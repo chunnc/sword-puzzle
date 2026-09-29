@@ -141,7 +141,10 @@ namespace KiemKhaiTienLo.App
         private void AddHud()
         {
             var hud = new VisualElement(); hud.AddToClassList("hud");
-            var avatar = Image("avatar", "avatar"); hud.Add(avatar);
+            var avatar = new VisualElement(); avatar.AddToClassList("avatar");
+            avatar.Add(Image("avatar", "avatar-portrait"));
+            avatar.Add(Image("avatar_frame", "avatar-frame"));
+            hud.Add(avatar);
             foreach (string kind in new[] { "jade", "coin", "bolt" })
             {
                 var stat = Button("—", () => ShowNotice("Sắp ra mắt"), "panel", "stat");
@@ -259,7 +262,7 @@ namespace KiemKhaiTienLo.App
                 swordTargeting = true;
                 notice = "Chạm một hàng trên bàn cờ";
                 RenderGame();
-            }, ready ? "stage_current" : "stage_locked", "skill-button");
+            }, ready ? "skill_ready" : "skill_idle", "skill-button");
             skill.Add(Image("icon_skill", "skill-icon"));
             skillArea.Add(skill);
             var gaugeColumn = new VisualElement(); gaugeColumn.AddToClassList("gauge-column");
@@ -380,8 +383,10 @@ namespace KiemKhaiTienLo.App
             card.Add(Label(api.Session == null || api.Session.isGuest ?
                 "Liên kết để đồng bộ tiến trình" : "Tài khoản đã liên kết", "subtitle"));
             var email = new TextField("Email"); email.AddToClassList("input");
+            email.AddToClassList("art-panel");
             email.style.backgroundImage = Art("panel");
             var password = new TextField("Mật khẩu") { isPasswordField = true }; password.AddToClassList("input");
+            password.AddToClassList("art-panel");
             password.style.backgroundImage = Art("panel");
             card.Add(email); card.Add(password);
             var status = Label("", "small"); card.Add(status);
@@ -423,6 +428,7 @@ namespace KiemKhaiTienLo.App
         private static VisualElement ArtBox(string art, string className)
         {
             var box = new VisualElement(); box.AddToClassList(className);
+            AddArtClass(box, art);
             box.style.backgroundImage = Art(art);
             return box;
         }
@@ -444,8 +450,14 @@ namespace KiemKhaiTienLo.App
         {
             var button = new Button(action) { text = text };
             button.AddToClassList(className);
+            AddArtClass(button, art);
             button.style.backgroundImage = Art(art);
             return button;
+        }
+
+        private static void AddArtClass(VisualElement element, string art)
+        {
+            element.AddToClassList("art-" + art.Replace('_', '-'));
         }
     }
 }

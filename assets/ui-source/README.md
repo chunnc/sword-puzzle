@@ -1,6 +1,6 @@
 # Nguồn ảnh UI của bản thử nghiệm 3 màn
 
-Ba PNG trong thư mục này được tạo bằng công cụ ImageGen tích hợp của Codex. Các file ảnh trong `client/Assets/Resources/UI/` là asset runtime được tạo từ ba ảnh này và mã `tools/generate_ui_assets.py`. Không sử dụng `assets/ui-preview.png` trong game.
+Ba PNG gốc trong thư mục này được tạo bằng công cụ ImageGen tích hợp của Codex. Mã `tools/generate_ui_assets.py` tạo các background và ảnh nhân vật từ chúng, rồi chép UI component trong `runtime/` vào `client/Assets/Resources/UI/` để Unity nạp. `panel-base.png` được lưu với tên runtime `panel.png`; tên còn lại đổi dấu gạch nối thành dấu gạch dưới. Avatar runtime là ảnh cắt từ `cultivator.png`; khung avatar được ghép riêng trong UI Toolkit. Không sử dụng `assets/ui-preview.png` trong game.
 
 Prompt 1 (`world.png`): Reusable full-bleed portrait xianxia game background; floating jade mountains, ivory clouds, ornate East Asian celestial gate, waterfalls and stone terraces; quiet overlay areas; no character, monster, UI or text.
 

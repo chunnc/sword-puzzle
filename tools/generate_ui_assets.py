@@ -1,13 +1,15 @@
-"""Create the reusable, painted UI PNGs for the three-level prototype.
+"""Build runtime UI images for the three-level prototype.
 
-The only AI source images are assets/ui-source/{world,beast,cultivator}.png.
-Everything emitted here is a project-owned bitmap; Unity only displays it.
-Requires Pillow 11+ and can be rerun with: python3 tools/generate_ui_assets.py
+Backgrounds and character crops are generated from assets/ui-source/{world,beast,cultivator}.png;
+the UI component artwork is copied from assets/ui-source/runtime with Unity resource names.
+Unity only displays these project-owned bitmaps. Requires Pillow 11+ and can be rerun with:
+python3 tools/generate_ui_assets.py
 """
 
 from pathlib import Path
 from math import cos, sin, pi
 import random
+import shutil
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 
 
@@ -209,22 +211,26 @@ def icon(name):
 
 
 def avatar(hero):
-    # Reuse the generated hero rather than spending a fourth image generation.
+    # Reuse the generated hero; the runtime avatar frame is layered in UI Toolkit.
     w,h=hero.size
     head=hero.crop((int(w*.30),int(h*.02),int(w*.70),int(h*.47)))
     head=ImageOps.fit(head,(256,256),centering=(.5,.35))
     mask=Image.new("L",(256,256))
     ImageDraw.Draw(mask).ellipse((8,8,248,248),fill=255)
     head.putalpha(ImageChops_multiply(head.getchannel("A"),mask))
-    frame=Image.new("RGBA",(256,256))
-    frame.alpha_composite(head)
-    ImageDraw.Draw(frame).ellipse((7,7,249,249),outline=(247,212,125,255),width=8)
-    save(frame,"avatar")
+    save(head,"avatar")
 
 
 def ImageChops_multiply(a,b):
     from PIL import ImageChops
     return ImageChops.multiply(a,b)
+
+
+def copy_runtime_art():
+    # Keep the generated component art as the source of truth for runtime UI.
+    for image in sorted((SOURCE / "runtime").glob("*.png")):
+        name = "panel" if image.stem == "panel-base" else image.stem.replace("-", "_")
+        shutil.copy2(image, OUT / f"{name}.png")
 
 
 def main():
@@ -253,6 +259,7 @@ def main():
         overlay(name)
     for name in ("map","person","bag","lotus","menu","skill","herb","bolt","coin","jade"):
         icon(name)
+    copy_runtime_art()
     print(f"Generated {len(list(OUT.glob('*.png')))} UI images in {OUT}")
 
 
