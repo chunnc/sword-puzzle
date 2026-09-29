@@ -1,0 +1,10 @@
+{
+  "name": "kiem-khai-tien-lo",
+  "private": true,
+  "scripts": {
+    "api:build": "npm --prefix server run build",
+    "api:test": "npm --prefix server test",
+    "api:serve": "npm --prefix server run serve",
+    "api:deploy": "npm run api:build && firebase deploy --only functions:game-api,firestore:rules,storage:rules"
+  }
+}

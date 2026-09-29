@@ -1,0 +1,15 @@
+node_modules/
+server/lib/
+server/coverage/
+server/.env
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+client/Library/
+client/Temp/
+client/Obj/
+client/Build/
+client/Logs/
+client/UserSettings/
+.DS_Store

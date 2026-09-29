@@ -1,0 +1,49 @@
+.screen {
+    flex-grow: 1;
+    background-color: rgb(8, 42, 48);
+    color: rgb(247, 241, 222);
+    padding-left: 26px;
+    padding-right: 26px;
+    padding-top: 24px;
+    padding-bottom: 24px;
+}
+.game-screen { background-color: rgba(5, 31, 36, 0); }
+.title { font-size: 42px; -unity-font-style: bold; color: rgb(247, 215, 145); -unity-text-align: middle-center; margin-top: 10px; margin-bottom: 10px; }
+.subtitle { font-size: 23px; color: rgb(198, 235, 228); -unity-text-align: middle-center; margin-bottom: 16px; }
+.body { font-size: 22px; color: rgb(231, 239, 228); -unity-text-align: middle-center; }
+.small { font-size: 18px; color: rgb(185, 213, 211); -unity-text-align: middle-center; }
+.chapter { font-size: 27px; -unity-font-style: bold; color: rgb(236, 202, 127); margin-top: 24px; margin-bottom: 10px; -unity-text-align: middle-center; }
+.top-bar { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.row { flex-direction: row; justify-content: center; align-items: center; }
+.spacer { flex-grow: 1; }
+.card {
+    background-color: rgba(8, 48, 55, 0.94);
+    border-left-color: rgb(193, 155, 85); border-right-color: rgb(193, 155, 85);
+    border-top-color: rgb(193, 155, 85); border-bottom-color: rgb(193, 155, 85);
+    border-left-width: 2px; border-right-width: 2px; border-top-width: 2px; border-bottom-width: 2px;
+    border-top-left-radius: 16px; border-top-right-radius: 16px;
+    border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;
+    padding: 18px; margin-bottom: 14px;
+}
+.button-primary, .button-secondary, .stage-button {
+    border-left-width: 2px; border-right-width: 2px; border-top-width: 2px; border-bottom-width: 2px;
+    border-top-left-radius: 12px; border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
+    -unity-font-style: bold; -unity-text-align: middle-center;
+    min-height: 88px; margin: 6px; padding-left: 16px; padding-right: 16px;
+}
+.button-primary { background-color: rgb(212, 167, 81); color: rgb(41, 34, 23); border-left-color: rgb(252, 222, 151); border-right-color: rgb(252, 222, 151); border-top-color: rgb(252, 222, 151); border-bottom-color: rgb(252, 222, 151); font-size: 23px; }
+.button-secondary { background-color: rgb(19, 81, 87); color: rgb(235, 246, 235); border-left-color: rgb(74, 158, 150); border-right-color: rgb(74, 158, 150); border-top-color: rgb(74, 158, 150); border-bottom-color: rgb(74, 158, 150); font-size: 21px; }
+.stage-button { width: 140px; height: 140px; background-color: rgb(20, 77, 81); color: rgb(247, 235, 197); border-left-color: rgb(191, 154, 82); border-right-color: rgb(191, 154, 82); border-top-color: rgb(191, 154, 82); border-bottom-color: rgb(191, 154, 82); font-size: 32px; }
+.stage-complete { background-color: rgb(56, 117, 105); }
+.stage-current { background-color: rgb(179, 130, 55); color: rgb(27, 34, 30); }
+.stage-locked { opacity: 0.42; }
+.scroll { flex-grow: 1; }
+.bottom-row { flex-direction: row; justify-content: space-between; align-items: center; }
+.bottom-row .button-secondary { flex-grow: 1; }
+.bottom-row .button-primary { flex-grow: 1; }
+.realm-card { flex-grow: 1; justify-content: center; align-items: center; }
+.realm-symbol { font-size: 116px; color: rgb(247, 216, 143); -unity-text-align: middle-center; margin-top: 30px; margin-bottom: 35px; }
+.health-track { height: 22px; background-color: rgb(44, 31, 37); border-top-left-radius: 11px; border-top-right-radius: 11px; border-bottom-left-radius: 11px; border-bottom-right-radius: 11px; margin-top: 10px; }
+.health-fill { height: 22px; background-color: rgb(214, 71, 66); border-top-left-radius: 11px; border-top-right-radius: 11px; border-bottom-left-radius: 11px; border-bottom-right-radius: 11px; }
+.input { margin-top: 12px; margin-bottom: 12px; font-size: 22px; }

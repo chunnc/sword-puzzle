@@ -1,0 +1,3 @@
+# Unity rewrites these serialized files with intentional trailing spaces.
+*.meta -whitespace
+*.asset -whitespace
