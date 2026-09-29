@@ -14,7 +14,7 @@ namespace KiemKhaiTienLo.App
     [Serializable] public sealed class BootstrapResponse
     {
         public int contentVersion = 1;
-        public int levelCount = 60;
+        public int levelCount = 3;
         public bool rewardedAdsEnabled;
         public string minClientVersion;
     }

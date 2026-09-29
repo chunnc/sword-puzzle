@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using KiemKhaiTienLo.Core;
@@ -41,14 +42,18 @@ namespace KiemKhaiTienLo.App
         }
         public int HighestUnlocked
         {
+            get { return Math.Min(LevelCatalog.Count, CompletedCount + 1); }
+        }
+        public int CompletedCount
+        {
             get
             {
                 int completed = 0;
                 while (completed < LevelCatalog.Count && Stars(completed + 1) > 0) completed++;
-                return Math.Min(LevelCatalog.Count, completed + 1);
+                return completed;
             }
         }
-        public string Realm => LevelCatalog.RealmForCompleted(HighestUnlocked - 1);
+        public string Realm => LevelCatalog.RealmForCompleted(CompletedCount);
 
         public int Stars(int levelId)
         {
@@ -117,11 +122,36 @@ namespace KiemKhaiTienLo.App
                 try
                 {
                     var loaded = JsonUtility.FromJson<SaveData>(File.ReadAllText(candidate));
-                    if (loaded != null) { loaded.levels ??= Array.Empty<LevelStar>(); return loaded; }
+                    if (loaded != null) return Normalize(loaded);
                 }
                 catch (Exception error) { Debug.LogWarning("Cannot read save: " + error.Message); }
             }
             return new SaveData();
+        }
+
+        // Older prototype saves may contain levels 4–60. Keep the first three
+        // results, while discarding an active board that no longer has a level.
+        private static SaveData Normalize(SaveData loaded)
+        {
+            var levels = new Dictionary<int, int>();
+            foreach (var result in loaded.levels ?? Array.Empty<LevelStar>())
+            {
+                if (result == null || result.levelId < 1 || result.levelId > LevelCatalog.Count ||
+                    result.stars < 1 || result.stars > 3) continue;
+                levels[result.levelId] = Math.Max(levels.TryGetValue(result.levelId, out var old) ? old : 0,
+                    result.stars);
+            }
+            var filtered = new List<LevelStar>();
+            for (int id = 1; id <= LevelCatalog.Count; id++)
+            {
+                if (!levels.TryGetValue(id, out int stars)) break;
+                filtered.Add(new LevelStar { levelId = id, stars = stars });
+            }
+            loaded.levels = filtered.ToArray();
+            if (loaded.active != null && (loaded.active.LevelId < 1 ||
+                loaded.active.LevelId > Math.Min(LevelCatalog.Count, filtered.Count + 1)))
+                loaded.active = null;
+            return loaded;
         }
 
         private void Persist()

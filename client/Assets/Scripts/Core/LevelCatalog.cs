@@ -29,36 +29,28 @@ namespace KiemKhaiTienLo.Core
 
     public static class LevelCatalog
     {
-        public const int Count = 60;
-        private static readonly string[] Chapters =
-            { "Vân Hải Tiên Sơn", "Huyền Kiếm Bí Cảnh", "Lôi Hỏa Thiên Môn" };
+        public const int Count = 3;
 
         public static LevelDefinition Get(int id)
         {
             if (id < 1 || id > Count) throw new ArgumentOutOfRangeException(nameof(id));
-            int chapter = (id - 1) / 20;
-            int chapterLevel = (id - 1) % 20 + 1;
-            bool boss = chapterLevel == 20;
-            bool battle = !boss && chapterLevel % 2 == 0;
-            bool seal = !boss && !battle && chapterLevel >= 7 && chapterLevel % 4 == 3;
             return new LevelDefinition
             {
                 Id = id,
-                Chapter = Chapters[chapter],
-                Moves = boss ? 22 + chapter * 3 : 18 + chapter * 2 + Math.Min(4, chapterLevel / 5),
-                Goal = boss ? GoalKind.Boss : battle ? GoalKind.Battle : seal ? GoalKind.BreakSeals : GoalKind.Collect,
-                CollectKind = (TileKind)((id + chapter) % 5),
-                Target = boss ? 150 + chapter * 90 : battle ? 75 + chapter * 35 + chapterLevel * 2 :
-                    seal ? 2 + chapter : 8 + chapter * 3 + chapterLevel / 5,
-                Rocks = chapterLevel < 4 ? 0 : Math.Min(7, chapter + chapterLevel / 5),
-                Seals = seal ? 2 + chapter : chapterLevel < 6 ? 0 : Math.Min(4, chapter + 1),
+                Chapter = "Vân Hải Tiên Sơn",
+                Moves = id == 3 ? 24 : 20,
+                Goal = id == 3 ? GoalKind.Boss : id == 2 ? GoalKind.Battle : GoalKind.Collect,
+                CollectKind = TileKind.Herb,
+                Target = id == 3 ? 144 : id == 2 ? 72 : 6,
+                Rocks = id == 3 ? 2 : id == 2 ? 1 : 0,
+                Seals = id == 3 ? 2 : 0,
                 Seed = 7919 + id * 104729
             };
         }
 
         public static string RealmForCompleted(int completed)
         {
-            return completed >= 40 ? "Kim Đan" : completed >= 20 ? "Trúc Cơ" : "Luyện Khí";
+            return completed >= Count ? "Trúc Cơ" : "Luyện Khí";
         }
     }
 }

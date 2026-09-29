@@ -5,7 +5,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineString } from "firebase-functions/params";
-import { LEVEL_COUNT, emptyProgress, mergeProgress, parseStars, parseLevelResults, progressResponse, Progress } from "./domain/progress";
+import { LEVEL_COUNT, emptyProgress, mergeProgress, parseStoredStars, parseLevelResults, progressResponse, Progress } from "./domain/progress";
 import { verifyAdmobCallback, CallbackFields } from "./domain/admob";
 
 if (getApps().length === 0) initializeApp();
@@ -112,7 +112,7 @@ async function ensurePlayer(uid: string): Promise<void> {
 
 function savedProgress(data: FirebaseFirestore.DocumentData | undefined): Progress {
   if (!data) return emptyProgress();
-  return mergeProgress({}, parseStars(data.stars || {}));
+  return mergeProgress({}, parseStoredStars(data.stars || {}));
 }
 
 app.post("/v1/auth/guest", async (req, res, next) => {

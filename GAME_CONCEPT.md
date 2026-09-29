@@ -6,6 +6,8 @@ Kiến trúc và hướng dẫn chạy prototype: [SYSTEM_ARCHITECTURE.md](SYSTE
 
 ![Ảnh preview gồm bản đồ, màn khám phá, trận boss và đột phá tu vi](assets/ui-preview.png)
 
+> **Trạng thái triển khai hiện tại:** Để thử UI với ít lượt tạo ảnh, bản Unity chỉ đóng gói 3 màn liên tiếp (khám phá, chiến đấu, boss) và Đột Phá Trúc Cơ. Mốc 3 chương/60 màn dưới đây là định hướng nội dung về sau.
+
 ## 1. Tầm nhìn
 
 **Kiếm Khai Tiên Lộ** là game giải đố ghép 3 theo màn, lấy cảm hứng từ hành trình kiếm tu. Người chơi ghép các linh vật để phá phong ấn, vượt bí cảnh, đánh yêu thú và đột phá cảnh giới. Trò chơi giữ thao tác đơn giản, nhịp nhanh của dòng casual nhưng tạo bản sắc bằng kiếm khí, pháp thuật và thế giới tu tiên mở dần qua từng chương.

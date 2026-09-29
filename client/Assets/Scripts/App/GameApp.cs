@@ -17,9 +17,7 @@ namespace KiemKhaiTienLo.App
         private UIDocument document;
         private VisualElement root;
         private VisualElement screen;
-        private Camera gameCamera;
-        private Vector2 pointerStart;
-        private bool pointerActive;
+        private VisualElement toast;
         private bool swordTargeting;
         private string notice = "";
 
@@ -39,21 +37,18 @@ namespace KiemKhaiTienLo.App
             save = new LocalSave();
             api = gameObject.AddComponent<GameApi>();
             ads = gameObject.AddComponent<RewardedAdsBridge>();
-            gameCamera = Camera.main;
-            if (gameCamera == null)
+            // UI Toolkit overlays a camera display in the Editor's Game view.
+            // The camera clears the display; all visible UI surfaces are PNGs.
+            if (Camera.main == null)
             {
                 var cameraObject = new GameObject("Game Camera");
                 cameraObject.tag = "MainCamera";
-                gameCamera = cameraObject.AddComponent<Camera>();
+                var camera = cameraObject.AddComponent<Camera>();
+                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = new Color(.02f, .12f, .15f);
             }
-            gameCamera.orthographic = true;
-            gameCamera.orthographicSize = 7.5f;
-            gameCamera.transform.position = new Vector3(0, 0, -10);
-            gameCamera.backgroundColor = new Color(.035f, .13f, .16f);
-            gameCamera.clearFlags = CameraClearFlags.SolidColor;
-            boardView = new GameObject("Puzzle Board").AddComponent<BoardRenderer>();
-            boardView.transform.SetParent(transform, false);
-            boardView.Initialize(gameCamera);
+            boardView = new BoardRenderer();
+            boardView.Gesture += HandleBoardGesture;
             document = gameObject.AddComponent<UIDocument>();
             document.panelSettings = Resources.Load<PanelSettings>("GamePanel");
             if (document.panelSettings == null)
@@ -94,30 +89,9 @@ namespace KiemKhaiTienLo.App
             }
         }
 
-        private void Update()
+        private void HandleBoardGesture(int x1, int y1, int x2, int y2)
         {
             if (board == null || board.Won || board.Lost) return;
-            if (Input.touchCount > 0)
-            {
-                var touch = Input.GetTouch(0);
-                if (touch.phase == TouchPhase.Began) { pointerStart = touch.position; pointerActive = true; }
-                if (pointerActive && (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled))
-                { pointerActive = false; HandleBoardGesture(pointerStart, touch.position); }
-            }
-#if UNITY_EDITOR
-            else
-            {
-                if (Input.GetMouseButtonDown(0)) { pointerStart = Input.mousePosition; pointerActive = true; }
-                if (pointerActive && Input.GetMouseButtonUp(0))
-                { pointerActive = false; HandleBoardGesture(pointerStart, Input.mousePosition); }
-            }
-#endif
-        }
-
-        private void HandleBoardGesture(Vector2 start, Vector2 end)
-        {
-            if (!boardView.CellFromScreen(start, out int x1, out int y1) ||
-                !boardView.CellFromScreen(end, out int x2, out int y2)) return;
             bool changed;
             if (swordTargeting)
             {
@@ -126,7 +100,6 @@ namespace KiemKhaiTienLo.App
             }
             else changed = board.TrySwap(x1, y1, x2, y2);
             if (!changed) return;
-            boardView.UpdateBoard(board);
             save.SaveBoard(board.Snapshot());
             if (board.Won)
             {
@@ -134,7 +107,7 @@ namespace KiemKhaiTienLo.App
                 int levelId = board.Level.Id;
                 save.Complete(levelId, stars);
                 StartCoroutine(api.Sync(save, _ => { }));
-                if (levelId % 20 == 0) RenderRealm(levelId);
+                if (levelId == LevelCatalog.Count) RenderRealm();
                 else RenderWin(levelId, stars);
             }
             else RenderGame();
@@ -142,107 +115,200 @@ namespace KiemKhaiTienLo.App
 
         private void StartLevel(int id, bool restart = false)
         {
-            if (id > save.HighestUnlocked || id < 1 || id > LevelCatalog.Count) return;
+            if (id < 1 || id > LevelCatalog.Count || id > save.HighestUnlocked) return;
             var previous = !restart && save.Active != null && save.Active.LevelId == id ? save.Active : null;
             board = new BoardEngine(LevelCatalog.Get(id), previous);
             swordTargeting = false;
             notice = "";
             save.SaveBoard(board.Snapshot());
-            boardView.Show(board);
             RenderGame();
         }
 
-        private void BeginScreen(bool gameplay)
+        private VisualElement BeginScreen(string name, string background)
         {
             root.Clear();
-            screen = new VisualElement();
+            screen = new VisualElement { name = name };
             screen.AddToClassList("screen");
-            if (gameplay) screen.AddToClassList("game-screen");
+            screen.style.backgroundImage = Art(background);
             float scale = Screen.width > 0 ? 1080f / Screen.width : 1f;
-            screen.style.paddingTop = 24f + Mathf.Max(0, Screen.height - Screen.safeArea.yMax) * scale;
-            screen.style.paddingBottom = 24f + Mathf.Max(0, Screen.safeArea.yMin) * scale;
+            screen.style.paddingTop = 18f + Mathf.Max(0, Screen.height - Screen.safeArea.yMax) * scale;
+            screen.style.paddingBottom = 14f + Mathf.Max(0, Screen.safeArea.yMin) * scale;
             root.Add(screen);
-            if (!gameplay) boardView.Hide();
+            toast = null;
+            return screen;
+        }
+
+        private void AddHud()
+        {
+            var hud = new VisualElement(); hud.AddToClassList("hud");
+            var avatar = Image("avatar", "avatar"); hud.Add(avatar);
+            foreach (string kind in new[] { "jade", "coin", "bolt" })
+            {
+                var stat = Button("—", () => ShowNotice("Sắp ra mắt"), "panel", "stat");
+                stat.Add(Image("icon_" + kind, "stat-icon"));
+                hud.Add(stat);
+            }
+            var menu = Button("", ShowAccount, "panel", "menu-button");
+            menu.Add(Image("icon_menu", "menu-icon"));
+            hud.Add(menu);
+            screen.Add(hud);
+        }
+
+        private void AddTitle(string title)
+        {
+            var banner = ArtBox("banner", "title-banner");
+            banner.Add(Label(title, "title"));
+            screen.Add(banner);
+        }
+
+        private void AddNav(string active)
+        {
+            var nav = ArtBox("nav", "nav");
+            string[] labels = { "TIÊN LỘ", "NHÂN VẬT", "TÚI ĐỒ", "TU LUYỆN" };
+            string[] icons = { "map", "person", "bag", "lotus" };
+            for (int i = 0; i < labels.Length; i++)
+            {
+                int index = i;
+                Action navAction = index == 0 ? RenderMap : () => ShowNotice("Sắp ra mắt");
+                var item = new Button(navAction);
+                item.AddToClassList("nav-item");
+                if (icons[i] == active) item.AddToClassList("nav-active");
+                item.Add(Image("icon_" + icons[i], "nav-icon"));
+                item.Add(Label(labels[i], "nav-label"));
+                nav.Add(item);
+            }
+            screen.Add(nav);
         }
 
         private void RenderMap()
         {
             board = null;
-            BeginScreen(false);
-            screen.name = "map";
-            screen.Add(Label("KIẾM KHAI TIÊN LỘ", "title"));
-            screen.Add(Label("Tu vi: " + save.Realm, "subtitle"));
-            var top = new VisualElement(); top.AddToClassList("top-bar");
-            top.Add(Button("Tài khoản", ShowAccount, "button-secondary"));
-            top.Add(Button("Tiếp tục", () => StartLevel(save.Active != null ?
-                save.Active.LevelId : save.HighestUnlocked), "button-primary"));
-            screen.Add(top);
-            var scroll = new ScrollView(); scroll.AddToClassList("scroll");
-            string[] chapters = { "VÂN HẢI TIÊN SƠN", "HUYỀN KIẾM BÍ CẢNH", "LÔI HỎA THIÊN MÔN" };
-            for (int chapter = 0; chapter < 3; chapter++)
+            BeginScreen("map", "bg_map");
+            AddHud();
+            AddTitle("TIÊN LỘ");
+            var map = new VisualElement(); map.AddToClassList("map-area");
+            var chapter = ArtBox("panel_light", "chapter-card");
+            chapter.Add(Label("CHƯƠNG THỬ NGHIỆM", "chapter-small"));
+            chapter.Add(Label("VÂN HẢI\nTIÊN SƠN", "chapter-title"));
+            map.Add(chapter);
+            for (int id = 1; id <= LevelCatalog.Count; id++)
             {
-                scroll.Add(Label(chapters[chapter], "chapter"));
-                for (int rowNumber = 0; rowNumber < 5; rowNumber++)
-                {
-                    var row = new VisualElement(); row.AddToClassList("row");
-                    for (int column = 0; column < 4; column++)
-                    {
-                        int id = chapter * 20 + rowNumber * 4 + column + 1;
-                        var stage = Button(id.ToString(), () => StartLevel(id), "stage-button");
-                        if (save.Stars(id) > 0) stage.AddToClassList("stage-complete");
-                        else if (id == save.HighestUnlocked) stage.AddToClassList("stage-current");
-                        else if (id > save.HighestUnlocked) { stage.AddToClassList("stage-locked"); stage.SetEnabled(false); }
-                        row.Add(stage);
-                    }
-                    scroll.Add(row);
-                }
+                int stageId = id;
+                bool done = save.Stars(id) > 0;
+                bool current = !done && id == save.HighestUnlocked;
+                string art = done ? "stage_done" : current ? "stage_current" : "stage_locked";
+                var stage = Button(id.ToString(), () => StartLevel(stageId), art, "stage-node");
+                stage.AddToClassList("stage-" + id);
+                if (!done && !current) stage.SetEnabled(false);
+                if (done) stage.Add(Label(new string('★', save.Stars(id)), "stage-stars"));
+                map.Add(stage);
             }
-            screen.Add(scroll);
-            screen.Add(Label("Chọn một màn trên Tiên Lộ để bắt đầu.", "small"));
+            screen.Add(map);
+            screen.Add(Button(save.CompletedCount == LevelCatalog.Count ? "CHƠI LẠI BOSS" : "TIẾP TỤC",
+                () => StartLevel(save.Active != null ? save.Active.LevelId : save.HighestUnlocked),
+                "button_primary", "map-continue"));
+            AddNav("map");
         }
 
         private void RenderGame()
         {
             if (board == null) return;
-            BeginScreen(true);
-            boardView.Show(board);
-            var top = new VisualElement(); top.AddToClassList("card");
-            top.Add(Label(board.Level.Goal == GoalKind.Boss ? "YÊU VƯƠNG" :
-                board.Level.Goal == GoalKind.Battle ? "YÊU THÚ" : "BÍ CẢNH", "title"));
-            top.Add(Label("Màn " + board.Level.Id + "  •  " + board.Level.Chapter, "small"));
-            string objective = board.Level.Goal == GoalKind.Boss || board.Level.Goal == GoalKind.Battle ? "Máu yêu thú" :
-                board.Level.Goal == GoalKind.BreakSeals ? "Phong ấn còn" : "Linh vật còn";
-            top.Add(Label($"Lượt: {board.Moves}     {objective}: {board.Remaining}", "body"));
-            if (board.Level.Goal == GoalKind.Boss || board.Level.Goal == GoalKind.Battle)
+            bool boss = board.Level.Goal == GoalKind.Boss;
+            bool battle = board.Level.Goal == GoalKind.Battle;
+            BeginScreen("game", boss ? "bg_boss" : "bg_game");
+            AddHud();
+            AddTitle(boss ? "YÊU VƯƠNG" : battle ? "YÊU THÚ" : "BÍ CẢNH");
+            var stats = new VisualElement(); stats.AddToClassList("game-stats");
+            var stage = ArtBox("panel", "stat-card");
+            stage.Add(Label("TẦNG", "stat-caption"));
+            stage.Add(Label("1-" + board.Level.Id, "stat-number"));
+            stats.Add(stage);
+            var objective = ArtBox("panel", "objective-card");
+            objective.Add(Label(battle || boss ? "MÁU YÊU THÚ" : "MỤC TIÊU", "stat-caption"));
+            var objectiveRow = new VisualElement(); objectiveRow.AddToClassList("objective-row");
+            objectiveRow.Add(Image(battle || boss ? "icon_skill" : "icon_herb", "objective-icon"));
+            objectiveRow.Add(Label(board.Remaining + (battle || boss ? " HP" : "/6"), "objective-number"));
+            objective.Add(objectiveRow); stats.Add(objective);
+            var moves = ArtBox("panel", "moves-card");
+            moves.Add(Label("LƯỢT", "stat-caption"));
+            moves.Add(Label(board.Moves.ToString(), "moves-number"));
+            stats.Add(moves);
+            screen.Add(stats);
+
+            var main = new VisualElement(); main.AddToClassList("game-main");
+            if (battle || boss)
             {
-                var track = new VisualElement(); track.AddToClassList("health-track");
-                var fill = new VisualElement(); fill.AddToClassList("health-fill");
-                fill.style.width = Length.Percent(Mathf.Clamp01((float)board.Remaining / board.Level.Target) * 100f);
-                track.Add(fill); top.Add(track);
+                var enemy = Image("beast", "enemy-art");
+                if (boss) enemy.AddToClassList("boss-art");
+                main.Add(enemy);
+                var health = ProgressBar((float)board.Remaining / board.Level.Target, "bar_red", "health-bar");
+                main.Add(health);
             }
-            screen.Add(top);
-            var spacer = new VisualElement(); spacer.AddToClassList("spacer"); screen.Add(spacer);
-            if (!string.IsNullOrEmpty(notice)) screen.Add(Label(notice, "small"));
-            var bottom = new VisualElement(); bottom.AddToClassList("card");
-            bottom.Add(Label($"Kiếm khí  {board.SwordQi}/100", "body"));
-            if (board.Lost)
+            var boardSpace = new VisualElement(); boardSpace.AddToClassList("board-space");
+            boardSpace.Add(boardView.Element);
+            boardSpace.RegisterCallback<GeometryChangedEvent>(_ => SizeBoard(boardSpace));
+            main.Add(boardSpace);
+            screen.Add(main);
+            boardView.UpdateBoard(board);
+
+            var skillArea = ArtBox("panel", "skill-area");
+            bool ready = board.SwordQi >= 100;
+            var skill = Button("", () =>
             {
-                bottom.Add(Label("Hết lượt — hãy thử lại", "subtitle"));
-                bottom.Add(Button("Chơi lại", () => StartLevel(board.Level.Id, true), "button-primary"));
-                if (!board.ExtraMovesUsed && api.Online && api.RewardedAdsEnabled && ads.Ready)
-                    bottom.Add(Button("Xem quảng cáo: +3 lượt", RequestExtraMoves, "button-secondary"));
-            }
-            else
+                if (!ready || board == null || board.Lost) return;
+                swordTargeting = true;
+                notice = "Chạm một hàng trên bàn cờ";
+                RenderGame();
+            }, ready ? "stage_current" : "stage_locked", "skill-button");
+            skill.Add(Image("icon_skill", "skill-icon"));
+            skillArea.Add(skill);
+            var gaugeColumn = new VisualElement(); gaugeColumn.AddToClassList("gauge-column");
+            gaugeColumn.Add(Label(ready ? "KIẾM TRẢM SẴN SÀNG" : "KIẾM KHÍ", "gauge-caption"));
+            gaugeColumn.Add(ProgressBar(board.SwordQi / 100f, "bar_blue", "qi-bar"));
+            gaugeColumn.Add(Label(board.SwordQi + "/100", "gauge-value"));
+            skillArea.Add(gaugeColumn);
+            screen.Add(skillArea);
+            if (!string.IsNullOrEmpty(notice)) screen.Add(Label(notice, "notice"));
+            AddNav("map");
+            if (board.Lost) AddLossDialog();
+        }
+
+        private void SizeBoard(VisualElement available)
+        {
+            float width = available.resolvedStyle.width - 14f;
+            float height = available.resolvedStyle.height - 8f;
+            float size = Mathf.Min(950f, width, height);
+            if (size > 0)
             {
-                var row = new VisualElement(); row.AddToClassList("bottom-row");
-                row.Add(Button("Tiên Lộ", RenderMap, "button-secondary"));
-                var skill = Button(swordTargeting ? "Chọn hàng" : "Kiếm Trảm", () =>
-                { if (board.SwordQi >= 100) { swordTargeting = true; notice = "Chạm một hàng trên bàn cờ"; RenderGame(); } }, "button-primary");
-                skill.SetEnabled(board.SwordQi >= 100);
-                row.Add(skill);
-                bottom.Add(row);
+                boardView.Element.style.width = size;
+                boardView.Element.style.height = size;
             }
-            screen.Add(bottom);
+        }
+
+        private VisualElement ProgressBar(float portion, string fillArt, string className)
+        {
+            var track = ArtBox("bar_track", className);
+            track.AddToClassList("bar-track");
+            var fill = ArtBox(fillArt, "bar-fill");
+            fill.style.width = Length.Percent(Mathf.Clamp01(portion) * 100f);
+            track.Add(fill);
+            return track;
+        }
+
+        private void AddLossDialog()
+        {
+            var overlay = new VisualElement(); overlay.AddToClassList("dialog-overlay");
+            overlay.style.backgroundImage = Art("dim_overlay");
+            var dialog = ArtBox("panel", "dialog-card");
+            dialog.Add(Label("HẾT LƯỢT", "title"));
+            dialog.Add(Label("Hãy thử lại bí cảnh này", "body"));
+            dialog.Add(Button("CHƠI LẠI", () => StartLevel(board.Level.Id, true), "button_primary", "wide-button"));
+            if (!board.ExtraMovesUsed && api.Online && api.RewardedAdsEnabled && ads.Ready)
+                dialog.Add(Button("XEM QUẢNG CÁO · +3 LƯỢT", RequestExtraMoves,
+                    "button_secondary", "wide-button"));
+            dialog.Add(Button("VỀ TIÊN LỘ", RenderMap, "button_secondary", "wide-button"));
+            overlay.Add(dialog);
+            screen.Add(overlay);
         }
 
         private void RequestExtraMoves()
@@ -271,45 +337,62 @@ namespace KiemKhaiTienLo.App
         private void RenderWin(int levelId, int stars)
         {
             board = null;
-            BeginScreen(false);
-            screen.Add(new VisualElement { name = "space" });
-            screen.Add(Label("VƯỢT ẢI THÀNH CÔNG", "title"));
-            screen.Add(Label(new string('★', stars), "realm-symbol"));
-            screen.Add(Label("Màn " + levelId + " đã hoàn thành", "subtitle"));
-            screen.Add(Button("Màn tiếp theo", () => StartLevel(Math.Min(levelId + 1, LevelCatalog.Count)), "button-primary"));
-            screen.Add(Button("Về Tiên Lộ", RenderMap, "button-secondary"));
+            BeginScreen("win", "bg_game");
+            AddHud(); AddTitle("VƯỢT ẢI");
+            var card = ArtBox("panel", "center-card");
+            card.Add(Label("VƯỢT ẢI THÀNH CÔNG", "subtitle"));
+            card.Add(Label(new string('★', stars), "star-result"));
+            card.Add(Label("Màn " + levelId + " đã hoàn thành", "body"));
+            card.Add(Button("MÀN TIẾP THEO", () => StartLevel(levelId + 1), "button_primary", "wide-button"));
+            card.Add(Button("VỀ TIÊN LỘ", RenderMap, "button_secondary", "wide-button"));
+            screen.Add(card);
+            AddNav("map");
         }
 
-        private void RenderRealm(int completedLevel)
+        private void RenderRealm()
         {
             board = null;
-            BeginScreen(false);
-            var card = new VisualElement(); card.AddToClassList("realm-card");
-            card.Add(Label("ĐỘT PHÁ TU VI", "title"));
-            card.Add(Label("✧  ⚔  ✧", "realm-symbol"));
-            card.Add(Label("Cảnh giới mới: " + save.Realm, "subtitle"));
-            card.Add(Label("Một vùng đất mới đã mở trên Tiên Lộ", "body"));
+            BeginScreen("realm", "bg_realm");
+            AddHud(); AddTitle("ĐỘT PHÁ");
+            var labels = new VisualElement(); labels.AddToClassList("realm-labels");
+            var oldRealm = ArtBox("panel", "realm-step"); oldRealm.Add(Label("LUYỆN KHÍ", "realm-name"));
+            var newRealm = ArtBox("panel_light", "realm-step"); newRealm.Add(Label("TRÚC CƠ", "realm-name"));
+            labels.Add(oldRealm); labels.Add(Label("»", "realm-arrow")); labels.Add(newRealm);
+            screen.Add(labels);
+            var heroSpace = new VisualElement(); heroSpace.AddToClassList("hero-space");
+            heroSpace.Add(Image("cultivator", "hero-art"));
+            screen.Add(heroSpace);
+            var card = ArtBox("panel", "realm-bottom");
+            card.Add(ProgressBar(1f, "bar_blue", "qi-bar"));
+            card.Add(Label("3/3 · Linh khí viên mãn", "gauge-value"));
+            card.Add(Button("ĐỘT PHÁ", RenderMap, "button_primary", "realm-action"));
+            card.Add(Label("Một vùng đất mới đang chờ phía trước", "small"));
             screen.Add(card);
-            screen.Add(Button("Tiếp tục hành trình", RenderMap, "button-primary"));
+            AddNav("lotus");
         }
 
         private void ShowAccount()
         {
             board = null;
-            BeginScreen(false);
-            screen.Add(Label("TÀI KHOẢN KIẾM TU", "title"));
-            screen.Add(Label(api.Session == null || api.Session.isGuest ?
-                "Liên kết để đồng bộ giữa iOS và Android" : "Đã liên kết tài khoản", "subtitle"));
+            BeginScreen("account", "bg_map");
+            AddHud(); AddTitle("TÀI KHOẢN");
+            var card = ArtBox("panel", "center-card");
+            card.Add(Label(api.Session == null || api.Session.isGuest ?
+                "Liên kết để đồng bộ tiến trình" : "Tài khoản đã liên kết", "subtitle"));
             var email = new TextField("Email"); email.AddToClassList("input");
+            email.style.backgroundImage = Art("panel");
             var password = new TextField("Mật khẩu") { isPasswordField = true }; password.AddToClassList("input");
-            screen.Add(email); screen.Add(password);
-            var status = Label("", "small"); screen.Add(status);
-            screen.Add(Button("Tạo tài khoản", () => StartCoroutine(api.Register(email.value, password.value,
-                error => AccountResult(error, status))), "button-primary"));
-            screen.Add(Button("Đăng nhập", () => StartCoroutine(api.Login(email.value, password.value,
-                error => AccountResult(error, status))), "button-secondary"));
-            screen.Add(Button("Quay lại", RenderMap, "button-secondary"));
-            screen.Add(Label("Bản đầu chưa có xác minh email hoặc khôi phục mật khẩu.", "small"));
+            password.style.backgroundImage = Art("panel");
+            card.Add(email); card.Add(password);
+            var status = Label("", "small"); card.Add(status);
+            card.Add(Button("TẠO TÀI KHOẢN", () => StartCoroutine(api.Register(email.value, password.value,
+                error => AccountResult(error, status))), "button_primary", "wide-button"));
+            card.Add(Button("ĐĂNG NHẬP", () => StartCoroutine(api.Login(email.value, password.value,
+                error => AccountResult(error, status))), "button_secondary", "wide-button"));
+            card.Add(Button("QUAY LẠI", RenderMap, "button_secondary", "wide-button"));
+            card.Add(Label("Bản thử nghiệm chưa có khôi phục mật khẩu.", "small"));
+            screen.Add(card);
+            AddNav("map");
         }
 
         private void AccountResult(string error, Label status)
@@ -318,9 +401,38 @@ namespace KiemKhaiTienLo.App
             StartCoroutine(api.Sync(save, _ => RenderMap()));
         }
 
+        private void ShowNotice(string message)
+        {
+            if (screen == null) return;
+            toast?.RemoveFromHierarchy();
+            toast = ArtBox("panel", "toast");
+            toast.Add(Label(message, "body"));
+            screen.Add(toast);
+            var shown = toast;
+            shown.schedule.Execute(() => { if (toast == shown) { shown.RemoveFromHierarchy(); toast = null; } })
+                .StartingIn(1900);
+        }
+
         private void OnApplicationPause(bool paused)
         {
             if (paused && board != null && !board.Won) save.SaveBoard(board.Snapshot());
+        }
+
+        private static Texture2D Art(string name) => Resources.Load<Texture2D>("UI/" + name);
+
+        private static VisualElement ArtBox(string art, string className)
+        {
+            var box = new VisualElement(); box.AddToClassList(className);
+            box.style.backgroundImage = Art(art);
+            return box;
+        }
+
+        private static Image Image(string art, string className)
+        {
+            var image = new Image { image = Art(art), scaleMode = ScaleMode.ScaleToFit,
+                pickingMode = PickingMode.Ignore };
+            image.AddToClassList(className);
+            return image;
         }
 
         private static Label Label(string text, string className)
@@ -328,10 +440,11 @@ namespace KiemKhaiTienLo.App
             var label = new Label(text); label.AddToClassList(className); return label;
         }
 
-        private static Button Button(string text, Action action, string className)
+        private static Button Button(string text, Action action, string art, string className)
         {
             var button = new Button(action) { text = text };
             button.AddToClassList(className);
+            button.style.backgroundImage = Art(art);
             return button;
         }
     }

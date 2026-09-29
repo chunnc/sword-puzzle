@@ -4,15 +4,15 @@ Game ghép 3 tu tiên cho iOS/Android. [GAME_CONCEPT.md](GAME_CONCEPT.md) mô t�
 
 ## Trạng thái hiện tại
 
-- `client/`: Unity 6.3 LTS, 60 màn sinh từ cấu hình đóng gói, bàn ghép 7×7, màn bản đồ/giải đố/chiến đấu/đột phá, lưu màn đang chơi và đồng bộ qua HTTPS.
+- `client/`: Unity 6.3 LTS, bản thử nghiệm **3 màn** (khám phá, chiến đấu, boss), bàn ghép 7×7, bản đồ/đột phá Trúc Cơ, lưu màn đang chơi và đồng bộ qua HTTPS.
 - `server/`: Firebase Functions v2 với Auth sau API, Firestore tiến trình, API quảng cáo và xác thực AdMob SSV.
 - `firestore.rules` và `storage.rules`: từ chối mọi truy cập trực tiếp từ mobile/web client.
-- UI hiện dùng biểu tượng ô được vẽ bằng code và bảng màu của ảnh preview. Ảnh `assets/ui-preview.png` là tài liệu tham chiếu, không được dùng làm sprite giao diện.
+- UI dùng ba ảnh gốc tạo bởi Codex cùng bộ PNG do `tools/generate_ui_assets.py` xuất ra. `assets/ui-preview.png` chỉ là tài liệu tham chiếu, không được dùng làm sprite giao diện. Chạy `python3 tools/generate_ui_assets.py` sau khi chỉnh mã tạo asset; cần Pillow 11+.
 
 ## Chạy client trong Unity
 
 1. Mở thư mục `client/` bằng **Unity 6000.3.0f1 (Apple Silicon)**. Trên Mac Apple Silicon cần cài Rosetta 2 để Editor chạy. Build Android cần Android Build Support (gồm SDK, NDK, OpenJDK); build iOS cần iOS Build Support, Xcode và CocoaPods.
-2. Scene `Assets/Scenes/Main.unity` và `Assets/Resources/GamePanel.asset` đã được tạo. Mở scene này rồi bấm **Play** để vào bản đồ Tiên Lộ. Menu **Kiếm Khai → Validate 60 Levels** chạy kiểm tra các màn và lưu/khôi phục bàn cờ.
+2. Scene `Assets/Scenes/Main.unity` và `Assets/Resources/GamePanel.asset` đã được tạo. Mở scene này rồi bấm **Play** để vào bản đồ Tiên Lộ. Menu **Kiếm Khai → Validate 3 Levels** kiểm tra cấu hình và bàn cờ; **Kiếm Khai → Preview** cho xem riêng từng giao diện khi đang Play mà không thay save.
 3. Client chơi offline ngay cả khi chưa cấu hình backend. Để kết nối, thay `YOUR_PROJECT` trong `client/Assets/Resources/api-url.txt` bằng Firebase project ID. URL cần trỏ tới HTTP Function `gameApi` tại `asia-southeast1`.
 4. Sau khi kết nối, dùng nút **Tài khoản** để tạo hoặc đăng nhập tài khoản email/mật khẩu. Mật khẩu là mật khẩu game, không phải mật khẩu hộp thư. Bản đầu không xác minh email và không có luồng quên mật khẩu.
 
@@ -38,9 +38,9 @@ API gọi Firebase Auth REST qua backend. Khi chạy Emulator Suite, API tự d�
 
 ## Kiểm thử cần chạy trước phát hành
 
-- Unity Editor: menu **Kiếm Khai → Validate 60 Levels**, sau đó chơi thực tế cả màn khám phá, chiến đấu, boss và màn 20/40/60.
+- Unity Editor: menu **Kiếm Khai → Validate 3 Levels**, sau đó chơi lần lượt màn 1 → 2 → 3 → Đột Phá; kiểm tra cả tỉ lệ 9:16 và màn hình dọc dài.
 - Firebase Emulator: chạy `API_BASE_URL=http://127.0.0.1:5001/PROJECT_ID/asia-southeast1/gameApi npm --prefix server run test:integration` để thử tài khoản khách → liên kết email → đăng nhập lại → khôi phục tiến trình.
 - Thiết bị iOS/Android: kiểm tra vùng an toàn màn hình, chạm ô, lưu sau khi tắt app, mất mạng/khôi phục mạng, và callback quảng cáo chậm hoặc lặp.
 - Trước deploy: cấu hình IAM tối thiểu cho tài khoản chạy Functions, giữ quy tắc Firestore/Storage từ chối truy cập client, thiết lập TTL cho `authThrottle.expiresAt` và `adIntents.ttlAt`, theo dõi lỗi 5xx, đồng bộ và SSV.
 
-Firebase Emulator đã xác nhận luồng tài khoản khách, liên kết/đăng nhập email, làm mới phiên, gộp tiến trình và từ chối client truy cập Firestore trực tiếp. Unity 6000.3.0f1 Apple Silicon đã import project cùng Google Mobile Ads 11.5.0 và Unity UI 2.0.0. `BoardValidation.Validate` đã qua 60 màn; Play Mode tự động xác nhận game và bản đồ khởi tạo. Chưa kiểm tra build iOS/Android trong bước thiết lập Editor này. Chưa triển khai lên Firebase vì project ID, cấu hình Firebase/AdMob và quyền truy cập chưa có trong workspace.
+Firebase Emulator đã xác nhận luồng tài khoản khách, liên kết/đăng nhập email, làm mới phiên, gộp tiến trình và từ chối client truy cập Firestore trực tiếp ở bản thiết lập ban đầu. Unity 6000.3.0f1 Apple Silicon đã import project cùng Google Mobile Ads 11.5.0 và Unity UI 2.0.0. Bản UI ba màn dùng cùng backend nhưng chưa triển khai lên Firebase vì project ID, cấu hình Firebase/AdMob và quyền truy cập chưa có trong workspace.

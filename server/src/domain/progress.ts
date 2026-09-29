@@ -8,7 +8,7 @@ export interface Progress {
 
 export interface LevelResult { levelId: number; stars: number; }
 
-export const LEVEL_COUNT = 60;
+export const LEVEL_COUNT = 3;
 
 export function emptyProgress(): Progress {
   return { stars: {}, highestUnlocked: 1, realm: "LuyenKhi" };
@@ -28,6 +28,17 @@ export function parseStars(value: unknown): StarsByLevel {
     result[key] = stars as number;
   }
   return result;
+}
+
+// Firestore may still hold results from the earlier 60-level prototype.
+// Keep them untouched in storage but expose only levels in this test build.
+export function parseStoredStars(value: unknown): StarsByLevel {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const current = Object.fromEntries(Object.entries(value).filter(([key]) => {
+    const level = Number(key);
+    return Number.isInteger(level) && level >= 1 && level <= LEVEL_COUNT && String(level) === key;
+  }));
+  return parseStars(current);
 }
 
 export function parseLevelResults(value: unknown): StarsByLevel {
@@ -61,6 +72,6 @@ export function mergeProgress(a: StarsByLevel, b: StarsByLevel): Progress {
   return {
     stars,
     highestUnlocked: Math.min(LEVEL_COUNT, completed + 1),
-    realm: completed >= 40 ? "KimDan" : completed >= 20 ? "TrucCo" : "LuyenKhi"
+    realm: completed >= LEVEL_COUNT ? "TrucCo" : "LuyenKhi"
   };
 }

@@ -18,14 +18,14 @@ flowchart LR
 
 | Thành phần | Trách nhiệm |
 | --- | --- |
-| `BoardEngine`, `LevelCatalog` | Luật ghép, combo, Kiếm Trảm, kiếm khí, mục tiêu, boss; 60 cấu hình màn đóng gói |
+| `BoardEngine`, `LevelCatalog` | Luật ghép, combo, Kiếm Trảm, kiếm khí, mục tiêu, boss; 3 màn thử nghiệm đóng gói |
 | `GameApp`, `BoardRenderer`, UI Toolkit | Bản đồ, màn chơi, tu vi, account; vẽ ô bằng sprite 2D, điều khiển vuốt |
 | `LocalSave` | Sao cao nhất, màn đang chơi, snapshot bàn cờ; ghi cục bộ và dùng backup khi file lỗi |
 | `GameApi` | Gọi HTTPS, tự tạo tài khoản khách khi có mạng, làm mới token và đồng bộ định kỳ |
 | `SecureSessionStore` | Lưu phiên trong Keychain/Keystore trên thiết bị |
 | `RewardedAdsBridge` | AdMob Unity SDK, chỉ bật khi có mạng, server cho phép và SDK đã cấu hình |
 
-Lượt chơi không cần mạng. Ảnh/âm thanh để chơi 60 màn cơ bản phải nằm trong bản build. `GET /bootstrap` có thể thay đổi cờ quảng cáo và phiên bản nội dung; bản đóng gói vẫn là nguồn dự phòng offline.
+Lượt chơi không cần mạng. Asset cho 3 màn thử nghiệm nằm trong bản build. `GET /bootstrap` trả `levelCount: 3` và có thể thay đổi cờ quảng cáo; bản đóng gói vẫn là nguồn dự phòng offline.
 
 ## Game API
 
