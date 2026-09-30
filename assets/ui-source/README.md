@@ -1,6 +1,6 @@
 # Nguồn ảnh UI của bản thử nghiệm 3 màn
 
-Ba PNG gốc trong thư mục này được tạo bằng công cụ ImageGen tích hợp của Codex. Mã `tools/generate_ui_assets.py` tạo các background và ảnh nhân vật từ chúng, rồi chép UI component trong `runtime/` vào `client/Assets/Resources/UI/` để Unity nạp. `panel-base.png` được lưu với tên runtime `panel.png`; tên còn lại đổi dấu gạch nối thành dấu gạch dưới. Avatar runtime là ảnh cắt từ `cultivator.png`; khung avatar được ghép riêng trong UI Toolkit. Không sử dụng `assets/ui-preview.png` trong game.
+Ba ảnh gốc `world.png`, `beast.png` và `cultivator.png` được tạo bằng ImageGen. Script `tools/generate_ui_assets.py` dùng chúng để tạo background, ảnh nhân vật và avatar. Từng sprite UI trong `runtime/` được tạo riêng bằng Codex ImageGen, dùng `assets/ui-preview.png` cùng crop của component tương ứng làm input để khớp trực tiếp với mockup. Script chỉ trim alpha, resize/copy asset sang `client/Assets/Resources/UI/` và dựng contact sheet review; không vẽ nội dung sprite. `panel-base.png` được lưu với tên runtime `panel.png`; tên còn lại đổi dấu gạch nối thành dấu gạch dưới. Không sử dụng `assets/ui-preview.png` trong game.
 
 Prompt 1 (`world.png`): Reusable full-bleed portrait xianxia game background; floating jade mountains, ivory clouds, ornate East Asian celestial gate, waterfalls and stone terraces; quiet overlay areas; no character, monster, UI or text.
 
@@ -10,7 +10,6 @@ Prompt 3 (`cultivator.png`): Transparent cutout of a young sword cultivator in w
 
 All four view backgrounds reuse the one world painting. The same beast appears in battle and boss screens; the portrait avatar is cropped from the same cultivator image.
 
-The text-free `runtime/hud-chip.png`, `chapter-card.png`, `hud-tray.png`, and
-`dialog-panel.png` are generated source artwork for the compact counters, chapter
-card, wide HUD/navigation trays, and modal screens. The build script trims their
-transparent margins and limits their runtime size before copying them to Unity.
+Các sprite trong `runtime/` không chứa chữ; Unity vẫn dựng nhãn và số động. Bốn
+ảnh `runtime-preview-*.png` là contact sheet để duyệt bề mặt, icon, ô ghép và lớp
+phủ. Script giữ tên resource hiện có để không đổi tham chiếu hoặc `.meta` của Unity.

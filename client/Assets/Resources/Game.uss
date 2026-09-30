@@ -83,12 +83,12 @@
     -unity-background-scale-mode: stretch-to-fill;
 }
 .chapter-small {
-    font-size: 16px; color: rgb(255, 226, 157);
+    font-size: 16px; color: rgb(105, 75, 38);
     -unity-text-align: middle-center; white-space: normal;
 }
 .chapter-title {
     font-size: 27px; -unity-font-style: bold;
-    color: rgb(255, 245, 208);
+    color: rgb(54, 39, 26);
     -unity-text-align: middle-center; white-space: normal;
 }
 .stage-node {
