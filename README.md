@@ -12,7 +12,7 @@ Game ghép 3 tu tiên cho iOS/Android. [GAME_CONCEPT.md](GAME_CONCEPT.md) mô t�
 ## Chạy client trong Unity
 
 1. Mở thư mục `client/` bằng **Unity 6000.3.0f1 (Apple Silicon)**. Trên Mac Apple Silicon cần cài Rosetta 2 để Editor chạy. Build Android cần Android Build Support (gồm SDK, NDK, OpenJDK); build iOS cần iOS Build Support, Xcode và CocoaPods.
-2. Scene `Assets/Scenes/Main.unity` và `Assets/Resources/GamePanel.asset` đã được tạo. Mở scene này rồi bấm **Play** để vào bản đồ Tiên Lộ. Menu **Kiếm Khai → Validate 3 Levels** kiểm tra cấu hình và bàn cờ; **Kiếm Khai → Preview** cho xem riêng từng giao diện khi đang Play mà không thay save.
+2. Scene `Assets/Scenes/Main.unity` và `Assets/Resources/GamePanel.asset` đã được tạo. Mở scene này rồi bấm **Play** để vào bản đồ Tiên Lộ. Menu **Kiếm Khai → Validate 3 Levels** kiểm tra cấu hình và bàn cờ; **Kiếm Khai → Preview** cho xem riêng từng giao diện, kể cả thắng, hết lượt và tài khoản, khi đang Play mà không thay save. **Kiếm Khai → Capture UI Screens** chụp các màn tại 1080×1920 và 1080×2340 vào `assets/ui-review/after/`.
 3. Client chơi offline ngay cả khi chưa cấu hình backend. Để kết nối, thay `YOUR_PROJECT` trong `client/Assets/Resources/api-url.txt` bằng Firebase project ID. URL cần trỏ tới HTTP Function `gameApi` tại `asia-southeast1`.
 4. Sau khi kết nối, dùng nút **Tài khoản** để tạo hoặc đăng nhập tài khoản email/mật khẩu. Mật khẩu là mật khẩu game, không phải mật khẩu hộp thư. Bản đầu không xác minh email và không có luồng quên mật khẩu.
 

@@ -9,3 +9,8 @@ Prompt 2 (`beast.png`): Transparent cutout of one friendly but imposing white ce
 Prompt 3 (`cultivator.png`): Transparent cutout of a young sword cultivator in white jade robes, seated in meditation around a glowing turquoise sword with celestial ribbons; no platform, UI or text.
 
 All four view backgrounds reuse the one world painting. The same beast appears in battle and boss screens; the portrait avatar is cropped from the same cultivator image.
+
+The text-free `runtime/hud-chip.png`, `chapter-card.png`, `hud-tray.png`, and
+`dialog-panel.png` are generated source artwork for the compact counters, chapter
+card, wide HUD/navigation trays, and modal screens. The build script trims their
+transparent margins and limits their runtime size before copying them to Unity.

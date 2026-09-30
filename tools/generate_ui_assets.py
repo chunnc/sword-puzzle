@@ -228,9 +228,32 @@ def ImageChops_multiply(a,b):
 
 def copy_runtime_art():
     # Keep the generated component art as the source of truth for runtime UI.
+    # ImageGen leaves a transparent canvas around some long ornaments. Trim that
+    # canvas before Unity stretches the image into a short HUD element.
+    prepared = {
+        "banner": 2048,
+        "button-primary": 2048,
+        "button-secondary": 2048,
+        "button-disabled": 2048,
+        "hud-chip": 1024,
+        "hud-tray": 2048,
+        "chapter-card": 1024,
+        "dialog-panel": 1024,
+    }
     for image in sorted((SOURCE / "runtime").glob("*.png")):
         name = "panel" if image.stem == "panel-base" else image.stem.replace("-", "_")
-        shutil.copy2(image, OUT / f"{name}.png")
+        if image.stem not in prepared:
+            shutil.copy2(image, OUT / f"{name}.png")
+            continue
+        art = Image.open(image).convert("RGBA")
+        visible = art.getchannel("A").point(lambda alpha: 255 if alpha >= 16 else 0).getbbox()
+        if visible:
+            padding = 8
+            left, top, right, bottom = visible
+            art = art.crop((max(0, left-padding), max(0, top-padding),
+                            min(art.width, right+padding), min(art.height, bottom+padding)))
+        art.thumbnail((prepared[image.stem], prepared[image.stem]), Image.Resampling.LANCZOS)
+        save(art, name)
 
 
 def main():

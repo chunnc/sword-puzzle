@@ -24,21 +24,46 @@ public static class UIPreview
     [MenuItem("Kiếm Khai/Preview/Breakthrough")]
     public static void Breakthrough() => Invoke("RenderRealm");
 
+    [MenuItem("Kiếm Khai/Preview/Win")]
+    public static void Win() => Invoke("RenderWin", 1, 3);
+
+    [MenuItem("Kiếm Khai/Preview/Loss")]
+    public static void Loss()
+    {
+        var app = CurrentApp();
+        if (app == null) return;
+        var definition = LevelCatalog.Get(1);
+        var initial = new BoardEngine(definition).Snapshot();
+        initial.Moves = 0;
+        typeof(GameApp).GetField("board", PrivateInstance)?.SetValue(app,
+            new BoardEngine(definition, initial));
+        Invoke("RenderGame");
+    }
+
+    [MenuItem("Kiếm Khai/Preview/Account")]
+    public static void Account() => Invoke("ShowAccount");
+
     private static void Level(int id)
     {
-        var app = Object.FindFirstObjectByType<GameApp>();
-        if (!EditorApplication.isPlaying || app == null)
-        { Debug.LogWarning("Enter Play Mode to preview the UI."); return; }
+        var app = CurrentApp();
+        if (app == null) return;
         typeof(GameApp).GetField("board", PrivateInstance)?.SetValue(app,
             new BoardEngine(LevelCatalog.Get(id)));
         Invoke("RenderGame");
     }
 
-    private static void Invoke(string name)
+    private static GameApp CurrentApp()
     {
         var app = Object.FindFirstObjectByType<GameApp>();
         if (!EditorApplication.isPlaying || app == null)
-        { Debug.LogWarning("Enter Play Mode to preview the UI."); return; }
-        typeof(GameApp).GetMethod(name, PrivateInstance)?.Invoke(app, null);
+        { Debug.LogWarning("Enter Play Mode to preview the UI."); return null; }
+        return app;
+    }
+
+    private static void Invoke(string name, params object[] args)
+    {
+        var app = CurrentApp();
+        if (app == null) return;
+        typeof(GameApp).GetMethod(name, PrivateInstance)?.Invoke(app, args);
     }
 }

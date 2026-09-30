@@ -26,7 +26,6 @@ namespace KiemKhaiTienLo.Presentation
         {
             Element = new VisualElement { name = "puzzle-board" };
             Element.AddToClassList("board-frame");
-            Element.style.backgroundImage = Art("panel");
             grid = new VisualElement { name = "board-grid", pickingMode = PickingMode.Ignore };
             grid.AddToClassList("board-grid");
             Element.Add(grid);

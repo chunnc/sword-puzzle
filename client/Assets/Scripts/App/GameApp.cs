@@ -140,18 +140,19 @@ namespace KiemKhaiTienLo.App
 
         private void AddHud()
         {
-            var hud = new VisualElement(); hud.AddToClassList("hud");
+            var hud = ArtBox("hud_tray", "hud");
             var avatar = new VisualElement(); avatar.AddToClassList("avatar");
             avatar.Add(Image("avatar", "avatar-portrait"));
             avatar.Add(Image("avatar_frame", "avatar-frame"));
             hud.Add(avatar);
             foreach (string kind in new[] { "jade", "coin", "bolt" })
             {
-                var stat = Button("—", () => ShowNotice("Sắp ra mắt"), "panel", "stat");
+                var stat = Button("", () => ShowNotice("Sắp ra mắt"), "hud_chip", "stat");
                 stat.Add(Image("icon_" + kind, "stat-icon"));
+                stat.Add(Label("—", "stat-value"));
                 hud.Add(stat);
             }
-            var menu = Button("", ShowAccount, "panel", "menu-button");
+            var menu = Button("", ShowAccount, "stage_current", "menu-button");
             menu.Add(Image("icon_menu", "menu-icon"));
             hud.Add(menu);
             screen.Add(hud);
@@ -166,7 +167,7 @@ namespace KiemKhaiTienLo.App
 
         private void AddNav(string active)
         {
-            var nav = ArtBox("nav", "nav");
+            var nav = ArtBox("hud_tray", "nav");
             string[] labels = { "TIÊN LỘ", "NHÂN VẬT", "TÚI ĐỒ", "TU LUYỆN" };
             string[] icons = { "map", "person", "bag", "lotus" };
             for (int i = 0; i < labels.Length; i++)
@@ -190,7 +191,7 @@ namespace KiemKhaiTienLo.App
             AddHud();
             AddTitle("TIÊN LỘ");
             var map = new VisualElement(); map.AddToClassList("map-area");
-            var chapter = ArtBox("panel_light", "chapter-card");
+            var chapter = ArtBox("chapter_card", "chapter-card");
             chapter.Add(Label("CHƯƠNG THỬ NGHIỆM", "chapter-small"));
             chapter.Add(Label("VÂN HẢI\nTIÊN SƠN", "chapter-title"));
             map.Add(chapter);
@@ -222,17 +223,17 @@ namespace KiemKhaiTienLo.App
             AddHud();
             AddTitle(boss ? "YÊU VƯƠNG" : battle ? "YÊU THÚ" : "BÍ CẢNH");
             var stats = new VisualElement(); stats.AddToClassList("game-stats");
-            var stage = ArtBox("panel", "stat-card");
+            var stage = ArtBox("hud_chip", "stat-card");
             stage.Add(Label("TẦNG", "stat-caption"));
             stage.Add(Label("1-" + board.Level.Id, "stat-number"));
             stats.Add(stage);
-            var objective = ArtBox("panel", "objective-card");
+            var objective = ArtBox("hud_chip", "objective-card");
             objective.Add(Label(battle || boss ? "MÁU YÊU THÚ" : "MỤC TIÊU", "stat-caption"));
             var objectiveRow = new VisualElement(); objectiveRow.AddToClassList("objective-row");
             objectiveRow.Add(Image(battle || boss ? "icon_skill" : "icon_herb", "objective-icon"));
             objectiveRow.Add(Label(board.Remaining + (battle || boss ? " HP" : "/6"), "objective-number"));
             objective.Add(objectiveRow); stats.Add(objective);
-            var moves = ArtBox("panel", "moves-card");
+            var moves = ArtBox("hud_chip", "moves-card");
             moves.Add(Label("LƯỢT", "stat-caption"));
             moves.Add(Label(board.Moves.ToString(), "moves-number"));
             stats.Add(moves);
@@ -254,7 +255,7 @@ namespace KiemKhaiTienLo.App
             screen.Add(main);
             boardView.UpdateBoard(board);
 
-            var skillArea = ArtBox("panel", "skill-area");
+            var skillArea = ArtBox("hud_tray", "skill-area");
             bool ready = board.SwordQi >= 100;
             var skill = Button("", () =>
             {
@@ -290,9 +291,10 @@ namespace KiemKhaiTienLo.App
 
         private VisualElement ProgressBar(float portion, string fillArt, string className)
         {
-            var track = ArtBox("bar_track", className);
+            var track = new VisualElement(); track.AddToClassList(className);
             track.AddToClassList("bar-track");
-            var fill = ArtBox(fillArt, "bar-fill");
+            var fill = new VisualElement(); fill.AddToClassList("bar-fill");
+            fill.AddToClassList(fillArt == "bar_red" ? "fill-red" : "fill-blue");
             fill.style.width = Length.Percent(Mathf.Clamp01(portion) * 100f);
             track.Add(fill);
             return track;
@@ -302,7 +304,7 @@ namespace KiemKhaiTienLo.App
         {
             var overlay = new VisualElement(); overlay.AddToClassList("dialog-overlay");
             overlay.style.backgroundImage = Art("dim_overlay");
-            var dialog = ArtBox("panel", "dialog-card");
+            var dialog = ArtBox("dialog_panel", "dialog-card");
             dialog.Add(Label("HẾT LƯỢT", "title"));
             dialog.Add(Label("Hãy thử lại bí cảnh này", "body"));
             dialog.Add(Button("CHƠI LẠI", () => StartLevel(board.Level.Id, true), "button_primary", "wide-button"));
@@ -342,13 +344,14 @@ namespace KiemKhaiTienLo.App
             board = null;
             BeginScreen("win", "bg_game");
             AddHud(); AddTitle("VƯỢT ẢI");
-            var card = ArtBox("panel", "center-card");
+            var area = new VisualElement(); area.AddToClassList("center-area");
+            var card = ArtBox("dialog_panel", "center-card");
             card.Add(Label("VƯỢT ẢI THÀNH CÔNG", "subtitle"));
             card.Add(Label(new string('★', stars), "star-result"));
             card.Add(Label("Màn " + levelId + " đã hoàn thành", "body"));
             card.Add(Button("MÀN TIẾP THEO", () => StartLevel(levelId + 1), "button_primary", "wide-button"));
             card.Add(Button("VỀ TIÊN LỘ", RenderMap, "button_secondary", "wide-button"));
-            screen.Add(card);
+            area.Add(card); screen.Add(area);
             AddNav("map");
         }
 
@@ -358,18 +361,18 @@ namespace KiemKhaiTienLo.App
             BeginScreen("realm", "bg_realm");
             AddHud(); AddTitle("ĐỘT PHÁ");
             var labels = new VisualElement(); labels.AddToClassList("realm-labels");
-            var oldRealm = ArtBox("panel", "realm-step"); oldRealm.Add(Label("LUYỆN KHÍ", "realm-name"));
-            var newRealm = ArtBox("panel_light", "realm-step"); newRealm.Add(Label("TRÚC CƠ", "realm-name"));
+            var oldRealm = ArtBox("hud_chip", "realm-step"); oldRealm.Add(Label("LUYỆN KHÍ", "realm-name"));
+            var newRealm = ArtBox("hud_chip", "realm-step"); newRealm.Add(Label("TRÚC CƠ", "realm-name"));
             labels.Add(oldRealm); labels.Add(Label("»", "realm-arrow")); labels.Add(newRealm);
             screen.Add(labels);
             var heroSpace = new VisualElement(); heroSpace.AddToClassList("hero-space");
             heroSpace.Add(Image("cultivator", "hero-art"));
             screen.Add(heroSpace);
-            var card = ArtBox("panel", "realm-bottom");
+            var card = ArtBox("hud_tray", "realm-bottom");
             card.Add(ProgressBar(1f, "bar_blue", "qi-bar"));
             card.Add(Label("3/3 · Linh khí viên mãn", "gauge-value"));
-            card.Add(Button("ĐỘT PHÁ", RenderMap, "button_primary", "realm-action"));
             card.Add(Label("Một vùng đất mới đang chờ phía trước", "small"));
+            card.Add(Button("ĐỘT PHÁ", RenderMap, "button_primary", "realm-action"));
             screen.Add(card);
             AddNav("lotus");
         }
@@ -379,15 +382,13 @@ namespace KiemKhaiTienLo.App
             board = null;
             BeginScreen("account", "bg_map");
             AddHud(); AddTitle("TÀI KHOẢN");
-            var card = ArtBox("panel", "center-card");
+            var area = new VisualElement(); area.AddToClassList("center-area");
+            var card = ArtBox("dialog_panel", "center-card");
+            card.AddToClassList("account-card");
             card.Add(Label(api.Session == null || api.Session.isGuest ?
                 "Liên kết để đồng bộ tiến trình" : "Tài khoản đã liên kết", "subtitle"));
             var email = new TextField("Email"); email.AddToClassList("input");
-            email.AddToClassList("art-panel");
-            email.style.backgroundImage = Art("panel");
             var password = new TextField("Mật khẩu") { isPasswordField = true }; password.AddToClassList("input");
-            password.AddToClassList("art-panel");
-            password.style.backgroundImage = Art("panel");
             card.Add(email); card.Add(password);
             var status = Label("", "small"); card.Add(status);
             card.Add(Button("TẠO TÀI KHOẢN", () => StartCoroutine(api.Register(email.value, password.value,
@@ -396,7 +397,7 @@ namespace KiemKhaiTienLo.App
                 error => AccountResult(error, status))), "button_secondary", "wide-button"));
             card.Add(Button("QUAY LẠI", RenderMap, "button_secondary", "wide-button"));
             card.Add(Label("Bản thử nghiệm chưa có khôi phục mật khẩu.", "small"));
-            screen.Add(card);
+            area.Add(card); screen.Add(area);
             AddNav("map");
         }
 
@@ -410,7 +411,7 @@ namespace KiemKhaiTienLo.App
         {
             if (screen == null) return;
             toast?.RemoveFromHierarchy();
-            toast = ArtBox("panel", "toast");
+            toast = ArtBox("hud_chip", "toast");
             toast.Add(Label(message, "body"));
             screen.Add(toast);
             var shown = toast;
