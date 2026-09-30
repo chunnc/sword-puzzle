@@ -1,4 +1,4 @@
-/* 1080-unit portrait reference. Every text-bearing surface has an opaque fallback. */
+/* 1080-unit portrait reference. Art-backed elements use the panel fill in their PNG. */
 .screen {
     flex-grow: 1; width: 100%; height: 100%;
     padding-left: 24px; padding-right: 24px;
@@ -9,7 +9,7 @@
     height: 112px; flex-shrink: 0; flex-direction: row;
     align-items: center; justify-content: space-between;
     padding-left: 14px; padding-right: 14px;
-    background-color: rgb(8, 46, 49);
+    background-color: rgba(0, 0, 0, 0);
     -unity-background-scale-mode: stretch-to-fill;
 }
 .avatar { width: 94px; height: 94px; position: relative; flex-shrink: 0; }
@@ -27,7 +27,7 @@
     width: 183px; height: 70px; flex-shrink: 0;
     flex-direction: row; align-items: center; justify-content: center;
     padding-left: 22px; padding-right: 22px;
-    background-color: rgb(9, 49, 51); color: rgb(255, 247, 222);
+    background-color: rgba(0, 0, 0, 0); color: rgb(255, 247, 222);
     font-size: 28px; -unity-font-style: bold;
 }
 .stat-icon { width: 43px; height: 43px; margin-right: 8px; }
@@ -38,14 +38,14 @@
 .menu-button {
     width: 78px; height: 72px; flex-shrink: 0;
     align-items: center; justify-content: center;
-    background-color: rgb(8, 46, 49);
+    background-color: rgba(0, 0, 0, 0);
 }
 .menu-icon { width: 42px; height: 42px; }
 .title-banner {
     height: 105px; flex-shrink: 0;
     margin-left: 80px; margin-right: 80px;
     align-items: center; justify-content: center;
-    background-color: rgb(7, 49, 52);
+    background-color: rgba(0, 0, 0, 0);
 }
 .title {
     font-size: 47px; -unity-font-style: bold;
@@ -56,7 +56,7 @@
     height: 132px; flex-shrink: 0;
     flex-direction: row; align-items: center; justify-content: space-evenly;
     padding-left: 42px; padding-right: 42px;
-    background-color: rgb(8, 45, 47);
+    background-color: rgba(0, 0, 0, 0);
     -unity-background-scale-mode: stretch-to-fill;
 }
 .nav-item {
@@ -79,7 +79,7 @@
     width: 224px; height: 296px;
     align-items: center; justify-content: center;
     padding: 35px 23px 25px 23px;
-    background-color: rgb(9, 50, 52);
+    background-color: rgba(0, 0, 0, 0);
     -unity-background-scale-mode: stretch-to-fill;
 }
 .chapter-small {
@@ -109,7 +109,7 @@
     height: 108px; width: 430px; flex-shrink: 0;
     align-self: center; margin-bottom: 10px;
     color: rgb(62, 37, 16); font-size: 30px;
-    -unity-font-style: bold; background-color: rgb(229, 185, 97);
+    -unity-font-style: bold; background-color: rgba(0, 0, 0, 0);
 }
 
 .game-stats {
@@ -118,7 +118,7 @@
 }
 .stat-card, .objective-card, .moves-card {
     height: 106px; align-items: center; justify-content: center;
-    background-color: rgb(8, 49, 51);
+    background-color: rgba(0, 0, 0, 0);
     -unity-background-scale-mode: stretch-to-fill;
 }
 .stat-card, .moves-card { width: 190px; }
@@ -159,7 +159,7 @@
     height: 148px; flex-shrink: 0; flex-direction: row;
     align-items: center; margin-top: 4px;
     padding-left: 32px; padding-right: 42px;
-    background-color: rgb(8, 46, 49);
+    background-color: rgba(0, 0, 0, 0);
     -unity-background-scale-mode: stretch-to-fill;
 }
 .skill-button {
@@ -205,7 +205,7 @@
     width: 680px; min-height: 780px;
     align-items: center; justify-content: center;
     padding: 95px 70px 80px 70px;
-    background-color: rgb(8, 48, 49);
+    background-color: rgba(0, 0, 0, 0);
     -unity-background-scale-mode: stretch-to-fill;
 }
 .subtitle {
@@ -229,7 +229,7 @@
     width: 760px; min-height: 800px;
     align-items: center; justify-content: center;
     padding: 100px 80px 85px 80px;
-    background-color: rgb(8, 48, 49);
+    background-color: rgba(0, 0, 0, 0);
     -unity-background-scale-mode: stretch-to-fill;
 }
 .account-card { min-height: 990px; }
@@ -240,7 +240,7 @@
 .wide-button {
     width: 100%; height: 92px; margin-top: 14px;
     font-size: 28px; -unity-font-style: bold;
-    color: rgb(55, 38, 22); background-color: rgb(229, 185, 97);
+    color: rgb(55, 38, 22); background-color: rgba(0, 0, 0, 0);
 }
 .realm-labels {
     height: 132px; flex-shrink: 0;
@@ -250,7 +250,7 @@
 .realm-step {
     width: 295px; height: 106px;
     align-items: center; justify-content: center;
-    background-color: rgb(8, 49, 51);
+    background-color: rgba(0, 0, 0, 0);
     -unity-background-scale-mode: stretch-to-fill;
 }
 .realm-name { font-size: 32px; color: rgb(255, 235, 171); -unity-font-style: bold; }
@@ -264,7 +264,7 @@
     height: 280px; flex-shrink: 0;
     align-items: center; justify-content: center;
     padding: 26px 90px;
-    background-color: rgb(8, 46, 49);
+    background-color: rgba(0, 0, 0, 0);
     -unity-background-scale-mode: stretch-to-fill;
 }
 .realm-bottom .qi-bar { width: 72%; }
@@ -272,7 +272,7 @@
 .realm-action {
     width: 430px; height: 96px; margin-top: 4px;
     color: rgb(59, 39, 14); font-size: 36px;
-    -unity-font-style: bold; background-color: rgb(229, 185, 97);
+    -unity-font-style: bold; background-color: rgba(0, 0, 0, 0);
 }
 .input {
     width: 100%; min-height: 83px; margin-top: 13px;
@@ -290,7 +290,7 @@
 .toast {
     position: absolute; left: 25%; right: 25%; bottom: 165px;
     height: 88px; align-items: center; justify-content: center;
-    background-color: rgb(8, 49, 51);
+    background-color: rgba(0, 0, 0, 0);
 }
 
 /* The slice scale keeps both decorated ends smaller than the displayed height. */
@@ -299,4 +299,6 @@
     -unity-slice-top: 55; -unity-slice-bottom: 55;
     -unity-slice-scale: 0.28px;
 }
-.wide-button.art-button-secondary { color: rgb(249, 243, 218); background-color: rgb(10, 67, 68); }
+.wide-button.art-button-secondary {
+    color: rgb(249, 243, 218); background-color: rgba(0, 0, 0, 0);
+}
