@@ -1,20 +1,22 @@
 import React from 'react';
 import { Image } from 'expo-image';
-import { ImageSourcePropType, ImageStyle, Pressable, StyleProp, StyleSheet, Text, View } from 'react-native';
+import { ImageSourcePropType, ImageStyle, Pressable, StyleProp, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { ART } from '../assets';
 import { colors, type } from '../theme';
 import { ArtPanel } from './Art';
 
 export function TopHud({ onAccount }: { onAccount: () => void }) {
+  const { width } = useWindowDimensions();
+
   return (
-    <ArtPanel art="hudTray" style={styles.hud}>
+    <ArtPanel art="hudTray" style={[styles.hud, { width: width - 8 }]}>
       <View style={styles.avatar}>
         <Art image="avatar" style={StyleSheet.absoluteFill} />
         <Art image="avatarFrame" style={StyleSheet.absoluteFill} />
       </View>
-      <StatChip image="iconJade" value="—" />
-      <StatChip image="iconCoin" value="—" />
-      <StatChip image="iconBolt" value="—" />
+      <HudStat image="iconJade" value="—" />
+      <HudStat image="iconCoin" value="—" />
+      <HudStat image="iconBolt" value="—" />
       <Pressable accessibilityRole="button" accessibilityLabel="Tài khoản" onPress={onAccount} style={styles.menu}>
         <Art image="iconMenu" style={styles.menuImage} />
       </Pressable>
@@ -22,12 +24,12 @@ export function TopHud({ onAccount }: { onAccount: () => void }) {
   );
 }
 
-function StatChip({ image, value }: { image: keyof typeof ART; value: string }) {
+function HudStat({ image, value }: { image: keyof typeof ART; value: string }) {
   return (
-    <ArtPanel art="hudChip" style={styles.statChip}>
+    <View style={styles.statDisplay}>
       <Art image={image} style={styles.statIcon} />
       <Text style={styles.statValue}>{value}</Text>
-    </ArtPanel>
+    </View>
   );
 }
 
@@ -43,8 +45,10 @@ const tabs = [
 ] as const;
 
 export function BottomNav({ active, onSelect }: { active: string; onSelect: (id: string) => void }) {
+  const { width } = useWindowDimensions();
+
   return (
-    <ArtPanel art="nav" style={styles.nav}>
+    <ArtPanel art="nav" style={[styles.nav, { width: width - 8 }]}>
       {tabs.map((tab) => {
         const image = ART[tab.image];
         const selected = active === tab.id;
@@ -72,8 +76,8 @@ function ImageView({ source, selected }: { source: ImageSourcePropType; selected
 
 const styles = StyleSheet.create({
   hud: {
-    minHeight: 59,
-    width: '100%',
+    aspectRatio: 1600 / 195,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -81,14 +85,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   avatar: { width: 45, height: 45, position: 'relative', flexShrink: 0, marginRight: 4 },
-  statChip: { width: '19%', height: 37, flexDirection: 'row', justifyContent: 'center', gap: 3 },
+  statDisplay: { width: '19%', height: 37, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
   statIcon: { width: 22, height: 22 },
   statValue: { ...type.body, color: colors.ivory, fontSize: 14 },
   menu: { width: 39, height: 39, justifyContent: 'center', alignItems: 'center' },
   menuImage: { width: 34, height: 34 },
   nav: {
-    height: 70,
-    width: '100%',
+    aspectRatio: 1600 / 365,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
