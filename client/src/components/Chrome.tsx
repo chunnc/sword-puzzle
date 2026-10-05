@@ -14,9 +14,9 @@ export function TopHud({ onAccount }: { onAccount: () => void }) {
         <Art image="avatar" style={StyleSheet.absoluteFill} />
         <Art image="avatarFrame" style={StyleSheet.absoluteFill} />
       </View>
-      <HudStat image="iconJade" value="—" />
-      <HudStat image="iconCoin" value="—" />
-      <HudStat image="iconBolt" value="—" />
+      <HudStat image="iconJade" value="0" />
+      <HudStat image="iconCoin" value="0" />
+      <HudStat image="iconBolt" value="0" />
       <Pressable accessibilityRole="button" accessibilityLabel="Tài khoản" onPress={onAccount} style={styles.menu}>
         <Art image="iconMenu" style={styles.menuImage} />
       </Pressable>

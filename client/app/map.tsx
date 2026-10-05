@@ -4,10 +4,9 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { ART, Artwork } from '../src/assets';
 import { BottomNav, TopHud } from '../src/components/Chrome';
-import { ArtPanel, GameButton, ScreenFrame, TitleBanner } from '../src/components/Art';
+import { ArtPanel, ScreenFrame } from '../src/components/Art';
 import { Notice } from '../src/components/Notice';
 import { getHighestUnlocked, getLevelStars, useGameStore } from '../src/state/gameStore';
-import { completedCount } from '../src/game/save';
 import { colors, type } from '../src/theme';
 
 export default function MapScreen() {
@@ -17,13 +16,11 @@ export default function MapScreen() {
   const setNotice = useGameStore((state) => state.setNotice);
   const startLevel = useGameStore((state) => state.startLevel);
   const unlocked = getHighestUnlocked(save);
-  const completed = completedCount(save.levels);
   const totalStars = save.levels.reduce((sum, level) => sum + level.stars, 0);
 
   const openLevel = async (levelId: number) => {
     if (await startLevel(levelId)) router.push(`/game/${levelId}` as never);
   };
-  const continueGame = () => openLevel(save.active?.levelId ?? unlocked);
   const nav = (id: string) => {
     if (id !== 'map') {
       setNotice('Sắp ra mắt');
@@ -34,7 +31,6 @@ export default function MapScreen() {
   return (
     <ScreenFrame background="bgMap">
       <TopHud onAccount={() => router.push('/account')} />
-      <TitleBanner title="TIÊN LỘ" />
       <View style={styles.mapArea}>
         <ArtPanel art="chapterCard" style={styles.chapter}>
           <Text style={styles.chapterEyebrow}>CHƯƠNG THỬ NGHIỆM</Text>
@@ -63,11 +59,6 @@ export default function MapScreen() {
           );
         })}
       </View>
-      <GameButton
-        title={completed === 3 ? 'CHƠI LẠI BOSS' : 'TIẾP TỤC'}
-        onPress={() => void continueGame()}
-        style={styles.continue}
-      />
       <BottomNav active="map" onSelect={nav} />
       <Notice message={notice} onDismiss={() => setNotice('')} />
     </ScreenFrame>
@@ -94,5 +85,4 @@ const styles = StyleSheet.create({
   stageThree: { left: '50%', bottom: '67%' },
   stageNumber: { color: colors.ivory, fontSize: 26, fontWeight: '900', textShadowColor: '#102f2d', textShadowRadius: 5 },
   stageStars: { position: 'absolute', bottom: -3, color: colors.goldBright, fontSize: 10, letterSpacing: -1 },
-  continue: { width: '70%', alignSelf: 'center', marginTop: 3, marginBottom: 2, minHeight: 51 },
 });

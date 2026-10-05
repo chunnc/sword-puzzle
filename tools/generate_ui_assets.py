@@ -8,8 +8,7 @@ Run with: python3 tools/generate_ui_assets.py
 """
 
 from pathlib import Path
-from math import sin, pi
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageEnhance, ImageFont, ImageOps
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,21 +44,7 @@ def portrait_background(kind):
         for x in range(1080):
             p[x, y] = color
     crop = Image.alpha_composite(crop, tint)
-    if kind == "map":
-        # A deliberate winding route lets the three dynamic stage nodes sit on the art.
-        route = Image.new("RGBA", crop.size)
-        d = ImageDraw.Draw(route)
-        pts = []
-        for i in range(160):
-            t = i / 159
-            x = 515 + 195 * sin(t * 2.4 * pi + 0.1) * (1 - .25 * t)
-            y = 1590 - t * 1050
-            pts.append((round(x), round(y)))
-        d.line(pts, fill=(45, 42, 30, 110), width=59, joint="curve")
-        d.line(pts, fill=(242, 224, 171, 184), width=40, joint="curve")
-        d.line(pts, fill=(254, 241, 203, 90), width=21, joint="curve")
-        crop = Image.alpha_composite(crop, route.filter(ImageFilter.GaussianBlur(1)))
-    elif kind == "realm":
+    if kind == "realm":
         glow = Image.new("RGBA", crop.size)
         d = ImageDraw.Draw(glow)
         for radius in range(470, 170, -18):
