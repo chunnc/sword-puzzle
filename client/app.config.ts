@@ -26,6 +26,7 @@ const config: ExpoConfig = {
     [
       'expo-build-properties',
       {
+        ios: { enableSceneSupport: true },
         android: { minSdkVersion: 28 },
       },
     ],
