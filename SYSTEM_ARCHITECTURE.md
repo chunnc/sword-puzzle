@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-  C[Unity 2D iOS/Android<br/>Game Core + Local Save] -->|HTTPS /v1| A[Game API<br/>Firebase Functions v2]
+  C[Expo + React Native iOS/Android<br/>TypeScript Game Core + Local Save] -->|HTTPS /v1| A[Game API<br/>Firebase Functions v2]
   A --> F[Firebase Auth REST/Admin]
   A --> D[Firestore]
   A --> S[Cloud Storage<br/>nội dung tương lai]
@@ -12,20 +12,21 @@ flowchart LR
   M -->|SSV callback| A
 ```
 
-**Quy tắc sở hữu dữ liệu:** Unity xử lý từng nước đi và lưu tiến trình offline. Game API sở hữu phiên đăng nhập, đồng bộ, cấu hình và sổ quảng cáo. Unity không kết nối trực tiếp tới Firestore hoặc Storage; rules của hai dịch vụ từ chối mobile/web client. Admin SDK trên Functions truy cập bằng IAM.
+**Quy tắc sở hữu dữ liệu:** React Native xử lý từng nước đi và lưu tiến trình offline. Game API sở hữu phiên đăng nhập, đồng bộ, cấu hình và sổ quảng cáo. App không kết nối trực tiếp tới Firestore hoặc Storage; rules của hai dịch vụ từ chối mobile/web client. Admin SDK trên Functions truy cập bằng IAM.
 
 ## Client
 
 | Thành phần | Trách nhiệm |
 | --- | --- |
-| `BoardEngine`, `LevelCatalog` | Luật ghép, combo, Kiếm Trảm, kiếm khí, mục tiêu, boss; 3 màn thử nghiệm đóng gói |
-| `GameApp`, `BoardRenderer`, UI Toolkit | Bản đồ, màn chơi, tu vi, account; vẽ ô bằng sprite 2D, điều khiển vuốt |
-| `LocalSave` | Sao cao nhất, màn đang chơi, snapshot bàn cờ; ghi cục bộ và dùng backup khi file lỗi |
-| `GameApi` | Gọi HTTPS, tự tạo tài khoản khách khi có mạng, làm mới token và đồng bộ định kỳ |
-| `SecureSessionStore` | Lưu phiên trong Keychain/Keystore trên thiết bị |
-| `RewardedAdsBridge` | AdMob Unity SDK, chỉ bật khi có mạng, server cho phép và SDK đã cấu hình |
+| TypeScript `BoardEngine`, `LevelCatalog` | Luật ghép, combo, Kiếm Trảm, kiếm khí, mục tiêu, boss; 3 màn thử nghiệm đóng gói |
+| Expo Router + React Native views | Bản đồ, màn chơi, tu vi, account; lưới 7×7 tĩnh bằng ảnh WebP và điều khiển vuốt/chọn ô |
+| AsyncStorage | Sao cao nhất, màn đang chơi, snapshot bàn cờ; JSON có version và bản dự phòng |
+| API client (`fetch`) | Gọi HTTPS, tự tạo tài khoản khách khi có mạng, làm mới token và đồng bộ định kỳ |
+| Expo SecureStore | Lưu phiên trong Keychain/Keystore trên thiết bị |
+| `react-native-google-mobile-ads` | Rewarded AdMob, chỉ bật khi có mạng, server cho phép và SDK đã cấu hình |
+| Skia + Reanimated + Worklets | Đã cài cho giai đoạn animation sau; phiên bản migration hiện chưa dùng để render hoặc animate gameplay |
 
-Lượt chơi không cần mạng. Asset cho 3 màn thử nghiệm nằm trong bản build. `GET /bootstrap` trả `levelCount: 3` và có thể thay đổi cờ quảng cáo; bản đóng gói vẫn là nguồn dự phòng offline.
+Lượt chơi không cần mạng. Asset cho 3 màn thử nghiệm nằm trong bản build. `GET /bootstrap` trả `levelCount: 3` và có thể thay đổi cờ quảng cáo; bản đóng gói vẫn là nguồn dự phòng offline. Expo Prebuild sinh native project từ cấu hình và plugin, còn client dùng development build để kiểm tra thư viện native.
 
 ## Game API
 
@@ -42,7 +43,7 @@ Lượt chơi không cần mạng. Asset cho 3 màn thử nghiệm nằm trong b
 | `GET /v1/ads/intents/{id}` | Có | Xem trạng thái intent của người chơi |
 | `GET /v1/ads/admob-ssv` | Chữ ký AdMob | Xác thực callback ECDSA, ad unit, vật phẩm và giao dịch duy nhất |
 
-API viết TypeScript/Node.js, chạy trong một HTTP Function ở `asia-southeast1`. Firebase Auth quản lý mật khẩu; API là cổng duy nhất mà Unity gọi. Mật khẩu không được ghi vào Firestore hay log. ID token được Admin SDK xác thực trước mọi truy cập hồ sơ.
+API viết TypeScript/Node.js, chạy trong một HTTP Function ở `asia-southeast1`. Firebase Auth quản lý mật khẩu; API là cổng duy nhất mà app gọi. Mật khẩu không được ghi vào Firestore hay log. ID token được Admin SDK xác thực trước mọi truy cập hồ sơ.
 
 ### Firestore
 

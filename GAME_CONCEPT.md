@@ -6,7 +6,7 @@ Kiến trúc và hướng dẫn chạy prototype: [SYSTEM_ARCHITECTURE.md](SYSTE
 
 ![Ảnh preview gồm bản đồ, màn khám phá, trận boss và đột phá tu vi](assets/ui-preview.png)
 
-> **Trạng thái triển khai hiện tại:** Để thử UI với ít lượt tạo ảnh, bản Unity chỉ đóng gói 3 màn liên tiếp (khám phá, chiến đấu, boss) và Đột Phá Trúc Cơ. Mốc 3 chương/60 màn dưới đây là định hướng nội dung về sau.
+> **Trạng thái triển khai hiện tại:** Client đã chuyển sang Expo/React Native và vẫn đóng gói 3 màn liên tiếp (khám phá, chiến đấu, boss) cùng Đột Phá Trúc Cơ. Bản migration giữ lưới tĩnh, chưa triển khai animation. Mốc 3 chương/60 màn dưới đây là định hướng nội dung về sau.
 
 ## 1. Tầm nhìn
 

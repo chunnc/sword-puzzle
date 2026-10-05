@@ -1,4 +1,9 @@
 node_modules/
+.expo/
+client/ios/
+client/android/
+client/dist/
+client/.env
 server/lib/
 server/coverage/
 server/.env

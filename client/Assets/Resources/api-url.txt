@@ -1,1 +1,0 @@
-https://asia-southeast1-YOUR_PROJECT.cloudfunctions.net/gameApi
