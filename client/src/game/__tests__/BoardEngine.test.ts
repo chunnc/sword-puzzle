@@ -13,6 +13,7 @@ describe('BoardEngine Unity parity', () => {
     const [x1, y1, x2, y2] = fixture.move;
     expect(board.trySwap(x1, y1, x2, y2)).toBe(true);
     expect(board.snapshot()).toEqual(fixture.afterMove);
+    expect(board.animation?.finalBoard).toEqual(fixture.afterMove);
   });
 
   it.each(fixtures.levels)('restores the complete Unity snapshot for level $levelId', (fixture) => {
@@ -26,6 +27,35 @@ describe('BoardEngine Unity parity', () => {
     const before = board.snapshot();
     expect(board.trySwap(0, 0, 2, 0)).toBe(false);
     expect(board.snapshot()).toEqual(before);
+    expect(board.animation).toBeNull();
+  });
+
+  it('captures clear and fall steps without changing the saved board result', () => {
+    const fixture = fixtures.levels[0];
+    const board = new BoardEngine(getLevel(fixture.levelId));
+    const [x1, y1, x2, y2] = fixture.move;
+
+    expect(board.trySwap(x1, y1, x2, y2)).toBe(true);
+    expect(board.animation?.swap).toEqual({ x1, y1, x2, y2 });
+    expect(board.animation?.steps.length).toBeGreaterThan(0);
+    expect(board.animation?.steps[0].cleared.length).toBeGreaterThanOrEqual(3);
+    expect(board.animation?.steps[0].falls.length).toBeGreaterThan(0);
+    expect(board.animation?.finalBoard).toEqual(fixture.afterMove);
+    expect(board.snapshot()).toEqual(fixture.afterMove);
+  });
+
+  it('records every automatic cascade in order', () => {
+    const animations = fixtures.levels.map((fixture) => {
+      const board = new BoardEngine(getLevel(fixture.levelId));
+      const [x1, y1, x2, y2] = fixture.move;
+      board.trySwap(x1, y1, x2, y2);
+      return board.animation;
+    });
+    const cascade = animations.find((animation) => animation && animation.steps.length > 1);
+
+    expect(cascade).toBeDefined();
+    expect(cascade?.steps.map((step) => step.chain)).toEqual(cascade?.steps.map((_, index) => index + 1));
+    expect(cascade?.steps.every((step) => step.after.tiles.length === 49)).toBe(true);
   });
 
   it('activates a ready sword qi row and spends the charge once', () => {
@@ -61,5 +91,15 @@ describe('BoardEngine Unity parity', () => {
       expect(board.useSwordQi(fixture.row)).toBe(true);
     }
     expect(board.snapshot()).toEqual(fixture.afterMove);
+    if (fixture.name === 'slash-activation') {
+      expect(board.animation?.steps.some((step) => step.effects.some((effect) => effect.kind === 'slash'))).toBe(true);
+    }
+    if (fixture.name === 'omni-activation') {
+      expect(board.animation?.steps.some((step) => step.effects.some((effect) => effect.kind === 'omni'))).toBe(true);
+    }
+    if (fixture.name === 'sword-qi') {
+      expect(board.animation?.kind).toBe('sword');
+      expect(board.animation?.steps[0].effects.some((effect) => effect.kind === 'sword' && effect.row === fixture.row)).toBe(true);
+    }
   });
 });

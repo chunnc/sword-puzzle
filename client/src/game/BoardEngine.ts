@@ -1,4 +1,7 @@
 import {
+  BoardActionAnimation,
+  BoardAnimationEffect,
+  BoardAnimationFall,
   BoardSnapshot,
   GoalKind,
   LevelDefinition,
@@ -24,6 +27,7 @@ export class BoardEngine {
   swordQi = 0;
   score = 0;
   extraMovesUsed = false;
+  private lastActionAnimation: BoardActionAnimation | null = null;
 
   constructor(level: LevelDefinition, restore?: BoardSnapshot | null) {
     this.level = level;
@@ -65,6 +69,10 @@ export class BoardEngine {
     return this.level;
   }
 
+  get animation(): BoardActionAnimation | null {
+    return this.lastActionAnimation;
+  }
+
   get(x: number, y: number): Tile {
     const tile = this.tiles[x][y];
     return { kind: tile.kind, special: tile.special, locked: tile.locked };
@@ -92,6 +100,7 @@ export class BoardEngine {
   }
 
   trySwap(x1: number, y1: number, x2: number, y2: number): boolean {
+    this.lastActionAnimation = null;
     if (
       this.won || this.lost || !this.inside(x1, y1) || !this.inside(x2, y2) ||
       Math.abs(x1 - x2) + Math.abs(y1 - y2) !== 1 ||
@@ -138,16 +147,35 @@ export class BoardEngine {
       matched.delete(specialY * BOARD_WIDTH + specialX);
       this.tiles[specialX][specialY] = { ...this.tiles[specialX][specialY], special: created };
     }
-    this.resolve(matched);
+    const animation: BoardActionAnimation = {
+      kind: 'swap',
+      swap: { x1, y1, x2, y2 },
+      swappedBoard: this.snapshot(),
+      steps: [],
+      finalBoard: this.snapshot(),
+    };
+    this.resolve(matched, animation);
+    animation.finalBoard = this.snapshot();
+    this.lastActionAnimation = animation;
     return true;
   }
 
   useSwordQi(row: number): boolean {
+    this.lastActionAnimation = null;
     if (this.won || this.lost || this.swordQi < 100 || row < 0 || row >= BOARD_HEIGHT) return false;
     this.swordQi = 0;
     const matched = new Set<number>();
     for (let x = 0; x < BOARD_WIDTH; x += 1) matched.add(row * BOARD_WIDTH + x);
-    this.resolve(matched);
+    const animation: BoardActionAnimation = {
+      kind: 'sword',
+      swordRow: row,
+      swappedBoard: this.snapshot(),
+      steps: [],
+      finalBoard: this.snapshot(),
+    };
+    this.resolve(matched, animation);
+    animation.finalBoard = this.snapshot();
+    this.lastActionAnimation = animation;
     return true;
   }
 
@@ -158,33 +186,47 @@ export class BoardEngine {
     return true;
   }
 
-  private resolve(initialMatches: Set<number>): void {
+  private resolve(initialMatches: Set<number>, animation: BoardActionAnimation): void {
     let matched = initialMatches;
     let chain = 0;
     while (matched.size > 0 && chain < 20) {
       chain += 1;
+      const before = this.snapshot();
+      const remainingBefore = this.remaining;
       const clear = new Set(matched);
+      const effects: BoardAnimationEffect[] = [];
       for (const index of matched) {
         const x = index % BOARD_WIDTH;
         const y = Math.floor(index / BOARD_WIDTH);
         const tile = this.tiles[x][y];
         if (tile.special === SpecialKind.Slash) {
-          for (let xx = 0; xx < BOARD_WIDTH; xx += 1) clear.add(y * BOARD_WIDTH + xx);
+          const cells = Array.from({ length: BOARD_WIDTH }, (_, xx) => y * BOARD_WIDTH + xx);
+          effects.push({ kind: 'slash', cells, row: y });
+          for (const cell of cells) clear.add(cell);
         } else if (tile.special === SpecialKind.Omni) {
-          for (let yy = 0; yy < BOARD_HEIGHT; yy += 1) clear.add(yy * BOARD_WIDTH + x);
+          const cells = Array.from({ length: BOARD_HEIGHT }, (_, yy) => yy * BOARD_WIDTH + x);
+          effects.push({ kind: 'omni', cells, column: x });
+          for (const cell of cells) clear.add(cell);
         }
+      }
+      if (animation.kind === 'sword' && chain === 1 && animation.swordRow !== undefined) {
+        effects.push({ kind: 'sword', cells: Array.from(clear), row: animation.swordRow });
       }
 
       let removed = 0;
+      const cleared = new Set<number>();
+      const changed = new Set<number>();
       for (const index of clear) {
         const x = index % BOARD_WIDTH;
         const y = Math.floor(index / BOARD_WIDTH);
         const tile = this.tiles[x][y];
         if (tile.kind === TileKind.Rock) continue;
         if (tile.locked) {
+          changed.add(index);
           this.tiles[x][y] = { ...tile, locked: false };
           if (this.level.goal === GoalKind.BreakSeals) this.remaining = Math.max(0, this.remaining - 1);
         } else {
+          cleared.add(index);
           removed += 1;
           if (tile.kind === TileKind.Sword) this.swordQi = Math.min(100, this.swordQi + 6);
           if (this.level.goal === GoalKind.Collect && tile.kind === this.level.collectKind) {
@@ -192,20 +234,31 @@ export class BoardEngine {
           }
           this.tiles[x][y] = this.clearedTile();
         }
-        this.weakenAdjacent(x, y);
+        this.weakenAdjacent(x, y, changed);
       }
 
       if (this.level.goal === GoalKind.Boss || this.level.goal === GoalKind.Battle) {
         this.remaining = Math.max(0, this.remaining - removed * (chain === 1 ? 6 : 8));
       }
       this.score += removed * 10 * chain;
-      this.refill();
+      const falls = this.refill();
       matched = this.findMatches();
+      const after = this.snapshot();
+      animation.steps.push({
+        before,
+        after,
+        cleared: [...cleared],
+        changed: [...changed],
+        effects,
+        falls,
+        damage: remainingBefore - this.remaining,
+        chain,
+      });
     }
     if (!this.won && !this.lost) this.ensureMove();
   }
 
-  private weakenAdjacent(x: number, y: number): void {
+  private weakenAdjacent(x: number, y: number, changed: Set<number>): void {
     const dx = [-1, 1, 0, 0];
     const dy = [0, 0, -1, 1];
     for (let index = 0; index < 4; index += 1) {
@@ -214,15 +267,18 @@ export class BoardEngine {
       if (!this.inside(nx, ny)) continue;
       const nearby = this.tiles[nx][ny];
       if (nearby.kind === TileKind.Rock && nearby.special !== CLEARED_SPECIAL) {
+        changed.add(ny * BOARD_WIDTH + nx);
         this.tiles[nx][ny] = { ...nearby, kind: this.nextKind() };
       } else if (nearby.locked) {
+        changed.add(ny * BOARD_WIDTH + nx);
         this.tiles[nx][ny] = { ...nearby, locked: false };
         if (this.level.goal === GoalKind.BreakSeals) this.remaining = Math.max(0, this.remaining - 1);
       }
     }
   }
 
-  private refill(): void {
+  private refill(): BoardAnimationFall[] {
+    const falls: BoardAnimationFall[] = [];
     for (let x = 0; x < BOARD_WIDTH; x += 1) {
       let start = 0;
       for (let boundary = 0; boundary <= BOARD_HEIGHT; boundary += 1) {
@@ -233,13 +289,18 @@ export class BoardEngine {
         let write = start;
         for (let y = start; y < boundary; y += 1) {
           if (this.isCleared(x, y)) continue;
+          if (write !== y) falls.push({ index: write * BOARD_WIDTH + x, fromY: y });
           this.tiles[x][write] = this.tiles[x][y];
           write += 1;
         }
-        for (let y = write; y < boundary; y += 1) this.tiles[x][y] = this.newTile(this.nextKind());
+        for (let y = write; y < boundary; y += 1) {
+          this.tiles[x][y] = this.newTile(this.nextKind());
+          falls.push({ index: y * BOARD_WIDTH + x, fromY: boundary });
+        }
         start = boundary + 1;
       }
     }
+    return falls;
   }
 
   private fillInitial(): void {

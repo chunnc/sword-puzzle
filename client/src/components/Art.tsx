@@ -1,6 +1,7 @@
-import React, { PropsWithChildren } from 'react';
+import React, { PropsWithChildren, useEffect, useState } from 'react';
 import { Image, ImageContentFit } from 'expo-image';
 import { ImageStyle, Pressable, StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Artwork, ART } from '../assets';
 import { colors } from '../theme';
@@ -90,13 +91,23 @@ export function TitleBanner({ title }: { title: string }) {
   );
 }
 
-export function ProgressBar({ portion, color }: { portion: number; color: 'blue' | 'red' }) {
+export function ProgressBar({ portion, color, animated = false, duration = 250 }: { portion: number; color: 'blue' | 'red'; animated?: boolean; duration?: number }) {
+  const [trackWidth, setTrackWidth] = useState(0);
+  const progress = useSharedValue(Math.max(0, Math.min(1, portion)));
+  useEffect(() => {
+    const next = Math.max(0, Math.min(1, portion));
+    progress.value = animated ? withTiming(next, { duration }) : next;
+  }, [animated, duration, portion, progress]);
+  const fillStyle = useAnimatedStyle(() => ({ width: progress.value * trackWidth }));
+
   return (
-    <ArtPanel art="barTrack" style={styles.progressTrack}>
-      <View style={[styles.progressFill, { width: `${Math.max(0, Math.min(1, portion)) * 100}%` }]}>
-        <Image source={ART[color === 'red' ? 'barRed' : 'barBlue']} contentFit="fill" style={StyleSheet.absoluteFill} />
-      </View>
-    </ArtPanel>
+    <View onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)} style={styles.progressTrackWrap}>
+      <ArtPanel art="barTrack" style={[StyleSheet.absoluteFill, styles.progressTrack]}>
+        <Animated.View style={[styles.progressFill, fillStyle]}>
+          <Image source={ART[color === 'red' ? 'barRed' : 'barBlue']} contentFit="fill" style={StyleSheet.absoluteFill} />
+        </Animated.View>
+      </ArtPanel>
+    </View>
   );
 }
 
@@ -125,6 +136,7 @@ const styles = StyleSheet.create({
   titleBanner: { height: 60, width: '100%', marginBottom: 5 },
   titleText: { color: colors.ivory, fontSize: 24, fontWeight: '900', letterSpacing: 1.4 },
   progressTrack: { height: 18, width: '100%', overflow: 'hidden', borderRadius: 12, alignItems: 'flex-start' },
+  progressTrackWrap: { width: '100%', height: 18, position: 'relative' },
   progressFill: { height: '100%', overflow: 'hidden' },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(239, 211, 144, 0.5)' },
 });

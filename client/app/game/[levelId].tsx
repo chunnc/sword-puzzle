@@ -1,15 +1,28 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleProp, StyleSheet, Text, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { ART } from '../../src/assets';
-import { Board, CellPosition } from '../../src/components/Board';
+import {
+  Board,
+  BoardVisualEffect,
+  BOARD_CHAIN_DELAY_MS,
+  BOARD_CLEAR_MS,
+  BOARD_FALL_MS,
+  BOARD_REJECT_MS,
+  BOARD_SWAP_MS,
+  CellPosition,
+  SWORD_SWEEP_MS,
+} from '../../src/components/Board';
 import { BottomNav, TopHud } from '../../src/components/Chrome';
 import { ArtPanel, GameButton, ProgressBar, ScreenFrame, TitleBanner } from '../../src/components/Art';
 import { getLevel } from '../../src/game/levels';
 import { GoalKind } from '../../src/game/types';
+import type { BoardSnapshot } from '../../src/game/types';
 import { hasRewardedAdUnit } from '../../src/services/ads';
 import { useGameStore } from '../../src/state/gameStore';
+import type { BoardActionResult } from '../../src/state/gameStore';
 import { colors, type } from '../../src/theme';
 import { Notice } from '../../src/components/Notice';
 
@@ -35,7 +48,23 @@ export default function GameScreen() {
   const [selected, setSelected] = useState<CellPosition | null>(null);
   const [swordTargeting, setSwordTargeting] = useState(false);
   const [boardSpaceHeight, setBoardSpaceHeight] = useState(0);
-  const board = save.active?.levelId === levelId ? save.active : null;
+  const persistedBoard = save.active?.levelId === levelId ? save.active : null;
+  const [board, setBoard] = useState<BoardSnapshot | null>(persistedBoard);
+  const [animationPlaying, setAnimationPlaying] = useState(false);
+  const [visualEffect, setVisualEffect] = useState<BoardVisualEffect | null>(null);
+  const [enemyImpact, setEnemyImpact] = useState(0);
+  const busyRef = useRef(false);
+  const aliveRef = useRef(true);
+  const effectIdRef = useRef(0);
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => { aliveRef.current = false; };
+  }, []);
+  useEffect(() => {
+    if (!busyRef.current && persistedBoard) setBoard(persistedBoard);
+  }, [persistedBoard]);
 
   if (!level || !board) {
     return (
@@ -57,10 +86,65 @@ export default function GameScreen() {
   const lost = board.moves <= 0 && board.remaining > 0;
   const canRequestAds = lost && !board.extraMovesUsed && online && adsEnabled && session !== null && hasRewardedAdUnit();
 
-  const processResult = (result: Awaited<ReturnType<typeof swap>>) => {
-    setSelected(null);
-    if (!result.changed) return;
-    if (!result.won) return;
+  const nextEffectId = () => ++effectIdRef.current;
+  const wait = (duration: number) => new Promise<void>((resolve) => setTimeout(resolve, duration));
+
+  const playAnimation = async (result: BoardActionResult) => {
+    const animation = result.animation;
+    if (!animation) {
+      const latest = useGameStore.getState().save.active;
+      if (aliveRef.current && latest?.levelId === levelId) setBoard(latest);
+      return;
+    }
+    if (reduceMotion) {
+      if (aliveRef.current) {
+        setBoard(animation.finalBoard);
+        setVisualEffect(null);
+        if (animation.steps.some((step) => step.damage > 0)) setEnemyImpact((value) => value + 1);
+      }
+      return;
+    }
+
+    if (animation.kind === 'swap' && animation.swap) {
+      setVisualEffect({ id: nextEffectId(), kind: 'swap', first: { x: animation.swap.x1, y: animation.swap.y1 }, second: { x: animation.swap.x2, y: animation.swap.y2 } });
+      await wait(BOARD_SWAP_MS);
+      if (!aliveRef.current) return;
+      setBoard(animation.swappedBoard);
+      setVisualEffect(null);
+    } else if (animation.kind === 'sword' && animation.swordRow !== undefined) {
+      setBoard(animation.swappedBoard);
+      setVisualEffect({ id: nextEffectId(), kind: 'sword', row: animation.swordRow });
+      await wait(SWORD_SWEEP_MS);
+      if (!aliveRef.current) return;
+      setVisualEffect(null);
+    }
+
+    for (let index = 0; index < animation.steps.length; index += 1) {
+      const step = animation.steps[index];
+      setBoard({
+        ...step.before,
+        remaining: step.after.remaining,
+        swordQi: step.after.swordQi,
+        score: step.after.score,
+      });
+      setVisualEffect({ id: nextEffectId(), kind: 'clear', cleared: step.cleared, changed: step.changed, effects: step.effects });
+      if (step.damage > 0) setEnemyImpact((value) => value + 1);
+      await wait(BOARD_CLEAR_MS);
+      if (!aliveRef.current) return;
+      setBoard(step.after);
+      setVisualEffect({ id: nextEffectId(), kind: 'fall', falls: step.falls });
+      await wait(BOARD_FALL_MS);
+      if (!aliveRef.current) return;
+      if (index < animation.steps.length - 1) await wait(BOARD_CHAIN_DELAY_MS);
+    }
+    if (aliveRef.current) {
+      setBoard(animation.finalBoard);
+      setVisualEffect(null);
+    }
+  };
+
+  const processResult = (result: BoardActionResult) => {
+    if (!result.changed || !result.won || !aliveRef.current) return;
     if (result.levelId === 3) router.replace('/realm');
     else router.replace({ pathname: '/win', params: { levelId: String(result.levelId), stars: String(result.stars) } });
   };
@@ -70,19 +154,61 @@ export default function GameScreen() {
       await castSword(y2);
       return;
     }
-    if (Math.abs(x1 - x2) + Math.abs(y1 - y2) !== 1) return;
-    processResult(await swap(x1, y1, x2, y2));
+    if (busyRef.current || Math.abs(x1 - x2) + Math.abs(y1 - y2) !== 1) return;
+    busyRef.current = true;
+    setAnimationPlaying(true);
+    setSelected(null);
+    try {
+      const result = await swap(x1, y1, x2, y2);
+      if (!aliveRef.current) return;
+      if (!result.changed) {
+        if (!reduceMotion) {
+          setVisualEffect({ id: nextEffectId(), kind: 'reject', first: { x: x1, y: y1 }, second: { x: x2, y: y2 } });
+          await wait(BOARD_REJECT_MS);
+        }
+        return;
+      }
+      await playAnimation(result);
+      processResult(result);
+    } catch {
+      if (aliveRef.current) setNotice('Không thể hoàn tất lượt chơi. Vui lòng thử lại.');
+    } finally {
+      busyRef.current = false;
+      if (aliveRef.current) {
+        setAnimationPlaying(false);
+        setVisualEffect(null);
+      }
+    }
   };
 
   const castSword = async (row: number) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setAnimationPlaying(true);
     setSwordTargeting(false);
     setSelected(null);
-    const result = await useSwordQi(row);
-    if (!result.changed) setNotice('Kiếm khí chưa sẵn sàng.');
-    processResult(result);
+    try {
+      const result = await useSwordQi(row);
+      if (!aliveRef.current) return;
+      if (!result.changed) {
+        setNotice('Kiếm khí chưa sẵn sàng.');
+        return;
+      }
+      await playAnimation(result);
+      processResult(result);
+    } catch {
+      if (aliveRef.current) setNotice('Không thể hoàn tất lượt chơi. Vui lòng thử lại.');
+    } finally {
+      busyRef.current = false;
+      if (aliveRef.current) {
+        setAnimationPlaying(false);
+        setVisualEffect(null);
+      }
+    }
   };
 
   const tapCell = (x: number, y: number) => {
+    if (busyRef.current) return;
     if (swordTargeting) {
       void castSword(y);
       return;
@@ -104,9 +230,13 @@ export default function GameScreen() {
   };
 
   const restart = async () => {
+    if (busyRef.current) return;
     setSwordTargeting(false);
     setSelected(null);
-    await startLevel(levelId, true);
+    if (await startLevel(levelId, true)) {
+      const latest = useGameStore.getState().save.active;
+      if (latest?.levelId === levelId) setBoard(latest);
+    }
   };
 
   const background = isBoss ? 'bgBoss' : 'bgGame';
@@ -122,8 +252,8 @@ export default function GameScreen() {
       <View style={styles.gameMain}>
         {isBattle ? (
           <View style={styles.enemyArea}>
-            <Image source={ART.beast} contentFit="contain" style={[styles.enemy, isBoss && styles.boss]} />
-            <ProgressBar portion={board.remaining / level.target} color="red" />
+            <AnimatedEnemy impactId={enemyImpact} reduceMotion={reduceMotion} isBoss={isBoss} />
+            <ProgressBar portion={board.remaining / level.target} color="red" animated={!reduceMotion} duration={BOARD_CLEAR_MS} />
           </View>
         ) : null}
         <View style={styles.boardSpace} onLayout={(event) => setBoardSpaceHeight(event.nativeEvent.layout.height)}>
@@ -132,6 +262,9 @@ export default function GameScreen() {
               snapshot={board}
               selected={selected}
               swordTargeting={swordTargeting}
+              locked={animationPlaying}
+              visualEffect={visualEffect}
+              reduceMotion={reduceMotion}
               onCellPress={tapCell}
               onSwipe={(x1, y1, x2, y2) => void performSwap(x1, y1, x2, y2)}
             />
@@ -142,8 +275,8 @@ export default function GameScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={board.swordQi >= 100 ? 'Kiếm Trảm sẵn sàng' : `Kiếm khí ${board.swordQi} trên 100`}
-          accessibilityState={{ disabled: board.swordQi < 100 || lost }}
-          disabled={board.swordQi < 100 || lost}
+          accessibilityState={{ disabled: board.swordQi < 100 || lost || animationPlaying }}
+          disabled={board.swordQi < 100 || lost || animationPlaying}
           onPress={() => { setSwordTargeting(true); setSelected(null); }}
           style={styles.skillButton}
         >
@@ -158,7 +291,7 @@ export default function GameScreen() {
       </ArtPanel>
       <BottomNav active="map" onSelect={nav} />
       <Notice message={notice} onDismiss={() => setNotice('')} />
-      {lost ? (
+      {lost && !animationPlaying ? (
         <View style={styles.dialogOverlay}>
           <ArtPanel art="dialogPanel" style={styles.dialogCard}>
             <Text style={styles.dialogTitle}>HẾT LƯỢT</Text>
@@ -178,6 +311,34 @@ export default function GameScreen() {
         </View>
       ) : null}
     </ScreenFrame>
+  );
+}
+
+function AnimatedEnemy({ impactId, reduceMotion, isBoss }: { impactId: number; reduceMotion: boolean; isBoss: boolean }) {
+  const shake = useSharedValue(0);
+  const flash = useSharedValue(0);
+  useEffect(() => {
+    if (impactId <= 0 || reduceMotion) return;
+    shake.value = withSequence(
+      withTiming(-7, { duration: 45 }),
+      withTiming(7, { duration: 55 }),
+      withTiming(-5, { duration: 50 }),
+      withTiming(4, { duration: 45 }),
+      withTiming(0, { duration: 65 }),
+    );
+    flash.value = withSequence(
+      withTiming(0.78, { duration: 55 }),
+      withTiming(0, { duration: 220 }),
+    );
+  }, [flash, impactId, reduceMotion, shake]);
+  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
+  const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
+
+  return (
+    <Animated.View style={[styles.enemy, isBoss && styles.boss, shakeStyle]}>
+      <Image source={ART.beast} contentFit="contain" style={StyleSheet.absoluteFill} />
+      <Animated.View pointerEvents="none" style={[styles.enemyFlash, flashStyle]} />
+    </Animated.View>
   );
 }
 
@@ -216,8 +377,9 @@ const styles = StyleSheet.create({
   statValue: { ...type.number, color: colors.ivory, fontSize: 21 },
   gameMain: { flex: 1, minHeight: 0, alignItems: 'center' },
   enemyArea: { width: '100%', height: 92, alignItems: 'center', justifyContent: 'flex-end', gap: 1 },
-  enemy: { width: 156, height: 74 },
+  enemy: { width: 156, height: 74, position: 'relative' },
   boss: { width: 180, height: 88 },
+  enemyFlash: { ...StyleSheet.absoluteFill, backgroundColor: '#ffe79a', borderRadius: 50 },
   boardSpace: { flex: 1, minHeight: 0, width: '100%', alignItems: 'center', justifyContent: 'center' },
   skillArea: { height: 64, flexShrink: 0, marginTop: 3, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 },
   skillButton: { width: 49, height: 49, justifyContent: 'center', alignItems: 'center', marginRight: 10 },

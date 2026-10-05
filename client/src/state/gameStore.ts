@@ -3,6 +3,7 @@ import { BoardEngine } from '../game/BoardEngine';
 import { getLevel, LEVEL_COUNT } from '../game/levels';
 import { completedCount, emptySave, loadSave, mergeStars, persistSave, starsForLevel } from '../game/save';
 import { BoardSnapshot, LevelStar, SaveData } from '../game/types';
+import type { BoardActionAnimation } from '../game/types';
 import {
   checkAdIntent,
   createAdIntent,
@@ -23,6 +24,7 @@ export interface BoardActionResult {
   lost: boolean;
   stars: number;
   levelId: number;
+  animation: BoardActionAnimation | null;
 }
 
 interface GameState {
@@ -70,7 +72,7 @@ async function persistNextSave(next: SaveData): Promise<void> {
 }
 
 function emptyResult(levelId = 0): BoardActionResult {
-  return { changed: false, won: false, lost: false, stars: 0, levelId };
+  return { changed: false, won: false, lost: false, stars: 0, levelId, animation: null };
 }
 
 export function apiErrorMessage(error: unknown): string {
@@ -95,6 +97,7 @@ export function apiErrorMessage(error: unknown): string {
 
 async function recordBoardResult(engine: BoardEngine, previous: SaveData): Promise<BoardActionResult> {
   const levelId = engine.levelDefinition.id;
+  const animation = engine.animation;
   if (engine.won) {
     const stars = engine.moves >= 6 ? 3 : engine.moves >= 2 ? 2 : 1;
     const oldStars = starsForLevel(previous.levels, levelId);
@@ -105,10 +108,10 @@ async function recordBoardResult(engine: BoardEngine, previous: SaveData): Promi
         : previous.levels.map((level) => level.levelId === levelId ? { ...level, stars } : level);
     await persistNextSave({ ...previous, levels, active: null });
     void useGameStore.getState().syncProgress();
-    return { changed: true, won: true, lost: false, stars: Math.max(stars, oldStars), levelId };
+    return { changed: true, won: true, lost: false, stars: Math.max(stars, oldStars), levelId, animation };
   }
   await persistNextSave({ ...previous, active: engine.snapshot() });
-  return { changed: true, won: false, lost: engine.lost, stars: 0, levelId };
+  return { changed: true, won: false, lost: engine.lost, stars: 0, levelId, animation };
 }
 
 export const useGameStore = create<GameState>((set, get) => ({

@@ -38,6 +38,40 @@ export interface BoardSnapshot {
   tiles: Tile[];
 }
 
+export type BoardAnimationEffectKind = 'slash' | 'omni' | 'sword';
+
+export interface BoardAnimationEffect {
+  kind: BoardAnimationEffectKind;
+  cells: number[];
+  row?: number;
+  column?: number;
+}
+
+export interface BoardAnimationFall {
+  index: number;
+  fromY: number;
+}
+
+export interface BoardResolutionStep {
+  before: BoardSnapshot;
+  after: BoardSnapshot;
+  cleared: number[];
+  changed: number[];
+  effects: BoardAnimationEffect[];
+  falls: BoardAnimationFall[];
+  damage: number;
+  chain: number;
+}
+
+export interface BoardActionAnimation {
+  kind: 'swap' | 'sword';
+  swap?: { x1: number; y1: number; x2: number; y2: number };
+  swordRow?: number;
+  swappedBoard: BoardSnapshot;
+  steps: BoardResolutionStep[];
+  finalBoard: BoardSnapshot;
+}
+
 export interface LevelDefinition {
   id: number;
   moves: number;
