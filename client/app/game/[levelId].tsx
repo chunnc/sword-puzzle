@@ -320,15 +320,15 @@ function AnimatedEnemy({ impactId, reduceMotion, isBoss }: { impactId: number; r
   useEffect(() => {
     if (impactId <= 0 || reduceMotion) return;
     shake.value = withSequence(
-      withTiming(-7, { duration: 45 }),
-      withTiming(7, { duration: 55 }),
-      withTiming(-5, { duration: 50 }),
-      withTiming(4, { duration: 45 }),
-      withTiming(0, { duration: 65 }),
+      withTiming(-7, { duration: 70 }),
+      withTiming(7, { duration: 80 }),
+      withTiming(-5, { duration: 80 }),
+      withTiming(4, { duration: 70 }),
+      withTiming(0, { duration: 100 }),
     );
     flash.value = withSequence(
-      withTiming(0.78, { duration: 55 }),
-      withTiming(0, { duration: 220 }),
+      withTiming(0.78, { duration: 80 }),
+      withTiming(0, { duration: 320 }),
     );
   }, [flash, impactId, reduceMotion, shake]);
   const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));

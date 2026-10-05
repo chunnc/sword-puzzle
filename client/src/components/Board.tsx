@@ -22,12 +22,13 @@ export interface CellPosition {
   y: number;
 }
 
-export const BOARD_SWAP_MS = 180;
-export const BOARD_CLEAR_MS = 250;
-export const BOARD_FALL_MS = 300;
-export const BOARD_CHAIN_DELAY_MS = 100;
-export const SWORD_SWEEP_MS = 450;
-export const BOARD_REJECT_MS = 260;
+export const BOARD_SWAP_MS = 270;
+export const BOARD_CLEAR_MS = 380;
+export const BOARD_FALL_MS = 450;
+export const BOARD_CHAIN_DELAY_MS = 150;
+export const SWORD_SWEEP_MS = 680;
+export const BOARD_REJECT_MS = 390;
+const SELECTION_SPRING_DURATION_MS = 180; // Reanimated's perceptual spring duration plays for about 1.5× this value.
 
 export type BoardVisualEffect =
   | { id: number; kind: 'swap' | 'reject'; first: CellPosition; second: CellPosition }
@@ -218,14 +219,14 @@ function AnimatedCell({
         translateY.value = withTiming(dy, { duration: BOARD_SWAP_MS, easing: Easing.out(Easing.cubic) });
       } else {
         translateX.value = withSequence(
-          withTiming(dx * 0.4, { duration: 75 }),
-          withTiming(-dx * 0.18, { duration: 65 }),
-          withTiming(0, { duration: 120, easing: Easing.out(Easing.cubic) }),
+          withTiming(dx * 0.4, { duration: 110 }),
+          withTiming(-dx * 0.18, { duration: 100 }),
+          withTiming(0, { duration: 180, easing: Easing.out(Easing.cubic) }),
         );
         translateY.value = withSequence(
-          withTiming(dy * 0.4, { duration: 75 }),
-          withTiming(-dy * 0.18, { duration: 65 }),
-          withTiming(0, { duration: 120, easing: Easing.out(Easing.cubic) }),
+          withTiming(dy * 0.4, { duration: 110 }),
+          withTiming(-dy * 0.18, { duration: 100 }),
+          withTiming(0, { duration: 180, easing: Easing.out(Easing.cubic) }),
         );
       }
       return;
@@ -233,8 +234,8 @@ function AnimatedCell({
 
     if (effect.kind === 'clear' && effect.cleared.includes(index)) {
       scale.value = withSequence(
-        withTiming(1.15, { duration: 95, easing: Easing.out(Easing.cubic) }),
-        withTiming(0.08, { duration: 155, easing: Easing.in(Easing.cubic) }),
+        withTiming(1.15, { duration: 150, easing: Easing.out(Easing.cubic) }),
+        withTiming(0.08, { duration: 230, easing: Easing.in(Easing.cubic) }),
       );
       opacity.value = withTiming(0, { duration: BOARD_CLEAR_MS, easing: Easing.in(Easing.cubic) });
       return;
@@ -242,8 +243,8 @@ function AnimatedCell({
 
     if (effect.kind === 'clear' && effect.changed.includes(index)) {
       scale.value = withSequence(
-        withTiming(1.12, { duration: 100, easing: Easing.out(Easing.cubic) }),
-        withTiming(1, { duration: 150, easing: Easing.out(Easing.cubic) }),
+        withTiming(1.12, { duration: 150, easing: Easing.out(Easing.cubic) }),
+        withTiming(1, { duration: 230, easing: Easing.out(Easing.cubic) }),
       );
       return;
     }
@@ -264,7 +265,9 @@ function AnimatedCell({
       scale.value = 1;
       return;
     }
-    scale.value = selected ? withSpring(1.07, { damping: 13, stiffness: 240 }) : withSpring(1, { damping: 13, stiffness: 240 });
+    scale.value = selected
+      ? withSpring(1.07, { duration: SELECTION_SPRING_DURATION_MS, dampingRatio: 0.21 })
+      : withSpring(1, { duration: SELECTION_SPRING_DURATION_MS, dampingRatio: 0.21 });
   }, [reduceMotion, selected, scale]);
 
   const animatedStyle = useAnimatedStyle(() => ({
