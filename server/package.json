@@ -10,7 +10,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test test/*.test.cjs",
     "test:integration": "npm run build && node --test test/integration/integration.cjs",
-    "serve": "npm run build && cd .. && firebase emulators:start --only functions,firestore,auth,storage"
+    "serve": "npm run build && cd .. && firebase emulators:start --only functions,firestore,auth"
   },
   "dependencies": {
     "express": "^5.1.0",

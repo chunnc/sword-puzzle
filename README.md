@@ -24,10 +24,10 @@ Client không chứa Firebase Auth/Firestore SDK. Token chỉ được dùng là
 
 ## Chạy backend
 
-1. Tạo Firebase project ở vùng Singapore (`asia-southeast1`). Bật Authentication **Anonymous** và **Email/Password**, tạo Firestore và Cloud Storage. Chọn project bằng `firebase use --add` tại thư mục gốc.
+1. Project Firebase mặc định của repo là `sword-puzzle` trong `.firebaserc`. Bật Authentication **Anonymous** và **Email/Password**, rồi tạo Firestore. Bản server hiện tại chưa cần Cloud Storage.
 2. `cd server && npm install`. Tạo `server/.env` từ `server/.env.example` và điền Firebase Web API key cùng hai `ad_unit` dạng số mà AdMob gửi trong SSV callback.
 3. `npm run api:test` ở thư mục gốc chạy unit test và biên dịch. `npm run api:serve` chạy Firebase Emulator Suite; cần JDK trong `PATH`. Dùng project `demo-...` cho thử nghiệm cục bộ. HTTP Function trong emulator có URL dạng `http://127.0.0.1:5001/PROJECT_ID/asia-southeast1/gameApi`.
-4. Khi cấu hình sản phẩm thật, chạy `npm run api:deploy` từ thư mục gốc. Cấu hình `gameConfig/current` trong Firestore với `rewardedAdsEnabled: false` lúc đầu; chỉ chuyển thành `true` sau khi AdMob SSV đã sẵn sàng. Có thể đặt `minClientVersion`.
+4. Khi cấu hình sản phẩm thật, chạy `npm run api:deploy` từ thư mục gốc để deploy Functions và Firestore rules. Cấu hình `gameConfig/current` trong Firestore với `rewardedAdsEnabled: false` lúc đầu; chỉ chuyển thành `true` sau khi AdMob SSV đã sẵn sàng. Có thể đặt `minClientVersion`.
 
 API gọi Firebase Auth REST qua backend. Khi chạy Emulator Suite, API tự dùng Auth Emulator qua `FIREBASE_AUTH_EMULATOR_HOST`; Admin SDK cũng dùng emulator cho Auth và Firestore. Client vẫn chỉ gọi Game API.
 
