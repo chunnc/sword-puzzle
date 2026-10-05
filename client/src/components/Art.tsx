@@ -6,8 +6,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Artwork, ART } from '../assets';
 import { colors } from '../theme';
 
-export const SCREEN_HORIZONTAL_PADDING = 12;
-
 export function ScreenFrame({
   background,
   children,
@@ -119,7 +117,7 @@ export function BackdropDivider() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.ink },
-  safeContent: { flex: 1, paddingHorizontal: SCREEN_HORIZONTAL_PADDING },
+  safeContent: { flex: 1, paddingHorizontal: 12 },
   artPanel: { justifyContent: 'center', alignItems: 'center', overflow: 'visible' },
   button: {
     minHeight: 48,

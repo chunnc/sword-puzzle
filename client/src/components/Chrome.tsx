@@ -1,46 +1,33 @@
 import React from 'react';
 import { Image } from 'expo-image';
-import { ImageSourcePropType, ImageStyle, Pressable, StyleProp, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ImageSourcePropType, ImageStyle, Pressable, StyleProp, StyleSheet, Text, View } from 'react-native';
 import { ART } from '../assets';
 import { colors, type } from '../theme';
-import { ArtPanel, SCREEN_HORIZONTAL_PADDING } from './Art';
+import { ArtPanel } from './Art';
 
 export function TopHud({ onAccount }: { onAccount: () => void }) {
-  const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
-  const contentHeight = 71;
-  const horizontalBleed = screenWidth * 0.02 + SCREEN_HORIZONTAL_PADDING;
-
   return (
-    <View style={[styles.hud, { height: insets.top + contentHeight, marginTop: -insets.top }]}>
-      <Image
-        source={ART.hudTray}
-        contentFit="fill"
-        style={[styles.hudBackground, { left: -horizontalBleed, right: -horizontalBleed }]}
-      />
-      <View style={[styles.hudContent, { height: contentHeight }]}>
-        <View style={styles.avatar}>
-          <Art image="avatar" style={StyleSheet.absoluteFill} />
-          <Art image="avatarFrame" style={StyleSheet.absoluteFill} />
-        </View>
-        <StatItem image="iconJade" value="—" />
-        <StatItem image="iconCoin" value="—" />
-        <StatItem image="iconBolt" value="—" />
-        <Pressable accessibilityRole="button" accessibilityLabel="Tài khoản" onPress={onAccount} style={styles.menu}>
-          <Art image="iconMenu" style={styles.menuImage} />
-        </Pressable>
+    <ArtPanel art="hudTray" style={styles.hud}>
+      <View style={styles.avatar}>
+        <Art image="avatar" style={StyleSheet.absoluteFill} />
+        <Art image="avatarFrame" style={StyleSheet.absoluteFill} />
       </View>
-    </View>
+      <StatChip image="iconJade" value="—" />
+      <StatChip image="iconCoin" value="—" />
+      <StatChip image="iconBolt" value="—" />
+      <Pressable accessibilityRole="button" accessibilityLabel="Tài khoản" onPress={onAccount} style={styles.menu}>
+        <Art image="iconMenu" style={styles.menuImage} />
+      </Pressable>
+    </ArtPanel>
   );
 }
 
-function StatItem({ image, value }: { image: keyof typeof ART; value: string }) {
+function StatChip({ image, value }: { image: keyof typeof ART; value: string }) {
   return (
-    <View style={styles.statItem}>
+    <ArtPanel art="hudChip" style={styles.statChip}>
       <Art image={image} style={styles.statIcon} />
       <Text style={styles.statValue}>{value}</Text>
-    </View>
+    </ArtPanel>
   );
 }
 
@@ -85,27 +72,16 @@ function ImageView({ source, selected }: { source: ImageSourcePropType; selected
 
 const styles = StyleSheet.create({
   hud: {
+    minHeight: 59,
     width: '100%',
-    position: 'relative',
-    marginBottom: 8,
-  },
-  hudBackground: {
-    position: 'absolute',
-    height: '102%',
-    top: '-2%',
-  },
-  hudContent: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 9,
+    marginBottom: 8,
   },
   avatar: { width: 45, height: 45, position: 'relative', flexShrink: 0, marginRight: 4 },
-  statItem: { width: '19%', height: 37, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
+  statChip: { width: '19%', height: 37, flexDirection: 'row', justifyContent: 'center', gap: 3 },
   statIcon: { width: 22, height: 22 },
   statValue: { ...type.body, color: colors.ivory, fontSize: 14 },
   menu: { width: 39, height: 39, justifyContent: 'center', alignItems: 'center' },
