@@ -1,13 +1,16 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { ART, Artwork } from '../src/assets';
 import { BottomNav, TopHud } from '../src/components/Chrome';
 import { ArtPanel, ScreenFrame } from '../src/components/Art';
 import { Notice } from '../src/components/Notice';
+import { LEVEL_COUNT } from '../src/game/levels';
 import { getHighestUnlocked, getLevelStars, useGameStore } from '../src/state/gameStore';
 import { colors, type } from '../src/theme';
+
+const levelIds = Array.from({ length: LEVEL_COUNT }, (_, index) => index + 1);
 
 export default function MapScreen() {
   const router = useRouter();
@@ -32,32 +35,60 @@ export default function MapScreen() {
     <ScreenFrame background="bgMap">
       <TopHud onAccount={() => router.push('/account')} />
       <View style={styles.mapArea}>
+        <FlatList
+          data={levelIds}
+          inverted
+          keyExtractor={(levelId) => String(levelId)}
+          style={StyleSheet.absoluteFill}
+          contentContainerStyle={styles.levelListContent}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item: levelId }) => {
+            const stars = getLevelStars(save, levelId);
+            const locked = levelId > unlocked;
+            const current = !locked && stars === 0;
+            const art: Artwork = stars > 0 ? 'stageDone' : locked ? 'stageLocked' : 'stageCurrent';
+
+            return (
+              <View style={styles.levelItem}>
+                <View pointerEvents="none" style={styles.starArc}>
+                  {[0, 1, 2].map((starIndex) => (
+                    <Image
+                      key={starIndex}
+                      source={starIndex < stars ? ART.starBright : ART.starGray}
+                      contentFit="contain"
+                      style={[
+                        styles.starIcon,
+                        starIndex === 0 && styles.starLeft,
+                        starIndex === 1 && styles.starTop,
+                        starIndex === 2 && styles.starRight,
+                      ]}
+                    />
+                  ))}
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Màn ${levelId}${stars > 0 ? `, ${stars} sao` : current ? ', màn hiện tại' : ', đã khóa'}`}
+                  accessibilityState={{ disabled: locked }}
+                  disabled={locked}
+                  onPress={() => void openLevel(levelId)}
+                  style={styles.stage}
+                >
+                  <Image
+                    source={ART[art]}
+                    contentFit="contain"
+                    style={[StyleSheet.absoluteFill, locked && styles.lockedStageArt]}
+                  />
+                  <Text style={[styles.stageNumber, locked && styles.lockedStageNumber]}>{levelId}</Text>
+                </Pressable>
+              </View>
+            );
+          }}
+        />
         <ArtPanel art="chapterCard" style={styles.chapter}>
           <Text style={styles.chapterEyebrow}>CHƯƠNG THỬ NGHIỆM</Text>
           <Text style={styles.chapterName}>VÂN HẢI{ '\n' }TIÊN SƠN</Text>
           <Text style={styles.chapterStars}>{totalStars}/9 ★</Text>
         </ArtPanel>
-        {[1, 2, 3].map((levelId) => {
-          const stars = getLevelStars(save, levelId);
-          const current = stars === 0 && levelId === unlocked;
-          const art: Artwork = stars > 0 ? 'stageDone' : current ? 'stageCurrent' : 'stageLocked';
-          const position = levelId === 1 ? styles.stageOne : levelId === 2 ? styles.stageTwo : styles.stageThree;
-          return (
-            <Pressable
-              key={levelId}
-              accessibilityRole="button"
-              accessibilityLabel={`Màn ${levelId}${stars > 0 ? `, ${stars} sao` : current ? ', màn hiện tại' : ', đã khóa'}`}
-              accessibilityState={{ disabled: levelId > unlocked }}
-              disabled={levelId > unlocked}
-              onPress={() => void openLevel(levelId)}
-              style={[styles.stage, position]}
-            >
-              <Image source={ART[art]} contentFit="contain" style={StyleSheet.absoluteFill} />
-              <Text style={styles.stageNumber}>{levelId}</Text>
-              {stars > 0 ? <Text style={styles.stageStars}>{'★'.repeat(stars)}</Text> : null}
-            </Pressable>
-          );
-        })}
       </View>
       <BottomNav active="map" onSelect={nav} />
       <Notice message={notice} onDismiss={() => setNotice('')} />
@@ -67,6 +98,13 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
   mapArea: { flex: 1, minHeight: 0, position: 'relative' },
+  levelListContent: { flexGrow: 1, alignItems: 'center', paddingTop: 12, paddingBottom: 174 },
+  levelItem: { width: 100, height: 112, alignItems: 'center', marginVertical: 6 },
+  starArc: { width: 84, height: 28, position: 'relative' },
+  starIcon: { position: 'absolute', width: 24, height: 24 },
+  starLeft: { left: 0, bottom: 0, transform: [{ rotate: '-16deg' }] },
+  starTop: { left: 30, top: 0 },
+  starRight: { right: 0, bottom: 0, transform: [{ rotate: '16deg' }] },
   chapter: {
     position: 'absolute',
     top: 8,
@@ -79,10 +117,8 @@ const styles = StyleSheet.create({
   chapterEyebrow: { color: '#72512d', textAlign: 'center', fontSize: 9, fontWeight: '700' },
   chapterName: { color: '#392b1d', textAlign: 'center', fontSize: 15, fontWeight: '900', marginTop: 7 },
   chapterStars: { color: '#98702e', fontSize: 12, fontWeight: '800', marginTop: 7 },
-  stage: { position: 'absolute', width: 62, height: 74, justifyContent: 'center', alignItems: 'center' },
-  stageOne: { left: '43%', bottom: '7%' },
-  stageTwo: { left: '28%', bottom: '38%' },
-  stageThree: { left: '50%', bottom: '67%' },
+  stage: { width: 84, height: 84, justifyContent: 'center', alignItems: 'center' },
+  lockedStageArt: { tintColor: '#8f9699' },
   stageNumber: { color: colors.ivory, fontSize: 26, fontWeight: '900', textShadowColor: '#102f2d', textShadowRadius: 5 },
-  stageStars: { position: 'absolute', bottom: -3, color: colors.goldBright, fontSize: 10, letterSpacing: -1 },
+  lockedStageNumber: { color: '#c0c4c6' },
 });

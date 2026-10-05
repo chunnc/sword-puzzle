@@ -75,7 +75,7 @@ def build_runtime_previews():
             "stage-done", "stage-locked", "skill-idle", "skill-ready", "avatar-frame"]),
         "runtime-preview-icons.png": ("UI icons", [
             "icon-map", "icon-person", "icon-bag", "icon-lotus", "icon-menu", "icon-skill",
-            "icon-herb", "icon-bolt", "icon-coin", "icon-jade"]),
+            "icon-herb", "icon-bolt", "icon-coin", "icon-jade", "star-bright", "star-gray"]),
         "runtime-preview-tiles.png": ("Gameplay tiles", [
             "tile-sword", "tile-fire", "tile-lightning", "tile-stone", "tile-herb", "tile-rock"]),
         "runtime-preview-overlays.png": ("Tile overlays", [
@@ -136,6 +136,8 @@ def copy_runtime_art():
         "bar-track": 1600,
         "bar-blue": 1600,
         "bar-red": 1600,
+        "star-bright": 512,
+        "star-gray": 512,
     }
     for image in sorted((SOURCE / "runtime").glob("*.png")):
         name = "panel" if image.stem == "panel-base" else image.stem.replace("-", "_")

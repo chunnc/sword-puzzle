@@ -39,6 +39,8 @@ export const ART = {
   panelLight: require('../app-assets/ui/panel_light.webp') as ImageSourcePropType,
   skillIdle: require('../app-assets/ui/skill_idle.webp') as ImageSourcePropType,
   skillReady: require('../app-assets/ui/skill_ready.webp') as ImageSourcePropType,
+  starBright: require('../app-assets/ui/star_bright.webp') as ImageSourcePropType,
+  starGray: require('../app-assets/ui/star_gray.webp') as ImageSourcePropType,
   stageCurrent: require('../app-assets/ui/stage_current.webp') as ImageSourcePropType,
   stageDone: require('../app-assets/ui/stage_done.webp') as ImageSourcePropType,
   stageLocked: require('../app-assets/ui/stage_locked.webp') as ImageSourcePropType,
