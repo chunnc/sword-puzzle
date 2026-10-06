@@ -13,3 +13,23 @@ All four view backgrounds reuse the one world painting. The same beast appears i
 Các sprite trong `runtime/` không chứa chữ; app vẫn dựng nhãn và số động. Bốn
 ảnh `runtime-preview-*.png` là contact sheet để duyệt bề mặt, icon, ô ghép và lớp
 phủ. Script giữ tên asset hiện có để không đổi tham chiếu trong client.
+
+## Linh Châu
+
+`runtime/tile-spirit-orb.png` được tạo bằng công cụ ImageGen tích hợp. Bản dùng
+trong game là `client/app-assets/ui/tile_spirit_orb.webp`, 512×512, giữ alpha,
+WebP quality 90. Bàn cờ Skia dựng chữ `氣` riêng để rõ ở kích thước nhỏ.
+
+Prompt: Create one production-ready sprite for a xianxia match-three mobile game,
+square composition. A luminous spherical jade-green spirit orb with a mint-white
+inner energy core, subtle swirling qi, glossy highlights and a clear silhouette.
+Center it inside a dark teal rounded-square tile with polished gold and cyan
+metallic edging, matching a richly illustrated fantasy mobile game tile set.
+The frame has a narrow gold inset rim, glossy dark blue-teal glass interior,
+beveled cyan outer edge, restrained highlights from the upper left. The orb is
+unmistakably round, rich emerald-jade green rather than blue, with elegant
+swirling magical energy. Front-facing, balanced composition, readable at 40–50
+pixels. One tile only, genuinely transparent background outside the frame, no
+text, numbers, lettering, watermark or extra objects. Keep the whole frame
+inside the image with roughly 6% transparent margin on all sides; the tile
+occupies about 88% of the square canvas. No ground shadow or background scene.

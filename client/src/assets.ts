@@ -44,12 +44,13 @@ export const ART = {
   stageCurrent: require('../app-assets/ui/stage_current.webp') as ImageSourcePropType,
   stageDone: require('../app-assets/ui/stage_done.webp') as ImageSourcePropType,
   stageLocked: require('../app-assets/ui/stage_locked.webp') as ImageSourcePropType,
-  tileFire: require('../app-assets/ui/tile_fire.webp') as ImageSourcePropType,
+  tileFire: require('../app-assets/ui/tile_fire.webp') as number,
   tileHerb: require('../app-assets/ui/tile_herb.webp') as ImageSourcePropType,
-  tileLightning: require('../app-assets/ui/tile_lightning.webp') as ImageSourcePropType,
-  tileRock: require('../app-assets/ui/tile_rock.webp') as ImageSourcePropType,
+  tileLightning: require('../app-assets/ui/tile_lightning.webp') as number,
+  tileRock: require('../app-assets/ui/tile_rock.webp') as number,
+  tileSpiritOrb: require('../app-assets/ui/tile_spirit_orb.webp') as number,
   tileStone: require('../app-assets/ui/tile_stone.webp') as ImageSourcePropType,
-  tileSword: require('../app-assets/ui/tile_sword.webp') as ImageSourcePropType,
+  tileSword: require('../app-assets/ui/tile_sword.webp') as number,
 } as const;
 
 export type Artwork = keyof typeof ART;
@@ -59,7 +60,7 @@ export function tileArtwork(kind: TileKind): ImageSourcePropType {
     case TileKind.Sword: return ART.tileSword;
     case TileKind.Fire: return ART.tileFire;
     case TileKind.Lightning: return ART.tileLightning;
-    case TileKind.SpiritOrb: return ART.tileStone;
+    case TileKind.SpiritOrb: return ART.tileSpiritOrb;
     default: return ART.tileRock;
   }
 }

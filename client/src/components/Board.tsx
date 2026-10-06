@@ -1,141 +1,233 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
+import {
+  Canvas, FontWeight, Group, Image, Paint, Paragraph, RoundedRect, Skia, useImage,
+  type SkImage, type SkParagraph,
+} from '@shopify/react-native-skia';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-worklets';
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
-import { tileArtwork } from '../assets';
+import { runOnJS, runOnUI } from 'react-native-worklets';
+import {
+  cancelAnimation, useDerivedValue, useSharedValue, withSequence, withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
+import { ART } from '../assets';
 import { CONTENT } from '../game/domain';
-import { TileKind, type BoardAnimationEffect, type BoardAnimationFall, type BoardSnapshot, type CellPosition, type Tile } from '../game/types';
+import { TileKind, type BoardSnapshot, type CellPosition, type Tile } from '../game/types';
 import { colors } from '../theme';
+import {
+  BOARD_SIZE, BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS,
+  BOARD_REJECT_OUT_MS, BOARD_REJECT_BACK_MS, BOARD_FLASH_IN_MS, BOARD_PULSE_IN_MS,
+  DISPLAY_INDICES, buildCellVisuals, cellBounds, cellMotion, pointToCell,
+  type BoardVisualEffect, type CellVisual,
+} from './boardVisuals';
+
 export type { CellPosition } from '../game/types';
-export const BOARD_SWAP_MS = 210;
-export const BOARD_CLEAR_MS = 240;
-export const BOARD_FALL_MS = 280;
-export const BOARD_CHAIN_DELAY_MS = 70;
-export const BOARD_REJECT_MS = 260;
-export type BoardVisualEffect = {
-    id: number;
-    kind: 'swap' | 'reject';
-    first: CellPosition;
-    second: CellPosition;
-} | {
-    id: number;
-    kind: 'clear';
-    cleared: number[];
-    changed: number[];
-    effects: BoardAnimationEffect[];
-} | {
-    id: number;
-    kind: 'fall';
-    falls: BoardAnimationFall[];
-};
-const effectColor = (kind?: string) => kind === 'fire' ? '#ffb063' : kind === 'lightning' ? '#c7a5ff' : kind === 'spirit' ? '#8efbd4' : '#ffeab0';
-export function SpiritOrb({ size = 34 }: {
-    size?: number;
-}) {
-    return <View style={[styles.orb, { width: size, height: size, borderRadius: size / 2 }]}><View style={[styles.orbCore, { width: size * .64, height: size * .64, borderRadius: size }]}/><View style={styles.orbSpark}/><Text style={{ color: '#d6fff1', fontSize: size * .45, fontWeight: '900' }}>氣</Text></View>;
+export {
+  BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_REJECT_MS,
+  type BoardVisualEffect,
+} from './boardVisuals';
+
+interface Label {
+  paragraph: SkParagraph;
+  width: number;
+  height: number;
 }
+
+function makeLabel(text: string, fontSize: number, color: string, shadow = false): Label {
+  // Paragraph uses the native font manager's fallback for CJK and star glyphs.
+  const paragraph = Skia.ParagraphBuilder.Make({
+    maxLines: 1,
+    textStyle: {
+      fontSize, fontStyle: { weight: FontWeight.Black }, color: Skia.Color(color),
+      ...(shadow ? { shadows: [{ color: Skia.Color('#042f32'), offset: { x: 0, y: 1 }, blurRadius: 2 }] } : {}),
+    },
+  }).addText(text).build();
+  paragraph.layout(1000);
+  const width = Math.ceil(paragraph.getLongestLine());
+  paragraph.layout(Math.max(1, width));
+  return { paragraph, width: Math.max(1, width), height: paragraph.getHeight() };
+}
+
+function useBoardLabels(cellWidth: number, targetCount: number) {
+  return useMemo(() => ({
+    orb: makeLabel('氣', Math.max(16, cellWidth * .66) * .45, '#d6fff1', true),
+    seal: makeLabel('封', 27, '#eee0ff'),
+    charge4: makeLabel('✧4', 11, '#fff2c9'),
+    charge5: makeLabel('✦5', 11, '#fff2c9'),
+    targets: Array.from({ length: targetCount }, (_, i) => makeLabel(String(i + 1), 13, '#fff8dd')),
+  }), [cellWidth, targetCount]);
+}
+
+type BoardLabels = ReturnType<typeof useBoardLabels>;
+interface MotionValues {
+  phase: SharedValue<number>;
+  progress: SharedValue<number>;
+  pulse: SharedValue<number>;
+}
+
+// Retain this exported helper for callers outside the board; the board itself
+// draws every sprite into its one shared Canvas.
+export function SpiritOrb({ size = 34 }: { size?: number }) {
+  const image = useImage(ART.tileSpiritOrb);
+  const label = useMemo(() => makeLabel('氣', size * .45, '#d6fff1', true), [size]);
+  return <Canvas style={{ width: size, height: size }}>
+    <Image image={image} x={0} y={0} width={size} height={size} fit="contain" />
+    <Paragraph paragraph={label.paragraph} x={(size - label.width) / 2} y={(size - label.height) / 2} width={label.width} />
+  </Canvas>;
+}
+
 export function Board({ snapshot, selected, targets = [], preview = [], targetingHint, onCellPress, onSwipe, locked = false, visualEffect = null, reduceMotion = false }: {
-    snapshot: BoardSnapshot;
-    selected: CellPosition | null;
-    targets?: CellPosition[];
-    preview?: number[];
-    targetingHint?: string | null;
-    onCellPress: (x: number, y: number) => void;
-    onSwipe: (x1: number, y1: number, x2: number, y2: number) => void;
-    locked?: boolean;
-    visualEffect?: BoardVisualEffect | null;
-    reduceMotion?: boolean;
+  snapshot: BoardSnapshot;
+  selected: CellPosition | null;
+  targets?: CellPosition[];
+  preview?: number[];
+  targetingHint?: string | null;
+  onCellPress: (x: number, y: number) => void;
+  onSwipe: (x1: number, y1: number, x2: number, y2: number) => void;
+  locked?: boolean;
+  visualEffect?: BoardVisualEffect | null;
+  reduceMotion?: boolean;
 }) {
-    const [side, setSide] = useState(0);
-    const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onEnd(event => {
-        if (!side)
-            return;
-        const cell = side / 7;
-        const clamp = (n: number) => Math.max(0, Math.min(6, Math.floor(n / cell)));
-        runOnJS(onSwipe)(clamp(event.x - event.translationX), 6 - clamp(event.y - event.translationY), clamp(event.x), 6 - clamp(event.y));
-    }), [locked, targetingHint, side, onSwipe]);
-    return <View style={styles.frame}><GestureDetector gesture={gesture}><View onLayout={event => setSide(event.nativeEvent.layout.width)} style={styles.grid}>
-    {Array.from({ length: 7 }, (_, displayY) => <View key={displayY} style={styles.row}>{Array.from({ length: 7 }, (_, x) => {
-                const y = 6 - displayY, index = y * 7 + x, tile = snapshot.tiles[index];
-                return <Cell key={x} tile={tile} x={x} y={y} index={index} size={side / 7} selected={selected?.x === x && selected.y === y} targetNumber={targets.findIndex(p => p.x === x && p.y === y) + 1} preview={preview.includes(index)} effect={visualEffect} reduceMotion={reduceMotion} disabled={locked} onPress={() => onCellPress(x, y)}/>;
-            })}</View>)}
-  </View></GestureDetector>{targetingHint ? <Text style={styles.hint}>{targetingHint}</Text> : null}</View>;
+  const [side, setSide] = useState(0);
+  const sword = useImage(ART.tileSword), fire = useImage(ART.tileFire);
+  const lightning = useImage(ART.tileLightning), orb = useImage(ART.tileSpiritOrb), rock = useImage(ART.tileRock);
+  const images = [sword, fire, lightning, orb, rock];
+  const previousEffect = useRef<BoardVisualEffect | null>(null);
+  const visuals = useMemo(() => buildCellVisuals(visualEffect, previousEffect.current, reduceMotion), [visualEffect, reduceMotion]);
+  const id = visualEffect?.id ?? 0;
+  const phase = useSharedValue(id), progress = useSharedValue(0), pulse = useSharedValue(1), flash = useSharedValue(0);
+  const motion = useMemo(() => ({ phase, progress, pulse }), [phase, progress, pulse]);
+  const flashOpacity = useDerivedValue(() => phase.value === id ? flash.value : 0, [id]);
+  const labels = useBoardLabels(Math.max(0, side / BOARD_SIZE - 2), targets.length);
+  const drawOrder = useMemo(() => [...DISPLAY_INDICES].sort((a, b) => {
+    const moving = (index: number) => Number(visuals[index].falling || !!visuals[index].dx || !!visuals[index].dy);
+    return moving(a) - moving(b);
+  }), [visuals]);
+
+  useLayoutEffect(() => {
+    previousEffect.current = visualEffect;
+    // All cells share the phase clock. Reset and start it atomically on the UI
+    // thread; Canvas props guard the new phase's first frame while it is queued.
+    runOnUI((effectId: number, kind: string | undefined, motionOff: boolean) => {
+      cancelAnimation(progress);
+      cancelAnimation(pulse);
+      cancelAnimation(flash);
+      progress.value = 0;
+      pulse.value = 1;
+      flash.value = 0;
+      phase.value = effectId;
+      if (motionOff || !kind) return;
+      if (kind === 'reject') {
+        progress.value = withSequence(
+          withTiming(.38, { duration: BOARD_REJECT_OUT_MS }),
+          withTiming(0, { duration: BOARD_REJECT_BACK_MS }),
+        );
+      } else if (kind === 'swap' || kind === 'fall') {
+        progress.value = withTiming(1, { duration: kind === 'swap' ? BOARD_SWAP_MS : BOARD_FALL_MS });
+      } else if (kind === 'clear') {
+        progress.value = withTiming(1, { duration: BOARD_CLEAR_MS });
+        pulse.value = withSequence(
+          withTiming(1.12, { duration: BOARD_PULSE_IN_MS }),
+          withTiming(1, { duration: BOARD_CLEAR_MS - BOARD_PULSE_IN_MS }),
+        );
+        flash.value = withSequence(
+          withTiming(.85, { duration: BOARD_FLASH_IN_MS }),
+          withTiming(0, { duration: BOARD_CLEAR_MS - BOARD_FLASH_IN_MS }),
+        );
+      }
+    })(id, visualEffect?.kind, reduceMotion);
+    return () => {
+      runOnUI(() => {
+        cancelAnimation(progress);
+        cancelAnimation(pulse);
+        cancelAnimation(flash);
+      })();
+    };
+  }, [visualEffect, id, reduceMotion, phase, progress, pulse, flash]);
+
+  const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onEnd(event => {
+    const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side);
+    const second = pointToCell(event.x, event.y, side);
+    if (first && second) runOnJS(onSwipe)(first.x, first.y, second.x, second.y);
+  }), [locked, targetingHint, side, onSwipe]);
+
+  return <View style={styles.frame}>
+    <GestureDetector gesture={gesture}>
+      <View collapsable={false} onLayout={event => setSide(event.nativeEvent.layout.width)} style={styles.grid}>
+        {side > BOARD_SIZE * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
+          <Group clip={{ x: 0, y: 0, width: side, height: side }}>
+            {DISPLAY_INDICES.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side)} r={5} color="#0b4144" />)}
+            {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]} bounds={cellBounds(index, side)} pitch={side / BOARD_SIZE} image={images[snapshot.tiles[index].kind]} visual={visuals[index]} id={id} motion={motion} labels={labels} />)}
+            {DISPLAY_INDICES.map(index => {
+              const bounds = cellBounds(index, side), x = index % BOARD_SIZE, y = Math.floor(index / BOARD_SIZE);
+              const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
+              const highlighted = selected?.x === x && selected.y === y || targetNumber > 0 || preview.includes(index);
+              const targetLabel = targetNumber ? labels.targets[targetNumber - 1] : null;
+              return <Group key={`overlay-${index}`}>
+                {visuals[index].flashing ? <RoundedRect {...bounds} r={5} color={visuals[index].flashColor} opacity={flashOpacity} /> : null}
+                {preview.includes(index) ? <RoundedRect {...bounds} r={5} color="rgba(242,213,142,.16)" /> : null}
+                {highlighted ? <RoundedRect x={bounds.x + 1} y={bounds.y + 1} width={bounds.width - 2} height={bounds.height - 2} r={4} color={colors.goldBright} style="stroke" strokeWidth={2} /> : null}
+                {targetLabel ? <Group>
+                  <RoundedRect x={bounds.x + 2} y={bounds.y + 1} width={targetLabel.width + 6} height={targetLabel.height} r={6} color="#6a4c22" />
+                  <Paragraph paragraph={targetLabel.paragraph} x={bounds.x + 5} y={bounds.y + 1} width={targetLabel.width} />
+                </Group> : null}
+              </Group>;
+            })}
+          </Group>
+        </Canvas> : null}
+        {side > BOARD_SIZE * 2 ? DISPLAY_INDICES.map(index => {
+          const tile = snapshot.tiles[index], x = index % BOARD_SIZE, y = Math.floor(index / BOARD_SIZE);
+          const bounds = cellBounds(index, side);
+          const name = tile.kind === TileKind.Rock ? 'Đá chắn' : CONTENT.tiles[tile.kind].name;
+          return <Pressable key={index} accessibilityRole="button" accessibilityLabel={`${name}${tile.chargeTier ? `, cường hóa ${tile.chargeTier}` : ''}${tile.locked ? ', phong ấn' : ''}, hàng ${y + 1}, cột ${x + 1}`} accessibilityState={{ disabled: locked }} disabled={locked} onPress={() => onCellPress(x, y)} style={[styles.touchCell, { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }]} />;
+        }) : null}
+      </View>
+    </GestureDetector>
+    {targetingHint ? <Text style={styles.hint}>{targetingHint}</Text> : null}
+  </View>;
 }
-function Cell({ tile, x, y, index, size, selected, targetNumber, preview, effect, reduceMotion, disabled, onPress }: {
-    tile: Tile;
-    x: number;
-    y: number;
-    index: number;
-    size: number;
-    selected: boolean;
-    targetNumber: number;
-    preview: boolean;
-    effect: BoardVisualEffect | null;
-    reduceMotion: boolean;
-    disabled: boolean;
-    onPress: () => void;
+
+function TileVisual({ tile, bounds, pitch, image, visual, id, motion, labels }: {
+  tile: Tile;
+  bounds: ReturnType<typeof cellBounds>;
+  pitch: number;
+  image: SkImage | null;
+  visual: CellVisual;
+  id: number;
+  motion: MotionValues;
+  labels: BoardLabels;
 }) {
-    const opacity = useSharedValue(1), scale = useSharedValue(1), tx = useSharedValue(0), ty = useSharedValue(0), flash = useSharedValue(0);
-    const currentEffect = effect?.kind === 'clear' ? effect.effects.find(e => e.cells.includes(index) || e.source === index) : undefined;
-    useEffect(() => {
-        opacity.value = 1;
-        scale.value = 1;
-        tx.value = 0;
-        ty.value = 0;
-        flash.value = 0;
-        if (!effect || reduceMotion)
-            return;
-        if (effect.kind === 'swap' || effect.kind === 'reject') {
-            const first = effect.first.x === x && effect.first.y === y, second = effect.second.x === x && effect.second.y === y;
-            if (!first && !second)
-                return;
-            const from = first ? effect.first : effect.second, to = first ? effect.second : effect.first;
-            const dx = (to.x - from.x) * size, dy = (from.y - to.y) * size;
-            tx.value = effect.kind === 'reject' ? withSequence(withTiming(dx * .38, { duration: 110 }), withTiming(0, { duration: 150 })) : withTiming(dx, { duration: BOARD_SWAP_MS });
-            ty.value = effect.kind === 'reject' ? withSequence(withTiming(dy * .38, { duration: 110 }), withTiming(0, { duration: 150 })) : withTiming(dy, { duration: BOARD_SWAP_MS });
-        }
-        else if (effect.kind === 'clear') {
-            if (effect.cleared.includes(index)) {
-                opacity.value = withTiming(0, { duration: BOARD_CLEAR_MS });
-                scale.value = withTiming(.5, { duration: BOARD_CLEAR_MS });
-            }
-            else if (effect.changed.includes(index))
-                scale.value = withSequence(withTiming(1.12, { duration: 100 }), withTiming(1, { duration: 140 }));
-            if (effect.effects.some(e => e.cells.includes(index) || e.source === index))
-                flash.value = withSequence(withTiming(.85, { duration: 70 }), withTiming(0, { duration: BOARD_CLEAR_MS - 70 }));
-        }
-        else if (effect.kind === 'fall') {
-            const fall = effect.falls.find(f => f.index === index);
-            if (fall) {
-                ty.value = (y - fall.fromY) * size;
-                ty.value = withTiming(0, { duration: BOARD_FALL_MS });
-            }
-        }
-    }, [effect?.id, index, reduceMotion, size, tile.kind, tile.chargeTier]);
-    const motion = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }] }));
-    const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
-    const name = tile.kind === TileKind.Rock ? 'Đá chắn' : CONTENT.tiles[tile.kind].name;
-    return <Pressable accessibilityRole="button" accessibilityLabel={`${name}${tile.chargeTier ? `, cường hóa ${tile.chargeTier}` : ''}${tile.locked ? ', phong ấn' : ''}, hàng ${y + 1}, cột ${x + 1}`} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={styles.cell}>
-    <Animated.View style={[styles.tile, motion]}>
-      {tile.kind === TileKind.SpiritOrb ? <SpiritOrb size={Math.max(16, size * .66)}/> : <Image source={tileArtwork(tile.kind)} contentFit="contain" style={styles.image}/>}
-      {tile.chargeTier ? <View style={[styles.charge, tile.chargeTier === 5 && styles.chargeFive]}><Text style={styles.chargeText}>{tile.chargeTier === 5 ? '✦' : '✧'}{tile.chargeTier}</Text></View> : null}
-      {tile.locked ? <View style={styles.seal}><Text style={styles.sealText}>封</Text></View> : null}
-    </Animated.View>
-    <Animated.View pointerEvents="none" style={[styles.flash, { backgroundColor: effectColor(currentEffect?.kind) }, flashStyle]}/>
-    {selected || targetNumber || preview ? <View pointerEvents="none" style={[styles.selection, preview && styles.preview]}/> : null}
-    {targetNumber ? <Text pointerEvents="none" style={styles.targetNumber}>{targetNumber}</Text> : null}
-  </Pressable>;
+  const transform = useDerivedValue(() => {
+    const current = motion.phase.value === id;
+    const frame = cellMotion(visual, pitch, current ? motion.progress.value : 0, current ? motion.pulse.value : 1);
+    return [{ translateX: frame.tx }, { translateY: frame.ty }, { scale: frame.scale }];
+  }, [visual, pitch, id]);
+  const opacity = useDerivedValue(() => cellMotion(visual, pitch, motion.phase.value === id ? motion.progress.value : 0, 1).opacity, [visual, pitch, id]);
+  const charge = tile.chargeTier === 5 ? labels.charge5 : labels.charge4;
+  const chargeWidth = charge.width + 6, chargeHeight = charge.height + 2;
+  const chargeX = bounds.x + bounds.width - 1 - chargeWidth, chargeY = bounds.y + bounds.height - 1 - chargeHeight;
+  if (visual.hidden) return null;
+  // Paragraph paints its own colors, so fade the complete tile as a layer.
+  // Allocate that layer only during clears, not during swaps/falls or idle.
+  return <Group origin={{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }} transform={transform} layer={visual.clearing ? <Paint opacity={opacity} /> : undefined}>
+    <Image image={image} x={bounds.x + bounds.width * .06} y={bounds.y + bounds.height * .06} width={bounds.width * .88} height={bounds.height * .88} fit="contain" />
+    {tile.kind === TileKind.SpiritOrb ? <Paragraph paragraph={labels.orb.paragraph} x={bounds.x + (bounds.width - labels.orb.width) / 2} y={bounds.y + (bounds.height - labels.orb.height) / 2} width={labels.orb.width} /> : null}
+    {tile.chargeTier ? <Group>
+      <RoundedRect x={chargeX} y={chargeY} width={chargeWidth} height={chargeHeight} r={6} color={tile.chargeTier === 5 ? '#6a4c22' : '#163a40'} />
+      <RoundedRect x={chargeX + .5} y={chargeY + .5} width={chargeWidth - 1} height={chargeHeight - 1} r={5.5} style="stroke" strokeWidth={1} color={tile.chargeTier === 5 ? '#ffeba5' : '#e0cb80'} />
+      <Paragraph paragraph={charge.paragraph} x={chargeX + 3} y={chargeY + 1} width={charge.width} />
+    </Group> : null}
+    {tile.locked ? <Group>
+      <RoundedRect {...bounds} r={5} color="rgba(9,35,49,.45)" />
+      <RoundedRect x={bounds.x + 1} y={bounds.y + 1} width={bounds.width - 2} height={bounds.height - 2} r={4} style="stroke" strokeWidth={2} color="#ae97cd" />
+      <Paragraph paragraph={labels.seal.paragraph} x={bounds.x + (bounds.width - labels.seal.width) / 2} y={bounds.y + (bounds.height - labels.seal.height) / 2} width={labels.seal.width} />
+    </Group> : null}
+  </Group>;
 }
+
 const styles = StyleSheet.create({
-    frame: { flex: 1, borderWidth: 2, borderColor: colors.gold, borderRadius: 10, padding: 3, backgroundColor: '#042f32', overflow: 'hidden' },
-    grid: { flex: 1 }, row: { flex: 1, flexDirection: 'row' }, cell: { flex: 1, margin: 1, borderRadius: 5, backgroundColor: '#0b4144', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-    tile: { ...StyleSheet.absoluteFill, justifyContent: 'center', alignItems: 'center' }, image: { width: '88%', height: '88%' },
-    charge: { position: 'absolute', right: 1, bottom: 1, backgroundColor: '#163a40', borderWidth: 1, borderColor: '#e0cb80', borderRadius: 6, paddingHorizontal: 2 }, chargeFive: { backgroundColor: '#6a4c22', borderColor: '#ffeba5' }, chargeText: { color: '#fff2c9', fontSize: 11, fontWeight: '900' },
-    seal: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(9,35,49,.45)', borderWidth: 2, borderColor: '#ae97cd', alignItems: 'center', justifyContent: 'center' }, sealText: { color: '#eee0ff', fontSize: 27 },
-    selection: { ...StyleSheet.absoluteFill, borderWidth: 2, borderColor: colors.goldBright, borderRadius: 5 }, preview: { backgroundColor: 'rgba(242,213,142,.16)' }, flash: { ...StyleSheet.absoluteFill, borderRadius: 5 },
-    targetNumber: { position: 'absolute', top: 1, left: 2, color: '#fff8dd', fontSize: 13, fontWeight: '900', backgroundColor: '#6a4c22', borderRadius: 6, paddingHorizontal: 3 },
-    hint: { position: 'absolute', top: 5, alignSelf: 'center', color: colors.inkDeep, backgroundColor: colors.goldBright, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, fontSize: 10, fontWeight: '800' },
-    orb: { backgroundColor: '#167d75', borderWidth: 2, borderColor: '#b0ffe8', alignItems: 'center', justifyContent: 'center', shadowColor: '#5cffcd', shadowOpacity: .8, shadowRadius: 5, elevation: 3 }, orbCore: { position: 'absolute', backgroundColor: '#35b8a0', borderWidth: 1, borderColor: '#75f4d1' }, orbSpark: { position: 'absolute', top: '14%', left: '22%', width: 7, height: 4, borderRadius: 3, backgroundColor: '#ecfff8' },
+  frame: { flex: 1, borderWidth: 2, borderColor: colors.gold, borderRadius: 10, padding: 3, backgroundColor: '#042f32', overflow: 'hidden' },
+  grid: { flex: 1 },
+  touchCell: { position: 'absolute', borderRadius: 5 },
+  hint: { position: 'absolute', top: 5, alignSelf: 'center', color: colors.inkDeep, backgroundColor: colors.goldBright, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, fontSize: 10, fontWeight: '800' },
 });

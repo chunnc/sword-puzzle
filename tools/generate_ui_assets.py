@@ -77,7 +77,7 @@ def build_runtime_previews():
             "icon-map", "icon-person", "icon-bag", "icon-lotus", "icon-menu", "icon-skill",
             "icon-herb", "icon-bolt", "icon-coin", "icon-jade", "star-bright", "star-gray"]),
         "runtime-preview-tiles.png": ("Gameplay tiles", [
-            "tile-sword", "tile-fire", "tile-lightning", "tile-stone", "tile-herb", "tile-rock"]),
+            "tile-sword", "tile-fire", "tile-lightning", "tile-spirit-orb", "tile-stone", "tile-herb", "tile-rock"]),
         "runtime-preview-overlays.png": ("Tile overlays", [
             "overlay-seal", "overlay-slash", "overlay-omni"]),
     }
