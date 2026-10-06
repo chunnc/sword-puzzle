@@ -62,3 +62,41 @@ test('existing account merges guest stars idempotently', { skip: !base }, async 
   assert.equal(lower.status, 200);
   assert.deepEqual(lower.data.levels, [{ levelId: 1, stars: 3 }, { levelId: 2, stars: 2 }]);
 });
+
+test('v2 zero-star results, EXP upgrades, purchases and retries survive the real API', {skip:!base},async()=>{
+ const guest=await request('/v1/auth/guest','POST',{});assert.equal(guest.status,200);const token=guest.data.idToken;
+ const bootstrap=await request('/v2/bootstrap');assert.equal(bootstrap.data.contentVersion,2);assert.equal(bootstrap.data.levelCount,40);
+ const ops=[{id:'integration_zero_001',kind:'win',levelId:1,stars:0}];
+ let sync=await request('/v2/profile/sync','POST',{contentVersion:2,operations:ops},token);
+ assert.equal(sync.status,200);assert.equal(sync.data.profile.totalExp,30);assert.equal(sync.data.profile.coins,100);assert.deepEqual(sync.data.profile.levels,[{levelId:1,stars:0}]);
+ const retry=await request('/v2/profile/sync','POST',{contentVersion:2,operations:ops},token);assert.equal(retry.data.profile.coins,100);
+ sync=await request('/v2/profile/sync','POST',{contentVersion:2,operations:[{id:'integration_up_001',kind:'win',levelId:1,stars:3},{id:'integration_win002',kind:'win',levelId:2,stars:3},{id:'integration_win003',kind:'win',levelId:3,stars:3},{id:'integration_buy001',kind:'purchase',category:'skill',itemId:'ngu-kiem'}]},token);
+ assert.equal(sync.status,200);assert.equal(sync.data.profile.totalExp,300);assert.equal(sync.data.profile.coins,310);assert.ok(sync.data.profile.ownedSkills.includes('ngu-kiem'));
+ const double=await request('/v2/profile/sync','POST',{contentVersion:2,operations:[{id:'integration_buy002',kind:'purchase',category:'skill',itemId:'ngu-kiem'}]},token);assert.equal(double.data.profile.coins,310);assert.equal(double.data.rejected[0].reason,'ALREADY_OWNED');
+ const invalid=await request('/v2/profile/sync','POST',{contentVersion:2,operations:[{id:'integration_skip01',kind:'win',levelId:6,stars:3}]},token);assert.equal(invalid.data.rejected[0].reason,'LEVEL_LOCKED');
+});
+
+test('v2 competing device purchases cannot overdraw the wallet', {skip:!base},async()=>{
+ const guest=await request('/v1/auth/guest','POST',{}),token=guest.data.idToken;
+ const operations=Array.from({length:8},(_,i)=>({id:`compete_win_${i+1}`,kind:'win',levelId:i+1,stars:0}));
+ operations.push({id:'compete_buy_001',kind:'purchase',category:'sword',itemId:'trong-nhac'},{id:'compete_buy_002',kind:'purchase',category:'sword',itemId:'hoa-van'},{id:'compete_buy_003',kind:'purchase',category:'skill',itemId:'ngu-kiem'});
+ const initial=await request('/v2/profile/sync','POST',{contentVersion:2,operations},token);assert.equal(initial.data.profile.coins,250);
+ const [a,b]=await Promise.all([
+  request('/v2/profile/sync','POST',{contentVersion:2,operations:[{id:'compete_device_a',kind:'purchase',category:'skill',itemId:'hoa-lien'}]},token),
+  request('/v2/profile/sync','POST',{contentVersion:2,operations:[{id:'compete_device_b',kind:'purchase',category:'skill',itemId:'dan-loi'}]},token)
+ ]);
+ assert.equal(a.data.acknowledged.length+b.data.acknowledged.length,1);assert.equal(a.data.rejected.length+b.data.rejected.length,1);
+ const final=await request('/v2/profile','GET',undefined,token);assert.ok(final.data.coins>=0);assert.ok(final.data.coins<=50);
+});
+
+test('v2 guest merge moves the wallet once and merges EXP by highest stars', {skip:!base},async()=>{
+ const email=`v2merge-${Date.now()}@example.test`,password='a-long-test-password';
+ const account=await request('/v1/auth/register','POST',{email,password});
+ await request('/v2/profile/sync','POST',{contentVersion:2,operations:[{id:'merge_account_win',kind:'win',levelId:1,stars:2}]},account.data.idToken);
+ const guest=await request('/v1/auth/guest','POST',{});
+ await request('/v2/profile/sync','POST',{contentVersion:2,operations:[{id:'merge_guest_win01',kind:'win',levelId:1,stars:3}]},guest.data.idToken);
+ const merged=await request('/v1/auth/login','POST',{email,password},guest.data.idToken);assert.equal(merged.status,200);
+ const first=await request('/v2/profile','GET',undefined,merged.data.idToken);assert.equal(first.data.totalExp,100);assert.equal(first.data.coins,275);
+ await request('/v1/auth/login','POST',{email,password},guest.data.idToken);
+ const second=await request('/v2/profile','GET',undefined,merged.data.idToken);assert.equal(second.data.coins,275);
+});

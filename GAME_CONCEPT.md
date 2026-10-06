@@ -1,12 +1,12 @@
 # Kiếm Khai Tiên Lộ
 
-> **Tài liệu ý tưởng — bản preview 0.1.** Tên game và các thông số trong tài liệu là định hướng để làm nguyên mẫu, chưa phải cam kết cân bằng cuối cùng.
+> **Tài liệu thiết kế đang phát triển.** Các quy tắc được phân biệt với thông số và phương án còn đề xuất; chỉ số mẫu chưa phải cam kết cân bằng cuối cùng.
 
 Kiến trúc và hướng dẫn chạy prototype: [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) · [README.md](README.md).
 
 ![Ảnh preview gồm bản đồ, màn khám phá, trận boss và đột phá tu vi](assets/ui-preview.png)
 
-> **Trạng thái triển khai hiện tại:** Client đã chuyển sang Expo/React Native và vẫn đóng gói 3 màn liên tiếp (khám phá, chiến đấu, boss) cùng Đột Phá Trúc Cơ. Bản migration giữ lưới tĩnh, chưa triển khai animation. Mốc 3 chương/60 màn dưới đây là định hướng nội dung về sau.
+> **Bản nội dung 2:** Client Expo/React Native có 40 màn, bốn loại ô, ô cường hóa, tám kiếm thuật, tám bảo kiếm, cửa hàng offline và tu vi theo EXP. Catalog và domain trong content/ dùng chung cho client/server. Chỉ số hiện là cấu hình thử nghiệm.
 
 ## 1. Tầm nhìn
 
@@ -25,35 +25,48 @@ Kiến trúc và hướng dẫn chạy prototype: [SYSTEM_ARCHITECTURE.md](SYSTE
 
 1. **Dễ vào, có lựa chọn thú vị:** hiểu luật ghép trong vài giây; quyết định dùng kiếm khí, tạo ô đặc biệt và xử lý chướng ngại đúng lúc.
 2. **Tu tiên hiện diện trong gameplay:** mỗi mục tiêu, kỹ năng, màn boss và lần đột phá đều gắn với hành trình kiếm tu, thay vì chỉ đổi hình viên kẹo.
-3. **Tiến bộ mà không cày cấp:** vượt màn là nguồn tiến triển chính; tu vi mở cảnh quan và năng lực mới nhưng không thay kỹ năng giải đố của người chơi.
+3. **Sức mạnh chung, phong cách riêng:** vượt màn tăng tu vi và cảnh giới theo một lộ trình chung; kiếm thuật và bảo kiếm tạo cách chơi khác nhau cho từng người chơi.
 
 ## 2. Vòng chơi chính
 
-1. Chọn màn trên bản đồ Tiên Lộ; xem mục tiêu, số lượt và chướng ngại mới.
-2. Vuốt hai ô liền kề để ghép từ ba biểu tượng cùng loại; các ô được xóa, ô mới rơi xuống và có thể tạo chuỗi liên hoàn.
-3. Hoàn thành mục tiêu trong số lượt cho phép. Các lượt ghép tích **linh khí**; ghép kiếm tích thêm **kiếm khí** để kích hoạt kỹ năng chém.
-4. Nhận sao và phần thưởng, mở màn tiếp theo. Khi kết thúc chương, người chơi trải qua một lần **đột phá tu vi** và bước vào vùng đất mới.
+Chọn trang bị → chọn màn → đổi ô tạo ghép → tích kiếm khí và dùng skill → thắng màn → nhận EXP, linh thạch và mở màn tiếp.
 
-### Bộ ô cơ bản
+### Bốn ô cơ bản
 
-| Ô ghép | Hình dáng đọc nhanh | Vai trò trong bản đầu |
+Mọi màn dùng Kiếm, Hỏa, Lôi, Tụ Linh Châu. Bàn 7×7 bắt đầu không có match sẵn và có nước đi. Bốn loại có trọng số sinh bằng nhau. Thảo dược, băng và các ô theo màn sẽ thiết kế sau.
+
+| Ô | Sát thương cơ bản | Kiếm khí |
+| --- | ---: | ---: |
+| Kiếm | 10 | 1 |
+| Hỏa | 6 | 2 |
+| Lôi | 4 | 3 |
+| Tụ Linh Châu | 0 | 6 |
+
+Giá trị tính theo mỗi ô bị xóa. Tụ Linh Châu luôn gây 0 sát thương. Bảo kiếm áp dụng modifier; sát thương nhân hệ số tu vi rồi làm tròn xuống.
+
+### Ghép và ô cường hóa
+
+- Ghép 3 ô thường chỉ nhận chỉ số cơ bản.
+- Ghép 4 giữ một ô cấp 4; ghép từ 5 giữ một ô cấp 5. Các ô còn lại bị xóa và nhận chỉ số.
+- Điểm giữ ưu tiên ô đích rồi ô nguồn. Cascade dùng ô thường hợp lệ đầu tiên theo hàng/cột.
+- Đường ghép giao nhau tính số ô khác nhau. Nhóm đã có ô cường hóa kích hoạt chúng, không tạo thêm ô mới.
+- Ghép ít nhất ba ô cùng loại để kích hoạt trực tiếp. Đổi không tạo match không tiêu lượt.
+- Hiệu ứng đánh trúng ô cường hóa kích hoạt nó. Ô vừa tạo giữ đến đợt tiếp theo.
+
+| Ô | Cấp 4 | Cấp 5 |
 | --- | --- | --- |
-| Kiếm | Lưỡi kiếm xanh bạc | Ô thường; ghép kiếm nạp thêm kiếm khí |
-| Hỏa phù | Lá bùa đỏ cam | Ô thường; xuất hiện trong mục tiêu liên quan hỏa ấn |
-| Lôi ấn | Tia sét tím | Ô thường; dùng trong một số cơ quan và giáp boss |
-| Linh thạch | Viên ngọc lam | Ô thường; có thể là vật phẩm cần thu thập |
-| Linh dược | Lá thuốc xanh | Ô thường; có thể là vật phẩm cần thu thập |
+| Kiếm | Chém hàng ngang | Chém hình chữ thập |
+| Hỏa | Nổ 3×3 | Nổ hình thoi 13 ô |
+| Lôi | Ăn thêm 50% ô Lôi còn lại, làm tròn lên | Ăn toàn bộ ô Lôi còn lại |
+| Tụ Linh Châu | Ô kích hoạt nhận 3 lần khí cơ bản | Ô kích hoạt nhận 5 lần khí cơ bản và Ngưng Khí |
 
-Các ô thường tuân cùng một luật ghép để người mới không phải nhớ năm hệ thống khác nhau. Màu **và hình dáng** đều phải khác nhau; không dựa riêng vào màu để nhận diện.
+Ngưng Khí giảm 25% chi phí skill tiếp theo, không cộng dồn, tồn tại trong màn đến khi dùng. Chỉ tiêu thụ khi cast thành công. Khí đầu màn là 0, tối đa 100, khí dư bỏ đi.
 
-### Ghép đặc biệt và kiếm khí
+### Chuỗi hiệu ứng
 
-- **Ghép 3:** xóa các ô cùng loại, hoàn thành một phần mục tiêu và nạp linh khí.
-- **Ghép 4:** tạo một ô **Kiếm Trảm**; kích hoạt sẽ xóa một hàng hoặc cột theo hướng hiển thị trên ô.
-- **Ghép 5:** tạo **Vạn Kiếm Ấn**; đổi chỗ với một loại ô để xóa tất cả ô cùng loại trên bàn.
-- **Thanh kiếm khí:** ghép kiếm và tạo chuỗi liên hoàn nạp nhanh hơn. Khi đầy, người chơi bấm kỹ năng để chọn một hàng cần chém. Đây là một quyết định chủ động, không tự kích hoạt.
+Hàng đợi ổn định: chém → nổ → lan lôi → rơi ô → cascade. Animation chạy từng hiệu ứng lần lượt. Mỗi ô trao chỉ số một lần và mỗi ô cường hóa kích hoạt một lần trong một đợt. Lôi chọn ô còn lại gần nguồn nhất, phân giải theo hàng/cột.
 
-Trong nguyên mẫu, chỉ giới thiệu từng cơ chế một. Cân bằng tỉ lệ xuất hiện ô, lượng nạp và sức mạnh kỹ năng sau khi chơi thử.
+Ô bị xóa trao chỉ số theo loại của chính nó. Phong ấn phải được gỡ trước khi ô bị xóa. Shuffle hết nước đi không mất lượt, giữ ô cường hóa. Xử lý có giới hạn để tránh treo; giảm chuyển động giữ cùng kết quả logic.
 
 ## 3. Loại màn chơi và độ khó
 
@@ -63,38 +76,61 @@ Mục tiêu gồm phá phong ấn, mở đường qua đá chắn, thu thập li
 
 ### Chiến đấu yêu thú
 
-Các lượt ghép gây sát thương vào yêu thú. Kiếm Trảm và kỹ năng kiếm khí tạo khoảnh khắc tấn công mạnh. Yêu thú có thể dựng giáp, đặt phong ấn lên vài ô hoặc thay đổi mục tiêu sau một số lượt; mỗi boss chỉ dùng một cơ chế nổi bật để người chơi đọc được tình huống. Hoàn thành khi máu boss về 0 trước khi hết lượt.
+Các ô Kiếm, Hỏa và Lôi bị xóa gây sát thương vào yêu thú; Tụ Linh Châu cung cấp kiếm khí để dùng kiếm thuật. Ghép 4–5 và kỹ năng tạo khoảnh khắc tấn công mạnh. Yêu thú có thể dựng giáp, đặt phong ấn lên vài ô hoặc thay đổi mục tiêu sau một số lượt; mỗi boss chỉ dùng một cơ chế nổi bật để người chơi đọc được tình huống. Hoàn thành khi máu boss về 0 trước khi hết lượt.
 
 Hai loại màn được xen kẽ gần cân bằng để hành trình không thành chuỗi trận đánh liên tục. Boss đặt ở cuối mỗi chương, với cơ chế đã được giới thiệu ở các màn trước.
 
-### Nhịp tăng độ khó
+### Nhịp tăng độ khó — sẽ thiết kế chi tiết sau
 
 - Các màn đầu dạy đổi ô, ghép 4–5 và dùng kiếm khí bằng tình huống dễ hiểu.
 - Mỗi nhóm màn chỉ giới thiệu một chướng ngại hoặc biến thể mục tiêu mới; các màn sau mới kết hợp chúng.
 - Độ khó tăng bằng cách buộc người chơi ưu tiên mục tiêu và dùng ô đặc biệt đúng lúc, không chỉ bằng cách giảm số lượt.
 - Khi hết lượt, hiện rõ phần mục tiêu còn thiếu và cho phép thử lại nhanh. Có thể chọn xem quảng cáo nhận thêm một ít lượt, tối đa một lần cho mỗi lần chơi màn.
 
-## 4. Thế giới và hành trình tu vi
+## 4. EXP, cảnh giới và trang bị
 
-**Bản đầu đề xuất: 3 chương, khoảng 60 màn.** Mỗi chương có một cảnh quan, một nhóm chướng ngại và một boss riêng. Tên vùng dưới đây là tên làm việc.
+### EXP theo thành tích cao nhất
 
-| Chương | Cảnh quan và thử thách | Mốc tu vi |
-| --- | --- | --- |
-| Vân Hải Tiên Sơn | Sơn môn trên mây; học luật ghép, đá chắn và phong ấn đơn giản | Luyện Khí |
-| Huyền Kiếm Bí Cảnh | Di tích kiếm tu; đường khóa, linh thạch và Kiếm Trảm | Đột phá Trúc Cơ |
-| Lôi Hỏa Thiên Môn | Cổng trời giữa sấm và hỏa; kết hợp cơ quan, giáp yêu thú | Đột phá Kim Đan |
+Mỗi màn hiện có EXP nền 100. Thắng 3/2/1/0 sao nhận 100%/80%/60%/30% EXP. Thua không nhận. Mỗi màn đóng góp tối đa EXP nền: nâng sao chỉ nhận chênh lệch, chơi lại không tăng sao không nhận EXP thêm. Ví dụ 0 → 1 → 2 → 3 sao lần lượt nhận 30, 30, 20, 20 EXP.
 
-Mỗi chương có khoảng 20 màn. Bản đồ là đường đi qua các địa danh; người chơi nhìn thấy màn kế tiếp, màn boss và tiến độ chương. Đột phá là phần thưởng cho việc hoàn thành mốc truyện, không đòi hỏi cày tài nguyên ngoài màn. Mốc tu vi mở cảnh quan, hiệu ứng kiếm và một lựa chọn kỹ năng đơn giản; không thêm hệ thống trang bị hoặc chỉ số RPG phức tạp ở bản đầu.
+Thắng 0 sao vẫn mở màn tiếp theo. Chưa thắng là không có bản ghi, khác với bản ghi thắng 0 sao.
 
-### Phần thưởng và động lực quay lại
+| Cảnh giới | Tổng EXP |
+| --- | ---: |
+| Luyện Khí | 0 |
+| Trúc Cơ | 1.500 |
+| Kim Đan | 4.000 |
+| Nguyên Anh | 8.000 |
+| Hóa Thần | 14.000 |
+| Luyện Hư | 23.000 |
+| Hợp Thể | 36.000 |
+| Đại Thừa | 54.000 |
+| Độ Kiếp | 78.000 |
+| Chân Tiên | 110.000 |
 
-- Mỗi màn trao 1–3 sao theo hiệu quả hoàn thành; sao giúp nhìn lại tiến độ nhưng không chặn đường chính.
-- Phần thưởng chương gồm tranh cảnh, diện mạo kiếm khí hoặc hiệu ứng kỹ năng. Các vật phẩm hỗ trợ nhận qua chơi game được giới hạn để vẫn giữ trọng tâm giải đố.
-- Thử thách hằng ngày, sự kiện và bộ sưu tập pháp bảo là hướng mở rộng sau khi vòng chơi chính được kiểm chứng; chúng không nằm trong phạm vi bản đầu.
+Các cảnh trước Chân Tiên có Sơ kỳ, Trung kỳ, Hậu kỳ, Viên mãn tại 0/25/50/75% khoảng EXP đến cảnh tiếp. Uy lực bằng 1.25 ** realmIndex * (1 + 0.05 * stageIndex), chỉ số bắt đầu từ 0. Chân Tiên không có mốc tiếp theo. Cùng EXP có cùng sức mạnh nền; trang bị tạo phong cách riêng.
+
+### Kiếm thuật và bảo kiếm
+
+Danh mục, chỉ số, giá và mốc mở bán nằm trong content/game-content.json. Mỗi người dùng một bảo kiếm và một skill; ô skill thứ hai mở tại 1.500 EXP. Nhất Kiếm và Thanh Phong miễn phí ban đầu.
+
+Kiếm thuật gồm Nhất Kiếm, Ngự Kiếm, Hỏa Liên, Dẫn Lôi, Phá Chướng, Liên Kiếm, Hồi Linh, Vạn Kiếm. Không tiêu lượt; tối đa một cast giữa hai nước đổi thành công có tiêu lượt. Hủy chọn không tiêu khí. Hết lượt vẫn cho dùng cast cuối còn hợp lệ.
+
+Bảo kiếm gồm Thanh Phong, Trọng Nhạc, Hỏa Vân, Lôi Minh, Tụ Linh, Liên Tinh, Phá Quân, Huyền Cơ. Cấp tự dùng tu vi hiện tại. Bộ trang bị và uy lực cố định khi bắt đầu màn; thay đổi áp dụng từ màn tiếp.
+
+### Cửa hàng và linh thạch
+
+Mốc vượt màn mở quyền mua, độc lập EXP. Mua một lần, sở hữu vĩnh viễn. Cửa hàng hỗ trợ offline; giao dịch đồng bộ có ID chống trừ tiền lặp.
+
+- Thắng lần đầu: 100 linh thạch, bonus 0/0/25/50 cho 0/1/2/3 sao.
+- Chơi lại thắng: 10 linh thạch, thêm phần bonus thành tích mới tăng được.
+- Thua không nhận linh thạch.
+
+Ba sao khi còn ít nhất 25% lượt ban đầu; hai sao khi còn ít nhất 10%; một sao khi còn lượt; không sao khi thắng tại 0 lượt. Kết quả tách sao lần chơi, sao cao nhất, EXP mới, tổng EXP và linh thạch.
 
 ## 5. Mô hình miễn phí
 
-Không dùng quảng cáo bắt buộc giữa các màn. Người chơi có thể **chủ động** xem quảng cáo để nhận thêm lượt sau khi thất bại hoặc nhận thêm phần thưởng phụ sau khi thắng. Không đặt mục tiêu buộc người chơi xem quảng cáo để vượt màn thường. Bản đầu chưa cần cửa hàng mua vật phẩm trong ứng dụng; quyết định đó chỉ nên đưa ra sau khi có dữ liệu chơi thử.
+Không dùng quảng cáo bắt buộc giữa các màn. Người chơi có thể **chủ động** xem quảng cáo để nhận thêm lượt sau khi thất bại hoặc nhận thêm phần thưởng phụ sau khi thắng. Không đặt mục tiêu buộc người chơi xem quảng cáo để vượt màn thường. Cửa hàng dùng linh thạch nhận từ chơi game. Thanh toán tiền thật nằm ngoài bản cập nhật này.
 
 ## 6. Định hướng hình ảnh và âm thanh
 
@@ -117,17 +153,13 @@ Bốn màn hình chính là **bản đồ**, **giải đố khám phá**, **đá
 
 Ảnh đầu tài liệu là **mockup định hướng**, không phải ảnh chụp game có thể chơi. Các con số, tài nguyên, tỷ lệ lưới và chi tiết chữ phụ trên ảnh chỉ minh họa bố cục; luật và phạm vi bản đầu lấy theo tài liệu này. Nhãn chính trong ảnh dùng tiếng Việt để thuận tiện review.
 
-## 8. Phạm vi nguyên mẫu và kiểm chứng
+## 8. Nội dung và kiểm chứng
 
-Làm một nguyên mẫu khoảng **15 màn**: màn hướng dẫn, vài màn khám phá, vài màn chiến đấu và một boss. Nguyên mẫu cần có bàn ghép, năm loại ô, Kiếm Trảm, thanh kiếm khí, các mục tiêu chính, bản đồ đơn giản và một màn đột phá. Dùng nguyên mẫu để trả lời:
+Bản nội dung 2 đóng gói 40 màn: thu thập bốn loại ô, chiến đấu, phá phong ấn, phá đá và boss. Màn 15 là boss nội dung; đột phá theo EXP, không gắn cứng với màn. Cấu hình tĩnh là dữ liệu thử nghiệm; thuật toán tăng độ khó thiết kế sau.
 
-1. Người chơi mới có nhận ra luật ghép và mục tiêu mà không cần đọc hướng dẫn dài không?
-2. Kiếm khí có tạo lựa chọn thú vị hay chỉ là nút bấm thêm?
-3. Màn khám phá và màn chiến đấu có đủ khác nhau về cảm giác chơi không?
-4. Độ khó tăng có hợp lý, đặc biệt ở lần gặp chướng ngại và boss đầu tiên không?
-5. Sau lần đột phá Trúc Cơ, người chơi có muốn tiếp tục khám phá vùng đất mới không?
+40 màn toàn 3/2/1/0 sao có tổng 4.000/3.200/2.400/1.200 EXP. Có thể quay lại nâng sao để đạt cảnh giới cao hơn. Màn Tu Luyện hỗ trợ đến Chân Tiên; nội dung sau màn 40 bổ sung sau.
 
-Quan sát người chơi mới hoàn thành vài màn liên tiếp; ghi lại chỗ họ dừng, thao tác nhầm, tỷ lệ thắng và cảm nhận về độ dài mỗi màn. Dùng kết quả này để cân bằng trước khi mở rộng lên 60 màn.
+Kiểm chứng luật ghép, cường hóa, trace tuần tự, tám skill/kiếm, EXP best stars, thắng 0 sao, mua offline, retry, xung đột hai thiết bị, migration và gộp tài khoản. Quan sát chơi thử để cân bằng chỉ số, độ dài màn, bộ trang bị và độ khó.
 
 ## 9. Ghi chú tạo ảnh preview
 

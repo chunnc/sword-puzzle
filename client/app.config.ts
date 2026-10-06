@@ -7,7 +7,7 @@ const config: ExpoConfig = {
   name: 'Kiếm Khai Tiên Lộ',
   slug: 'kiem-khai-tien-lo',
   scheme: 'kiemkhai',
-  version: '1.0.0',
+  version: '1.1.0',
   platforms: ['ios', 'android'],
   orientation: 'portrait',
   ios: {

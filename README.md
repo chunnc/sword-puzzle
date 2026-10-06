@@ -4,8 +4,8 @@ Game ghép 3 tu tiên cho iOS/Android. [GAME_CONCEPT.md](GAME_CONCEPT.md) mô t�
 
 ## Trạng thái hiện tại
 
-- `client/`: Expo SDK 57, React Native 0.86, TypeScript; prototype 3 màn, bàn ghép 7×7, bản đồ, đột phá Trúc Cơ, lưu offline, tài khoản và đồng bộ qua HTTPS. Phiên bản migration này chưa có animation.
-- `server/`: Firebase Functions v2 với Auth sau API, Firestore tiến trình, API quảng cáo và xác thực AdMob SSV.
+- `client/`: Expo SDK 57, React Native 0.86, TypeScript; 40 màn, bàn 7×7 với 4 ô, cường hóa và animation hàng đợi; EXP/10 cảnh giới, 8 skill, 8 bảo kiếm, cửa hàng offline, tài khoản và đồng bộ HTTPS.
+- `server/`: Firebase Functions v2 với Auth sau API, profile/EXP/ví/túi đồ, giao dịch chống lặp, API quảng cáo và AdMob SSV.
 - `firestore.rules` và `storage.rules`: từ chối mọi truy cập trực tiếp từ mobile/web client.
 - UI tái sử dụng art hiện có, xuất thành WebP tối ưu bởi `tools/generate_ui_assets.py`. Chạy script sau khi chỉnh nguồn ảnh; cần Pillow 11+. `assets/ui-preview.png` chỉ là tài liệu tham chiếu, không được dùng làm sprite giao diện.
 
@@ -42,9 +42,24 @@ API gọi Firebase Auth REST qua backend. Khi chạy Emulator Suite, API tự d�
 
 ## Kiểm thử
 
-- `npm --prefix client run typecheck` kiểm tra TypeScript; `npm --prefix client test` kiểm tra game core TypeScript đối chiếu fixture được xuất từ C# Unity.
+- `npm --prefix client run typecheck` kiểm tra TypeScript; `npm --prefix client test` kiểm tra engine mới, catalog, EXP, cửa hàng và migration. Fixture Unity cũ được giữ cho kiểm thử save migration.
 - `npm run api:test` chạy kiểm thử server hiện có.
-- `API_BASE_URL=http://127.0.0.1:5001/PROJECT_ID/asia-southeast1/gameApi npm --prefix server run test:integration` kiểm tra guest, liên kết/đăng nhập email, refresh phiên, gộp tiến trình và từ chối client truy cập Firestore trực tiếp.
+- `API_BASE_URL=http://127.0.0.1:5001/PROJECT_ID/asia-southeast1/gameApi npm --prefix server run test:integration` kiểm tra guest, email, EXP 0 sao, retry, mua cạnh tranh hai thiết bị, gộp ví khách một lần và từ chối truy cập Firestore trực tiếp.
 - Trên thiết bị thật, kiểm tra vùng an toàn màn hình, vuốt/chọn ô, save sau khi đóng app, offline → online và rewarded ad test trên Android 9+ 3 GB RAM/iOS 16.4+.
 
 Trước deploy, cấu hình IAM tối thiểu cho tài khoản chạy Functions, giữ rules Firestore/Storage từ chối truy cập client, thiết lập TTL cho `authThrottle.expiresAt` và `adIntents.ttlAt`, rồi theo dõi lỗi 5xx, đồng bộ và SSV. Backend production và AdMob IDs thật chưa được cấu hình trong workspace.
+
+
+## Nội dung phiên bản 2
+
+Catalog gốc: content/game-content.json. Luật EXP, cảnh giới, thưởng và giao dịch chung: content/game-domain.ts. Chạy node tools/generate_game_content.mjs để sinh module client/server; start/typecheck/test/build tự chạy bước này. Thêm --check để kiểm tra bản sinh khớp nguồn.
+
+Thắng 0 sao vẫn mở màn. EXP theo sao cao nhất: 3/2/1/0 sao nhận 100/80/60/30% EXP nền; nâng sao chỉ nhận chênh lệch. Trúc Cơ ở 1.500 EXP mở skill thứ hai; cảnh cuối Chân Tiên ở 110.000 EXP. Chỉ số 40 màn là cấu hình thử nghiệm.
+
+Save v2 lưu profile đã xác nhận, outbox offline và snapshot. Migration v1 giữ sao, tính thưởng một lần, bắt đầu lại bàn theo luật mới. API mới: GET /v2/bootstrap, GET /v2/profile, POST /v2/profile/sync. Server giữ receipt cho mỗi ID; giá và thưởng do server tính. Giao dịch offline bị từ chối được hòa giải về profile server; bộ trang bị màn đang chơi vẫn cố định.
+
+Chạy integration với project demo:
+
+    firebase emulators:exec --project demo-kiem-khai --only functions,auth,firestore 'API_BASE_URL=http://127.0.0.1:5001/demo-kiem-khai/asia-southeast1/gameApi npm --prefix server run test:integration'
+
+Cần OpenJDK 21 trong PATH và JAVA_HOME phù hợp.

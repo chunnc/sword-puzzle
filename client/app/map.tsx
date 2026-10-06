@@ -6,8 +6,9 @@ import { ART, Artwork } from '../src/assets';
 import { BottomNav, TopHud } from '../src/components/Chrome';
 import { ArtPanel, ScreenFrame } from '../src/components/Art';
 import { Notice } from '../src/components/Notice';
-import { LEVEL_COUNT } from '../src/game/levels';
-import { getHighestUnlocked, getLevelStars, useGameStore } from '../src/state/gameStore';
+import { LEVEL_COUNT, getLevel } from '../src/game/levels';
+import { navigateTab } from '../src/components/Navigation';
+import { getHighestUnlocked, getLevelStars, getLevelCompleted, useGameStore } from '../src/state/gameStore';
 import { colors, type } from '../src/theme';
 
 const levelIds = Array.from({ length: LEVEL_COUNT }, (_, index) => index + 1);
@@ -19,17 +20,12 @@ export default function MapScreen() {
   const setNotice = useGameStore((state) => state.setNotice);
   const startLevel = useGameStore((state) => state.startLevel);
   const unlocked = getHighestUnlocked(save);
-  const totalStars = save.levels.reduce((sum, level) => sum + level.stars, 0);
+  const totalStars = save.profile.levels.reduce((sum, level) => sum + level.stars, 0);
 
   const openLevel = async (levelId: number) => {
     if (await startLevel(levelId)) router.push(`/game/${levelId}` as never);
   };
-  const nav = (id: string) => {
-    if (id !== 'map') {
-      setNotice('Sắp ra mắt');
-      return;
-    }
-  };
+  const nav = (id: string) => navigateTab(router, id);
 
   return (
     <ScreenFrame background="bgMap">
@@ -45,8 +41,9 @@ export default function MapScreen() {
           renderItem={({ item: levelId }) => {
             const stars = getLevelStars(save, levelId);
             const locked = levelId > unlocked;
-            const current = !locked && stars === 0;
-            const art: Artwork = stars > 0 ? 'stageDone' : locked ? 'stageLocked' : 'stageCurrent';
+            const completed = getLevelCompleted(save, levelId);
+            const current = !locked && !completed;
+            const art: Artwork = completed ? 'stageDone' : locked ? 'stageLocked' : 'stageCurrent';
 
             return (
               <View style={styles.levelItem}>
@@ -67,7 +64,7 @@ export default function MapScreen() {
                 </View>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Màn ${levelId}${stars > 0 ? `, ${stars} sao` : current ? ', màn hiện tại' : ', đã khóa'}`}
+                  accessibilityLabel={`Màn ${levelId}${completed ? `, đã hoàn thành, ${stars} sao` : current ? ', màn hiện tại' : ', đã khóa'}`}
                   accessibilityState={{ disabled: locked }}
                   disabled={locked}
                   onPress={() => void openLevel(levelId)}
@@ -79,15 +76,16 @@ export default function MapScreen() {
                     style={[StyleSheet.absoluteFill, locked && styles.lockedStageArt]}
                   />
                   <Text style={[styles.stageNumber, locked && styles.lockedStageNumber]}>{levelId}</Text>
+                  {completed && stars === 0 ? <Text style={{ color: '#fff2c9', position: 'absolute', bottom: 7, fontSize: 11 }}>✓ VƯỢT ẢI</Text> : null}
                 </Pressable>
               </View>
             );
           }}
         />
         <ArtPanel art="chapterCard" style={styles.chapter}>
-          <Text style={styles.chapterEyebrow}>CHƯƠNG THỬ NGHIỆM</Text>
-          <Text style={styles.chapterName}>VÂN HẢI{ '\n' }TIÊN SƠN</Text>
-          <Text style={styles.chapterStars}>{totalStars}/9 ★</Text>
+          <Text style={styles.chapterEyebrow}>TIÊN LỘ · 40 MÀN</Text>
+          <Text style={styles.chapterName}>{getLevel(unlocked).chapter.toUpperCase()}</Text>
+          <Text style={styles.chapterStars}>{totalStars}/120 ★</Text>
         </ArtPanel>
       </View>
       <BottomNav active="map" onSelect={nav} />

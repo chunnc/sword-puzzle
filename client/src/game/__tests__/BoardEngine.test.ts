@@ -1,105 +1,62 @@
-import fixtures from './unity-board-fixtures.json';
-import specialFixtures from './unity-special-fixtures.json';
 import { BoardEngine } from '../BoardEngine';
 import { getLevel } from '../levels';
-import { SpecialKind, TileKind } from '../types';
-
-describe('BoardEngine Unity parity', () => {
-  it.each(fixtures.levels)('matches seeded board and first legal move for level $levelId', (fixture) => {
-    const level = getLevel(fixture.levelId);
-    const board = new BoardEngine(level);
-    expect(board.snapshot()).toEqual(fixture.initial);
-
-    const [x1, y1, x2, y2] = fixture.move;
-    expect(board.trySwap(x1, y1, x2, y2)).toBe(true);
-    expect(board.snapshot()).toEqual(fixture.afterMove);
-    expect(board.animation?.finalBoard).toEqual(fixture.afterMove);
-  });
-
-  it.each(fixtures.levels)('restores the complete Unity snapshot for level $levelId', (fixture) => {
-    const restored = new BoardEngine(getLevel(fixture.levelId), fixture.afterMove);
-    expect(restored.snapshot()).toEqual(fixture.afterMove);
-  });
-
-  it('rejects non-adjacent swaps without changing the state', () => {
-    const fixture = fixtures.levels[0];
-    const board = new BoardEngine(getLevel(fixture.levelId));
-    const before = board.snapshot();
-    expect(board.trySwap(0, 0, 2, 0)).toBe(false);
-    expect(board.snapshot()).toEqual(before);
-    expect(board.animation).toBeNull();
-  });
-
-  it('captures clear and fall steps without changing the saved board result', () => {
-    const fixture = fixtures.levels[0];
-    const board = new BoardEngine(getLevel(fixture.levelId));
-    const [x1, y1, x2, y2] = fixture.move;
-
-    expect(board.trySwap(x1, y1, x2, y2)).toBe(true);
-    expect(board.animation?.swap).toEqual({ x1, y1, x2, y2 });
-    expect(board.animation?.steps.length).toBeGreaterThan(0);
-    expect(board.animation?.steps[0].cleared.length).toBeGreaterThanOrEqual(3);
-    expect(board.animation?.steps[0].falls.length).toBeGreaterThan(0);
-    expect(board.animation?.finalBoard).toEqual(fixture.afterMove);
-    expect(board.snapshot()).toEqual(fixture.afterMove);
-  });
-
-  it('records every automatic cascade in order', () => {
-    const animations = fixtures.levels.map((fixture) => {
-      const board = new BoardEngine(getLevel(fixture.levelId));
-      const [x1, y1, x2, y2] = fixture.move;
-      board.trySwap(x1, y1, x2, y2);
-      return board.animation;
-    });
-    const cascade = animations.find((animation) => animation && animation.steps.length > 1);
-
-    expect(cascade).toBeDefined();
-    expect(cascade?.steps.map((step) => step.chain)).toEqual(cascade?.steps.map((_, index) => index + 1));
-    expect(cascade?.steps.every((step) => step.after.tiles.length === 49)).toBe(true);
-  });
-
-  it('activates a ready sword qi row and spends the charge once', () => {
-    const fixture = fixtures.levels[0];
-    const snapshot = { ...fixture.initial, swordQi: 100, tiles: fixture.initial.tiles.map((tile) => ({ ...tile })) };
-    for (let x = 0; x < 7; x += 1) {
-      const index = 3 * 7 + x;
-      snapshot.tiles[index] = { kind: TileKind.Herb, special: SpecialKind.None, locked: false };
-    }
-    const board = new BoardEngine(getLevel(1), snapshot);
-    expect(board.useSwordQi(3)).toBe(true);
-    expect(board.swordQi).toBe(0);
-    expect(board.remaining).toBe(0);
-    expect(board.won).toBe(true);
-    expect(board.useSwordQi(3)).toBe(false);
-  });
-
-  it('grants three extra moves only once after a loss', () => {
-    const fixture = fixtures.levels[0];
-    const board = new BoardEngine(getLevel(1), { ...fixture.initial, moves: 0 });
-    expect(board.lost).toBe(true);
-    expect(board.grantExtraMoves()).toBe(true);
-    expect(board.moves).toBe(3);
-    expect(board.extraMovesUsed).toBe(true);
-    expect(board.grantExtraMoves()).toBe(false);
-  });
-
-  it.each(specialFixtures.specialCases)('matches Unity $name behavior', (fixture) => {
-    const board = new BoardEngine(getLevel(1), fixture.input);
-    if (fixture.move) {
-      expect(board.trySwap(fixture.move[0], fixture.move[1], fixture.move[2], fixture.move[3])).toBe(true);
-    } else {
-      expect(board.useSwordQi(fixture.row)).toBe(true);
-    }
-    expect(board.snapshot()).toEqual(fixture.afterMove);
-    if (fixture.name === 'slash-activation') {
-      expect(board.animation?.steps.some((step) => step.effects.some((effect) => effect.kind === 'slash'))).toBe(true);
-    }
-    if (fixture.name === 'omni-activation') {
-      expect(board.animation?.steps.some((step) => step.effects.some((effect) => effect.kind === 'omni'))).toBe(true);
-    }
-    if (fixture.name === 'sword-qi') {
-      expect(board.animation?.kind).toBe('sword');
-      expect(board.animation?.steps[0].effects.some((effect) => effect.kind === 'sword' && effect.row === fixture.row)).toBe(true);
-    }
-  });
+import { TileKind, GoalKind, type BoardSnapshot, type Tile } from '../types';
+import { SKILLS, SWORDS, type SkillId } from '../domain';
+const tile = (kind: number, chargeTier: 0 | 4 | 5 = 0): Tile => ({ kind, chargeTier, locked: false });
+function fixture(): BoardSnapshot { const s = new BoardEngine(getLevel(5)).snapshot(); s.tiles = Array.from({ length: 49 }, (_, i) => tile((i % 7 + 2 * Math.floor(i / 7)) % 4)); s.remaining = 100000; s.swordQi = 100; s.loadout = { sword: 'thanh-phong', skills: ['nhat-kiem'] }; return s; }
+function matching(size: number, kind: TileKind, tier: 0 | 4 | 5 = 0) {
+    const s = fixture(), others = [0, 1, 2, 3].filter(k => k !== kind);
+    s.tiles = Array.from({ length: 49 }, (_, i) => tile(others[(i % 7 + 2 * Math.floor(i / 7)) % 3]));
+    for (let x = 0; x < size; x++)
+        s.tiles[3 * 7 + x] = tile(kind);
+    s.tiles[3 * 7 + size - 1] = tile(others[0]);
+    s.tiles[4 * 7 + size - 1] = tile(kind);
+    if (tier)
+        s.tiles[3 * 7] = tile(kind, tier);
+    const b = new BoardEngine(getLevel(5), s);
+    expect(b.trySwap(size - 1, 4, size - 1, 3)).toBe(true);
+    return b;
+}
+describe('board rules v2', () => {
+    it('generates all four types with a legal move in all 40 stages', () => { for (let id = 1; id <= 40; id++) {
+        const b = new BoardEngine(getLevel(id));
+        expect(new Set(b.snapshot().tiles.filter(t => t.kind !== TileKind.Rock).map(t => t.kind)).size).toBe(4);
+        expect(b.legalMoves().length).toBeGreaterThan(0);
+        expect(b.snapshot().swordQi).toBe(0);
+    } });
+    it('restores the complete snapshot and deterministic RNG', () => { const a = new BoardEngine(getLevel(5)); const snap = a.snapshot(); const b = new BoardEngine(getLevel(5), snap); expect(b.snapshot()).toEqual(snap); const move = a.legalMoves()[0]; a.trySwap(...move); b.trySwap(...move); expect(a.snapshot()).toEqual(b.snapshot()); expect(a.animation).toEqual(b.animation); });
+    it('rejects invalid and non-matching swaps without changes, even with a charged piece', () => { const s = fixture(); s.tiles[0].chargeTier = 5; const b = new BoardEngine(getLevel(5), s); const old = b.snapshot(); expect(b.trySwap(0, 0, 2, 0)).toBe(false); expect(b.trySwap(0, 0, 1, 0)).toBe(false); expect(b.snapshot()).toEqual(old); });
+    it.each([0, 1, 2, 3])('match 3 type %i has no elemental effect', (kind) => { const b = matching(3, kind); expect(b.animation!.steps[0].effects.every(e => e.kind === 'skill')).toBe(true); expect(b.animation!.steps[0].cleared.length).toBe(3); });
+    it.each([0, 1, 2, 3])('match 4 type %i retains a charged piece', (kind) => { const b = matching(4, kind); expect(b.animation!.steps[0].after.tiles.some(t => t.kind === kind && t.chargeTier === 4)).toBe(true); expect(b.animation!.steps[0].cleared.length).toBe(3); });
+    it.each([0, 1, 2, 3])('match 5 type %i retains tier 5', (kind) => { const b = matching(5, kind); expect(b.animation!.steps[0].after.tiles.some(t => t.kind === kind && t.chargeTier === 5)).toBe(true); });
+    it.each([[0, 4, 'slash'], [0, 5, 'cross'], [1, 4, 'fire'], [1, 5, 'fire'], [2, 4, 'lightning'], [2, 5, 'lightning'], [3, 4, 'spirit'], [3, 5, 'spirit']] as const)('matched charge %i/%i activates %s', (kind, tier, effect) => { const b = matching(3, kind, tier); expect(b.animation!.steps[0].effects.some(e => e.kind === effect)).toBe(true); expect(b.animation!.steps[0].after.tiles.some(t => t.chargeTier > 0 && t.kind === kind)).toBe(false); });
+    it('fire tier 5 has thirteen distinct targets at board center', () => { const s = fixture(); s.tiles[24] = tile(1, 5); const b = new BoardEngine(getLevel(5), s); expect(b.trySkill('nhat-kiem', [{ x: 0, y: 3 }])).toBe(true); const fire = b.animation!.steps[0].effects.find(e => e.kind === 'fire')!; expect(fire.cells).toHaveLength(13); });
+    it('chains sword → fire → lightning in queue order, with unique clears', () => { const s = fixture(); s.tiles[21] = tile(0, 4); s.tiles[24] = tile(1, 4); s.tiles[31] = tile(2, 5); const b = new BoardEngine(getLevel(5), s); b.trySkill('nhat-kiem', [{ x: 0, y: 3 }]); const step = b.animation!.steps[0]; expect(step.effects.slice(1).filter(e => e.source === 21 || e.source === 24 || e.source === 31).map(e => e.kind)).toEqual(['slash', 'fire', 'lightning']); expect(new Set(step.cleared).size).toBe(step.cleared.length); });
+    it('activated spirit grants Ngung Khi and never contributes damage', () => { const s = fixture(); s.tiles[21] = tile(3, 5); const b = new BoardEngine(getLevel(5), s); b.trySkill('nhat-kiem', [{ x: 0, y: 3 }]); expect(b.animation!.steps[0].effects.find(e => e.kind === 'spirit')!.damage).toBe(0); expect(b.snapshot().condensed).toBe(true); });
+    it('locked charges are unlocked rather than activated in that wave', () => { const s = fixture(); s.tiles[21] = { ...tile(1, 5), locked: true }; const b = new BoardEngine(getLevel(5), s); b.trySkill('nhat-kiem', [{ x: 0, y: 3 }]); expect(b.animation!.steps[0].effects.some(e => e.kind === 'fire')).toBe(false); });
+    it('casts at most once until a successful paid swap and rejects invalid targets without spending', () => { const s = fixture(); s.loadout.skills = ['ngu-kiem', 'nhat-kiem']; s.condensed = true; const b = new BoardEngine(getLevel(5), s); const old = b.snapshot(); expect(b.trySkill('ngu-kiem', [{ x: 0, y: 0 }, { x: 3, y: 0 }])).toBe(false); expect(b.snapshot()).toEqual(old); expect(b.trySkill('nhat-kiem', [{ x: 0, y: 0 }])).toBe(true); expect(b.trySkill('nhat-kiem', [{ x: 0, y: 1 }])).toBe(false); const move = b.legalMoves()[0]; b.trySwap(...move); expect(b.snapshot().skillUsed).toBe(false); });
+    it('allows a final free skill at zero moves and then loses or wins', () => { const s = fixture(); s.moves = 0; const b = new BoardEngine(getLevel(5), s); expect(b.lost).toBe(false); b.trySkill('nhat-kiem', [{ x: 0, y: 0 }]); expect(b.lost).toBe(true); expect(b.grantExtraMoves()).toBe(true); expect(b.grantExtraMoves()).toBe(false); });
+    it('supports every skill with valid targets', () => { for (const skill of SKILLS) {
+        const s = fixture();
+        s.loadout.skills = [skill.id];
+        if (skill.id === 'lien-kiem') {
+            s.tiles[0].chargeTier = 4;
+            s.tiles[1].chargeTier = 5;
+        }
+        if (skill.id === 'pha-chuong')
+            s.tiles[0] = tile(4);
+        const b = new BoardEngine(getLevel(5), s);
+        const targets = skill.id === 'ngu-kiem' || skill.id === 'lien-kiem' ? [{ x: 0, y: 0 }, { x: 1, y: 0 }] : skill.id === 'dan-loi' ? [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 3, y: 0 }] : [{ x: 0, y: 0 }];
+        expect(b.trySkill(skill.id, targets)).toBe(true);
+        expect(b.snapshot().skillUsed).toBe(true);
+        expect(b.moves).toBe(s.moves);
+    } });
+    it('spirit stays at zero damage under every sword modifier', () => { for (const sword of SWORDS) {
+        const s = fixture();
+        s.loadout.sword = sword.id;
+        s.tiles = Array.from({ length: 49 }, (_, i) => tile(i < 7 ? 3 : (i % 7 + 2 * Math.floor(i / 7)) % 4));
+        const b = new BoardEngine(getLevel(5), s);
+        b.trySkill('nhat-kiem', [{ x: 0, y: 0 }]);
+        expect(b.animation!.steps[0].damage).toBe(0);
+    } });
 });

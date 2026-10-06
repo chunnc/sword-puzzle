@@ -1,123 +1,88 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LEVEL_COUNT } from './levels';
-import { BoardSnapshot, LevelStar, SaveData, Tile, TileKind, SpecialKind } from './types';
-
-const SAVE_KEY = 'kiemkhai.save.v1';
-const BACKUP_KEY = 'kiemkhai.save.backup.v1';
-
-export function emptySave(): SaveData {
-  return { schemaVersion: 1, levels: [], active: null };
+import { applyOperation, emptyProfile, highestUnlocked, normalizeLevels, normalizeProfile, parseOperation, profileFromLegacy, SKILLS, SWORDS, type PlayerOperation, type PlayerProfile } from './domain';
+import { newId } from './BoardEngine';
+import type { BoardSnapshot, SaveData } from './types';
+const SAVE_KEY = 'kiemkhai.save.v2';
+const BACKUP_KEY = 'kiemkhai.save.backup.v2';
+export function emptySave(): SaveData { const profile = emptyProfile(); return { schemaVersion: 2, ownerId: null, confirmed: profile, operations: [], profile, active: null, lastWin: null }; }
+export function projectProfile(confirmed: PlayerProfile, operations: PlayerOperation[]): PlayerProfile {
+    return operations.reduce((profile, op) => applyOperation(profile, op).profile, confirmed);
 }
-
-export function normalizeSave(value: unknown): SaveData | null {
-  if (!value || typeof value !== 'object') return null;
-  const candidate = value as Partial<SaveData>;
-  if (candidate.schemaVersion !== 1 || !Array.isArray(candidate.levels)) return null;
-  const byId = new Map<number, number>();
-  for (const raw of candidate.levels) {
-    if (!raw || !Number.isInteger(raw.levelId) || !Number.isInteger(raw.stars)) continue;
-    if (raw.levelId! < 1 || raw.levelId! > LEVEL_COUNT || raw.stars! < 1 || raw.stars! > 3) continue;
-    byId.set(raw.levelId!, Math.max(byId.get(raw.levelId!) ?? 0, raw.stars!));
-  }
-  const levels: LevelStar[] = [];
-  for (let levelId = 1; levelId <= LEVEL_COUNT; levelId += 1) {
-    const stars = byId.get(levelId);
-    if (stars === undefined) break;
-    levels.push({ levelId, stars });
-  }
-  const active = normalizeSnapshot(candidate.active);
-  const allowedLevel = Math.min(LEVEL_COUNT, levels.length + 1);
-  return {
-    schemaVersion: 1,
-    levels,
-    active: active && active.levelId <= allowedLevel ? active : null,
-  };
-}
-
-export function normalizeSnapshot(value: unknown): BoardSnapshot | null {
-  if (!value || typeof value !== 'object') return null;
-  const candidate = value as Partial<BoardSnapshot>;
-  if (
-    !Number.isInteger(candidate.levelId) || candidate.levelId! < 1 || candidate.levelId! > LEVEL_COUNT ||
-    !Number.isInteger(candidate.moves) || !Number.isInteger(candidate.remaining) ||
-    !Number.isInteger(candidate.swordQi) || !Number.isInteger(candidate.score) ||
-    !Number.isInteger(candidate.drops) || !Number.isInteger(candidate.randomState) ||
-    typeof candidate.extraMovesUsed !== 'boolean' || !Array.isArray(candidate.tiles) || candidate.tiles.length !== 49
-  ) return null;
-  const tiles: Tile[] = [];
-  for (const raw of candidate.tiles) {
-    if (!raw || typeof raw !== 'object') return null;
-    const tile = raw as Tile;
-    if (
-      !Number.isInteger(tile.kind) || tile.kind < TileKind.Sword || tile.kind > TileKind.Rock ||
-      !Number.isInteger(tile.special) || !(tile.special === SpecialKind.None || tile.special === SpecialKind.Slash ||
-        tile.special === SpecialKind.Omni || tile.special === 99) || typeof tile.locked !== 'boolean'
-    ) return null;
-    tiles.push({ kind: tile.kind, special: tile.special, locked: tile.locked });
-  }
-  return {
-    levelId: candidate.levelId!,
-    moves: candidate.moves!,
-    remaining: candidate.remaining!,
-    swordQi: candidate.swordQi!,
-    score: candidate.score!,
-    drops: candidate.drops!,
-    randomState: candidate.randomState!,
-    extraMovesUsed: candidate.extraMovesUsed,
-    tiles,
-  };
-}
-
-export async function loadSave(): Promise<SaveData> {
-  for (const key of [SAVE_KEY, BACKUP_KEY]) {
-    try {
-      const raw = await AsyncStorage.getItem(key);
-      if (!raw) continue;
-      const parsed = normalizeSave(JSON.parse(raw));
-      if (parsed) return parsed;
-    } catch {
-      // A corrupt save falls through to the backup or a fresh local save.
+export function normalizeSave(raw: unknown): SaveData | null {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const value = raw as Record<string, unknown>;
+    if (value.schemaVersion === 1 && Array.isArray(value.levels)) {
+        const levels = normalizeLevels(value.levels);
+        const operation: PlayerOperation = { id: newId(), kind: 'importProgress', levels };
+        const confirmed = emptyProfile();
+        return { ...emptySave(), confirmed, operations: levels.length ? [operation] : [], profile: profileFromLegacy(levels) };
     }
-  }
-  return emptySave();
+    if (value.schemaVersion !== 2 || !Array.isArray(value.operations))
+        return null;
+    const confirmed = normalizeProfile(value.confirmed);
+    if (!confirmed)
+        return null;
+    const ids = new Set<string>();
+    const operations: PlayerOperation[] = [];
+    for (const rawOp of value.operations) {
+        const op = parseOperation(rawOp);
+        if (!op || ids.has(op.id))
+            return null;
+        ids.add(op.id);
+        operations.push(op);
+    }
+    const profile = projectProfile(confirmed, operations);
+    const active = normalizeSnapshot(value.active);
+    return { schemaVersion: 2, ownerId: typeof value.ownerId === 'string' ? value.ownerId : null, confirmed, operations, profile, active: active && active.levelId <= highestUnlocked(profile.levels) ? active : null, lastWin: null };
 }
-
-let persistQueue = Promise.resolve();
-
+export function normalizeSnapshot(raw: unknown): BoardSnapshot | null {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const p = raw as BoardSnapshot;
+    if (p.contentVersion !== 2 || typeof p.runId !== 'string' || !/^[a-zA-Z0-9_-]{8,120}$/.test(p.runId) || !Number.isInteger(p.levelId) || p.levelId < 1 || p.levelId > 40 || !Number.isInteger(p.moves) || p.moves < 0 || p.moves > 27 || !Number.isInteger(p.remaining) || p.remaining < 0 || !Number.isInteger(p.swordQi) || p.swordQi < 0 || p.swordQi > 100 || !Number.isSafeInteger(p.score) || p.score < 0 || !Number.isSafeInteger(p.drops) || p.drops < 0 || !Number.isInteger(p.randomState) || !Number.isFinite(p.damageScale) || p.damageScale < 1 || p.damageScale > 20 || typeof p.extraMovesUsed !== 'boolean' || typeof p.condensed !== 'boolean' || typeof p.skillUsed !== 'boolean' || !Array.isArray(p.tiles) || p.tiles.length !== 49 || !p.loadout || !Array.isArray(p.loadout.skills) || p.loadout.skills.length < 1 || p.loadout.skills.length > 2 || new Set(p.loadout.skills).size !== p.loadout.skills.length || !p.loadout.skills.every(id => SKILLS.some(s => s.id === id)) || !SWORDS.some(s => s.id === p.loadout.sword))
+        return null;
+    if (!p.tiles.every(t => t && Number.isInteger(t.kind) && t.kind >= 0 && t.kind <= 4 && [0, 4, 5].includes(t.chargeTier) && typeof t.locked === 'boolean' && (t.kind !== 4 || t.chargeTier === 0 && !t.locked)))
+        return null;
+    return { ...p, tiles: p.tiles.map(t => ({ ...t })), loadout: { ...p.loadout, skills: [...p.loadout.skills] } };
+}
+export async function loadSave(): Promise<SaveData> {
+    for (const key of [SAVE_KEY, BACKUP_KEY, 'kiemkhai.save.v1', 'kiemkhai.save.backup.v1']) {
+        try {
+            const raw = await AsyncStorage.getItem(key);
+            if (!raw)
+                continue;
+            const save = normalizeSave(JSON.parse(raw));
+            if (save) {
+                if (key !== SAVE_KEY)
+                    await persistSave(save);
+                return save;
+            }
+        }
+        catch { /* Try the next backup. */ }
+    }
+    return emptySave();
+}
+let queue = Promise.resolve();
 export function persistSave(save: SaveData): Promise<void> {
-  const snapshot = JSON.stringify(save);
-  persistQueue = persistQueue.catch(() => undefined).then(async () => {
-    const old = await AsyncStorage.getItem(SAVE_KEY);
-    if (old) await AsyncStorage.setItem(BACKUP_KEY, old);
-    await AsyncStorage.setItem(SAVE_KEY, snapshot);
-  });
-  return persistQueue;
+    const json = JSON.stringify(save);
+    queue = queue.catch(() => undefined).then(async () => {
+        const old = await AsyncStorage.getItem(SAVE_KEY);
+        if (old)
+            await AsyncStorage.setItem(BACKUP_KEY, old);
+        await AsyncStorage.setItem(SAVE_KEY, json);
+    });
+    return queue;
 }
-
-export function mergeStars(local: LevelStar[], remote: LevelStar[]): LevelStar[] {
-  const merged = new Map(local.map(({ levelId, stars }) => [levelId, stars]));
-  for (const result of remote) {
-    if (!Number.isInteger(result.levelId) || result.levelId < 1 || result.levelId > LEVEL_COUNT) continue;
-    if (!Number.isInteger(result.stars) || result.stars < 1 || result.stars > 3) continue;
-    merged.set(result.levelId, Math.max(merged.get(result.levelId) ?? 0, result.stars));
-  }
-  const sequential: LevelStar[] = [];
-  for (let levelId = 1; levelId <= LEVEL_COUNT; levelId += 1) {
-    const stars = merged.get(levelId);
-    if (stars === undefined) break;
-    sequential.push({ levelId, stars });
-  }
-  return sequential;
+export async function archiveProfile(save: SaveData): Promise<void> {
+    await AsyncStorage.setItem(`kiemkhai.profile.${save.ownerId ?? 'local'}`, JSON.stringify(save));
 }
-
-export function completedCount(levels: LevelStar[]): number {
-  let completed = 0;
-  while (completed < LEVEL_COUNT && levels.some((level) => level.levelId === completed + 1 && level.stars > 0)) {
-    completed += 1;
-  }
-  return completed;
-}
-
-export function starsForLevel(levels: LevelStar[], levelId: number): number {
-  return levels.find((level) => level.levelId === levelId)?.stars ?? 0;
+export async function loadArchivedProfile(ownerId: string): Promise<SaveData | null> {
+    try {
+        const raw = await AsyncStorage.getItem(`kiemkhai.profile.${ownerId}`);
+        return raw ? normalizeSave(JSON.parse(raw)) : null;
+    }
+    catch {
+        return null;
+    }
 }

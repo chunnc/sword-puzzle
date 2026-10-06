@@ -7,6 +7,8 @@ import { onRequest } from "firebase-functions/v2/https";
 import { defineString } from "firebase-functions/params";
 import { LEVEL_COUNT, emptyProgress, mergeProgress, parseStoredStars, parseLevelResults, progressResponse, Progress } from "./domain/progress";
 import { verifyAdmobCallback, CallbackFields } from "./domain/admob";
+import { CONTENT, applyOperation, type Stars } from './domain/game';
+import { profileFromDocument, profileFields, mergeProfiles, parseOperations, processOperations, type OperationReceipt } from './domain/profile';
 
 if (getApps().length === 0) initializeApp();
 const db = getFirestore();
@@ -160,9 +162,12 @@ app.post("/v1/auth/login", async (req, res, next) => {
         await db.runTransaction(async tx => {
           const [guestSnap, targetSnap] = await Promise.all([tx.get(guestRef), tx.get(targetRef)]);
           const guestData = guestSnap.data();
-          if (guestData?.mergedInto && guestData.mergedInto !== result.localId) throw new ApiError(409, "GUEST_ALREADY_MERGED");
-          const combined = mergeProgress(savedProgress(guestData).stars, savedProgress(targetSnap.data()).stars);
-          tx.set(targetRef, { ...combined, updatedAt: Date.now() }, { merge: true });
+          if (guestData?.mergedInto) {
+            if (guestData.mergedInto !== result.localId) throw new ApiError(409, "GUEST_ALREADY_MERGED");
+            return;
+          }
+          const combined = mergeProfiles(profileFromDocument(guestData), profileFromDocument(targetSnap.data()));
+          tx.set(targetRef, profileFields(combined, targetSnap.data()?.stars), { merge: true });
           tx.set(guestRef, { mergedInto: result.localId, updatedAt: Date.now() }, { merge: true });
         });
       }
@@ -191,6 +196,48 @@ app.get("/v1/bootstrap", async (_req, res, next) => {
   } catch (error) { next(error); }
 });
 
+app.get('/v2/bootstrap', async (_req, res, next) => {
+  try {
+    const config = (await db.collection('gameConfig').doc('current').get()).data();
+    res.json({ contentVersion: CONTENT.version, levelCount: LEVEL_COUNT, rewardedAdsEnabled: config?.rewardedAdsEnabled === true, minClientVersion: config?.minClientVersion || '1.1.0' });
+  } catch (error) { next(error); }
+});
+
+app.get('/v2/profile', requireAuth, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const ref = db.collection('players').doc(req.playerId!);
+    const profile = await db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      if (snap.data()?.mergedInto) throw new ApiError(409, 'GUEST_ALREADY_MERGED');
+      const p = profileFromDocument(snap.data());
+      tx.set(ref, profileFields(p, snap.data()?.stars), { merge: true });
+      return p;
+    });
+    res.json(profile);
+  } catch (error) { next(error); }
+});
+
+app.post('/v2/profile/sync', requireAuth, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (req.body?.contentVersion !== 2) throw new ApiError(409, 'CONTENT_MISMATCH');
+    let operations;
+    try { operations = parseOperations(req.body?.operations); } catch { throw new ApiError(400, 'INVALID_OPERATIONS'); }
+    const ref = db.collection('players').doc(req.playerId!);
+    const response = await db.runTransaction(async tx => {
+      // Firestore requires all reads before writes, including operation receipts.
+      const [snap, ...receiptSnaps] = await Promise.all([tx.get(ref), ...operations.map(op => tx.get(ref.collection('operations').doc(op.id)))]);
+      if (snap.data()?.mergedInto) throw new ApiError(409, 'GUEST_ALREADY_MERGED');
+      const receipts = new Map<string, OperationReceipt>();
+      receiptSnaps.forEach((s, i) => { if (s.exists) receipts.set(operations[i].id, s.data() as OperationReceipt); });
+      const processed = processOperations(profileFromDocument(snap.data()), operations, receipts);
+      tx.set(ref, profileFields(processed.profile, snap.data()?.stars), { merge: true });
+      for (const [id, receipt] of processed.newReceipts) tx.create(ref.collection('operations').doc(id), { ...receipt, createdAt: Date.now() });
+      return { profile: processed.profile, acknowledged: processed.acknowledged, rejected: processed.rejected, rewards: processed.rewards };
+    });
+    res.json(response);
+  } catch (error) { next(error); }
+});
+
 app.get("/v1/progress", requireAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const snap = await db.collection("players").doc(req.playerId!).get();
@@ -209,7 +256,8 @@ app.put("/v1/progress", requireAuth, async (req: AuthenticatedRequest, res, next
       const data = snap.data();
       if (data?.mergedInto) throw new ApiError(409, "GUEST_ALREADY_MERGED");
       const progress = mergeProgress(savedProgress(data).stars, incoming);
-      tx.set(ref, { ...progress, updatedAt: Date.now() }, { merge: true });
+      const imported = applyOperation(profileFromDocument(data), { id: randomUUID(), kind: 'importProgress', levels: Object.entries(progress.stars).map(([levelId, stars]) => ({ levelId: Number(levelId), stars: stars as Stars })) }).profile;
+      tx.set(ref, profileFields(imported, data?.stars), { merge: true });
       return progress;
     });
     res.json(progressResponse(merged));

@@ -1,5 +1,6 @@
 import { LevelStar, ProgressResponse } from '../game/types';
 import { SessionData } from './session';
+import type { PlayerOperation, PlayerProfile, SyncResponse } from '../game/domain';
 
 export interface BootstrapResponse {
   contentVersion: number;
@@ -77,7 +78,17 @@ async function authorized<T>(
 }
 
 export async function fetchBootstrap(): Promise<BootstrapResponse> {
-  return request<BootstrapResponse>('/v1/bootstrap');
+  return request<BootstrapResponse>('/v2/bootstrap');
+}
+
+export async function syncProfile(session: SessionData, operations: PlayerOperation[]): Promise<{ response: SyncResponse; session: SessionData }> {
+  const result = await authorized<SyncResponse>(session, 'POST', '/v2/profile/sync', { contentVersion: 2, operations });
+  return { response: result.value, session: result.session };
+}
+
+export async function fetchProfile(session: SessionData): Promise<{ profile: PlayerProfile; session: SessionData }> {
+  const result = await authorized<PlayerProfile>(session, 'GET', '/v2/profile');
+  return { profile: result.value, session: result.session };
 }
 
 export async function createGuest(): Promise<SessionData> {

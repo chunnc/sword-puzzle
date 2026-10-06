@@ -4,9 +4,15 @@ import { ImageSourcePropType, ImageStyle, Pressable, StyleProp, StyleSheet, Text
 import { ART } from '../assets';
 import { colors, type } from '../theme';
 import { ArtPanel } from './Art';
+import { useGameStore } from '../state/gameStore';
+import { realmForExp } from '../game/domain';
+import { useRouter } from 'expo-router';
 
 export function TopHud({ onAccount }: { onAccount: () => void }) {
   const { width } = useWindowDimensions();
+  const profile = useGameStore(state => state.save.profile);
+  const router = useRouter();
+  const realm = realmForExp(profile.totalExp);
 
   return (
     <ArtPanel art="hudTray" style={[styles.hud, { width: width - 8 }]}>
@@ -14,9 +20,9 @@ export function TopHud({ onAccount }: { onAccount: () => void }) {
         <Art image="avatar" style={StyleSheet.absoluteFill} />
         <Art image="avatarFrame" style={StyleSheet.absoluteFill} />
       </View>
-      <HudStat image="iconJade" value="0" />
-      <HudStat image="iconCoin" value="0" />
-      <HudStat image="iconBolt" value="0" />
+      <HudStat image="iconJade" value={`${profile.totalExp} EXP`} />
+      <Pressable accessibilityRole="button" accessibilityLabel={`${profile.coins} linh thạch, mở cửa hàng`} onPress={() => router.push('/shop')}><HudStat image="iconCoin" value={String(profile.coins)} /></Pressable>
+      <Text numberOfLines={2} style={{ color: colors.ivory, fontSize: 10, fontWeight: '800', maxWidth: 58 }}>{realm.name}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Tài khoản" onPress={onAccount} style={styles.menu}>
         <Art image="iconMenu" style={styles.menuImage} />
       </Pressable>
@@ -92,7 +98,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
     transform: [{ translateX: -3 }, { translateY: 3 }],
   },
-  statDisplay: { width: '19%', height: 37, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
+  statDisplay: { minWidth: 57, height: 37, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
   statIcon: { width: 22, height: 22 },
   statValue: { ...type.body, color: colors.ivory, fontSize: 14 },
   menu: { width: 39, height: 39, justifyContent: 'center', alignItems: 'center' },

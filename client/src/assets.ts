@@ -1,5 +1,5 @@
 import { ImageSourcePropType } from 'react-native';
-import { SpecialKind, TileKind } from './game/types';
+import { TileKind } from './game/types';
 
 export const ART = {
   avatar: require('../app-assets/ui/avatar.webp') as ImageSourcePropType,
@@ -59,14 +59,7 @@ export function tileArtwork(kind: TileKind): ImageSourcePropType {
     case TileKind.Sword: return ART.tileSword;
     case TileKind.Fire: return ART.tileFire;
     case TileKind.Lightning: return ART.tileLightning;
-    case TileKind.Stone: return ART.tileStone;
-    case TileKind.Herb: return ART.tileHerb;
+    case TileKind.SpiritOrb: return ART.tileStone;
     default: return ART.tileRock;
   }
-}
-
-export function specialArtwork(kind: number): ImageSourcePropType | null {
-  if (kind === SpecialKind.Slash) return ART.overlaySlash;
-  if (kind === SpecialKind.Omni) return ART.overlayOmni;
-  return null;
 }

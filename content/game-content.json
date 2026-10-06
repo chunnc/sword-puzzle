@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "levelCount": 40,
+  "qiCap": 100,
+  "expRates": [30, 60, 80, 100],
+  "tiles": [
+    {"id": 0, "name": "Kiếm", "damage": 10, "qi": 1},
+    {"id": 1, "name": "Hỏa", "damage": 6, "qi": 2},
+    {"id": 2, "name": "Lôi", "damage": 4, "qi": 3},
+    {"id": 3, "name": "Tụ Linh Châu", "damage": 0, "qi": 6}
+  ],
+  "realms": [
+    {"id": "LuyenKhi", "name": "Luyện Khí", "exp": 0},
+    {"id": "TrucCo", "name": "Trúc Cơ", "exp": 1500},
+    {"id": "KimDan", "name": "Kim Đan", "exp": 4000},
+    {"id": "NguyenAnh", "name": "Nguyên Anh", "exp": 8000},
+    {"id": "HoaThan", "name": "Hóa Thần", "exp": 14000},
+    {"id": "LuyenHu", "name": "Luyện Hư", "exp": 23000},
+    {"id": "HopThe", "name": "Hợp Thể", "exp": 36000},
+    {"id": "DaiThua", "name": "Đại Thừa", "exp": 54000},
+    {"id": "DoKiep", "name": "Độ Kiếp", "exp": 78000},
+    {"id": "ChanTien", "name": "Chân Tiên", "exp": 110000}
+  ],
+  "skills": [
+    {"id": "nhat-kiem", "name": "Nhất Kiếm", "description": "Chém một hàng ngang được chọn.", "cost": 60, "unlock": 0, "price": 0, "target": "row", "icon": "剑"},
+    {"id": "ngu-kiem", "name": "Ngự Kiếm", "description": "Đổi hai ô cạnh nhau, ít nhất một ô Kiếm. Không cần tạo match.", "cost": 30, "unlock": 3, "price": 150, "target": "pair", "icon": "↔"},
+    {"id": "hoa-lien", "name": "Hỏa Liên", "description": "Nổ vùng 3×3 quanh ô chọn.", "cost": 65, "unlock": 5, "price": 200, "target": "cell", "icon": "火"},
+    {"id": "dan-loi", "name": "Dẫn Lôi", "description": "Chọn ba ô thường khác Lôi để chuyển thành Lôi.", "cost": 45, "unlock": 8, "price": 250, "target": "triple", "icon": "ϟ"},
+    {"id": "pha-chuong", "name": "Phá Chướng", "description": "Gỡ đá và phong ấn trong vùng 3×3.", "cost": 40, "unlock": 12, "price": 300, "target": "cell", "icon": "破"},
+    {"id": "lien-kiem", "name": "Liên Kiếm", "description": "Chọn hai ô cường hóa để kích hoạt lần lượt.", "cost": 80, "unlock": 15, "price": 350, "target": "chargedPair", "icon": "双"},
+    {"id": "hoi-linh", "name": "Hồi Linh", "description": "Xáo các ô di chuyển được trong vùng 3×3.", "cost": 35, "unlock": 20, "price": 450, "target": "cell", "icon": "↻"},
+    {"id": "van-kiem", "name": "Vạn Kiếm", "description": "Chọn một ô để xóa toàn bộ ô cùng loại.", "cost": 100, "unlock": 30, "price": 500, "target": "kind", "icon": "万"}
+  ],
+  "swords": [
+    {"id": "thanh-phong", "name": "Thanh Phong", "description": "Ô Kiếm nhận thêm 1 kiếm khí.", "unlock": 0, "price": 0, "color": "#49c8e5"},
+    {"id": "trong-nhac", "name": "Trọng Nhạc", "description": "Sát thương ô Kiếm tăng 30%.", "unlock": 3, "price": 200, "color": "#d7b76e"},
+    {"id": "hoa-van", "name": "Hỏa Vân", "description": "Sát thương ô Hỏa tăng 50%.", "unlock": 5, "price": 200, "color": "#e35646"},
+    {"id": "loi-minh", "name": "Lôi Minh", "description": "Ô Lôi nhận thêm 1 kiếm khí.", "unlock": 8, "price": 250, "color": "#b79aff"},
+    {"id": "tu-linh", "name": "Tụ Linh", "description": "Khí cơ bản của Tụ Linh Châu tăng thêm 2.", "unlock": 12, "price": 300, "color": "#7ce4bd"},
+    {"id": "lien-tinh", "name": "Liên Tinh", "description": "Sát thương tăng 20% từ cascade thứ hai.", "unlock": 15, "price": 350, "color": "#f2d58e"},
+    {"id": "pha-quan", "name": "Phá Quân", "description": "Ô bị xóa phá chướng ngại cạnh bên theo tám hướng.", "unlock": 20, "price": 400, "color": "#efac82"},
+    {"id": "huyen-co", "name": "Huyền Cơ", "description": "Giảm 10% chi phí kiếm thuật.", "unlock": 30, "price": 450, "color": "#87c3dc"}
+  ],
+  "levelBands": [
+    {"chapter": "Vân Hải Tiên Sơn", "moves": 24, "collect": 18, "seals": 4, "rocks": 3, "battle": 220, "boss": 360},
+    {"chapter": "Huyền Kiếm Bí Cảnh", "moves": 24, "collect": 24, "seals": 6, "rocks": 4, "battle": 320, "boss": 520},
+    {"chapter": "Lôi Hỏa Thiên Môn", "moves": 22, "collect": 30, "seals": 8, "rocks": 5, "battle": 420, "boss": 680},
+    {"chapter": "Tinh Hà Kiếm Vực", "moves": 22, "collect": 36, "seals": 10, "rocks": 6, "battle": 520, "boss": 840}
+  ]
+}
