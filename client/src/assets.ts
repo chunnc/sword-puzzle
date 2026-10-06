@@ -30,6 +30,7 @@ export const ART = {
   iconMap: require('../app-assets/ui/icon_map.webp') as ImageSourcePropType,
   iconMenu: require('../app-assets/ui/icon_menu.webp') as ImageSourcePropType,
   iconPerson: require('../app-assets/ui/icon_person.webp') as ImageSourcePropType,
+  iconShop: require('../app-assets/ui/icon_shop.webp') as ImageSourcePropType,
   iconSkill: require('../app-assets/ui/icon_skill.webp') as ImageSourcePropType,
   nav: require('../app-assets/ui/nav.webp') as ImageSourcePropType,
   overlayOmni: require('../app-assets/ui/overlay_omni.webp') as ImageSourcePropType,

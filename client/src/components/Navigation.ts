@@ -1,12 +1,14 @@
 import type { useRouter } from 'expo-router';
 type Router = ReturnType<typeof useRouter>;
-export function navigateTab(router: Router, id: string): void {
-    if (id === 'map')
-        router.replace('/map');
-    else if (id === 'person')
-        router.replace('/character');
-    else if (id === 'bag')
-        router.replace('/inventory');
-    else if (id === 'cultivation')
-        router.replace('/realm');
+const routes = {
+  map: '/map',
+  person: '/character',
+  bag: '/inventory',
+  shop: '/shop',
+} as const;
+
+export type BottomNavId = keyof typeof routes;
+
+export function navigateTab(router: Router, id: BottomNavId): void {
+  router.replace(routes[id]);
 }

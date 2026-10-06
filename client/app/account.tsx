@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BottomNav, TopHud } from '../src/components/Chrome';
+import { TopHud } from '../src/components/Chrome';
 import { GameButton, ScreenFrame, TitleBanner } from '../src/components/Art';
 import { useGameStore } from '../src/state/gameStore';
 import { colors, type } from '../src/theme';
@@ -18,6 +18,10 @@ export default function AccountScreen() {
   const [status, setStatus] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const linked = session !== null && !session.isGuest;
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/map');
+  };
 
   const submit = async (action: 'register' | 'login') => {
     setBusy(true);
@@ -35,7 +39,7 @@ export default function AccountScreen() {
 
   return (
     <ScreenFrame background="bgMap">
-      <TopHud onAccount={() => router.replace('/map')} />
+      <TopHud onAccount={goBack} />
       <TitleBanner title="TÀI KHOẢN" />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
@@ -84,12 +88,11 @@ export default function AccountScreen() {
             ) : (
               <Text style={styles.body}>Tiến trình đã liên kết và sẽ được đồng bộ khi có mạng.</Text>
             )}
-            <GameButton title="QUAY LẠI" onPress={() => router.replace('/map')} art="buttonSecondary" style={styles.action} />
+            <GameButton title="QUAY LẠI" onPress={goBack} art="buttonSecondary" style={styles.action} />
             <Text style={styles.small}>Bản thử nghiệm chưa có chức năng khôi phục mật khẩu.</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <BottomNav active="map" onSelect={(id) => id === 'map' ? router.replace('/map') : setStatus('Sắp ra mắt')} />
     </ScreenFrame>
   );
 }

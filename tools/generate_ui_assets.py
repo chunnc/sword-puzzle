@@ -74,7 +74,7 @@ def build_runtime_previews():
             "button-disabled", "bar-track", "bar-blue", "bar-red", "stage-current",
             "stage-done", "stage-locked", "skill-idle", "skill-ready", "avatar-frame"]),
         "runtime-preview-icons.png": ("UI icons", [
-            "icon-map", "icon-person", "icon-bag", "icon-lotus", "icon-menu", "icon-skill",
+            "icon-map", "icon-person", "icon-bag", "icon-shop", "icon-menu", "icon-skill",
             "icon-herb", "icon-bolt", "icon-coin", "icon-jade", "star-bright", "star-gray"]),
         "runtime-preview-tiles.png": ("Gameplay tiles", [
             "tile-sword", "tile-fire", "tile-lightning", "tile-spirit-orb", "tile-stone", "tile-herb", "tile-rock"]),

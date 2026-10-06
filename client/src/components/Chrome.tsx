@@ -7,6 +7,7 @@ import { ArtPanel } from './Art';
 import { useGameStore } from '../state/gameStore';
 import { realmForExp } from '../game/domain';
 import { useRouter } from 'expo-router';
+import type { BottomNavId } from './Navigation';
 
 export function TopHud({ onAccount }: { onAccount: () => void }) {
   const { width } = useWindowDimensions();
@@ -47,10 +48,10 @@ const tabs = [
   { id: 'map', label: 'TIÊN LỘ', image: 'iconMap' },
   { id: 'person', label: 'NHÂN VẬT', image: 'iconPerson' },
   { id: 'bag', label: 'TÚI ĐỒ', image: 'iconBag' },
-  { id: 'cultivation', label: 'TU LUYỆN', image: 'iconLotus' },
+  { id: 'shop', label: 'CỬA HÀNG', image: 'iconShop' },
 ] as const;
 
-export function BottomNav({ active, onSelect }: { active: string; onSelect: (id: string) => void }) {
+export function BottomNav({ active, onSelect }: { active: BottomNavId; onSelect: (id: BottomNavId) => void }) {
   const { width } = useWindowDimensions();
 
   return (
@@ -64,7 +65,7 @@ export function BottomNav({ active, onSelect }: { active: string; onSelect: (id:
             accessibilityRole="button"
             accessibilityLabel={tab.label}
             accessibilityState={{ selected }}
-            onPress={() => onSelect(tab.id)}
+            onPress={() => { if (!selected) onSelect(tab.id); }}
             style={styles.navItem}
           >
             <ImageView source={image} selected={selected} />

@@ -7,7 +7,7 @@ import { BottomNav, TopHud } from '../src/components/Chrome';
 import { ArtPanel, ScreenFrame } from '../src/components/Art';
 import { Notice } from '../src/components/Notice';
 import { LEVEL_COUNT, getLevel } from '../src/game/levels';
-import { navigateTab } from '../src/components/Navigation';
+import { navigateTab, type BottomNavId } from '../src/components/Navigation';
 import { getHighestUnlocked, getLevelStars, getLevelCompleted, useGameStore } from '../src/state/gameStore';
 import { colors, type } from '../src/theme';
 
@@ -25,7 +25,7 @@ export default function MapScreen() {
   const openLevel = async (levelId: number) => {
     if (await startLevel(levelId)) router.push(`/game/${levelId}` as never);
   };
-  const nav = (id: string) => navigateTab(router, id);
+  const nav = (id: BottomNavId) => navigateTab(router, id);
 
   return (
     <ScreenFrame background="bgMap">

@@ -33,3 +33,12 @@ pixels. One tile only, genuinely transparent background outside the frame, no
 text, numbers, lettering, watermark or extra objects. Keep the whole frame
 inside the image with roughly 6% transparent margin on all sides; the tile
 occupies about 88% of the square canvas. No ground shadow or background scene.
+
+## Cửa hàng
+
+`runtime/icon-shop.png` được tạo bằng công cụ ImageGen tích hợp sau khi xem trực
+tiếp các icon `icon-map.png`, `icon-person.png` và `icon-bag.png`. Quầy hàng mái
+cong dùng cùng tông ngà, vàng và ngọc xanh, khối nổi mềm, ánh sáng từ phía trên
+bên trái và nền trong suốt. Prompt đầy đủ lưu tại `runtime/icon-shop.prompt.txt`.
+Bản dùng trong game là `client/app-assets/ui/icon_shop.webp`, 512×512, giữ alpha,
+WebP quality 90. Contact sheet icon dùng cửa hàng ở vị trí trước đây của hoa sen.

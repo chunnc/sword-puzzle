@@ -1,0 +1,173 @@
+import React from 'react';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { BottomNav } from '../Chrome';
+import { CollectionScreen } from '../CollectionScreen';
+import { navigateTab } from '../Navigation';
+import CharacterScreen from '../../../app/character';
+import WinScreen from '../../../app/win';
+import AccountScreen from '../../../app/account';
+import { REALMS } from '../../game/domain';
+import { emptySave } from '../../game/save';
+import type { WinSummary } from '../../game/types';
+
+jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+jest.mock('expo-image', () => ({ Image: require('react-native').View }));
+jest.mock('expo-router', () => ({
+  useRouter: () => mockRouter,
+  useNavigation: () => mockNavigation,
+  useLocalSearchParams: () => mockParams,
+}));
+jest.mock('../../state/gameStore', () => ({
+  useGameStore: (selector?: (state: typeof mockState) => unknown) => selector ? selector(mockState) : mockState,
+}));
+jest.mock('../Art', () => {
+  const React = require('react');
+  const { Pressable, Text, View } = require('react-native');
+  return {
+    ScreenFrame: View,
+    ArtPanel: View,
+    ProgressBar: View,
+    TitleBanner: ({ title }: { title: string }) => React.createElement(Text, null, title),
+    GameButton: ({ title, onPress }: { title: string; onPress: () => void }) =>
+      React.createElement(Pressable, { onPress, accessibilityLabel: title }, React.createElement(Text, null, title)),
+  };
+});
+
+const mockRouter = { replace: jest.fn(), push: jest.fn(), back: jest.fn(), canGoBack: jest.fn() };
+const mockNavigation = { addListener: jest.fn(), setParams: jest.fn() };
+let mockParams: Record<string, string> = {};
+const mockState = {
+  save: emptySave(), notice: '', session: null, online: false,
+  startLevel: jest.fn(), register: jest.fn(), login: jest.fn(), setNotice: jest.fn(),
+};
+
+const win: WinSummary = {
+  runId: 'winning-run', levelId: 4, stars: 3, bestStars: 3,
+  expGained: 100, totalExp: REALMS[1].exp, coinsGained: 10,
+  realmBefore: 0, realmAfter: 1,
+};
+
+describe('scene navigation', () => {
+  let renderer: ReactTestRenderer;
+  const mount = (element: React.ReactElement) => {
+    act(() => { renderer = create(element); });
+  };
+  const button = (label: string) => renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0];
+  const hasText = (text: string) => renderer.root.findAll(node => {
+    const children = Array.isArray(node.props.children) ? node.props.children : [node.props.children];
+    return children.filter((child: unknown) => typeof child === 'string' || typeof child === 'number').join('') === text;
+  }).length > 0;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockParams = {};
+    mockState.save = emptySave();
+    mockRouter.canGoBack.mockReturnValue(true);
+    mockState.startLevel.mockResolvedValue(true);
+    mockNavigation.addListener.mockImplementation(() => jest.fn());
+  });
+  afterEach(() => { act(() => { renderer?.unmount(); }); });
+
+  it('does not replace the selected scene and opens the shop from the bottom bar', () => {
+    const onSelect = jest.fn((id) => navigateTab(mockRouter as never, id));
+    mount(React.createElement(BottomNav, { active: 'map', onSelect }));
+    act(() => { button('TIÊN LỘ').props.onPress(); });
+    expect(onSelect).not.toHaveBeenCalled();
+    act(() => { button('CỬA HÀNG').props.onPress(); });
+    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
+    expect(mockRouter.replace).toHaveBeenCalledWith('/shop');
+  });
+
+  it('marks the shop as selected rather than the inventory', () => {
+    mount(React.createElement(CollectionScreen, { shop: true }));
+    expect(button('CỬA HÀNG').props.accessibilityState.selected).toBe(true);
+    expect(button('TÚI ĐỒ').props.accessibilityState.selected).toBe(false);
+    act(() => { button('CỬA HÀNG').props.onPress(); });
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+
+  it('opens the character scene with the winning run when a realm increases', async () => {
+    mockParams = { levelId: '4' };
+    mockState.save.lastWin = win;
+    mount(React.createElement(WinScreen));
+    expect(renderer.root.findAllByType(BottomNav)).toHaveLength(0);
+    await act(async () => { button('ĐỘT PHÁ').props.onPress(); });
+    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
+    expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/character', params: { breakthroughRunId: win.runId } });
+    expect(mockState.startLevel).not.toHaveBeenCalled();
+  });
+
+  it('continues to the next level when no realm increases', async () => {
+    mockParams = { levelId: '4' };
+    mockState.save.lastWin = { ...win, realmAfter: 0 };
+    mount(React.createElement(WinScreen));
+    await act(async () => { button('MÀN TIẾP THEO').props.onPress(); });
+    expect(mockState.startLevel).toHaveBeenCalledWith(5);
+    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
+    expect(mockRouter.replace).toHaveBeenCalledWith('/game/5');
+  });
+
+  it('does not use a breakthrough summary from a different level', async () => {
+    mockParams = { levelId: '5' };
+    mockState.save.lastWin = win;
+    mount(React.createElement(WinScreen));
+    expect(button('ĐỘT PHÁ')).toBeUndefined();
+    await act(async () => { button('MÀN TIẾP THEO').props.onPress(); });
+    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
+    expect(mockRouter.replace).toHaveBeenCalledWith('/game/6');
+  });
+
+  it('shows the matching realm increase and continues to the map', () => {
+    mockParams = { breakthroughRunId: win.runId };
+    mockState.save.lastWin = win;
+    mockState.save.profile.totalExp = win.totalExp;
+    mount(React.createElement(CharacterScreen));
+    expect(hasText(`${REALMS[0].name} → ${REALMS[1].name}`)).toBe(true);
+    act(() => { button('TIẾP TỤC TIÊN LỘ').props.onPress(); });
+    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
+    expect(mockRouter.replace).toHaveBeenCalledWith('/map');
+  });
+
+  it.each([undefined, 'an-older-run'])('hides the celebration without a matching run: %s', (runId) => {
+    mockParams = runId ? { breakthroughRunId: runId } : {};
+    mockState.save.lastWin = win;
+    mount(React.createElement(CharacterScreen));
+    expect(hasText('ĐỘT PHÁ')).toBe(false);
+    expect(button('TIẾP TỤC TIÊN LỘ')).toBeUndefined();
+  });
+
+  it('hides the celebration when the matched win did not increase the realm', () => {
+    mockParams = { breakthroughRunId: win.runId };
+    mockState.save.lastWin = { ...win, realmAfter: win.realmBefore };
+    mount(React.createElement(CharacterScreen));
+    expect(hasText('ĐỘT PHÁ')).toBe(false);
+  });
+
+  it('clears the breakthrough parameter when another scene covers the character scene', () => {
+    mockParams = { breakthroughRunId: win.runId };
+    mockState.save.lastWin = win;
+    mount(React.createElement(CharacterScreen));
+    const onBlur = mockNavigation.addListener.mock.calls.find(([event]) => event === 'blur')![1];
+    act(() => { onBlur(); });
+    expect(mockNavigation.setParams).toHaveBeenCalledTimes(1);
+    expect(mockNavigation.setParams).toHaveBeenCalledWith({ breakthroughRunId: undefined });
+    mockParams = {};
+    act(() => { renderer.update(React.createElement(CharacterScreen)); });
+    expect(hasText('ĐỘT PHÁ')).toBe(false);
+  });
+
+  it.each([true, false])('returns from account with history=%s and has no bottom bar', (canGoBack) => {
+    mockRouter.canGoBack.mockReturnValue(canGoBack);
+    mount(React.createElement(AccountScreen));
+    expect(renderer.root.findAllByType(BottomNav)).toHaveLength(0);
+    act(() => { button('QUAY LẠI').props.onPress(); });
+    if (canGoBack) {
+      expect(mockRouter.back).toHaveBeenCalledTimes(1);
+      expect(mockRouter.replace).not.toHaveBeenCalled();
+    } else {
+      expect(mockRouter.replace).toHaveBeenCalledTimes(1);
+      expect(mockRouter.replace).toHaveBeenCalledWith('/map');
+      expect(mockRouter.back).not.toHaveBeenCalled();
+    }
+  });
+});
