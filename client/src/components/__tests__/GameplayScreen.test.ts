@@ -6,6 +6,7 @@ import { ART, SKILL_ART, SWORD_ART } from '../../assets';
 import { Board } from '../Board';
 import { GameplayDock, GameplayInfo } from '../GameplayChrome';
 import { GameplayProgressBar } from '../GameplayProgressBar';
+import { GameplayResultPopup } from '../GameplayResultPopup';
 import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
 import { emptySave } from '../../game/save';
@@ -17,14 +18,15 @@ jest.mock('@react-native-async-storage/async-storage', () => require('@react-nat
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => mockRouter, useFocusEffect: (callback: () => () => void) => require('react').useEffect(callback, [callback]) }));
 jest.mock('react-native-reanimated', () => ({
   __esModule: true,
-  default: { View: require('react-native').View }, useReducedMotion: () => true,
+  default: { View: require('react-native').View }, useReducedMotion: () => mockReduceMotion,
   useSharedValue: (value: number) => require('react').useRef({ value }).current,
   useAnimatedStyle: (style: () => unknown) => style(), withTiming: (value: number) => value,
 }));
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: require('react-native').View }));
 jest.mock('../../services/ads', () => ({ hasRewardedAdUnit: () => false }));
 jest.mock('../../state/gameStore', () => ({ useGameStore: Object.assign((selector?: (state: typeof mockState) => unknown) => selector ? selector(mockState) : mockState, { getState: () => mockState }) }));
-jest.mock('../Board', () => ({ Board: require('react-native').View, BOARD_CLEAR_MS: 0, BOARD_FALL_MS: 0, BOARD_SWAP_MS: 0, BOARD_REJECT_MS: 0 }));
+jest.mock('../Board', () => ({ Board: require('react-native').View, BOARD_CLEAR_MS: 30, BOARD_FALL_MS: 20, BOARD_SWAP_MS: 10, BOARD_REJECT_MS: 10 }));
+jest.mock('../GameplayResultPopup', () => ({ GameplayResultPopup: require('react-native').View }));
 jest.mock('../Art', () => {
   const React = require('react'), { View, Pressable, Text } = require('react-native');
   return { ScreenFrame: View, ArtPanel: View, ProgressBar: View,
@@ -33,6 +35,7 @@ jest.mock('../Art', () => {
 });
 
 const mockParams = { levelId: '15' };
+let mockReduceMotion = true;
 const mockRouter = { push: jest.fn(), replace: jest.fn() };
 const mockState = { save: emptySave(), notice: '', online: false, adsEnabled: false, session: null, setNotice: jest.fn(), swap: jest.fn(), castSkill: jest.fn(), startLevel: jest.fn() };
 
@@ -42,10 +45,12 @@ describe('gameplay presentation and exit behavior', () => {
   const view = (id: string) => renderer.root.findAllByType(Native.View).find(node => node.props.testID === id)!;
   const button = (label: string) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === label)[0];
   const board = () => renderer.root.findAllByType(Board).find(node => node.props.snapshot)!;
+  const popup = () => renderer.root.findAllByType(GameplayResultPopup).find(node => node.props.result)!;
   const mount = () => { act(() => { renderer = create(React.createElement(GameScreen)); }); };
   beforeEach(() => {
-    jest.clearAllMocks(); mockParams.levelId = '15'; mockState.save = emptySave();
+    jest.clearAllMocks(); mockReduceMotion = true; mockParams.levelId = '15'; mockState.save = emptySave();
     mockState.save.active = new BoardEngine(getLevel(15)).snapshot(); mockState.save.active.swordQi = 100;
+    mockState.startLevel.mockResolvedValue(true);
     jest.spyOn(Native, 'useWindowDimensions').mockReturnValue({ width: 320, height: 568, scale: 3, fontScale: 1 });
     jest.spyOn(Native.BackHandler, 'addEventListener').mockImplementation((_event, handler) => { hardwareBack = handler as () => boolean; return { remove: removeBack }; });
   });
@@ -170,7 +175,7 @@ describe('gameplay presentation and exit behavior', () => {
     expect(renderer.root.findAllByType(Native.Text).some(node => node.props.children === 'HẾT LƯỢT')).toBe(false);
     act(() => { renderer.unmount(); }); mockState.save.active!.skillUsed = true; mount();
     expect(button('Nhất Kiếm, 60 kiếm khí').props.disabled).toBe(true);
-    expect(renderer.root.findAllByType(Native.Text).some(node => node.props.children === 'HẾT LƯỢT')).toBe(true);
+    expect(popup().props.result.kind).toBe('lost');
   });
 
   it('cancels exit with targets intact and confirms without altering the saved run', () => {
@@ -179,6 +184,9 @@ describe('gameplay presentation and exit behavior', () => {
     const saved = JSON.stringify(mockState.save.active);
     act(() => { button('Rời màn chơi').props.onPress(); });
     expect(view('game-leave-confirmation')).toBeDefined(); expect(board().props.locked).toBe(true); expect(mockRouter.replace).not.toHaveBeenCalled();
+    expect(view('game-leave-panel').props.art).toBe('inventoryDialog');
+    expect(view('game-leave-panel').props.contentFit).toBe('contain');
+    expect(Native.StyleSheet.flatten(view('game-leave-panel').props.style)).toMatchObject({ maxWidth: 360, aspectRatio: 800 / 671 });
     act(() => { button('Tiếp tục').props.onPress(); });
     expect(board().props.targets).toEqual([{ x: 0, y: 0 }]);
     act(() => { button('Rời màn chơi').props.onPress(); });
@@ -203,5 +211,135 @@ describe('gameplay presentation and exit behavior', () => {
     act(() => { expect(hardwareBack()).toBe(true); }); expect(view('game-leave-confirmation')).toBeUndefined();
     await act(async () => { finish({ changed: false, won: false, lost: false, stars: 0, levelId: 15, animation: null }); });
     expect(button('Rời màn chơi').props.disabled).toBe(false);
+  });
+
+  async function winRun(stars: 0 | 1 | 2 | 3 = 3) {
+    const finalBoard = { ...mockState.save.active!, remaining: 0 };
+    const summary = { runId: finalBoard.runId, levelId: finalBoard.levelId, stars, bestStars: stars, expGained: 100, totalExp: 1500, coinsGained: 125, realmBefore: 0, realmAfter: 1 };
+    mockState.swap.mockImplementation(async () => {
+      mockState.save.active = null;
+      mockState.save.lastWin = summary;
+      return { changed: true, won: true, lost: false, stars, levelId: finalBoard.levelId, summary, animation: { swappedBoard: finalBoard, finalBoard, steps: [] } };
+    });
+    mount();
+    await act(async () => { board().props.onSwipe(0, 0, 1, 0); });
+    return summary;
+  }
+
+  it.each([0, 1, 2, 3] as const)('keeps the final board and opens a %s-star win popup without navigation', async stars => {
+    await winRun(stars);
+    expect(popup().props.result.summary.stars).toBe(stars);
+    expect(board().props.snapshot.remaining).toBe(0);
+    expect(board().props.locked).toBe(true);
+    expect(mockState.save.active).toBeNull();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+    act(() => { board().props.onSwipe(0, 0, 1, 0); hardwareBack(); popup().props.onContinue(); });
+    expect(mockState.swap).toHaveBeenCalledTimes(1);
+    expect(mockState.startLevel).not.toHaveBeenCalled();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+
+  it('continues to the next level after a realm increase and prevents duplicate starts', async () => {
+    await winRun();
+    let finish!: (ok: boolean) => void;
+    mockState.startLevel.mockReturnValue(new Promise<boolean>(resolve => { finish = resolve; }));
+    act(() => { popup().props.onReady(); popup().props.onContinue(); popup().props.onContinue(); hardwareBack(); });
+    expect(mockState.startLevel).toHaveBeenCalledTimes(1);
+    expect(mockState.startLevel).toHaveBeenCalledWith(16);
+    expect(popup().props.busy).toBe(true);
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+    await act(async () => { finish(true); });
+    expect(mockRouter.replace).toHaveBeenCalledWith('/game/16');
+  });
+
+  it('keeps the popup available if starting the next level fails', async () => {
+    await winRun(); mockState.startLevel.mockResolvedValue(false);
+    await act(async () => { popup().props.onReady(); popup().props.onContinue(); });
+    expect(popup().props.busy).toBe(false);
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+    expect(mockState.setNotice).toHaveBeenCalledWith('Không thể bắt đầu màn. Vui lòng thử lại.');
+    mockState.startLevel.mockResolvedValue(true);
+    await act(async () => { popup().props.onContinue(); });
+    expect(mockRouter.replace).toHaveBeenCalledWith('/game/16');
+  });
+
+  it('returns directly to the map on ready Android Back or at the last level', async () => {
+    await winRun();
+    act(() => { popup().props.onReady(); hardwareBack(); });
+    expect(mockRouter.replace).toHaveBeenCalledWith('/map');
+    expect(view('game-leave-confirmation')).toBeUndefined();
+    act(() => { renderer.unmount(); }); jest.clearAllMocks();
+    mockParams.levelId = '40'; mockState.save.active = new BoardEngine(getLevel(40)).snapshot();
+    await winRun();
+    await act(async () => { popup().props.onReady(); popup().props.onContinue(); });
+    expect(mockRouter.replace).toHaveBeenCalledWith('/map');
+    expect(mockState.startLevel).not.toHaveBeenCalled();
+  });
+
+  it('restores a lost run and restarts with a new board without changing routes', async () => {
+    mockState.save.active!.moves = 0; mockState.save.active!.swordQi = 0; mount();
+    expect(popup().props.result.kind).toBe('lost');
+    const runId = board().props.snapshot.runId;
+    mockState.startLevel.mockImplementation(async () => { mockState.save.active = new BoardEngine(getLevel(15)).snapshot(); return true; });
+    await act(async () => { popup().props.onReady(); popup().props.onContinue(); });
+    expect(mockState.startLevel).toHaveBeenCalledWith(15, true);
+    expect(renderer.root.findAllByType(GameplayResultPopup).filter(node => node.props.result)).toHaveLength(0);
+    expect(board().props.snapshot.runId).not.toBe(runId);
+    expect(board().props.locked).toBe(false);
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+
+  it('uses only reward reconciliation for the same run and resets when the route changes', async () => {
+    const summary = await winRun();
+    mockState.save.lastWin = { ...summary, expGained: 0, coinsGained: 10 };
+    act(() => { renderer.update(React.createElement(GameScreen)); });
+    expect(popup().props.result.summary).toMatchObject({ expGained: 0, coinsGained: 10 });
+    mockState.save.lastWin = { ...summary, runId: 'another-run', coinsGained: 999 };
+    act(() => { renderer.update(React.createElement(GameScreen)); });
+    expect(popup().props.result.summary.coinsGained).toBe(125);
+    mockParams.levelId = '16'; mockState.save.active = new BoardEngine(getLevel(16)).snapshot();
+    act(() => { renderer.update(React.createElement(GameScreen)); });
+    expect(renderer.root.findAllByType(GameplayResultPopup).filter(node => node.props.result)).toHaveLength(0);
+    expect(board().props.snapshot.levelId).toBe(16);
+  });
+
+  it('finishes the real last-skill board animation before opening a zero-star win', async () => {
+    jest.useFakeTimers();
+    try {
+      mockReduceMotion = false; mockParams.levelId = '1';
+      const snapshot = new BoardEngine(getLevel(1)).snapshot();
+      snapshot.moves = 0; snapshot.remaining = 1; snapshot.swordQi = 60;
+      for (let x = 0; x < 7; x++) snapshot.tiles[x] = { kind: 0, chargeTier: 0, locked: false };
+      mockState.save.active = snapshot;
+      const engine = new BoardEngine(getLevel(1), snapshot);
+      expect(engine.trySkill('nhat-kiem', [{ x: 0, y: 0 }])).toBe(true);
+      const summary = { runId: snapshot.runId, levelId: 1, stars: 0 as const, bestStars: 0 as const, expGained: 30, totalExp: 30, coinsGained: 100, realmBefore: 0, realmAfter: 0 };
+      mockState.castSkill.mockImplementation(async () => {
+        mockState.save.active = null; mockState.save.lastWin = summary;
+        return { changed: true, won: true, lost: false, stars: 0, levelId: 1, summary, animation: engine.animation };
+      });
+      mount(); act(() => { button('Nhất Kiếm, 60 kiếm khí').props.onPress(); board().props.onCellPress(0, 0); });
+      await act(async () => { button('Thi triển · 60 khí').props.onPress(); });
+      expect(renderer.root.findAllByType(GameplayResultPopup).filter(node => node.props.result)).toHaveLength(0);
+      expect(board().props.locked).toBe(true);
+      await act(async () => { await jest.runAllTimersAsync(); });
+      expect(popup().props.result.summary.stars).toBe(0);
+      expect(board().props.snapshot).toEqual(engine.animation!.finalBoard);
+      expect(mockRouter.replace).not.toHaveBeenCalled();
+    } finally { jest.useRealTimers(); }
+  });
+
+  it('opens loss only after the final swap animation completes', async () => {
+    jest.useFakeTimers();
+    try {
+      mockReduceMotion = false;
+      const before = mockState.save.active!, finalBoard = { ...before, moves: 0, swordQi: 0 };
+      mockState.swap.mockResolvedValue({ changed: true, won: false, lost: true, stars: 0, levelId: 15, animation: { swap: { x1: 0, y1: 0, x2: 1, y2: 0 }, swappedBoard: before, finalBoard, steps: [] } });
+      mount(); await act(async () => { board().props.onSwipe(0, 0, 1, 0); });
+      expect(renderer.root.findAllByType(GameplayResultPopup).filter(node => node.props.result)).toHaveLength(0);
+      await act(async () => { await jest.runAllTimersAsync(); });
+      expect(popup().props.result.kind).toBe('lost');
+      expect(board().props.snapshot).toEqual(finalBoard);
+    } finally { jest.useRealTimers(); }
   });
 });

@@ -45,7 +45,7 @@ describe('game store lifecycle', () => {
         expect((await loadSave()).profile.levels).toEqual([{ levelId: 1, stars: 0 }]);
         expect(await useGameStore.getState().startLevel(2)).toBe(true);
     });
-    it('updates win-screen rewards after another device already improved the stage', async () => {
+    it('updates result rewards after another device already improved the stage', async () => {
         const snapshot = new BoardEngine(getLevel(1)).snapshot();
         snapshot.moves = 0; snapshot.remaining = 1; snapshot.swordQi = 60;
         for (let x = 0; x < 7; x++) snapshot.tiles[x] = { kind: 0, chargeTier: 0, locked: false };

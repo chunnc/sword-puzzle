@@ -1,0 +1,129 @@
+{
+  "device": "iPhone 16e",
+  "scale": 3,
+  "scenarios": [
+    {
+      "name": "won-320x568",
+      "params": {
+        "width": 320,
+        "height": 568,
+        "kind": "won"
+      }
+    },
+    {
+      "name": "lost-320x568",
+      "params": {
+        "width": 320,
+        "height": 568,
+        "kind": "lost"
+      }
+    },
+    {
+      "name": "leave-320x568",
+      "params": {
+        "width": 320,
+        "height": 568,
+        "kind": "leave"
+      }
+    },
+    {
+      "name": "won-360x640",
+      "params": {
+        "width": 360,
+        "height": 640,
+        "kind": "won"
+      }
+    },
+    {
+      "name": "lost-360x640",
+      "params": {
+        "width": 360,
+        "height": 640,
+        "kind": "lost"
+      }
+    },
+    {
+      "name": "leave-360x640",
+      "params": {
+        "width": 360,
+        "height": 640,
+        "kind": "leave"
+      }
+    },
+    {
+      "name": "won-360x780",
+      "params": {
+        "width": 360,
+        "height": 780,
+        "kind": "won"
+      }
+    },
+    {
+      "name": "lost-360x780",
+      "params": {
+        "width": 360,
+        "height": 780,
+        "kind": "lost"
+      }
+    },
+    {
+      "name": "leave-360x780",
+      "params": {
+        "width": 360,
+        "height": 780,
+        "kind": "leave"
+      }
+    },
+    {
+      "name": "won-390x844",
+      "params": {
+        "width": 390,
+        "height": 844,
+        "kind": "won"
+      }
+    },
+    {
+      "name": "lost-390x844",
+      "params": {
+        "width": 390,
+        "height": 844,
+        "kind": "lost"
+      }
+    },
+    {
+      "name": "leave-390x844",
+      "params": {
+        "width": 390,
+        "height": 844,
+        "kind": "leave"
+      }
+    },
+    {
+      "name": "zero-320x568",
+      "params": {
+        "width": 320,
+        "height": 568,
+        "kind": "won",
+        "stars": 0
+      }
+    },
+    {
+      "name": "zero-390x844",
+      "params": {
+        "width": 390,
+        "height": 844,
+        "kind": "won",
+        "stars": 0
+      }
+    },
+    {
+      "name": "busy-320x568",
+      "params": {
+        "width": 320,
+        "height": 568,
+        "kind": "won",
+        "busy": "true"
+      }
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "panel": {
+    "size": [
+      883,
+      1000
+    ],
+    "bytes": 151298,
+    "alpha_range": [
+      0,
+      255
+    ]
+  },
+  "continue": {
+    "size": [
+      512,
+      142
+    ],
+    "bytes": 18470,
+    "alpha_range": [
+      0,
+      255
+    ]
+  },
+  "back": {
+    "size": [
+      512,
+      146
+    ],
+    "bytes": 18114,
+    "alpha_range": [
+      0,
+      255
+    ]
+  },
+  "star": {
+    "size": [
+      256,
+      233
+    ],
+    "bytes": 16314,
+    "alpha_range": [
+      0,
+      255
+    ]
+  }
+}

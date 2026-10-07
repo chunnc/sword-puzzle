@@ -224,3 +224,55 @@ alpha; ảnh mục tiêu tối đa 1200 px, Lượt/Hủy 512 px, Thi triển 10
 Nguồn PNG được giữ nguyên. `runtime-preview-gameplay-v3.png` là contact
 sheet; ảnh native và xác minh nguồn được lưu tại `assets/ui-review/gameplay-v3/`.
 Phần HP có đệm bên phải để không đè hoa văn, section vẫn cao 76/66 px.
+
+## Popup kết thúc màn
+
+Bốn sprite mới được tạo riêng bằng ImageGen tích hợp: panel ngọc tối, nút
+Tiếp tục/Chơi lại, nút Quay về và sao vàng năm cánh. Viền vàng mảnh, hoa văn
+mây ít, highlight trên trái và ánh sáng gọn giữ cùng artstyle gameplay v3.
+Hai nút được tinh chỉnh thêm để giảm hoa văn; nhãn dựng bằng code.
+
+- [Panel](runtime/gameplay-result-panel.png) · [prompt](runtime/gameplay-result-panel.prompt.txt)
+- [Nút chính](runtime/gameplay-result-continue.png) · [prompt](runtime/gameplay-result-continue.prompt.txt) · [tinh chỉnh](runtime/gameplay-result-continue.refine.prompt.txt)
+- [Nút Quay về](runtime/gameplay-result-back.png) · [prompt](runtime/gameplay-result-back.prompt.txt) · [tinh chỉnh](runtime/gameplay-result-back.refine.prompt.txt)
+- [Sao vàng](runtime/gameplay-result-star.png) · [prompt](runtime/gameplay-result-star.prompt.txt)
+
+Sao chưa đạt dùng chính ảnh sao vàng mới áp grayscale bằng Skia ColorMatrix,
+giữ nguyên alpha, hình dáng và chi tiết. Không dùng sprite sao xám cũ trong
+popup. Saturation và zoom thay đổi lần lượt cho từng sao đạt được.
+
+Pipeline chỉ trim alpha, resize và xuất WebP quality 90: panel tối đa 1000 px,
+hai nút 512 px, sao 256 px. Bốn WebP runtime tổng khoảng 199 KiB; bản PNG giữ
+nguyên alpha ImageGen. `runtime-preview-gameplay-result.png` là contact sheet.
+Ảnh native bốn viewport, video/GIF animation và kiểm tra giữ nguyên save
+nằm trong [gameplay-result-v1](../ui-review/gameplay-result-v1/README.md).
+
+## Gameplay dialog v2: tái sử dụng panel và nút
+
+Popup thắng/thua và xác nhận quay về hiện dùng `inventory_dialog.webp` có
+kích thước runtime 800×671. Component chung lấy tỷ lệ từ metadata ảnh,
+giới hạn rộng 360 px và dùng `contain` để giữ nguyên hình dáng khung.
+Padding và khoảng cách nội dung được thu gọn theo kích thước panel.
+
+Popup kết quả dùng lại `button_primary.webp` và `button_secondary.webp`
+của dialog quay về: nút vàng chữ tối cho Tiếp tục/Chơi lại, nút ngọc chữ
+ngà cho Quay về. Hàng nút rộng 92% vùng nội dung, ảnh cao 42 px, vùng nhấn
+44 px. Dialog quay về giữ hai nút xếp dọc, kích thước nút hiện tại.
+
+Không generate ảnh mới. Sao vàng, grayscale và animation giữ nguyên;
+panel/nút ImageGen của bản v1 được lưu làm tham chiếu lịch sử. Ảnh native
+bốn viewport và xác nhận giữ nguyên save nằm trong
+[gameplay-dialog-v2](../ui-review/gameplay-dialog-v2/README.md).
+
+## Gameplay dialog v3: nút kết quả xếp dọc, đúng tỷ lệ ảnh
+
+Popup thắng/thua đặt Tiếp tục/Chơi lại trên Quay về. Hai ảnh nút lấy tỷ lệ
+riêng từ metadata runtime: vàng 1400×363, ngọc 1400×356. Chiều cao tính từ
+chiều rộng, dùng `contain`, không kéo ảnh vào chiều cao cố định hoặc scale
+nút khi nhấn; phản hồi nhấn dùng opacity.
+
+Nút rộng tối đa 184 px, hoặc 168 px khi panel nhỏ hơn 350 px; vùng nhấn
+tối thiểu 44 px. Màn nhỏ dùng canvas sao 56 px và khoảng cách gọn để nội
+dung vừa panel inventory đúng tỷ lệ. Animation và màu grayscale/vàng giữ
+nguyên. Ảnh native bốn viewport nằm trong
+[gameplay-dialog-v3](../ui-review/gameplay-dialog-v3/README.md).

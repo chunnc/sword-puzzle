@@ -3,6 +3,10 @@ import { TileKind } from './game/types';
 import type { SkillId, SwordId } from './game/domain';
 
 export const ART = {
+  gameplayResultPanel: require('../app-assets/ui/gameplay_result_panel.webp') as ImageSourcePropType,
+  gameplayResultContinue: require('../app-assets/ui/gameplay_result_continue.webp') as ImageSourcePropType,
+  gameplayResultBack: require('../app-assets/ui/gameplay_result_back.webp') as ImageSourcePropType,
+  gameplayResultStar: require('../app-assets/ui/gameplay_result_star.webp') as number,
   gameplayBack: require('../app-assets/ui/gameplay_back.webp') as ImageSourcePropType,
   gameplayObjective: require('../app-assets/ui/gameplay_objective_v3.webp') as ImageSourcePropType,
   gameplayMoves: require('../app-assets/ui/gameplay_moves_v3.webp') as ImageSourcePropType,

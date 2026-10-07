@@ -1,0 +1,204 @@
+{
+  "device": "iPhone 16e",
+  "scale": 3,
+  "scenarios": [
+    {
+      "name": "win-0-320x568",
+      "params": {
+        "width": 320,
+        "height": 568,
+        "stars": 0,
+        "goal": "normal"
+      }
+    },
+    {
+      "name": "win-1-320x568",
+      "params": {
+        "width": 320,
+        "height": 568,
+        "stars": 1,
+        "goal": "normal"
+      }
+    },
+    {
+      "name": "win-2-320x568",
+      "params": {
+        "width": 320,
+        "height": 568,
+        "stars": 2,
+        "goal": "boss"
+      }
+    },
+    {
+      "name": "win-3-320x568",
+      "params": {
+        "width": 320,
+        "height": 568,
+        "stars": 3,
+        "goal": "normal"
+      }
+    },
+    {
+      "name": "lost-320x568",
+      "params": {
+        "width": 320,
+        "height": 568,
+        "kind": "lost",
+        "goal": "boss"
+      }
+    },
+    {
+      "name": "win-0-360x640",
+      "params": {
+        "width": 360,
+        "height": 640,
+        "stars": 0,
+        "goal": "normal"
+      }
+    },
+    {
+      "name": "win-1-360x640",
+      "params": {
+        "width": 360,
+        "height": 640,
+        "stars": 1,
+        "goal": "normal"
+      }
+    },
+    {
+      "name": "win-2-360x640",
+      "params": {
+        "width": 360,
+        "height": 640,
+        "stars": 2,
+        "goal": "boss"
+      }
+    },
+    {
+      "name": "win-3-360x640",
+      "params": {
+        "width": 360,
+        "height": 640,
+        "stars": 3,
+        "goal": "normal"
+      }
+    },
+    {
+      "name": "lost-360x640",
+      "params": {
+        "width": 360,
+        "height": 640,
+        "kind": "lost",
+        "goal": "boss"
+      }
+    },
+    {
+      "name": "win-0-360x780",
+      "params": {
+        "width": 360,
+        "height": 780,
+        "stars": 0,
+        "goal": "normal"
+      }
+    },
+    {
+      "name": "win-1-360x780",
+      "params": {
+        "width": 360,
+        "height": 780,
+        "stars": 1,
+        "goal": "normal"
+      }
+    },
+    {
+      "name": "win-2-360x780",
+      "params": {
+        "width": 360,
+        "height": 780,
+        "stars": 2,
+        "goal": "boss"
+      }
+    },
+    {
+      "name": "win-3-360x780",
+      "params": {
+        "width": 360,
+        "height": 780,
+        "stars": 3,
+        "goal": "normal"
+      }
+    },
+    {
+      "name": "lost-360x780",
+      "params": {
+        "width": 360,
+        "height": 780,
+        "kind": "lost",
+        "goal": "boss"
+      }
+    },
+    {
+      "name": "win-0-390x844",
+      "params": {
+        "width": 390,
+        "height": 844,
+        "stars": 0,
+        "goal": "normal"
+      }
+    },
+    {
+      "name": "win-1-390x844",
+      "params": {
+        "width": 390,
+        "height": 844,
+        "stars": 1,
+        "goal": "normal"
+      }
+    },
+    {
+      "name": "win-2-390x844",
+      "params": {
+        "width": 390,
+        "height": 844,
+        "stars": 2,
+        "goal": "boss"
+      }
+    },
+    {
+      "name": "win-3-390x844",
+      "params": {
+        "width": 390,
+        "height": 844,
+        "stars": 3,
+        "goal": "normal"
+      }
+    },
+    {
+      "name": "lost-390x844",
+      "params": {
+        "width": 390,
+        "height": 844,
+        "kind": "lost",
+        "goal": "boss"
+      }
+    },
+    {
+      "name": "busy-320x568",
+      "params": {
+        "width": 320,
+        "height": 568,
+        "stars": 3,
+        "busy": "true"
+      }
+    },
+    {
+      "name": "busy-390x844",
+      "params": {
+        "width": 390,
+        "height": 844,
+        "stars": 3,
+        "busy": "true"
+      }
+    }
+  ]
+}

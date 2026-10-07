@@ -4,20 +4,25 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useReducedMotion } from 'react-native-reanimated';
 import { Board, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_SWAP_MS, BOARD_REJECT_MS, type BoardVisualEffect } from '../../src/components/Board';
 import { GameplayDock, GameplayHeader, GameplayInfo } from '../../src/components/GameplayChrome';
+import { GameplayResultPopup, type GameplayResult } from '../../src/components/GameplayResultPopup';
+import { GameplayLeaveDialog } from '../../src/components/GameplayLeaveDialog';
 import { ArtPanel, GameButton, ScreenFrame } from '../../src/components/Art';
 import { Notice } from '../../src/components/Notice';
 import { BoardEngine } from '../../src/game/BoardEngine';
 import { getLevel } from '../../src/game/levels';
-import { CONTENT, SKILLS, realmForExp, type SkillId } from '../../src/game/domain';
+import { CONTENT, LEVEL_COUNT, SKILLS, realmForExp, type SkillId } from '../../src/game/domain';
 import { GoalKind, TileKind, type BoardSnapshot, type CellPosition } from '../../src/game/types';
 import { useGameStore, type BoardActionResult } from '../../src/state/gameStore';
-import { hasRewardedAdUnit } from '../../src/services/ads';
 import { colors } from '../../src/theme';
 export default function GameScreen() {
     const { levelId: rawId } = useLocalSearchParams<{
         levelId: string;
     }>();
-    const levelId = Number(rawId), router = useRouter(), { width } = useWindowDimensions();
+    return <GameplaySession key={rawId} levelId={Number(rawId)} />;
+}
+
+function GameplaySession({ levelId }: { levelId: number }) {
+    const router = useRouter(), { width } = useWindowDimensions();
     const level = useMemo(() => { try {
         return getLevel(levelId);
     }
@@ -35,18 +40,39 @@ export default function GameScreen() {
     const compact = viewport.height > 0 && viewport.height < 640;
     const [effect, setEffect] = useState<BoardVisualEffect | null>(null), [help, setHelp] = useState(false);
     const [leave, setLeave] = useState(false);
+    const [result, setResult] = useState<GameplayResult | null>(null);
+    const resultRef = useRef<GameplayResult | null>(null), resultReady = useRef(false);
     const busyRef = useRef(false), alive = useRef(true), effectId = useRef(0);
     const reduceMotion = useReducedMotion();
     const engine = useMemo(() => board && level ? new BoardEngine(level, board) : null, [board, level]);
-    useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
-    useEffect(() => { if (!busyRef.current && persisted)
-        setBoard(persisted); }, [persisted]);
-    const requestLeave = useCallback(() => {
-        if (!busyRef.current) setLeave(true);
+    const openResult = useCallback((next: GameplayResult) => {
+        if (resultRef.current?.runId === next.runId) return;
+        resultRef.current = next;
+        resultReady.current = false;
+        setSelected(null);
+        setTargetSkill(null);
+        setTargets([]);
+        setHelp(false);
+        setLeave(false);
+        setResult(next);
     }, []);
+    useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+    useEffect(() => {
+        if (busyRef.current || !persisted || !level) return;
+        setBoard(persisted);
+        if (new BoardEngine(level, persisted).lost)
+            openResult({ kind: 'lost', runId: persisted.runId, levelId });
+    }, [level, levelId, openResult, persisted]);
+    const requestLeave = useCallback(() => {
+        if (busyRef.current) return;
+        if (resultRef.current) {
+            if (resultReady.current) { busyRef.current = true; setBusy(true); router.replace('/map'); }
+        } else setLeave(true);
+    }, [router]);
     useFocusEffect(useCallback(() => {
         const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
             if (busyRef.current) return true;
+            if (resultRef.current) { requestLeave(); return true; }
             if (leave) setLeave(false);
             else if (help) setHelp(false);
             else if (!board) router.replace('/map');
@@ -54,11 +80,11 @@ export default function GameScreen() {
             return true;
         });
         return () => subscription.remove();
-    }, [board, help, leave, router]));
+    }, [board, help, leave, requestLeave, router]));
     if (!board || !level || !engine)
         return <ScreenFrame background="bgGame"><Text style={styles.body}>Không tìm thấy màn chơi.</Text><GameButton title="VỀ TIÊN LỘ" onPress={() => router.replace('/map')}/></ScreenFrame>;
     const battle = level.goal === GoalKind.Battle || level.goal === GoalKind.Boss;
-    const available = engine.availableSkills(), lost = engine.lost;
+    const available = engine.availableSkills();
     const skill = SKILLS.find(s => s.id === targetSkill);
     const required = skill?.target === 'triple' ? 3 : skill?.target === 'pair' || skill?.target === 'chargedPair' ? 2 : 1;
     const preview: number[] = [];
@@ -129,7 +155,7 @@ export default function GameScreen() {
         CellPosition,
         CellPosition
     ]) => {
-        if (busyRef.current)
+        if (busyRef.current || resultRef.current)
             return;
         busyRef.current = true;
         setBusy(true);
@@ -150,8 +176,10 @@ export default function GameScreen() {
             setTargetSkill(null);
             setTargets([]);
             await play(result);
-            if (alive.current && result.won)
-                router.replace({ pathname: '/win', params: { levelId: String(levelId) } });
+            if (alive.current && result.won && result.summary)
+                openResult({ kind: 'won', runId: result.summary.runId, summary: result.summary });
+            else if (alive.current && result.lost)
+                openResult({ kind: 'lost', runId: board.runId, levelId });
         }
         catch {
             if (alive.current)
@@ -171,7 +199,7 @@ export default function GameScreen() {
         void perform(() => store.swap(x1, y1, x2, y2), [{ x: x1, y: y1 }, { x: x2, y: y2 }]);
     };
     const tap = (x: number, y: number) => {
-        if (busyRef.current)
+        if (busyRef.current || resultRef.current)
             return;
         if (targetSkill) {
             const tile = board.tiles[y * 7 + x];
@@ -187,44 +215,59 @@ export default function GameScreen() {
         else
             setSelected({ x, y });
     };
-    const restart = async () => {
-        if (busyRef.current) return;
+    const continueResult = async () => {
+        const completed = resultRef.current;
+        if (busyRef.current || !completed || !resultReady.current) return;
         busyRef.current = true;
         setBusy(true);
-        setTargetSkill(null);
-        setTargets([]);
+        let navigating = false;
         try {
-            if (await store.startLevel(levelId, true) && alive.current)
-                setBoard(useGameStore.getState().save.active);
+            if (completed.kind === 'won') {
+                if (levelId === LEVEL_COUNT) { router.replace('/map'); navigating = true; return; }
+                if (!await store.startLevel(levelId + 1)) throw new Error('START_FAILED');
+                if (alive.current) { router.replace(`/game/${levelId + 1}` as never); navigating = true; }
+            } else {
+                if (!await store.startLevel(levelId, true)) throw new Error('START_FAILED');
+                if (alive.current) {
+                    setBoard(useGameStore.getState().save.active);
+                    resultRef.current = null;
+                    resultReady.current = false;
+                    setResult(null);
+                }
+            }
         } catch {
-            if (alive.current) store.setNotice('Không thể bắt đầu lại màn. Vui lòng thử lại.');
+            if (alive.current) store.setNotice('Không thể bắt đầu màn. Vui lòng thử lại.');
         } finally {
-            busyRef.current = false;
-            if (alive.current) setBusy(false);
+            if (!navigating) {
+                busyRef.current = false;
+                if (alive.current) setBusy(false);
+            }
         }
     };
-    const overlayOpen = help || leave || lost && !busy;
+    const overlayOpen = help || leave || Boolean(result);
+    const displayResult = result?.kind === 'won' && store.save.lastWin?.runId === result.runId
+        ? { ...result, summary: store.save.lastWin } : result;
     const boardSide = Math.min(Math.max(0, (viewport.width || width) - 28), Math.max(0, height - 6));
     return (
       <ScreenFrame background={level.goal === GoalKind.Boss ? 'bgBoss' : 'bgGame'}>
         <View testID="game-content" style={styles.gameContent} onLayout={event => setViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
           <View style={styles.scene} pointerEvents={overlayOpen ? 'none' : 'auto'} accessibilityElementsHidden={overlayOpen} importantForAccessibility={overlayOpen ? 'no-hide-descendants' : 'auto'}>
-            <GameplayHeader levelId={levelId} busy={busy} compact={compact} onBack={requestLeave} onHelp={() => setHelp(true)} />
+            <GameplayHeader levelId={levelId} busy={busy || Boolean(result)} compact={compact} onBack={requestLeave} onHelp={() => { if (!busyRef.current && !resultRef.current) setHelp(true); }} />
             <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion} duration={BOARD_CLEAR_MS} />
             <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setHeight(event.nativeEvent.layout.height)}>
               <View style={{ width: boardSide, height: boardSide }}>
                 <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} showTargetingHint={false} locked={busy || overlayOpen} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} />
               </View>
             </View>
-            <GameplayDock board={board} skillSlots={realmForExp(store.save.profile.totalExp).skillSlots} available={available} cost={id => engine.cost(id)} targetSkill={targetSkill} targetCount={required} canCast={targets.length === required} busy={busy} compact={compact}
-              onSkill={id => { setTargetSkill(id); setTargets([]); setSelected(null); }}
-              onCancel={() => { setTargetSkill(null); setTargets([]); }}
+            <GameplayDock board={board} skillSlots={realmForExp(store.save.profile.totalExp).skillSlots} available={available} cost={id => engine.cost(id)} targetSkill={targetSkill} targetCount={required} canCast={targets.length === required} busy={busy || Boolean(result)} compact={compact}
+              onSkill={id => { if (!busyRef.current && !resultRef.current) { setTargetSkill(id); setTargets([]); setSelected(null); } }}
+              onCancel={() => { if (!busyRef.current && !resultRef.current) { setTargetSkill(null); setTargets([]); } }}
               onCast={() => { if (targetSkill) void perform(() => store.castSkill(targetSkill, targets)); }} />
           </View>
-          <Notice message={store.notice} onDismiss={() => store.setNotice('')} />
-          {lost && !busy && !leave ? <View accessibilityViewIsModal style={styles.overlay}><ArtPanel art="dialogPanel" style={styles.dialog}><Text style={styles.dialogTitle}>HẾT LƯỢT</Text><Text style={styles.body}>Còn {board.remaining} mục tiêu. Thử một cách ghép khác.</Text><GameButton title="CHƠI LẠI" onPress={() => void restart()} />{store.online && store.adsEnabled && store.session && hasRewardedAdUnit() && !board.extraMovesUsed ? <GameButton title="QUẢNG CÁO · +3 LƯỢT" disabled={store.adsLoading} onPress={() => void store.requestExtraMoves()} art="buttonSecondary" textStyle={styles.secondaryText} /> : null}<GameButton title="VỀ TIÊN LỘ" onPress={requestLeave} art="buttonSecondary" textStyle={styles.secondaryText} /></ArtPanel></View> : null}
+          {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} /> : null}
+          <View pointerEvents="box-none" style={styles.noticeLayer}><Notice message={store.notice} onDismiss={() => store.setNotice('')} /></View>
           {help && !leave ? <View accessibilityViewIsModal style={styles.overlay}><ArtPanel art="dialogPanel" style={styles.dialog}><Text style={styles.dialogTitle}>LINH VẬT</Text><Text style={styles.body}>Ghép 3 nhận sát thương và khí. Ghép 4–5 giữ một ô cường hóa; ghép tiếp cùng loại để kích hoạt.</Text>{CONTENT.tiles.map(tile => <Text key={tile.id} style={styles.rule}>{tile.name}: {tile.damage} sát thương · {tile.qi} khí</Text>)}<Text style={styles.body}>Kiếm: hàng / chữ thập. Hỏa: 3×3 / 13 ô. Lôi: thêm 50% / toàn bộ Lôi. Châu: nhiều khí / Ngưng Khí.</Text><GameButton title="ĐÃ HIỂU" onPress={() => setHelp(false)} /></ArtPanel></View> : null}
-          {leave ? <View testID="game-leave-confirmation" accessibilityViewIsModal style={styles.overlay}><ArtPanel art="dialogPanel" style={styles.dialog}><Text accessibilityRole="header" style={styles.dialogTitle}>Rời màn chơi?</Text><Text style={styles.body}>Tiến trình màn này đã được lưu. Bạn có thể chơi tiếp khi quay lại.</Text><GameButton title="Tiếp tục" disabled={busy} onPress={() => setLeave(false)} /><GameButton title="Về Tiên Lộ" disabled={busy} onPress={() => { if (!busyRef.current) router.replace('/map'); }} art="buttonSecondary" textStyle={styles.secondaryText} /></ArtPanel></View> : null}
+          {leave ? <GameplayLeaveDialog busy={busy} compact={(viewport.width || width) < 360} onContinue={() => setLeave(false)} onBack={() => { if (!busyRef.current) router.replace('/map'); }} /> : null}
         </View>
       </ScreenFrame>
     );
@@ -233,11 +276,11 @@ export default function GameScreen() {
 const styles = StyleSheet.create({
     gameContent: { flex: 1, minHeight: 0, marginHorizontal: -12, paddingHorizontal: 12 },
     scene: { flex: 1, minHeight: 0 },
+    noticeLayer: { ...StyleSheet.absoluteFill, zIndex: 50 },
     boardSpace: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 6 },
     overlay: { ...StyleSheet.absoluteFill, zIndex: 30, backgroundColor: colors.veil, alignItems: 'center', justifyContent: 'center', padding: 12 },
     dialog: { width: '100%', maxWidth: 390, padding: 24, gap: 12 },
     dialogTitle: { fontSize: 22, fontWeight: '900', color: colors.ivory, textAlign: 'center' },
     body: { color: colors.ivory, fontSize: 13, textAlign: 'center', lineHeight: 20 },
     rule: { color: colors.goldBright, fontSize: 13 },
-    secondaryText: { color: colors.ivory },
 });

@@ -6,7 +6,6 @@ import { BottomNav, TopHud } from '../Chrome';
 import { CollectionScreen } from '../CollectionScreen';
 import { navigateTab } from '../Navigation';
 import CharacterScreen from '../../../app/character';
-import WinScreen from '../../../app/win';
 import AccountScreen from '../../../app/account';
 import InventoryScreen from '../../../app/inventory';
 import { REALMS, SKILLS, SWORDS } from '../../game/domain';
@@ -86,37 +85,6 @@ describe('scene navigation', () => {
     expect(button('TÚI ĐỒ').props.accessibilityState.selected).toBe(false);
     act(() => { button('CỬA HÀNG').props.onPress(); });
     expect(mockRouter.replace).not.toHaveBeenCalled();
-  });
-
-  it('opens the character scene directly when a realm increases', async () => {
-    mockParams = { levelId: '4' };
-    mockState.save.lastWin = win;
-    mount(React.createElement(WinScreen));
-    expect(renderer.root.findAllByType(BottomNav)).toHaveLength(0);
-    await act(async () => { button('ĐỘT PHÁ').props.onPress(); });
-    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
-    expect(mockRouter.replace).toHaveBeenCalledWith('/character');
-    expect(mockState.startLevel).not.toHaveBeenCalled();
-  });
-
-  it('continues to the next level when no realm increases', async () => {
-    mockParams = { levelId: '4' };
-    mockState.save.lastWin = { ...win, realmAfter: 0 };
-    mount(React.createElement(WinScreen));
-    await act(async () => { button('MÀN TIẾP THEO').props.onPress(); });
-    expect(mockState.startLevel).toHaveBeenCalledWith(5);
-    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
-    expect(mockRouter.replace).toHaveBeenCalledWith('/game/5');
-  });
-
-  it('does not use a breakthrough summary from a different level', async () => {
-    mockParams = { levelId: '5' };
-    mockState.save.lastWin = win;
-    mount(React.createElement(WinScreen));
-    expect(button('ĐỘT PHÁ')).toBeUndefined();
-    await act(async () => { button('MÀN TIẾP THEO').props.onPress(); });
-    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
-    expect(mockRouter.replace).toHaveBeenCalledWith('/game/6');
   });
 
   it.each([
