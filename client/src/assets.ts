@@ -3,6 +3,12 @@ import { TileKind } from './game/types';
 import type { SkillId, SwordId } from './game/domain';
 
 export const ART = {
+  inventoryCard: require('../app-assets/ui/inventory_card.webp') as ImageSourcePropType,
+  inventoryTabIdle: require('../app-assets/ui/inventory_tab_idle.webp') as ImageSourcePropType,
+  inventoryTabActive: require('../app-assets/ui/inventory_tab_active.webp') as ImageSourcePropType,
+  inventoryButton: require('../app-assets/ui/inventory_button.webp') as ImageSourcePropType,
+  inventoryButtonDisabled: require('../app-assets/ui/inventory_button_disabled.webp') as ImageSourcePropType,
+  inventoryDialog: require('../app-assets/ui/inventory_dialog.webp') as ImageSourcePropType,
   iconLinhThach: require('../app-assets/ui/icon_linh_thach.webp') as ImageSourcePropType,
   iconTienNgoc: require('../app-assets/ui/icon_tien_ngoc.webp') as ImageSourcePropType,
   hudTrayV2: require('../app-assets/ui/hud_tray_v2.webp') as ImageSourcePropType,

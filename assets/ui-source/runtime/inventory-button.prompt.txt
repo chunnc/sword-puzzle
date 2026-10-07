@@ -1,0 +1,8 @@
+Use case: stylized-concept
+Asset type: ONE production-ready transparent UI sprite for a portrait xianxia mobile game.
+Input images are STYLE REFERENCES ONLY: match the soft hand-painted dimensional jade enamel, warm polished gold and upper-left ivory lighting. Create a NEW quieter component with MUCH thinner edges than the reference HUD/button. Keep the interior calm and readable behind live text.
+Palette: deep jade #062427, jade #0b5051, turquoise jade highlights #1a7772, warm gold #d7b76e, ivory #fff2c9.
+Style: premium illustrated East Asian fantasy game UI; crisp silhouette, gently painted materials. Restrained highlights, not vector-flat or photorealistic.
+Decoration: a tiny elegant gold cloud-curl at each end or corner is welcome, but each ornament stays within its corner, no thicker than the thin rim. At least 85 percent of the surface stays empty. One thin bevel edge, no stacked concentric frames, no dense filigree, no gems, no large spikes, no side wings, no dark cast shadow.
+Composition: straight-on, centered, full silhouette with 3 percent transparent exterior margin. ONE component ONLY, actual alpha outside the silhouette, no background scene, text, letters, numbers, icons, labels, watermark or other objects.
+Primary request: ONE small equip action button, landscape aspect ratio about 2.65:1, softly clipped rounded corners, softly lit warm gold face with subdued amber lower edge, thin gold bevel. One tiny jade-gold cloud-hook on each horizontal end, small enough to leave 80 percent central space for a label. Minimal broad sheen, no starburst. Intended display 88 by 34 pixels with dark jade text added by the app.

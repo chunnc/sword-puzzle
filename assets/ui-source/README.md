@@ -91,3 +91,21 @@ Pipeline xuất header rộng tối đa 1600 px, icon và khung 512×512, WebP q
 Khi đo footprint, pipeline bỏ qua điểm alpha dưới 8 và chừa 4 px quanh
 vùng thấy rõ; alpha còn lại giữ nguyên để tránh lệch tâm do điểm mờ rời rạc.
 `runtime-preview-hud-v2.png` là contact sheet để duyệt bộ ảnh mới.
+
+## Túi Đồ
+
+Sáu sprite mới được tạo riêng bằng công cụ ImageGen tích hợp, dùng
+`hud-tray-v2.png` và `slot-sword.png` làm tham chiếu chất liệu: nền card,
+tab thường/chọn, nút trang bị thường/vô hiệu hóa và panel chọn ô. Tông ngọc
+xanh và vàng ấm, viền thanh với đầu hoa văn mây gọn; không có chữ trong ảnh.
+Các nút ngọc tối dùng nhãn ngà để giữ độ tương phản ở kích thước nhỏ.
+
+PNG gốc cùng prompt chính xác của từng lần tạo nằm trong
+`runtime/inventory-*.png` và `runtime/inventory-*.prompt.txt`. Bản dùng trong
+game là `client/app-assets/ui/inventory_*.webp`, quality 90, giữ alpha; tổng
+dung lượng sáu WebP khoảng 125 KiB. `generate_ui_assets.py` chỉ trim alpha,
+resize và chuyển định dạng, không vẽ lại nội dung asset. Kích thước tối đa:
+card 1200 px, tab 640 px, nút 352 px, panel 800 px.
+
+`runtime-preview-inventory.png` là contact sheet của sáu sprite. Các ảnh
+native và quy trình kiểm chứng nằm trong `assets/ui-review/inventory-v1/`.

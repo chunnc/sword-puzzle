@@ -68,6 +68,9 @@ def cutout(name, target, max_size):
 
 def build_runtime_previews():
     groups = {
+        "runtime-preview-inventory.png": ("Inventory surfaces", [
+            "inventory-card", "inventory-tab-idle", "inventory-tab-active",
+            "inventory-button", "inventory-button-disabled", "inventory-dialog"]),
         "runtime-preview-hud-v2.png": ("HUD and equipment sockets", [
             "hud-tray-v2", "icon-linh-thach", "icon-tien-ngoc",
             "slot-sword", "slot-skill", "slot-skill-empty", "slot-skill-locked"]),
@@ -129,6 +132,12 @@ def copy_runtime_art(names=None):
         # Preserve the runtime artwork names. Crop generated alpha margins on
         # sprites that are stretched into wide controls.
     prepared = {
+        "inventory-card": 1200,
+        "inventory-tab-idle": 640,
+        "inventory-tab-active": 640,
+        "inventory-button": 352,
+        "inventory-button-disabled": 352,
+        "inventory-dialog": 800,
         "banner": 1600,
         "button-primary": 1400,
         "button-secondary": 1400,
