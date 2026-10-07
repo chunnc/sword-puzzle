@@ -1,0 +1,8 @@
+Asset: inventory-tab-idle.png
+Source: inventory-tab-active.png, unmodified.
+Method: deterministic RGB brightness reduction, no ImageGen edit.
+For each RGB channel, output = floor(input * 7 / 10).
+Copy the source alpha channel unchanged, pixel for pixel.
+Preserve canvas size, composition, silhouette, ornamentation and all detail positions.
+Export PNG, then use copy_runtime_art({'inventory-tab-idle'}) from tools/generate_ui_assets.py.
+The unchanged alpha gives the idle and active sprites identical crop bounds and runtime dimensions.

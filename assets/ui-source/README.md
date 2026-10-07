@@ -94,18 +94,26 @@ vùng thấy rõ; alpha còn lại giữ nguyên để tránh lệch tâm do đi
 
 ## Túi Đồ
 
-Sáu sprite mới được tạo riêng bằng công cụ ImageGen tích hợp, dùng
+Bộ sáu sprite ban đầu được tạo riêng bằng công cụ ImageGen tích hợp, dùng
 `hud-tray-v2.png` và `slot-sword.png` làm tham chiếu chất liệu: nền card,
 tab thường/chọn, nút trang bị thường/vô hiệu hóa và panel chọn ô. Tông ngọc
 xanh và vàng ấm, viền thanh với đầu hoa văn mây gọn; không có chữ trong ảnh.
 Các nút ngọc tối dùng nhãn ngà để giữ độ tương phản ở kích thước nhỏ.
 
-PNG gốc cùng prompt chính xác của từng lần tạo nằm trong
-`runtime/inventory-*.png` và `runtime/inventory-*.prompt.txt`. Bản dùng trong
+PNG gốc cùng prompt của các sprite ImageGen nằm trong
+`runtime/inventory-*.png` và `runtime/inventory-*.prompt.txt`. Tab idle hiện
+được tạo trực tiếp từ `inventory-tab-active.png`: giảm sáng RGB 30%, giữ
+nguyên alpha, canvas, hoa văn và vị trí mọi chi tiết. Công thức chính xác
+ghi trong `runtime/inventory-tab-idle.recipe.txt`; ảnh active giữ nguyên.
+Hai tab dùng cùng crop/resize nên khớp hình dáng ở cả hai trạng thái.
+Bản dùng trong
 game là `client/app-assets/ui/inventory_*.webp`, quality 90, giữ alpha; tổng
-dung lượng sáu WebP khoảng 125 KiB. `generate_ui_assets.py` chỉ trim alpha,
+dung lượng sáu WebP khoảng 127 KiB. `generate_ui_assets.py` chỉ trim alpha,
 resize và chuyển định dạng, không vẽ lại nội dung asset. Kích thước tối đa:
 card 1200 px, tab 640 px, nút 352 px, panel 800 px.
 
 `runtime-preview-inventory.png` là contact sheet của sáu sprite. Các ảnh
-native và quy trình kiểm chứng nằm trong `assets/ui-review/inventory-v1/`.
+native của bản đầu nằm trong `assets/ui-review/inventory-v1/`; bản đồng bộ
+hai tab và bỏ khung vuông quanh kiếm được review trong
+`assets/ui-review/inventory-v2/`. Icon kiếm nằm trực tiếp trên card, giữ
+vùng bố trí 56×56 và ảnh 48×48; khung tròn của kiếm thuật giữ nguyên.

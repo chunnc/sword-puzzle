@@ -18,7 +18,7 @@ const SAVE_ERROR = 'Không thể lưu thay đổi. Vui lòng thử lại.';
 function EquipmentArt({ art, skill = false, empty = false }: { art?: Artwork; skill?: boolean; empty?: boolean }) {
   return (
     <View style={styles.socket}>
-      <Image source={ART[skill ? empty ? 'slotSkillEmpty' : 'slotSkill' : 'slotSword']} contentFit="contain" accessible={false} style={StyleSheet.absoluteFill} />
+      {skill ? <Image source={ART[empty ? 'slotSkillEmpty' : 'slotSkill']} contentFit="contain" accessible={false} style={StyleSheet.absoluteFill} /> : null}
       {art ? <Image source={ART[art]} contentFit="contain" accessible={false} style={styles.itemIcon} /> : null}
     </View>
   );
