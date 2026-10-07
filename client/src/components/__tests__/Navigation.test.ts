@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { BottomNav, TopHud } from '../Chrome';
 import { CollectionScreen } from '../CollectionScreen';
 import { navigateTab } from '../Navigation';
@@ -52,7 +53,7 @@ const win: WinSummary = {
 describe('scene navigation', () => {
   let renderer: ReactTestRenderer;
   const mount = (element: React.ReactElement) => {
-    act(() => { renderer = create(element); });
+    act(() => { renderer = create(React.createElement(SafeAreaInsetsContext.Provider, { value: { top: 0, bottom: 0, left: 0, right: 0 } }, element)); });
   };
   const button = (label: string) => renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0];
   const hasText = (text: string) => renderer.root.findAll(node => {

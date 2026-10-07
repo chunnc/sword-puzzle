@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-context';
 import { CollectionScreen } from '../CollectionScreen';
 import { CollectionTabs } from '../CollectionTabs';
 import { ART, SKILL_ART, SWORD_ART } from '../../assets';
@@ -26,11 +27,13 @@ const mockState = {
 
 describe('shop collection', () => {
   let renderer: ReactTestRenderer;
+  const insets = { top: 47, bottom: 34, left: 0, right: 0 };
+  const scene = (category: 'sword' | 'skill') => React.createElement(SafeAreaInsetsContext.Provider, { value: insets }, React.createElement(CollectionScreen, { shop: true, initialCategory: category }));
   const mount = (category: 'sword' | 'skill' = 'sword') => {
-    act(() => { renderer = create(React.createElement(CollectionScreen, { shop: true, initialCategory: category })); });
+    act(() => { renderer = create(scene(category)); });
   };
   const refresh = (category: 'sword' | 'skill' = 'sword') => {
-    act(() => { renderer.update(React.createElement(CollectionScreen, { shop: true, initialCategory: category })); });
+    act(() => { renderer.update(scene(category)); });
   };
   const button = (label: string) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === label && typeof node.props.disabled === 'boolean')[0];
   const text = () => renderer.root.findAllByType(Text).map(node => React.Children.toArray(node.props.children).filter(child => typeof child === 'string' || typeof child === 'number').join('')).join('\n');
@@ -126,7 +129,7 @@ describe('shop collection', () => {
     mount();
     expect(button('Xem Trọng Nhạc').props.disabled).toBe(false);
     open();
-    expect(text()).toContain('Cần vượt 3 màn để mua.');
+    expect(text()).toContain('Cần vượt qua màn 3');
     expect(buy().props.disabled).toBe(true);
     expect(buy().props.onPress).toBeUndefined();
     expect(sources()).toContain(ART.shopButtonDisabled);
@@ -238,15 +241,73 @@ describe('shop collection', () => {
     expect(buy()).toBeUndefined();
   });
 
-  it('hides both indicators and keeps scrolling enabled in the list and details', () => {
+  it('keeps only the catalogue scrollable with both indicators hidden', () => {
     mount();
     open();
-    for (const scroll of renderer.root.findAllByType(ScrollView)) {
-      expect(scroll.props.showsVerticalScrollIndicator).toBe(false);
-      expect(scroll.props.showsHorizontalScrollIndicator).toBe(false);
-      expect(scroll.props.scrollEnabled).not.toBe(false);
+    const scrolls = renderer.root.findAllByType(ScrollView);
+    expect(scrolls).toHaveLength(1);
+    expect(scrolls[0].props.showsVerticalScrollIndicator).toBe(false);
+    expect(scrolls[0].props.showsHorizontalScrollIndicator).toBe(false);
+    expect(scrolls[0].props.scrollEnabled).not.toBe(false);
+    expect(modal().findAllByType(ScrollView)).toHaveLength(0);
+  });
+
+  it.each([false, true])('shows Mua, price and currency icon only inside the purchase button when disabled is %s', disabled => {
+    if (disabled) mockState.save.profile.coins = 0;
+    mount();
+    open();
+    const purchase = buy();
+    expect(purchase.props.disabled).toBe(disabled);
+    const labels = purchase.findAllByType(Text).map(node => node.props.children);
+    expect(labels).toEqual(['Mua', 200]);
+    const images = purchase.findAllByType(View).filter(node => node.props.source).map(node => node.props.source);
+    expect(images).toContain(ART.iconLinhThach);
+    expect(images).toContain(ART[disabled ? 'shopButtonDisabled' : 'shopButton']);
+    const panelText = modal().findAllByType(Text).map(node => React.Children.toArray(node.props.children).join('')).join('\n');
+    expect(panelText.split('\n')).not.toContain('Linh Thạch');
+    expect(panelText).not.toContain('Mở sau màn');
+    const currencyIcons = modal().findAllByType(View).filter(node => node.props.source === ART.iconLinhThach);
+    expect(currencyIcons).toHaveLength(1);
+  });
+
+  it('replaces the bottom close button with a 32-point icon in a 44-point corner target', () => {
+    mount();
+    open();
+    const close = button('Đóng');
+    const style = StyleSheet.flatten(close.props.style({ pressed: false }));
+    expect(style).toMatchObject({ position: 'absolute', top: 12, right: 12, width: 44, height: 44 });
+    expect(close.findAllByType(Text)).toHaveLength(0);
+    const icon = close.findAllByType(View).find(node => node.props.source === ART.shopCloseIcon)!;
+    expect(StyleSheet.flatten(icon.props.style)).toMatchObject({ width: 32, height: 32 });
+    expect(sources()).not.toContain(ART.shopCloseButton);
+  });
+
+  it('uses the existing screen safe-area padding from the first modal render', () => {
+    mount();
+    open();
+    expect(modal().props.animationType).toBe('none');
+    expect(modal().props.onShow).toBeUndefined();
+    expect(modal().findAllByType(SafeAreaView)).toHaveLength(0);
+    const overlay = modal().findAllByType(View).find(node => {
+      const style = StyleSheet.flatten(node.props.style);
+      return style?.backgroundColor === 'rgba(1, 18, 23, 0.62)';
+    })!;
+    expect(StyleSheet.flatten(overlay.props.style)).toMatchObject({ paddingTop: 67, paddingBottom: 54, paddingLeft: 20, paddingRight: 20 });
+    refresh();
+    expect(StyleSheet.flatten(overlay.props.style)).toMatchObject({ paddingTop: 67, paddingBottom: 54 });
+  });
+
+  it('keeps every catalogue description visible and untruncated in the compact panel', () => {
+    mount();
+    for (const category of ['sword', 'skill'] as const) {
+      refresh(category);
+      for (const item of (category === 'sword' ? SWORDS : SKILLS).slice(1)) {
+        open(item.name);
+        const description = modal().findAllByType(Text).find(node => node.props.children === item.description)!;
+        expect(description).toBeDefined();
+        expect(description.props.numberOfLines).toBeUndefined();
+        act(() => { button('Đóng').props.onPress(); });
+      }
     }
-    const details = renderer.root.findAllByType(ScrollView)[1];
-    expect(details.findAll(node => node.props.accessibilityLabel === 'Mua Trọng Nhạc, 200 Linh Thạch' || node.props.accessibilityLabel === 'Đóng')).toHaveLength(0);
   });
 });

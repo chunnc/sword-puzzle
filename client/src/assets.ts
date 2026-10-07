@@ -8,6 +8,7 @@ export const ART = {
   shopButton: require('../app-assets/ui/shop_button.webp') as ImageSourcePropType,
   shopButtonDisabled: require('../app-assets/ui/shop_button_disabled.webp') as ImageSourcePropType,
   shopCloseButton: require('../app-assets/ui/shop_close_button.webp') as ImageSourcePropType,
+  shopCloseIcon: require('../app-assets/ui/shop_close_icon.webp') as ImageSourcePropType,
   inventoryCard: require('../app-assets/ui/inventory_card.webp') as ImageSourcePropType,
   inventoryTabIdle: require('../app-assets/ui/inventory_tab_idle.webp') as ImageSourcePropType,
   inventoryTabActive: require('../app-assets/ui/inventory_tab_active.webp') as ImageSourcePropType,

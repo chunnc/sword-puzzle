@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Modal, ScrollView, View } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { CollectionScreen } from '../CollectionScreen';
 import { InventoryCollection } from '../InventoryCollection';
 import { ART, SKILL_ART, SWORD_ART } from '../../assets';
@@ -36,7 +37,7 @@ const mockState = {
 describe('inventory collection', () => {
   let renderer: ReactTestRenderer;
   const mount = (category: 'skill' | 'sword' = 'sword', shop = false) => {
-    act(() => { renderer = create(React.createElement(CollectionScreen, { initialCategory: category, shop })); });
+    act(() => { renderer = create(React.createElement(SafeAreaInsetsContext.Provider, { value: { top: 0, bottom: 0, left: 0, right: 0 } }, React.createElement(CollectionScreen, { initialCategory: category, shop }))); });
   };
   const button = (label: string) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === label && typeof node.props.disabled === 'boolean')[0];
   const sources = () => renderer.root.findAllByType(View).filter(node => node.props.source).map(node => node.props.source);

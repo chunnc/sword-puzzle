@@ -43,3 +43,10 @@ both categories, purchase dialogs, locked and insufficient-balance states,
 single-item final rows, extended descriptions, empty catalogues, and the
 inventory regression review. See `shop-v1/README.md` for asset provenance,
 read-only fixture details and validation.
+
+## Compact purchase panel
+
+`shop-panel-v2/` contains the updated panel review at three native viewport
+sizes, five purchase states, and native geometry samples through 500 ms after
+opening. All 18 measured openings show zero position or size drift. See
+`shop-panel-v2/README.md` for details and `layout-stability.json` for samples.

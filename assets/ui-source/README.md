@@ -139,3 +139,20 @@ panel và nút tối đa 1000 px. Bản runtime không chứa nhãn cố định
 `runtime-preview-shop.png` là contact sheet duyệt năm sprite. Cửa Hàng dùng
 lại tab và bộ icon từng vật phẩm của Túi Đồ. Ảnh review native ở ba viewport,
 popup và trạng thái cuộn nằm trong `assets/ui-review/shop-v1/`.
+
+## Nút X và panel Cửa Hàng thu gọn
+
+[Nút X](runtime/shop-close-icon.png) được tạo bằng ImageGen tích hợp, dùng
+nút ngọc thứ cấp và panel mua làm tham chiếu. Ảnh có dấu X màu ngà rõ ở
+kích thước nhỏ, nền ngọc xanh, viền vàng mảnh, hoa văn mây gọn và nền ngoài
+trong suốt. [Prompt đầy đủ](runtime/shop-close-icon.prompt.txt) lưu cạnh PNG gốc.
+
+Pipeline trim alpha, resize cạnh dài tối đa 256 px và xuất
+`client/app-assets/ui/shop_close_icon.webp` quality 90, giữ alpha. Runtime
+hiển thị ảnh 32×32 trong vùng nhấn 44×44 ở góc trên phải. Panel bỏ nút Đóng
+phía dưới, dòng giá riêng và note mở khóa; nút mua dựng chữ “Mua”, giá và
+icon Linh Thạch bằng code. Panel không còn vùng cuộn và dùng safe-area có
+sẵn của màn hình để giữ kích thước ổn định khi mở.
+
+Ảnh native và số đo layout từ lần đầu đến sau 500 ms được lưu tại
+`assets/ui-review/shop-panel-v2/`.

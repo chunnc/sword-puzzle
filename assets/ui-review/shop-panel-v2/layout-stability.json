@@ -1,0 +1,856 @@
+{
+  "device": "iPhone 16e",
+  "runtime": "iOS 26.3",
+  "pixelsPerPoint": 3,
+  "tolerancePixels": 1,
+  "caseCount": 18,
+  "passed": true,
+  "cases": [
+    {
+      "caseId": "skill-320-first",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0.0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "skill-320-first",
+          "kind": "layout",
+          "elapsedMs": 0.6271670013666153,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        },
+        {
+          "caseId": "skill-320-first",
+          "kind": "sample-100",
+          "elapsedMs": 107.43587499856949,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        },
+        {
+          "caseId": "skill-320-first",
+          "kind": "sample-250",
+          "elapsedMs": 257.4714590013027,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        },
+        {
+          "caseId": "skill-320-first",
+          "kind": "sample-500",
+          "elapsedMs": 507.78045900166035,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        }
+      ]
+    },
+    {
+      "caseId": "sword-320x568",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "sword-320x568",
+          "kind": "layout",
+          "elapsedMs": 0.038332998752593994,
+          "x": 20,
+          "y": 172,
+          "width": 280,
+          "height": 237
+        },
+        {
+          "caseId": "sword-320x568",
+          "kind": "sample-100",
+          "elapsedMs": 105.41204199939966,
+          "x": 20,
+          "y": 172,
+          "width": 280,
+          "height": 237
+        },
+        {
+          "caseId": "sword-320x568",
+          "kind": "sample-250",
+          "elapsedMs": 255.40579199790955,
+          "x": 20,
+          "y": 172,
+          "width": 280,
+          "height": 237
+        },
+        {
+          "caseId": "sword-320x568",
+          "kind": "sample-500",
+          "elapsedMs": 505.64374999701977,
+          "x": 20,
+          "y": 172,
+          "width": 280,
+          "height": 237
+        }
+      ]
+    },
+    {
+      "caseId": "skill-320x568",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0.0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "skill-320x568",
+          "kind": "layout",
+          "elapsedMs": 0.04337500035762787,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        },
+        {
+          "caseId": "skill-320x568",
+          "kind": "sample-100",
+          "elapsedMs": 113.02649999409914,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        },
+        {
+          "caseId": "skill-320x568",
+          "kind": "sample-250",
+          "elapsedMs": 263.123541995883,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        },
+        {
+          "caseId": "skill-320x568",
+          "kind": "sample-500",
+          "elapsedMs": 513.4432500004768,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        }
+      ]
+    },
+    {
+      "caseId": "locked-320x568",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "locked-320x568",
+          "kind": "layout",
+          "elapsedMs": 0.04612500220537186,
+          "x": 20,
+          "y": 159,
+          "width": 280,
+          "height": 263
+        },
+        {
+          "caseId": "locked-320x568",
+          "kind": "sample-100",
+          "elapsedMs": 114.01766700297594,
+          "x": 20,
+          "y": 159,
+          "width": 280,
+          "height": 263
+        },
+        {
+          "caseId": "locked-320x568",
+          "kind": "sample-250",
+          "elapsedMs": 263.46262500435114,
+          "x": 20,
+          "y": 159,
+          "width": 280,
+          "height": 263
+        },
+        {
+          "caseId": "locked-320x568",
+          "kind": "sample-500",
+          "elapsedMs": 513.599417001009,
+          "x": 20,
+          "y": 159,
+          "width": 280,
+          "height": 263
+        }
+      ]
+    },
+    {
+      "caseId": "short-balance-320x568",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "short-balance-320x568",
+          "kind": "layout",
+          "elapsedMs": 0.04087500274181366,
+          "x": 20,
+          "y": 159,
+          "width": 280,
+          "height": 263
+        },
+        {
+          "caseId": "short-balance-320x568",
+          "kind": "sample-100",
+          "elapsedMs": 104.70033299922943,
+          "x": 20,
+          "y": 159,
+          "width": 280,
+          "height": 263
+        },
+        {
+          "caseId": "short-balance-320x568",
+          "kind": "sample-250",
+          "elapsedMs": 254.2688330039382,
+          "x": 20,
+          "y": 159,
+          "width": 280,
+          "height": 263
+        },
+        {
+          "caseId": "short-balance-320x568",
+          "kind": "sample-500",
+          "elapsedMs": 504.25754100084305,
+          "x": 20,
+          "y": 159,
+          "width": 280,
+          "height": 263
+        }
+      ]
+    },
+    {
+      "caseId": "save-error-320x568",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0.0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "save-error-320x568",
+          "kind": "layout",
+          "elapsedMs": 0.04270800203084946,
+          "x": 20,
+          "y": 135.6666717529297,
+          "width": 280,
+          "height": 310
+        },
+        {
+          "caseId": "save-error-320x568",
+          "kind": "sample-100",
+          "elapsedMs": 103.67016600072384,
+          "x": 20,
+          "y": 135.6666717529297,
+          "width": 280,
+          "height": 310
+        },
+        {
+          "caseId": "save-error-320x568",
+          "kind": "sample-250",
+          "elapsedMs": 253.66641600430012,
+          "x": 20,
+          "y": 135.6666717529297,
+          "width": 280,
+          "height": 310
+        },
+        {
+          "caseId": "save-error-320x568",
+          "kind": "sample-500",
+          "elapsedMs": 503.948875002563,
+          "x": 20,
+          "y": 135.6666717529297,
+          "width": 280,
+          "height": 310
+        }
+      ]
+    },
+    {
+      "caseId": "sword-360x640",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "sword-360x640",
+          "kind": "layout",
+          "elapsedMs": 0.041874997317790985,
+          "x": 20,
+          "y": 208,
+          "width": 320,
+          "height": 237
+        },
+        {
+          "caseId": "sword-360x640",
+          "kind": "sample-100",
+          "elapsedMs": 107.55049999803305,
+          "x": 20,
+          "y": 208,
+          "width": 320,
+          "height": 237
+        },
+        {
+          "caseId": "sword-360x640",
+          "kind": "sample-250",
+          "elapsedMs": 257.58458299934864,
+          "x": 20,
+          "y": 208,
+          "width": 320,
+          "height": 237
+        },
+        {
+          "caseId": "sword-360x640",
+          "kind": "sample-500",
+          "elapsedMs": 507.8220419958234,
+          "x": 20,
+          "y": 208,
+          "width": 320,
+          "height": 237
+        }
+      ]
+    },
+    {
+      "caseId": "skill-360x640",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0.0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "skill-360x640",
+          "kind": "layout",
+          "elapsedMs": 0.0403750017285347,
+          "x": 20,
+          "y": 184.6666717529297,
+          "width": 320,
+          "height": 284
+        },
+        {
+          "caseId": "skill-360x640",
+          "kind": "sample-100",
+          "elapsedMs": 103.39704199880362,
+          "x": 20,
+          "y": 184.6666717529297,
+          "width": 320,
+          "height": 284
+        },
+        {
+          "caseId": "skill-360x640",
+          "kind": "sample-250",
+          "elapsedMs": 252.93054199963808,
+          "x": 20,
+          "y": 184.6666717529297,
+          "width": 320,
+          "height": 284
+        },
+        {
+          "caseId": "skill-360x640",
+          "kind": "sample-500",
+          "elapsedMs": 503.1884170025587,
+          "x": 20,
+          "y": 184.6666717529297,
+          "width": 320,
+          "height": 284
+        }
+      ]
+    },
+    {
+      "caseId": "locked-360x640",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "locked-360x640",
+          "kind": "layout",
+          "elapsedMs": 0.03804200142621994,
+          "x": 20,
+          "y": 195,
+          "width": 320,
+          "height": 263
+        },
+        {
+          "caseId": "locked-360x640",
+          "kind": "sample-100",
+          "elapsedMs": 113.67020799964666,
+          "x": 20,
+          "y": 195,
+          "width": 320,
+          "height": 263
+        },
+        {
+          "caseId": "locked-360x640",
+          "kind": "sample-250",
+          "elapsedMs": 263.75345800071955,
+          "x": 20,
+          "y": 195,
+          "width": 320,
+          "height": 263
+        },
+        {
+          "caseId": "locked-360x640",
+          "kind": "sample-500",
+          "elapsedMs": 513.8492499962449,
+          "x": 20,
+          "y": 195,
+          "width": 320,
+          "height": 263
+        }
+      ]
+    },
+    {
+      "caseId": "short-balance-360x640",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "short-balance-360x640",
+          "kind": "layout",
+          "elapsedMs": 0.040957994759082794,
+          "x": 20,
+          "y": 195,
+          "width": 320,
+          "height": 263
+        },
+        {
+          "caseId": "short-balance-360x640",
+          "kind": "sample-100",
+          "elapsedMs": 107.24241599440575,
+          "x": 20,
+          "y": 195,
+          "width": 320,
+          "height": 263
+        },
+        {
+          "caseId": "short-balance-360x640",
+          "kind": "sample-250",
+          "elapsedMs": 257.46866599470377,
+          "x": 20,
+          "y": 195,
+          "width": 320,
+          "height": 263
+        },
+        {
+          "caseId": "short-balance-360x640",
+          "kind": "sample-500",
+          "elapsedMs": 507.6317499950528,
+          "x": 20,
+          "y": 195,
+          "width": 320,
+          "height": 263
+        }
+      ]
+    },
+    {
+      "caseId": "save-error-360x640",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0.0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "save-error-360x640",
+          "kind": "layout",
+          "elapsedMs": 0.04075000435113907,
+          "x": 20,
+          "y": 171.6666717529297,
+          "width": 320,
+          "height": 310
+        },
+        {
+          "caseId": "save-error-360x640",
+          "kind": "sample-100",
+          "elapsedMs": 109.36608400195837,
+          "x": 20,
+          "y": 171.6666717529297,
+          "width": 320,
+          "height": 310
+        },
+        {
+          "caseId": "save-error-360x640",
+          "kind": "sample-250",
+          "elapsedMs": 259.4300840049982,
+          "x": 20,
+          "y": 171.6666717529297,
+          "width": 320,
+          "height": 310
+        },
+        {
+          "caseId": "save-error-360x640",
+          "kind": "sample-500",
+          "elapsedMs": 509.74141700565815,
+          "x": 20,
+          "y": 171.6666717529297,
+          "width": 320,
+          "height": 310
+        }
+      ]
+    },
+    {
+      "caseId": "sword-390x844",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "sword-390x844",
+          "kind": "layout",
+          "elapsedMs": 0.0411670058965683,
+          "x": 25,
+          "y": 310,
+          "width": 340,
+          "height": 237
+        },
+        {
+          "caseId": "sword-390x844",
+          "kind": "sample-100",
+          "elapsedMs": 110.31795900315046,
+          "x": 25,
+          "y": 310,
+          "width": 340,
+          "height": 237
+        },
+        {
+          "caseId": "sword-390x844",
+          "kind": "sample-250",
+          "elapsedMs": 260.38470900058746,
+          "x": 25,
+          "y": 310,
+          "width": 340,
+          "height": 237
+        },
+        {
+          "caseId": "sword-390x844",
+          "kind": "sample-500",
+          "elapsedMs": 510.38308400660753,
+          "x": 25,
+          "y": 310,
+          "width": 340,
+          "height": 237
+        }
+      ]
+    },
+    {
+      "caseId": "skill-390x844",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0.0,
+        "width": 0,
+        "height": 0.0
+      },
+      "samples": [
+        {
+          "caseId": "skill-390x844",
+          "kind": "layout",
+          "elapsedMs": 0.042416997253894806,
+          "x": 25,
+          "y": 286.6666564941406,
+          "width": 340,
+          "height": 284.0000305175781
+        },
+        {
+          "caseId": "skill-390x844",
+          "kind": "sample-100",
+          "elapsedMs": 116.32966700196266,
+          "x": 25,
+          "y": 286.6666564941406,
+          "width": 340,
+          "height": 284.0000305175781
+        },
+        {
+          "caseId": "skill-390x844",
+          "kind": "sample-250",
+          "elapsedMs": 266.4103749990463,
+          "x": 25,
+          "y": 286.6666564941406,
+          "width": 340,
+          "height": 284.0000305175781
+        },
+        {
+          "caseId": "skill-390x844",
+          "kind": "sample-500",
+          "elapsedMs": 516.5118749961257,
+          "x": 25,
+          "y": 286.6666564941406,
+          "width": 340,
+          "height": 284.0000305175781
+        }
+      ]
+    },
+    {
+      "caseId": "locked-390x844",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "locked-390x844",
+          "kind": "layout",
+          "elapsedMs": 0.04408400505781174,
+          "x": 25,
+          "y": 297,
+          "width": 340,
+          "height": 263
+        },
+        {
+          "caseId": "locked-390x844",
+          "kind": "sample-100",
+          "elapsedMs": 103.21950000524521,
+          "x": 25,
+          "y": 297,
+          "width": 340,
+          "height": 263
+        },
+        {
+          "caseId": "locked-390x844",
+          "kind": "sample-250",
+          "elapsedMs": 253.29500000178814,
+          "x": 25,
+          "y": 297,
+          "width": 340,
+          "height": 263
+        },
+        {
+          "caseId": "locked-390x844",
+          "kind": "sample-500",
+          "elapsedMs": 503.30854200571775,
+          "x": 25,
+          "y": 297,
+          "width": 340,
+          "height": 263
+        }
+      ]
+    },
+    {
+      "caseId": "short-balance-390x844",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "short-balance-390x844",
+          "kind": "layout",
+          "elapsedMs": 0.04762499779462814,
+          "x": 25,
+          "y": 297,
+          "width": 340,
+          "height": 263
+        },
+        {
+          "caseId": "short-balance-390x844",
+          "kind": "sample-100",
+          "elapsedMs": 107.10908300429583,
+          "x": 25,
+          "y": 297,
+          "width": 340,
+          "height": 263
+        },
+        {
+          "caseId": "short-balance-390x844",
+          "kind": "sample-250",
+          "elapsedMs": 257.2111660018563,
+          "x": 25,
+          "y": 297,
+          "width": 340,
+          "height": 263
+        },
+        {
+          "caseId": "short-balance-390x844",
+          "kind": "sample-500",
+          "elapsedMs": 507.9394579976797,
+          "x": 25,
+          "y": 297,
+          "width": 340,
+          "height": 263
+        }
+      ]
+    },
+    {
+      "caseId": "save-error-390x844",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0.0,
+        "width": 0,
+        "height": 0.0
+      },
+      "samples": [
+        {
+          "caseId": "save-error-390x844",
+          "kind": "layout",
+          "elapsedMs": 0.038124993443489075,
+          "x": 25,
+          "y": 273.6666564941406,
+          "width": 340,
+          "height": 310.0000305175781
+        },
+        {
+          "caseId": "save-error-390x844",
+          "kind": "sample-100",
+          "elapsedMs": 115.19366699457169,
+          "x": 25,
+          "y": 273.6666564941406,
+          "width": 340,
+          "height": 310.0000305175781
+        },
+        {
+          "caseId": "save-error-390x844",
+          "kind": "sample-250",
+          "elapsedMs": 265.2498339936137,
+          "x": 25,
+          "y": 273.6666564941406,
+          "width": 340,
+          "height": 310.0000305175781
+        },
+        {
+          "caseId": "save-error-390x844",
+          "kind": "sample-500",
+          "elapsedMs": 515.6922499984503,
+          "x": 25,
+          "y": 273.6666564941406,
+          "width": 340,
+          "height": 310.0000305175781
+        }
+      ]
+    },
+    {
+      "caseId": "skill-320-reopen-1",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0.0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "skill-320-reopen-1",
+          "kind": "layout",
+          "elapsedMs": 0.038832999765872955,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        },
+        {
+          "caseId": "skill-320-reopen-1",
+          "kind": "sample-100",
+          "elapsedMs": 102.8893750011921,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        },
+        {
+          "caseId": "skill-320-reopen-1",
+          "kind": "sample-250",
+          "elapsedMs": 252.41454200446606,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        },
+        {
+          "caseId": "skill-320-reopen-1",
+          "kind": "sample-500",
+          "elapsedMs": 502.7377920001745,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        }
+      ]
+    },
+    {
+      "caseId": "skill-320-reopen-2",
+      "maxDriftPixels": {
+        "x": 0,
+        "y": 0.0,
+        "width": 0,
+        "height": 0
+      },
+      "samples": [
+        {
+          "caseId": "skill-320-reopen-2",
+          "kind": "layout",
+          "elapsedMs": 0.03999999910593033,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        },
+        {
+          "caseId": "skill-320-reopen-2",
+          "kind": "sample-100",
+          "elapsedMs": 112.77158299833536,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        },
+        {
+          "caseId": "skill-320-reopen-2",
+          "kind": "sample-250",
+          "elapsedMs": 262.26337499916553,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        },
+        {
+          "caseId": "skill-320-reopen-2",
+          "kind": "sample-500",
+          "elapsedMs": 512.6401659995317,
+          "x": 20,
+          "y": 148.6666717529297,
+          "width": 280,
+          "height": 284
+        }
+      ]
+    }
+  ]
+}
