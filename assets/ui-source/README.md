@@ -42,3 +42,22 @@ cong dùng cùng tông ngà, vàng và ngọc xanh, khối nổi mềm, ánh sá
 bên trái và nền trong suốt. Prompt đầy đủ lưu tại `runtime/icon-shop.prompt.txt`.
 Bản dùng trong game là `client/app-assets/ui/icon_shop.webp`, 512×512, giữ alpha,
 WebP quality 90. Contact sheet icon dùng cửa hàng ở vị trí trước đây của hoa sen.
+
+## Icon trang Nhân Vật
+
+18 sprite được tạo riêng bằng công cụ ImageGen tích hợp: `icon-sword-*` cho
+tám bảo kiếm, `icon-skill-*` cho tám kiếm thuật, cùng `icon-slot-locked` và
+`icon-slot-empty`. PNG gốc và prompt đầy đủ của từng ảnh lưu trong `runtime/`.
+Không có chữ trên sprite; tên trang bị chỉ dùng trong nhãn accessibility.
+
+Ba ảnh tham chiếu style là `icon-map.png`, `icon-jade.png` và `icon-shop.png`:
+ngọc xanh, ngà và kim loại vàng, họa tiết mây tiết chế, ánh sáng phía trên trái.
+Thanh Phong, Nhất Kiếm và ô khóa được tạo trước; các ảnh sau dùng thêm sprite
+tương ứng đó làm tham chiếu để giữ đồng bộ giữa các biến thể. Màu kiếm lấy từ
+catalog; kiếm thuật thể hiện đúng hình tượng của từng hiệu ứng.
+
+`generate_ui_assets.py` chỉ cắt alpha, cân kích thước vào 80% canvas và xuất
+WebP 512×512 quality 90, giữ alpha. 18 ảnh runtime có tổng dung lượng khoảng
+865 KiB. `runtime-preview-character-icons.png` là contact sheet riêng của bộ
+icon; toàn bộ sprite cũng đã được duyệt ở kích thước hiển thị khoảng 60 px
+cạnh các icon gốc.

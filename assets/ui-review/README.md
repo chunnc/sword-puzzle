@@ -3,3 +3,18 @@
 `after/1080x1920/` and `after/1080x2340/` contain captures of the original Unity prototype's map, exploration, battle, boss, breakthrough, win, loss, and account screens. They remain visual references for the React Native migration; the migration has not yet added replacement screen captures.
 
 `before/` preserves the two references supplied for this review. The exploration reference is a cropped top section rather than a full-screen capture.
+
+## React Native character revamp
+
+`character/` contains native captures of the revamped character scene, using
+the installed Expo development app and the existing 500 EXP player profile.
+`1080x1920.png` and `1080x2340.png` use temporary viewport constraints of
+360×640 and 360×780 points on the 3× iPhone simulator. `small-320x568.png`
+uses 320×568 points. The constraints and temporary HUD widths are removed
+after capture. Images crop only the viewport, without resizing or repainting.
+`native-1170x2532.png` is the full unconstrained iPhone 16e capture.
+
+The scene has no ScrollView; the character uses contain and the remaining
+flex height. Headers, EXP label, all three equipment slots, and bottom
+navigation stay visible at each size. Navigation, realm boundaries, locked
+and empty slots, and motion lifecycle are also covered by client tests.

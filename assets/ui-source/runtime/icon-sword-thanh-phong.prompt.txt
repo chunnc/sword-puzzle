@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: a single production-ready transparent inventory icon for a portrait xianxia mobile game.
+Input images: the three supplied images are STYLE REFERENCES ONLY (map, jade pendant, shop), not edit targets. Match their illustrated material rendering, clean bold silhouette, upper-left highlights, warm golden bevels and soft painterly internal shading exactly.
+Primary request: Thanh Phong treasure sword: ONE slender straight East Asian jian sword angled from lower-left hilt to upper-right tip, polished ivory-silver blade, pale cyan-jade core (#49c8e5), warm gold crossguard, jade pommel, a short mint silk tassel, a restrained wind wisp. It is a physical equipped sword, no large attack arc.
+Style/medium: polished hand-painted 2D East Asian celestial fantasy mobile-game icon, softly dimensional like the reference set, crisp edges, luminous but restrained. Bright, approachable, premium.
+Composition/framing: ONE centered isolated emblem on a square canvas, straight-on, no perspective scene. Fit the whole object within the central 80% with at least 10% truly transparent margin on every side. Balanced visual weight and readable at 60 pixels. For swords preserve the requested diagonal.
+Palette: jade #0b5051, mint jade, ivory #fff2c9, warm gold #d7b76e, celestial cyan #49c8e5, plus the subject's specified accent.
+Lighting: upper-left soft ivory highlight; warm polished gold edges, restrained cyan bloom.
+Constraints: genuinely transparent background including holes, alpha preserved, ONE icon only. No background disc or tile, no rectangular frame, no scene, no ground, no character, no labels, text, lettering, numbers, watermarks, grayscale placeholder, pixel art, photorealism, generic Western medieval motifs. Do not copy the reference subjects.

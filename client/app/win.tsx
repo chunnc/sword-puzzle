@@ -15,7 +15,7 @@ export default function WinScreen() {
     const breakthrough = summary && summary.realmAfter > summary.realmBefore;
     const next = async () => {
         if (breakthrough && summary) {
-            router.replace({ pathname: '/character', params: { breakthroughRunId: summary.runId } });
+            router.replace('/character');
             return;
         }
         if (levelId < LEVEL_COUNT && await store.startLevel(levelId + 1))

@@ -9,7 +9,7 @@ import { realmForExp } from '../game/domain';
 import { useRouter } from 'expo-router';
 import type { BottomNavId } from './Navigation';
 
-export function TopHud({ onAccount }: { onAccount: () => void }) {
+export function TopHud({ onAccount, showExp = true }: { onAccount: () => void; showExp?: boolean }) {
   const { width } = useWindowDimensions();
   const profile = useGameStore(state => state.save.profile);
   const router = useRouter();
@@ -21,7 +21,7 @@ export function TopHud({ onAccount }: { onAccount: () => void }) {
         <Art image="avatar" style={StyleSheet.absoluteFill} />
         <Art image="avatarFrame" style={StyleSheet.absoluteFill} />
       </View>
-      <HudStat image="iconJade" value={`${profile.totalExp} EXP`} />
+      {showExp ? <HudStat image="iconJade" value={`${profile.totalExp} EXP`} /> : null}
       <Pressable accessibilityRole="button" accessibilityLabel={`${profile.coins} linh thạch, mở cửa hàng`} onPress={() => router.push('/shop')}><HudStat image="iconCoin" value={String(profile.coins)} /></Pressable>
       <Text numberOfLines={2} style={{ color: colors.ivory, fontSize: 10, fontWeight: '800', maxWidth: 58 }}>{realm.name}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Tài khoản" onPress={onAccount} style={styles.menu}>

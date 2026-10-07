@@ -1,7 +1,26 @@
 import { ImageSourcePropType } from 'react-native';
 import { TileKind } from './game/types';
+import type { SkillId, SwordId } from './game/domain';
 
 export const ART = {
+  iconSwordThanhPhong: require('../app-assets/ui/icon_sword_thanh_phong.webp') as ImageSourcePropType,
+  iconSwordTrongNhac: require('../app-assets/ui/icon_sword_trong_nhac.webp') as ImageSourcePropType,
+  iconSwordHoaVan: require('../app-assets/ui/icon_sword_hoa_van.webp') as ImageSourcePropType,
+  iconSwordLoiMinh: require('../app-assets/ui/icon_sword_loi_minh.webp') as ImageSourcePropType,
+  iconSwordTuLinh: require('../app-assets/ui/icon_sword_tu_linh.webp') as ImageSourcePropType,
+  iconSwordLienTinh: require('../app-assets/ui/icon_sword_lien_tinh.webp') as ImageSourcePropType,
+  iconSwordPhaQuan: require('../app-assets/ui/icon_sword_pha_quan.webp') as ImageSourcePropType,
+  iconSwordHuyenCo: require('../app-assets/ui/icon_sword_huyen_co.webp') as ImageSourcePropType,
+  iconSkillNhatKiem: require('../app-assets/ui/icon_skill_nhat_kiem.webp') as ImageSourcePropType,
+  iconSkillNguKiem: require('../app-assets/ui/icon_skill_ngu_kiem.webp') as ImageSourcePropType,
+  iconSkillHoaLien: require('../app-assets/ui/icon_skill_hoa_lien.webp') as ImageSourcePropType,
+  iconSkillDanLoi: require('../app-assets/ui/icon_skill_dan_loi.webp') as ImageSourcePropType,
+  iconSkillPhaChuong: require('../app-assets/ui/icon_skill_pha_chuong.webp') as ImageSourcePropType,
+  iconSkillLienKiem: require('../app-assets/ui/icon_skill_lien_kiem.webp') as ImageSourcePropType,
+  iconSkillHoiLinh: require('../app-assets/ui/icon_skill_hoi_linh.webp') as ImageSourcePropType,
+  iconSkillVanKiem: require('../app-assets/ui/icon_skill_van_kiem.webp') as ImageSourcePropType,
+  iconSlotLocked: require('../app-assets/ui/icon_slot_locked.webp') as ImageSourcePropType,
+  iconSlotEmpty: require('../app-assets/ui/icon_slot_empty.webp') as ImageSourcePropType,
   avatar: require('../app-assets/ui/avatar.webp') as ImageSourcePropType,
   avatarFrame: require('../app-assets/ui/avatar_frame.webp') as ImageSourcePropType,
   banner: require('../app-assets/ui/banner.webp') as ImageSourcePropType,
@@ -55,6 +74,28 @@ export const ART = {
 } as const;
 
 export type Artwork = keyof typeof ART;
+
+export const SWORD_ART = {
+  'thanh-phong': 'iconSwordThanhPhong',
+  'trong-nhac': 'iconSwordTrongNhac',
+  'hoa-van': 'iconSwordHoaVan',
+  'loi-minh': 'iconSwordLoiMinh',
+  'tu-linh': 'iconSwordTuLinh',
+  'lien-tinh': 'iconSwordLienTinh',
+  'pha-quan': 'iconSwordPhaQuan',
+  'huyen-co': 'iconSwordHuyenCo',
+} as const satisfies Record<SwordId, Artwork>;
+
+export const SKILL_ART = {
+  'nhat-kiem': 'iconSkillNhatKiem',
+  'ngu-kiem': 'iconSkillNguKiem',
+  'hoa-lien': 'iconSkillHoaLien',
+  'dan-loi': 'iconSkillDanLoi',
+  'pha-chuong': 'iconSkillPhaChuong',
+  'lien-kiem': 'iconSkillLienKiem',
+  'hoi-linh': 'iconSkillHoiLinh',
+  'van-kiem': 'iconSkillVanKiem',
+} as const satisfies Record<SkillId, Artwork>;
 
 export function tileArtwork(kind: TileKind): ImageSourcePropType {
   switch (kind) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -10,11 +10,13 @@ import { navigateTab } from './Navigation';
 import { SKILLS, SWORDS, realmForExp, type SkillId, type SwordId } from '../game/domain';
 import { useGameStore } from '../state/gameStore';
 import { colors } from '../theme';
-export function CollectionScreen({ shop = false }: {
+export function CollectionScreen({ shop = false, initialCategory = 'sword' }: {
     shop?: boolean;
+    initialCategory?: 'skill' | 'sword';
 }) {
     const router = useRouter(), store = useGameStore(), p = store.save.profile, realm = realmForExp(p.totalExp);
-    const [category, setCategory] = useState<'skill' | 'sword'>('sword'), [working, setWorking] = useState(false);
+    const [category, setCategory] = useState<'skill' | 'sword'>(initialCategory), [working, setWorking] = useState(false);
+    useEffect(() => setCategory(initialCategory), [initialCategory]);
     const items = category === 'skill' ? SKILLS : SWORDS;
     const ownedIds: readonly string[] = category === 'skill' ? p.ownedSkills : p.ownedSwords;
     const execute = async (work: () => Promise<boolean>) => { if (working)

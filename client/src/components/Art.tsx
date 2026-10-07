@@ -91,7 +91,7 @@ export function TitleBanner({ title }: { title: string }) {
   );
 }
 
-export function ProgressBar({ portion, color, animated = false, duration = 250 }: { portion: number; color: 'blue' | 'red'; animated?: boolean; duration?: number }) {
+export function ProgressBar({ portion, color, animated = false, duration = 250, fillHeight = 18 }: { portion: number; color: 'blue' | 'red'; animated?: boolean; duration?: number; fillHeight?: number }) {
   const [trackWidth, setTrackWidth] = useState(0);
   const progress = useSharedValue(Math.max(0, Math.min(1, portion)));
   useEffect(() => {
@@ -103,7 +103,7 @@ export function ProgressBar({ portion, color, animated = false, duration = 250 }
   return (
     <View onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)} style={styles.progressTrackWrap}>
       <ArtPanel art="barTrack" style={[StyleSheet.absoluteFill, styles.progressTrack]}>
-        <Animated.View style={[styles.progressFill, fillStyle]}>
+        <Animated.View style={[styles.progressFill, { height: fillHeight }, fillStyle]}>
           <Image source={ART[color === 'red' ? 'barRed' : 'barBlue']} contentFit="fill" style={StyleSheet.absoluteFill} />
         </Animated.View>
       </ArtPanel>

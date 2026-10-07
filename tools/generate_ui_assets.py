@@ -76,6 +76,8 @@ def build_runtime_previews():
         "runtime-preview-icons.png": ("UI icons", [
             "icon-map", "icon-person", "icon-bag", "icon-shop", "icon-menu", "icon-skill",
             "icon-herb", "icon-bolt", "icon-coin", "icon-jade", "star-bright", "star-gray"]),
+        "runtime-preview-character-icons.png": ("Character equipment icons", [
+            "icon-sword-thanh-phong", "icon-sword-trong-nhac", "icon-sword-hoa-van", "icon-sword-loi-minh", "icon-sword-tu-linh", "icon-sword-lien-tinh", "icon-sword-pha-quan", "icon-sword-huyen-co", "icon-skill-nhat-kiem", "icon-skill-ngu-kiem", "icon-skill-hoa-lien", "icon-skill-dan-loi", "icon-skill-pha-chuong", "icon-skill-lien-kiem", "icon-skill-hoi-linh", "icon-skill-van-kiem", "icon-slot-locked", "icon-slot-empty"]),
         "runtime-preview-tiles.png": ("Gameplay tiles", [
             "tile-sword", "tile-fire", "tile-lightning", "tile-spirit-orb", "tile-stone", "tile-herb", "tile-rock"]),
         "runtime-preview-overlays.png": ("Tile overlays", [
@@ -120,7 +122,7 @@ def ImageChops_multiply(a,b):
     return ImageChops.multiply(a,b)
 
 
-def copy_runtime_art():
+def copy_runtime_art(names=None):
         # Preserve the runtime artwork names. Crop generated alpha margins on
         # sprites that are stretched into wide controls.
     prepared = {
@@ -140,8 +142,21 @@ def copy_runtime_art():
         "star-gray": 512,
     }
     for image in sorted((SOURCE / "runtime").glob("*.png")):
+        if names is not None and image.stem not in names:
+            continue
         name = "panel" if image.stem == "panel-base" else image.stem.replace("-", "_")
         art = Image.open(image).convert("RGBA")
+        if image.stem.startswith(("icon-sword-", "icon-skill-", "icon-slot-")):
+            # Consistent 80% footprint for the 60 px character loadout icons.
+            # Keep the source illustration and its alpha; only crop and resize.
+            visible = art.getchannel("A").getbbox()
+            if visible:
+                art = art.crop(visible)
+            art.thumbnail((410, 410), Image.Resampling.LANCZOS)
+            canvas = Image.new("RGBA", (512, 512))
+            canvas.paste(art, ((512-art.width)//2, (512-art.height)//2))
+            save(canvas, name)
+            continue
         if image.stem in prepared:
             visible = art.getchannel("A").point(lambda alpha: 255 if alpha >= 16 else 0).getbbox()
             if visible:

@@ -1,37 +1,90 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Image } from 'expo-image';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import type { NavigationProp } from 'expo-router/react-navigation';
-import { ART } from '../src/assets';
-import { TopHud, BottomNav } from '../src/components/Chrome';
-import { GameButton, ProgressBar, ScreenFrame, TitleBanner } from '../src/components/Art';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { ART, SKILL_ART, SWORD_ART, type Artwork } from '../src/assets';
+import { BottomNav, TopHud } from '../src/components/Chrome';
+import { ProgressBar, ScreenFrame } from '../src/components/Art';
+import { FloatingCultivator } from '../src/components/FloatingCultivator';
 import { navigateTab } from '../src/components/Navigation';
-import { CONTENT, REALMS, realmForExp, SKILLS, SWORDS } from '../src/game/domain';
+import { realmForExp, SKILLS, SWORDS } from '../src/game/domain';
 import { useGameStore } from '../src/state/gameStore';
 import { colors } from '../src/theme';
+
 export default function CharacterScreen() {
-    const router = useRouter(), p = useGameStore(s => s.save.profile), realm = realmForExp(p.totalExp), sword = SWORDS.find(x => x.id === p.loadout.sword)!;
-    const navigation = useNavigation<NavigationProp<{ character: { breakthroughRunId?: string } }, 'character'>>();
-    const { breakthroughRunId } = useLocalSearchParams<{ breakthroughRunId?: string }>();
-    const lastWin = useGameStore(s => s.save.lastWin);
-    const breakthrough = lastWin && lastWin.runId === breakthroughRunId && lastWin.realmAfter > lastWin.realmBefore ? lastWin : null;
+  const router = useRouter();
+  const profile = useGameStore(state => state.save.profile);
+  const realm = realmForExp(profile.totalExp);
+  const sword = SWORDS.find(item => item.id === profile.loadout.sword)!;
+  const expLabel = realm.next ? `${profile.totalExp - realm.exp}/${realm.next.exp - realm.exp}` : 'MAX';
+  const stageName = realm.stageName.replace(/\b(kỳ|mãn)/g, word => word[0].toUpperCase() + word.slice(1));
+  const openInventory = (category: 'sword' | 'skill') => router.push({ pathname: '/inventory', params: { category } });
 
-    useEffect(() => {
-        if (!breakthroughRunId) return;
-        // Replacement removes the scene's params. Clear them on blur too,
-        // when another scene is pushed over this one.
-        return navigation.addListener('blur', () => {
-            navigation.setParams({ breakthroughRunId: undefined });
-        });
-    }, [breakthroughRunId, navigation]);
+  return (
+    <ScreenFrame background="bgRealm">
+      <TopHud showExp={false} onAccount={() => router.push('/account')} />
+      <View style={styles.scene}>
+        <View style={styles.realmTitle}>
+          <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
+            <Text numberOfLines={1} style={[styles.realm, styles.realmGlow]}>{realm.name}</Text>
+          </View>
+          <Text key={realm.name} accessible accessibilityRole="header" accessibilityLabel={`${realm.name}${realm.next ? ` ${stageName}` : ''}`} numberOfLines={1} style={styles.realm}>{realm.name}</Text>
+          {realm.next ? <Text accessible={false} style={styles.stage}>{stageName}</Text> : null}
+        </View>
 
-    return <ScreenFrame background="bgRealm"><TopHud onAccount={() => router.push('/account')}/><TitleBanner title="KIẾM TU"/><ScrollView contentContainerStyle={styles.content}>
-  <View style={styles.hero}><Image source={ART.cultivator} contentFit="contain" style={StyleSheet.absoluteFill}/><View style={styles.realmBadge}><Text style={styles.realm}>{realm.name}</Text><Text style={styles.sub}>{realm.stageName}</Text></View></View>
-  <View style={styles.panel}><Text style={styles.heading}>{p.totalExp} EXP</Text><ProgressBar portion={realm.progress} color="blue"/><Text style={styles.sub}>{realm.next ? `Còn ${realm.next.exp - p.totalExp} EXP để đạt ${realm.next.name}` : 'Đã đạt Chân Tiên'}</Text><Text style={styles.sub}>Uy lực ×{realm.damageScale.toFixed(2)} · {p.levels.length}/40 màn hoàn thành</Text></View>
-  {breakthrough ? <View accessibilityRole="summary" style={[styles.panel, styles.breakthrough]}><Text style={styles.heading}>ĐỘT PHÁ</Text><Text style={styles.celebration}>{REALMS[breakthrough.realmBefore].name} → {REALMS[breakthrough.realmAfter].name}</Text><GameButton title="TIẾP TỤC TIÊN LỘ" onPress={() => router.replace('/map')}/></View> : null}
-  <View style={styles.panel}><Text style={styles.heading}>Bảo kiếm · {sword.name}</Text><Text style={styles.body}>{sword.description}</Text>{p.loadout.skills.map((id, index) => <View key={id} style={styles.skill}><Text style={styles.glyph}>{SKILLS.find(s => s.id === id)!.icon}</Text><View style={{ flex: 1 }}><Text style={styles.heading}>Ô {index + 1} · {SKILLS.find(s => s.id === id)!.name}</Text><Text style={styles.body}>{SKILLS.find(s => s.id === id)!.description}</Text></View></View>)}{realm.skillSlots === 1 ? <Text style={styles.sub}>Ô kỹ năng thứ hai mở tại 1.500 EXP.</Text> : null}<GameButton title="CHỌN TRANG BỊ" onPress={() => router.push('/inventory')}/></View>
-  <View style={styles.panel}><Text style={styles.heading}>Linh vật trong trận</Text>{CONTENT.tiles.map(t => <Text key={t.id} style={styles.body}>{t.name} · {Math.floor(t.damage * realm.damageScale * (sword.id === 'trong-nhac' && t.id === 0 ? 1.3 : sword.id === 'hoa-van' && t.id === 1 ? 1.5 : 1))} sát thương · {t.qi + (sword.id === 'thanh-phong' && t.id === 0 || sword.id === 'loi-minh' && t.id === 2 ? 1 : sword.id === 'tu-linh' && t.id === 3 ? 2 : 0)} khí</Text>)}</View>
- </ScrollView><BottomNav active="person" onSelect={id => navigateTab(router, id)}/></ScreenFrame>;
+        <View style={styles.hero}>
+          <FloatingCultivator />
+        </View>
+
+        <View accessible style={styles.progress} accessibilityRole="progressbar" accessibilityLabel="Tu vi" accessibilityValue={{ min: 0, max: 100, now: Math.round(realm.progress * 100), text: expLabel }}>
+          <ProgressBar portion={realm.progress} color="blue" fillHeight={14} />
+          <Text style={styles.exp}>{expLabel}</Text>
+        </View>
+
+        <View style={styles.loadout}>
+          <EquipmentIcon art={SWORD_ART[sword.id]} label={`Bảo kiếm ${sword.name}, mở Túi Đồ`} onPress={() => openInventory('sword')} />
+          {[0, 1].map(slot => {
+            const locked = slot >= realm.skillSlots;
+            const skillId = profile.loadout.skills[slot];
+            const skill = !locked && skillId ? SKILLS.find(item => item.id === skillId) : undefined;
+            return (
+              <EquipmentIcon
+                key={slot}
+                art={locked ? 'iconSlotLocked' : skill ? SKILL_ART[skill.id] : 'iconSlotEmpty'}
+                label={locked ? `Ô kỹ năng ${slot + 1} bị khóa, mở tại 1500 EXP` : `Ô kỹ năng ${slot + 1}${skill ? `, ${skill.name}` : ' trống'}, mở Kiếm thuật`}
+                disabled={locked}
+                onPress={() => openInventory('skill')}
+              />
+            );
+          })}
+        </View>
+      </View>
+      <BottomNav active="person" onSelect={id => navigateTab(router, id)} />
+    </ScreenFrame>
+  );
 }
-const styles = StyleSheet.create({ content: { gap: 12, paddingBottom: 18 }, hero: { height: 235, alignItems: 'center' }, realmBadge: { position: 'absolute', bottom: 0, backgroundColor: '#073e40', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: colors.gold, alignItems: 'center', minWidth: 170 }, realm: { color: colors.ivory, fontSize: 23, fontWeight: '900' }, sub: { color: colors.gold, fontSize: 11, lineHeight: 18 }, panel: { padding: 16, gap: 9, borderWidth: 1, borderColor: '#54786e', borderRadius: 14, backgroundColor: 'rgba(4,35,39,.92)' }, breakthrough: { borderColor: colors.goldBright }, celebration: { color: colors.goldBright, fontSize: 20, fontWeight: '900', textAlign: 'center' }, heading: { color: colors.ivory, fontSize: 15, fontWeight: '800' }, body: { color: colors.textMuted, fontSize: 13, lineHeight: 20 }, skill: { flexDirection: 'row', gap: 10, paddingVertical: 5 }, glyph: { color: colors.goldBright, fontSize: 30, width: 38 } });
+
+function EquipmentIcon({ art, label, disabled = false, onPress }: { art: Artwork; label: string; disabled?: boolean; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={disabled ? undefined : onPress} style={({ pressed }) => [styles.equipment, pressed && styles.equipmentPressed, disabled && styles.equipmentLocked]}>
+      <Image source={ART[art]} contentFit="contain" style={styles.equipmentImage} />
+    </Pressable>
+  );
+}
+
+const displayFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia, serif' });
+const styles = StyleSheet.create({
+  scene: { flex: 1, minHeight: 0, alignItems: 'center', paddingTop: 12, paddingBottom: 8 },
+  realmTitle: { width: '100%', minHeight: 78, alignItems: 'center', flexShrink: 0 },
+  realm: { width: '100%', fontFamily: displayFont, fontSize: 32, lineHeight: 44, fontWeight: '700', color: colors.ivory, textAlign: 'center', textShadowColor: colors.inkDeep, textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 5 },
+  realmGlow: { color: colors.ivory, textShadowColor: colors.blue, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 14, opacity: 0.65 },
+  stage: { fontFamily: displayFont, fontSize: 20, lineHeight: 28, color: colors.goldBright, textShadowColor: colors.inkDeep, textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+  hero: { flex: 1, minHeight: 0, width: '100%', marginVertical: 4, paddingVertical: 8 },
+  progress: { width: '78%', maxWidth: 360, alignItems: 'center', gap: 5, marginTop: 4, flexShrink: 0 },
+  exp: { color: colors.ivory, fontSize: 11, lineHeight: 16, fontWeight: '600', fontVariant: ['tabular-nums'], textShadowColor: colors.inkDeep, textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  loadout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, marginTop: 14, flexShrink: 0 },
+  equipment: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center', borderRadius: 18 },
+  equipmentImage: { width: 72, height: 72 },
+  equipmentPressed: { opacity: 0.8, transform: [{ scale: 0.94 }] },
+  equipmentLocked: { opacity: 0.62 },
+});
