@@ -35,3 +35,11 @@ review sheet, native captures at 320×568, 360×640 and 360×780 points, and the
 final unconstrained player scene. It covers the green Linh Thach / purple
 Tien Ngoc discs, equipped items, and simplified empty/locked frames. See
 `currency-slots-v3/README.md` for read-only fixture and capture details.
+
+## Two-column shop
+
+`shop-v1/` contains native captures at 320x568, 360x640 and 390x844 points of
+both categories, purchase dialogs, locked and insufficient-balance states,
+single-item final rows, extended descriptions, empty catalogues, and the
+inventory regression review. See `shop-v1/README.md` for asset provenance,
+read-only fixture details and validation.

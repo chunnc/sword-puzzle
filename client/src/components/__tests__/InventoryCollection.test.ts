@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Modal, View } from 'react-native';
+import { Modal, ScrollView, View } from 'react-native';
 import { CollectionScreen } from '../CollectionScreen';
 import { InventoryCollection } from '../InventoryCollection';
 import { ART, SKILL_ART, SWORD_ART } from '../../assets';
@@ -185,19 +185,31 @@ describe('inventory collection', () => {
     expect(mockState.equip).not.toHaveBeenCalled();
   });
 
-  it('retains the shop banner, catalogue and purchase flow', async () => {
+  it('opens shop item details before purchasing and removes the shop shortcuts', async () => {
     mockState.save.profile.coins = 1000;
     mockState.save.profile.ownedSwords = ['thanh-phong'];
     mockState.save.profile.levels = [1, 2, 3].map(levelId => ({ levelId, stars: 3 as const }));
     mount('sword', true);
-    expect(renderer.root.findAll(node => node.props.testID === 'title-banner').length).toBeGreaterThan(0);
-    expect(button('XEM TÚI ĐỒ')).toBeDefined();
+    expect(renderer.root.findAll(node => node.props.testID === 'title-banner')).toHaveLength(0);
+    expect(button('XEM TÚI ĐỒ')).toBeUndefined();
     expect(renderer.root.findAllByType(InventoryCollection)).toHaveLength(0);
-    const buy = button('MUA · 200');
+    expect(button('Mua Trọng Nhạc, 200 Linh Thạch')).toBeUndefined();
+    act(() => { button('Xem Trọng Nhạc').props.onPress(); });
+    const buy = button('Mua Trọng Nhạc, 200 Linh Thạch');
     expect(buy.props.disabled).toBe(false);
     await act(async () => { buy.props.onPress(); });
     expect(mockState.purchase).toHaveBeenCalledWith('sword', 'trong-nhac');
     expect(mockState.setNotice).toHaveBeenCalledWith('Đã thêm vào túi đồ.');
     expect(mockState.equip).not.toHaveBeenCalled();
+  });
+
+  it('hides both scroll indicators in the inventory and slot chooser', () => {
+    mount('skill');
+    openSkill();
+    for (const scroll of renderer.root.findAllByType(ScrollView)) {
+      expect(scroll.props.showsVerticalScrollIndicator).toBe(false);
+      expect(scroll.props.showsHorizontalScrollIndicator).toBe(false);
+      expect(scroll.props.scrollEnabled).not.toBe(false);
+    }
   });
 });

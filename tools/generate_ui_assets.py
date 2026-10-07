@@ -68,6 +68,9 @@ def cutout(name, target, max_size):
 
 def build_runtime_previews():
     groups = {
+        "runtime-preview-shop.png": ("Shop surfaces", [
+            "shop-card", "shop-dialog", "shop-button",
+            "shop-button-disabled", "shop-close-button"]),
         "runtime-preview-inventory.png": ("Inventory surfaces", [
             "inventory-card", "inventory-tab-idle", "inventory-tab-active",
             "inventory-button", "inventory-button-disabled", "inventory-dialog"]),
@@ -132,6 +135,11 @@ def copy_runtime_art(names=None):
         # Preserve the runtime artwork names. Crop generated alpha margins on
         # sprites that are stretched into wide controls.
     prepared = {
+        "shop-card": 800,
+        "shop-dialog": 1000,
+        "shop-button": 1000,
+        "shop-button-disabled": 1000,
+        "shop-close-button": 1000,
         "inventory-card": 1200,
         "inventory-tab-idle": 640,
         "inventory-tab-active": 640,

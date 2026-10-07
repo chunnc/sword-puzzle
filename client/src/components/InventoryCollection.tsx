@@ -9,10 +9,10 @@ import { useGameStore } from '../state/gameStore';
 import { colors } from '../theme';
 import { ScreenFrame } from './Art';
 import { BottomNav, TopHud } from './Chrome';
+import { CollectionTabs, type CollectionCategory as Category } from './CollectionTabs';
 import { navigateTab } from './Navigation';
 import { Notice } from './Notice';
 
-type Category = 'sword' | 'skill';
 const SAVE_ERROR = 'Không thể lưu thay đổi. Vui lòng thử lại.';
 
 function EquipmentArt({ art, skill = false, empty = false }: { art?: Artwork; skill?: boolean; empty?: boolean }) {
@@ -97,15 +97,8 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
   return (
     <ScreenFrame background="bgRealm">
       <TopHud onAccount={() => router.push('/account')} />
-      <View style={styles.tabs}>
-        {(['sword', 'skill'] as const).map(tab => (
-          <Pressable key={tab} accessibilityRole="tab" accessibilityLabel={tab === 'sword' ? 'Bảo kiếm' : 'Kiếm thuật'} accessibilityState={{ selected: category === tab, disabled: working }} disabled={working} onPress={() => setCategory(tab)} style={({ pressed }) => [styles.tab, pressed && styles.pressed]}>
-            <Image source={ART[category === tab ? 'inventoryTabActive' : 'inventoryTabIdle']} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.tabText, category === tab && styles.selectedTabText]}>{tab === 'sword' ? 'BẢO KIẾM' : 'KIẾM THUẬT'}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.list}>
+      <CollectionTabs category={category} disabled={working} onSelect={setCategory} />
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
         {items.filter(item => owned.includes(item.id)).map(item => {
           const isSkill = 'cost' in item;
           const slot = isSkill ? profile.loadout.skills.indexOf(item.id) : -1;
@@ -145,7 +138,7 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
           {selectedSkill ? (
             <View accessibilityViewIsModal style={styles.dialog}>
               <Image source={ART.inventoryDialog} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />
-              <ScrollView contentContainerStyle={styles.dialogContent}>
+              <ScrollView contentContainerStyle={styles.dialogContent} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
                 <Text accessibilityRole="header" style={styles.dialogTitle}>Trang bị {selectedSkill.name}</Text>
                 <Text style={styles.dialogCaption}>Chọn ô trang bị</Text>
                 {Array.from({ length: realm.skillSlots }, (_, slot) => {
@@ -179,10 +172,6 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
 }
 
 const styles = StyleSheet.create({
-  tabs: { flexDirection: 'row', gap: 8, marginBottom: 10, flexShrink: 0 },
-  tab: { flex: 1, minHeight: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 },
-  tabText: { color: colors.textMuted, fontSize: 12, fontWeight: '800', letterSpacing: 0.4 },
-  selectedTabText: { color: colors.ivory },
   scroll: { flex: 1, minHeight: 0 },
   list: { gap: 8, paddingBottom: 12 },
   card: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10, minHeight: 88 },

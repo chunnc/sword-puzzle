@@ -117,3 +117,25 @@ native của bản đầu nằm trong `assets/ui-review/inventory-v1/`; bản đ
 hai tab và bỏ khung vuông quanh kiếm được review trong
 `assets/ui-review/inventory-v2/`. Icon kiếm nằm trực tiếp trên card, giữ
 vùng bố trí 56×56 và ảnh 48×48; khung tròn của kiếm thuật giữ nguyên.
+
+## Cửa Hàng hai cột
+
+Năm sprite được tạo riêng bằng công cụ ImageGen tích hợp, tham chiếu card,
+dialog và HUD hiện có. Bộ mới dùng ngọc xanh tối, viền vàng mảnh, điểm sáng
+trên trái và hoa văn mây nhỏ ở góc; không chứa chữ hoặc icon vật phẩm.
+
+- [Nền card](runtime/shop-card.png) · [prompt](runtime/shop-card.prompt.txt)
+- [Panel chi tiết](runtime/shop-dialog.png) · [prompt](runtime/shop-dialog.prompt.txt)
+- [Nút mua](runtime/shop-button.png) · [prompt](runtime/shop-button.prompt.txt)
+- [Nút mua vô hiệu hóa](runtime/shop-button-disabled.png) · [prompt](runtime/shop-button-disabled.prompt.txt)
+- [Nút đóng](runtime/shop-close-button.png) · [prompt](runtime/shop-close-button.prompt.txt)
+
+Nút vô hiệu hóa được tạo từ nút mua để giữ hình dáng và bố cục viền. PNG
+gốc và prompt giữ nguyên trong `runtime/`. Pipeline chỉ trim alpha, resize
+và xuất năm WebP quality 90 vào `client/app-assets/ui/shop_*.webp`, giữ nền
+ngoài trong suốt; tổng khoảng 206 KiB. Card có cạnh dài tối đa 800 px,
+panel và nút tối đa 1000 px. Bản runtime không chứa nhãn cố định.
+
+`runtime-preview-shop.png` là contact sheet duyệt năm sprite. Cửa Hàng dùng
+lại tab và bộ icon từng vật phẩm của Túi Đồ. Ảnh review native ở ba viewport,
+popup và trạng thái cuộn nằm trong `assets/ui-review/shop-v1/`.
