@@ -51,7 +51,7 @@ function makeLabel(text: string, fontSize: number, color: string, shadow = false
 function useBoardLabels(cellWidth: number, targetCount: number) {
   return useMemo(() => ({
     orb: makeLabel('氣', Math.max(16, cellWidth * .66) * .45, '#d6fff1', true),
-    seal: makeLabel('封', 27, '#eee0ff'),
+    seal: makeLabel('封', Math.min(27, cellWidth * .65), '#eee0ff'),
     charge4: makeLabel('✧4', 11, '#fff2c9'),
     charge5: makeLabel('✦5', 11, '#fff2c9'),
     targets: Array.from({ length: targetCount }, (_, i) => makeLabel(String(i + 1), 13, '#fff8dd')),
@@ -76,12 +76,13 @@ export function SpiritOrb({ size = 34 }: { size?: number }) {
   </Canvas>;
 }
 
-export function Board({ snapshot, selected, targets = [], preview = [], targetingHint, onCellPress, onSwipe, locked = false, visualEffect = null, reduceMotion = false }: {
+export function Board({ snapshot, selected, targets = [], preview = [], targetingHint, showTargetingHint = true, onCellPress, onSwipe, locked = false, visualEffect = null, reduceMotion = false }: {
   snapshot: BoardSnapshot;
   selected: CellPosition | null;
   targets?: CellPosition[];
   preview?: number[];
   targetingHint?: string | null;
+  showTargetingHint?: boolean;
   onCellPress: (x: number, y: number) => void;
   onSwipe: (x1: number, y1: number, x2: number, y2: number) => void;
   locked?: boolean;
@@ -183,7 +184,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
         }) : null}
       </View>
     </GestureDetector>
-    {targetingHint ? <Text style={styles.hint}>{targetingHint}</Text> : null}
+    {showTargetingHint && targetingHint ? <Text style={styles.hint}>{targetingHint}</Text> : null}
   </View>;
 }
 

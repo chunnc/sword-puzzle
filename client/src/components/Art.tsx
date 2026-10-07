@@ -55,6 +55,7 @@ export function GameButton({
   title,
   onPress,
   art = 'buttonPrimary',
+  disabledArt = 'buttonDisabled',
   disabled = false,
   style,
   textStyle,
@@ -63,6 +64,7 @@ export function GameButton({
   title: string;
   onPress: () => void;
   art?: Artwork;
+  disabledArt?: Artwork;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
@@ -77,7 +79,7 @@ export function GameButton({
       disabled={disabled}
       style={[styles.button, style, disabled && styles.disabled]}
     >
-      <Image source={ART[disabled ? 'buttonDisabled' : art]} contentFit="fill" style={StyleSheet.absoluteFill} />
+      <Image source={ART[disabled ? disabledArt : art]} contentFit="fill" style={StyleSheet.absoluteFill} />
       <Text style={[styles.buttonText, textStyle]}>{title}</Text>
     </Pressable>
   );
@@ -91,7 +93,7 @@ export function TitleBanner({ title }: { title: string }) {
   );
 }
 
-export function ProgressBar({ portion, color, animated = false, duration = 250, fillHeight = 18 }: { portion: number; color: 'blue' | 'red'; animated?: boolean; duration?: number; fillHeight?: number }) {
+export function ProgressBar({ portion, color, animated = false, duration = 250, fillHeight = 18, trackHeight = 18 }: { portion: number; color: 'blue' | 'red'; animated?: boolean; duration?: number; fillHeight?: number; trackHeight?: number }) {
   const [trackWidth, setTrackWidth] = useState(0);
   const progress = useSharedValue(Math.max(0, Math.min(1, portion)));
   useEffect(() => {
@@ -101,8 +103,8 @@ export function ProgressBar({ portion, color, animated = false, duration = 250, 
   const fillStyle = useAnimatedStyle(() => ({ width: progress.value * trackWidth }));
 
   return (
-    <View onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)} style={styles.progressTrackWrap}>
-      <ArtPanel art="barTrack" style={[StyleSheet.absoluteFill, styles.progressTrack]}>
+    <View onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)} style={[styles.progressTrackWrap, { height: trackHeight }]}>
+      <ArtPanel art="barTrack" style={[StyleSheet.absoluteFill, styles.progressTrack, { height: trackHeight }]}>
         <Animated.View style={[styles.progressFill, { height: fillHeight }, fillStyle]}>
           <Image source={ART[color === 'red' ? 'barRed' : 'barBlue']} contentFit="fill" style={StyleSheet.absoluteFill} />
         </Animated.View>

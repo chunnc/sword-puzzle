@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Board, type BoardVisualEffect } from '../Board';
 import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
@@ -52,7 +52,7 @@ jest.mock('@shopify/react-native-skia', () => {
           let text = '';
           const builder = {
             addText: (value: string) => { text = value; return builder; },
-            build: () => ({ text, layout: () => {}, getLongestLine: () => text.length * 8, getHeight: () => 14 }),
+            build: () => ({ text, layout: () => {}, getLongestLine: () => text.length * Number(options.textStyle.fontSize), getHeight: () => Number(options.textStyle.fontSize) * 1.2 }),
           };
           return builder;
         },
@@ -106,6 +106,21 @@ describe('Skia Board integration', () => {
     act(() => { renderer.update(React.createElement(Board, { ...props, targetingHint: 'Chọn một ô' })); });
     expect(latestGesture().enabled).toHaveBeenCalledWith(false);
     expect(buttons().every(node => !node.props.disabled)).toBe(true);
+    act(() => { renderer.update(React.createElement(Board, { ...props, targetingHint: 'Chọn một ô', showTargetingHint: false })); });
+    expect(latestGesture().enabled).toHaveBeenCalledWith(false);
+    expect(renderer.root.findAllByType(Text).some(node => node.props.children === 'Chọn một ô')).toBe(false);
+  });
+
+  it.each([175, 350])('keeps the seal label inside its tile at grid width %s', side => {
+    mount();
+    const grid = renderer.root.findAllByType(View).find(node => typeof node.props.onLayout === 'function')!;
+    act(() => { grid.props.onLayout({ nativeEvent: { layout: { width: side, height: side } } }); });
+    const seal = renderer.root.findAll(node => node.type === 'Paragraph' as never && node.props.paragraph.text === '封')[0];
+    const bounds = StyleSheet.flatten(buttons()[0].props.style);
+    expect(seal.props.x).toBeGreaterThanOrEqual(bounds.left);
+    expect(seal.props.y).toBeGreaterThanOrEqual(bounds.top);
+    expect(seal.props.x + seal.props.width).toBeLessThanOrEqual(bounds.left + bounds.width);
+    expect(seal.props.y + seal.props.paragraph.getHeight()).toBeLessThanOrEqual(bounds.top + bounds.height);
   });
 
   it('uses the old timing sequence, ignores HUD-only updates and cancels on cleanup', () => {

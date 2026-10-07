@@ -3,6 +3,10 @@ import { TileKind } from './game/types';
 import type { SkillId, SwordId } from './game/domain';
 
 export const ART = {
+  gameplayBack: require('../app-assets/ui/gameplay_back.webp') as ImageSourcePropType,
+  gameplayObjective: require('../app-assets/ui/gameplay_objective.webp') as ImageSourcePropType,
+  gameplayMoves: require('../app-assets/ui/gameplay_moves.webp') as ImageSourcePropType,
+  gameplayDock: require('../app-assets/ui/gameplay_dock.webp') as ImageSourcePropType,
   shopCard: require('../app-assets/ui/shop_card.webp') as ImageSourcePropType,
   shopDialog: require('../app-assets/ui/shop_dialog.webp') as ImageSourcePropType,
   shopButton: require('../app-assets/ui/shop_button.webp') as ImageSourcePropType,

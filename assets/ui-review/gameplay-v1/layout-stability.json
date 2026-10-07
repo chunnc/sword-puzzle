@@ -1,0 +1,52 @@
+{
+  "method": "Bounding box of the largest connected component of exact RGB 215,183,110 board outline pixels in unscaled native screenshots.",
+  "scale": 3,
+  "viewports": {
+    "320x568": {
+      "bounds_pixels": {
+        "boss": [
+          182,
+          489,
+          779,
+          1086
+        ],
+        "targeting": [
+          182,
+          489,
+          779,
+          1086
+        ],
+        "targets": [
+          182,
+          489,
+          779,
+          1086
+        ]
+      },
+      "drift_pixels": 0
+    },
+    "390x844": {
+      "bounds_pixels": {
+        "boss": [
+          149,
+          933,
+          1022,
+          1806
+        ],
+        "targeting": [
+          149,
+          933,
+          1022,
+          1806
+        ],
+        "targets": [
+          149,
+          933,
+          1022,
+          1806
+        ]
+      },
+      "drift_pixels": 0
+    }
+  }
+}

@@ -9,7 +9,7 @@ import { emptySave } from '../../game/save';
 
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
-jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ levelId: '15' }), useRouter: () => ({ push: jest.fn(), replace: jest.fn() }) }));
+jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ levelId: '15' }), useRouter: () => ({ push: jest.fn(), replace: jest.fn() }), useFocusEffect: () => undefined }));
 jest.mock('react-native-reanimated', () => ({ useReducedMotion: () => true }));
 jest.mock('../../services/ads', () => ({ hasRewardedAdUnit: () => false }));
 jest.mock('../../state/gameStore', () => ({ useGameStore: (selector?: (state: typeof mockState) => unknown) => selector ? selector(mockState) : mockState }));
@@ -25,7 +25,7 @@ jest.mock('../Art', () => {
 
 const mockState = { save: emptySave(), notice: '', online: false, adsEnabled: false, session: null, setNotice: jest.fn() };
 
-describe('gameplay layout with the taller header', () => {
+describe('gameplay layout with dedicated controls', () => {
   let renderer: ReactTestRenderer;
   const view = (id: string) => renderer.root.findAllByType(Native.View).find(node => node.props.testID === id)!;
   const button = (label: string) => renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0];
@@ -50,7 +50,7 @@ describe('gameplay layout with the taller header', () => {
     expect(renderer.root.findAllByType(Board).find(node => node.props.snapshot)!.props.targetingHint).toBe('Nhất Kiếm · chọn 1 ô');
     expect(boardSize()).toEqual(initialBoardSize);
     expect(Native.StyleSheet.flatten(view('game-skill-controls').props.style).height).toBe(initialControlsHeight);
-    act(() => { button('HỦY').props.onPress(); });
+    act(() => { button('Hủy').props.onPress(); });
     expect(boardSize()).toEqual(initialBoardSize);
     expect(Native.StyleSheet.flatten(view('game-skill-controls').props.style).height).toBe(initialControlsHeight);
   });

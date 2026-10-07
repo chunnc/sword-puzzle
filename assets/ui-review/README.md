@@ -59,3 +59,11 @@ item icon, overhanging close target, and centered purchase button reduced by
 All 132 geometry samples across 21 openings and state changes show zero
 position or size drift. See `shop-panel-v3/README.md` and its
 `layout-stability.json` for details.
+
+## Dedicated gameplay UI
+
+`gameplay-v1/` contains native captures of the dedicated back/stage header,
+objective and move panels, boss presentation, sword and two skill sockets.
+The four viewport sizes cover all five goal types; additional states cover
+locked/empty sockets, qi availability, targeting, exit confirmation and loss.
+See `gameplay-v1/README.md` for provenance and validation.

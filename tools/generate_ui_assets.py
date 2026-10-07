@@ -68,6 +68,8 @@ def cutout(name, target, max_size):
 
 def build_runtime_previews():
     groups = {
+        "runtime-preview-gameplay.png": ("Gameplay surfaces", [
+            "gameplay-back", "gameplay-objective", "gameplay-moves", "gameplay-dock"]),
         "runtime-preview-shop.png": ("Shop surfaces", [
             "shop-card", "shop-dialog", "shop-button",
             "shop-button-disabled", "shop-close-button", "shop-close-icon"]),
@@ -135,6 +137,10 @@ def copy_runtime_art(names=None):
         # Preserve the runtime artwork names. Crop generated alpha margins on
         # sprites that are stretched into wide controls.
     prepared = {
+        "gameplay-back": 256,
+        "gameplay-objective": 1200,
+        "gameplay-moves": 512,
+        "gameplay-dock": 1200,
         "shop-card": 800,
         "shop-dialog": 1000,
         "shop-button": 1000,

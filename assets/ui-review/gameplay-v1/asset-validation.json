@@ -1,0 +1,38 @@
+[
+  {
+    "name": "gameplay_back",
+    "size": [
+      256,
+      244
+    ],
+    "bytes": 15024,
+    "alpha": true
+  },
+  {
+    "name": "gameplay_objective",
+    "size": [
+      1200,
+      304
+    ],
+    "bytes": 45244,
+    "alpha": true
+  },
+  {
+    "name": "gameplay_moves",
+    "size": [
+      423,
+      512
+    ],
+    "bytes": 34758,
+    "alpha": true
+  },
+  {
+    "name": "gameplay_dock",
+    "size": [
+      1200,
+      317
+    ],
+    "bytes": 51570,
+    "alpha": true
+  }
+]

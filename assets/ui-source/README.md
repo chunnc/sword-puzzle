@@ -156,3 +156,26 @@ sẵn của màn hình để giữ kích thước ổn định khi mở.
 
 Ảnh native và số đo layout từ lần đầu đến sau 500 ms được lưu tại
 `assets/ui-review/shop-panel-v2/`.
+
+## Gameplay: thông tin màn và thanh kiếm thuật
+
+Bốn sprite được tạo riêng bằng công cụ ImageGen tích hợp, tham chiếu trực
+tiếp `slot-sword.png`, `slot-skill.png` và `shop-dialog.png`. Bộ mới dùng ngọc
+xanh tối trơn, ánh sáng trên trái, viền vàng mảnh và góc vát gọn; không có
+hoa văn mây cuộn, đá đính hoặc chi tiết trang trí lớn.
+
+- [Nút back](runtime/gameplay-back.png) · [prompt](runtime/gameplay-back.prompt.txt)
+- [Panel mục tiêu/HP](runtime/gameplay-objective.png) · [prompt](runtime/gameplay-objective.prompt.txt)
+- [Khung lượt](runtime/gameplay-moves.png) · [prompt](runtime/gameplay-moves.prompt.txt)
+- [Thanh trang bị](runtime/gameplay-dock.png) · [prompt](runtime/gameplay-dock.prompt.txt)
+
+PNG gốc có alpha trong suốt. Ngoài mũi tên của nút back, các sprite không
+chứa chữ, số hay icon cố định; client dựng dữ liệu màn, HP, bảo kiếm và
+kỹ năng bằng các lớp riêng. Nút Hủy/Thi triển tái sử dụng panel mục tiêu
+để giữ viền gọn ở cả trạng thái thường và vô hiệu hóa.
+
+`generate_ui_assets.py` chỉ trim alpha, resize và xuất WebP quality 90, giữ
+alpha: back tối đa 256 px, khung lượt 512 px, hai panel rộng tối đa 1200 px.
+Bốn WebP trong `client/app-assets/ui/gameplay_*.webp` có tổng dung lượng
+146.596 byte (khoảng 143 KiB). `runtime-preview-gameplay.png` là contact sheet.
+Ảnh review native và kiểm tra alpha nằm trong `assets/ui-review/gameplay-v1/`.

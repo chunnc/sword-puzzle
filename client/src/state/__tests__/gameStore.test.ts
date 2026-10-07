@@ -20,6 +20,15 @@ const session: SessionData = { uid: 'test-player', idToken: 'token', refreshToke
 function install(profile: PlayerProfile) { const save = emptySave(); save.confirmed = profile; save.profile = profile; useGameStore.setState({ save }); }
 describe('game store lifecycle', () => {
     beforeEach(async () => { await useGameStore.getState().syncProgress(); jest.clearAllMocks(); (api.isApiConfigured as jest.Mock).mockReturnValue(false); await AsyncStorage.clear(); useGameStore.setState({ save: emptySave(), session: null, initialized: true, bootstrapLoaded: false, online: false, adsEnabled: false, notice: '' }); });
+    it('reopens the same stage with its saved board, moves, qi and run ID intact', async () => {
+        await useGameStore.getState().startLevel(1);
+        const saved = { ...useGameStore.getState().save.active!, moves: 17, remaining: 7, swordQi: 60 };
+        useGameStore.setState({ save: { ...useGameStore.getState().save, active: saved } });
+        expect(await useGameStore.getState().startLevel(1)).toBe(true);
+        expect(useGameStore.getState().save.active).toEqual(saved);
+        expect((await loadSave()).active).toEqual(saved);
+        expect(useGameStore.getState().save.operations).toEqual([]);
+    });
     it('records a real last-skill zero-star win, saves it and opens stage two', async () => {
         const snapshot = new BoardEngine(getLevel(1)).snapshot();
         snapshot.moves = 0;
