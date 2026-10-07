@@ -179,3 +179,48 @@ alpha: back tối đa 256 px, khung lượt 512 px, hai panel rộng tối đa 1
 Bốn WebP trong `client/app-assets/ui/gameplay_*.webp` có tổng dung lượng
 146.596 byte (khoảng 143 KiB). `runtime-preview-gameplay.png` là contact sheet.
 Ảnh review native và kiểm tra alpha nằm trong `assets/ui-review/gameplay-v1/`.
+
+## Gameplay v2: panel bo mềm và thanh native
+
+Hai sprite v2 được tạo riêng bằng ImageGen tích hợp, dùng socket bảo kiếm và
+kỹ năng hiện có làm tham chiếu vật liệu/màu. Panel mới có góc bo liên tục,
+viền vàng mảnh, lòng ngọc tối, ánh sáng trên trái; không còn cạnh vát nhọn,
+chữ, số hoặc icon cố định.
+
+- [Panel mục tiêu/HP v2](runtime/gameplay-objective-v2.png) · [prompt](runtime/gameplay-objective-v2.prompt.txt)
+- [Khung lượt v2](runtime/gameplay-moves-v2.png) · [prompt](runtime/gameplay-moves-v2.prompt.txt)
+
+PNG gốc giữ nguyên alpha do ImageGen tạo. Pipeline đo vùng alpha ≥128 để
+bỏ khoảng glow ngoài, trim với đệm 2 px, resize tối đa 1200/512 px và xuất
+WebP quality 90 giữ alpha. Xuất qua file tạm rồi rename để Metro không đọc
+file đang viết dở. Registry `gameplayObjective`/`gameplayMoves` dùng WebP v2;
+bản v1 được giữ để đối chiếu. `runtime-preview-gameplay-v2.png` là contact sheet.
+
+Gameplay bỏ nền dock. Hủy/Thi triển dùng Pressable 64×44 và 156×44, giữ vùng
+thao tác 44 px khi trống. HP và Kiếm khí dùng View/Reanimated/Expo
+LinearGradient, không dùng sprite thanh. Avatar lấy vùng đầu artwork boss
+hiện có; tên nằm trên HP có số bên trong, đúng hai hàng. Ảnh native và số
+đo bàn cờ nằm tại `assets/ui-review/gameplay-v2/`.
+
+## Gameplay v3: panel mây góc và nút bằng sprite
+
+Hai panel v3 dùng đúng hai PNG người dùng đính kèm và chọn trong hội thoại,
+giữ nguyên phần hoa văn mây vàng ở góc dưới phải. Chúng được tạo bằng
+ImageGen tích hợp từ panel v2; bản tinh chỉnh hoa văn không được sử dụng.
+
+- [Panel mục tiêu/boss v3](runtime/gameplay-objective-v3.png) · [prompt](runtime/gameplay-objective-v3.prompt.txt)
+- [Panel Lượt v3](runtime/gameplay-moves-v3.png) · [prompt](runtime/gameplay-moves-v3.prompt.txt)
+- [Nút Hủy](runtime/gameplay-cancel.png) · [prompt](runtime/gameplay-cancel.prompt.txt) · [prompt tinh chỉnh tỷ lệ](runtime/gameplay-cancel.refine.prompt.txt)
+- [Nút Thi triển](runtime/gameplay-cast.png) · [prompt](runtime/gameplay-cast.prompt.txt) · [prompt tinh chỉnh tỷ lệ](runtime/gameplay-cast.refine.prompt.txt)
+
+Hai nút được tạo riêng bằng ImageGen tích hợp, tham chiếu panel v2 và bộ
+socket, sau đó chỉnh tỷ lệ để phù hợp với nút nhỏ. Ảnh không có chữ, số,
+icon hoặc giá khí. Client đặt ảnh với `contentFit="contain"` trong vùng
+nhấn 64×44/156×44, chữ và giá khí nằm trên ảnh. Pressable không vẽ nền
+hoặc viền; trạng thái nhấn và disabled giữ nguyên.
+
+Pipeline chỉ trim khoảng alpha ngoài, resize và xuất WebP quality 90 giữ
+alpha; ảnh mục tiêu tối đa 1200 px, Lượt/Hủy 512 px, Thi triển 1000 px.
+Nguồn PNG được giữ nguyên. `runtime-preview-gameplay-v3.png` là contact
+sheet; ảnh native và xác minh nguồn được lưu tại `assets/ui-review/gameplay-v3/`.
+Phần HP có đệm bên phải để không đè hoa văn, section vẫn cao 76/66 px.

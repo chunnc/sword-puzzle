@@ -1,0 +1,7 @@
+{
+  "method": "SHA-256 of every AsyncStorage file before native fixture review and after restoring the production screen.",
+  "filesCompared": 4,
+  "unchanged": true,
+  "fixtures": 42,
+  "temporaryFixtureCodeRemoved": true
+}

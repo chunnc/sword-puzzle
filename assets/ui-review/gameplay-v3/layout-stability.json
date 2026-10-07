@@ -1,0 +1,218 @@
+{
+  "method": "Bounding box of the largest connected component of exact RGB 215,183,110 board outline pixels in unscaled native screenshots.",
+  "scale": 3,
+  "viewports": {
+    "320x568": {
+      "bounds_pixels": {
+        "normal": [
+          182,
+          489,
+          779,
+          1086
+        ],
+        "boss": [
+          182,
+          489,
+          779,
+          1086
+        ],
+        "targeting": [
+          182,
+          489,
+          779,
+          1086
+        ],
+        "targets": [
+          182,
+          489,
+          779,
+          1086
+        ],
+        "busy": [
+          182,
+          489,
+          779,
+          1086
+        ],
+        "normal-targeting": [
+          182,
+          489,
+          779,
+          1086
+        ],
+        "normal-targets": [
+          182,
+          489,
+          779,
+          1086
+        ],
+        "normal-busy": [
+          182,
+          489,
+          779,
+          1086
+        ]
+      },
+      "drift_pixels": 0
+    },
+    "360x640": {
+      "bounds_pixels": {
+        "normal": [
+          134,
+          489,
+          947,
+          1302
+        ],
+        "boss": [
+          134,
+          489,
+          947,
+          1302
+        ],
+        "targeting": [
+          134,
+          489,
+          947,
+          1302
+        ],
+        "targets": [
+          134,
+          489,
+          947,
+          1302
+        ],
+        "busy": [
+          134,
+          489,
+          947,
+          1302
+        ],
+        "normal-targeting": [
+          134,
+          489,
+          947,
+          1302
+        ],
+        "normal-targets": [
+          134,
+          489,
+          947,
+          1302
+        ],
+        "normal-busy": [
+          134,
+          489,
+          947,
+          1302
+        ]
+      },
+      "drift_pixels": 0
+    },
+    "360x780": {
+      "bounds_pixels": {
+        "normal": [
+          42,
+          618,
+          1038,
+          1614
+        ],
+        "boss": [
+          42,
+          618,
+          1038,
+          1614
+        ],
+        "targeting": [
+          42,
+          618,
+          1038,
+          1614
+        ],
+        "targets": [
+          42,
+          618,
+          1038,
+          1614
+        ],
+        "busy": [
+          42,
+          618,
+          1038,
+          1614
+        ],
+        "normal-targeting": [
+          42,
+          618,
+          1038,
+          1614
+        ],
+        "normal-targets": [
+          42,
+          618,
+          1038,
+          1614
+        ],
+        "normal-busy": [
+          42,
+          618,
+          1038,
+          1614
+        ]
+      },
+      "drift_pixels": 0
+    },
+    "390x844": {
+      "bounds_pixels": {
+        "normal": [
+          42,
+          720,
+          1128,
+          1806
+        ],
+        "boss": [
+          42,
+          720,
+          1128,
+          1806
+        ],
+        "targeting": [
+          42,
+          720,
+          1128,
+          1806
+        ],
+        "targets": [
+          42,
+          720,
+          1128,
+          1806
+        ],
+        "busy": [
+          42,
+          720,
+          1128,
+          1806
+        ],
+        "normal-targeting": [
+          42,
+          720,
+          1128,
+          1806
+        ],
+        "normal-targets": [
+          42,
+          720,
+          1128,
+          1806
+        ],
+        "normal-busy": [
+          42,
+          720,
+          1128,
+          1806
+        ]
+      },
+      "drift_pixels": 0
+    }
+  }
+}

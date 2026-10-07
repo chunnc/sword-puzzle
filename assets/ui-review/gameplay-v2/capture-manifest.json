@@ -1,0 +1,442 @@
+{
+  "device": "iPhone 16e",
+  "scale": 3,
+  "scenarios": [
+    {
+      "name": "collect-320x568",
+      "params": {
+        "levelId": 4,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "rocks-320x568",
+      "params": {
+        "levelId": 8,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "seals-320x568",
+      "params": {
+        "levelId": 6,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "battle-320x568",
+      "params": {
+        "levelId": 5,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "boss-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "collect-360x640",
+      "params": {
+        "levelId": 4,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "rocks-360x640",
+      "params": {
+        "levelId": 8,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "seals-360x640",
+      "params": {
+        "levelId": 6,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "battle-360x640",
+      "params": {
+        "levelId": 5,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "boss-360x640",
+      "params": {
+        "levelId": 15,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "collect-360x780",
+      "params": {
+        "levelId": 4,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "rocks-360x780",
+      "params": {
+        "levelId": 8,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "seals-360x780",
+      "params": {
+        "levelId": 6,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "battle-360x780",
+      "params": {
+        "levelId": 5,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "boss-360x780",
+      "params": {
+        "levelId": 15,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "collect-390x844",
+      "params": {
+        "levelId": 4,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "rocks-390x844",
+      "params": {
+        "levelId": 8,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "seals-390x844",
+      "params": {
+        "levelId": 6,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "battle-390x844",
+      "params": {
+        "levelId": 5,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "boss-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "zero-bars-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 0,
+        "remaining": 0
+      }
+    },
+    {
+      "name": "zero-bars-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 0,
+        "remaining": 0
+      }
+    },
+    {
+      "name": "partial-bars-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 50,
+        "remaining": 260
+      }
+    },
+    {
+      "name": "partial-bars-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 50,
+        "remaining": 260
+      }
+    },
+    {
+      "name": "locked-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "locked",
+        "qi": 0
+      }
+    },
+    {
+      "name": "locked-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "locked",
+        "qi": 0
+      }
+    },
+    {
+      "name": "empty-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "empty",
+        "qi": 100
+      }
+    },
+    {
+      "name": "empty-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "empty",
+        "qi": 100
+      }
+    },
+    {
+      "name": "insufficient-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 60
+      }
+    },
+    {
+      "name": "insufficient-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 60
+      }
+    },
+    {
+      "name": "targeting-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targeting"
+      }
+    },
+    {
+      "name": "targeting-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targeting"
+      }
+    },
+    {
+      "name": "targets-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targets"
+      }
+    },
+    {
+      "name": "targets-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targets"
+      }
+    },
+    {
+      "name": "leave-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "leave"
+      }
+    },
+    {
+      "name": "leave-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "leave"
+      }
+    },
+    {
+      "name": "last-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "last"
+      }
+    },
+    {
+      "name": "last-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "last"
+      }
+    },
+    {
+      "name": "lost-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 0,
+        "qaState": "lost"
+      }
+    },
+    {
+      "name": "lost-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 0,
+        "qaState": "lost"
+      }
+    },
+    {
+      "name": "used-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "used"
+      }
+    },
+    {
+      "name": "used-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "used"
+      }
+    }
+  ]
+}

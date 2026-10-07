@@ -1,0 +1,7 @@
+Use case: precise-object-edit
+Asset type: transparent 2D xianxia mobile game objective/boss panel sprite.
+Edit target: Image 1 is the existing wide gameplay panel. Images 2 and 3 are equipment socket material references.
+Primary request: preserve the target panel's rounded silhouette, deep jade interior, thin warm gold rim, front-facing framing and soft upper-left highlight. Add exactly ONE tiny gold cloud-scroll engraving at the bottom-right corner, tucked against the INSIDE of the rim.
+Ornament: two small flowing cloud curls, one delicate continuous gold line, about 15 percent of panel HEIGHT wide and 10 percent of panel height tall (10–12 pixels wide at runtime). It is a quiet corner accent, not a medallion. Keep it within the lowest 15 percent of the panel so the avatar, name and HP area remain completely clean. No motifs in any other corner.
+Style: Painted 2D xianxia UI, deep jade #062427/#0b5051, warm gold #d7b76e, subtle upper-left gleam, smooth rounded edges and thin restrained rim. Truly transparent exterior alpha.
+Constraints: all edges fully visible, small transparent margins. No text, numbers, bars, icons, gemstones, protrusions, large flourishes, flowers, extra ornamentation or mockup. Only add the specified tiny cloud accent; preserve the rest of Image 1. One sprite only.

@@ -10,7 +10,13 @@ import { emptySave } from '../../game/save';
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ levelId: '15' }), useRouter: () => ({ push: jest.fn(), replace: jest.fn() }), useFocusEffect: () => undefined }));
-jest.mock('react-native-reanimated', () => ({ useReducedMotion: () => true }));
+jest.mock('react-native-reanimated', () => ({
+  __esModule: true,
+  default: { View: require('react-native').View }, useReducedMotion: () => true,
+  useSharedValue: (value: number) => require('react').useRef({ value }).current,
+  useAnimatedStyle: (style: () => unknown) => style(), withTiming: (value: number) => value,
+}));
+jest.mock('expo-linear-gradient', () => ({ LinearGradient: require('react-native').View }));
 jest.mock('../../services/ads', () => ({ hasRewardedAdUnit: () => false }));
 jest.mock('../../state/gameStore', () => ({ useGameStore: (selector?: (state: typeof mockState) => unknown) => selector ? selector(mockState) : mockState }));
 jest.mock('../Board', () => ({ Board: require('react-native').View, BOARD_CLEAR_MS: 0, BOARD_FALL_MS: 0, BOARD_SWAP_MS: 0, BOARD_REJECT_MS: 0 }));
@@ -50,7 +56,7 @@ describe('gameplay layout with dedicated controls', () => {
     expect(renderer.root.findAllByType(Board).find(node => node.props.snapshot)!.props.targetingHint).toBe('Nhất Kiếm · chọn 1 ô');
     expect(boardSize()).toEqual(initialBoardSize);
     expect(Native.StyleSheet.flatten(view('game-skill-controls').props.style).height).toBe(initialControlsHeight);
-    act(() => { button('Hủy').props.onPress(); });
+    act(() => { button('Hủy chọn kỹ năng').props.onPress(); });
     expect(boardSize()).toEqual(initialBoardSize);
     expect(Native.StyleSheet.flatten(view('game-skill-controls').props.style).height).toBe(initialControlsHeight);
   });

@@ -1,0 +1,372 @@
+{
+  "device": "iPhone 16e",
+  "scale": 3,
+  "scenarios": [
+    {
+      "name": "normal-320x568",
+      "params": {
+        "levelId": 4,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "boss-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "targeting-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targeting"
+      }
+    },
+    {
+      "name": "targets-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targets"
+      }
+    },
+    {
+      "name": "busy-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "busy"
+      }
+    },
+    {
+      "name": "normal-targeting-320x568",
+      "params": {
+        "levelId": 4,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targeting"
+      }
+    },
+    {
+      "name": "normal-targets-320x568",
+      "params": {
+        "levelId": 4,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targets"
+      }
+    },
+    {
+      "name": "normal-busy-320x568",
+      "params": {
+        "levelId": 4,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "busy"
+      }
+    },
+    {
+      "name": "normal-360x640",
+      "params": {
+        "levelId": 4,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "boss-360x640",
+      "params": {
+        "levelId": 15,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "targeting-360x640",
+      "params": {
+        "levelId": 15,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targeting"
+      }
+    },
+    {
+      "name": "targets-360x640",
+      "params": {
+        "levelId": 15,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targets"
+      }
+    },
+    {
+      "name": "busy-360x640",
+      "params": {
+        "levelId": 15,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "busy"
+      }
+    },
+    {
+      "name": "normal-targeting-360x640",
+      "params": {
+        "levelId": 4,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targeting"
+      }
+    },
+    {
+      "name": "normal-targets-360x640",
+      "params": {
+        "levelId": 4,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targets"
+      }
+    },
+    {
+      "name": "normal-busy-360x640",
+      "params": {
+        "levelId": 4,
+        "width": 360,
+        "height": 640,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "busy"
+      }
+    },
+    {
+      "name": "normal-360x780",
+      "params": {
+        "levelId": 4,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "boss-360x780",
+      "params": {
+        "levelId": 15,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "targeting-360x780",
+      "params": {
+        "levelId": 15,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targeting"
+      }
+    },
+    {
+      "name": "targets-360x780",
+      "params": {
+        "levelId": 15,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targets"
+      }
+    },
+    {
+      "name": "busy-360x780",
+      "params": {
+        "levelId": 15,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "busy"
+      }
+    },
+    {
+      "name": "normal-targeting-360x780",
+      "params": {
+        "levelId": 4,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targeting"
+      }
+    },
+    {
+      "name": "normal-targets-360x780",
+      "params": {
+        "levelId": 4,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targets"
+      }
+    },
+    {
+      "name": "normal-busy-360x780",
+      "params": {
+        "levelId": 4,
+        "width": 360,
+        "height": 780,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "busy"
+      }
+    },
+    {
+      "name": "normal-390x844",
+      "params": {
+        "levelId": 4,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "boss-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100
+      }
+    },
+    {
+      "name": "targeting-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targeting"
+      }
+    },
+    {
+      "name": "targets-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targets"
+      }
+    },
+    {
+      "name": "busy-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "busy"
+      }
+    },
+    {
+      "name": "normal-targeting-390x844",
+      "params": {
+        "levelId": 4,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targeting"
+      }
+    },
+    {
+      "name": "normal-targets-390x844",
+      "params": {
+        "levelId": 4,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "targets"
+      }
+    },
+    {
+      "name": "normal-busy-390x844",
+      "params": {
+        "levelId": 4,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "busy"
+      }
+    },
+    {
+      "name": "leave-320x568",
+      "params": {
+        "levelId": 15,
+        "width": 320,
+        "height": 568,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "leave"
+      }
+    },
+    {
+      "name": "leave-390x844",
+      "params": {
+        "levelId": 15,
+        "width": 390,
+        "height": 844,
+        "slots": "two",
+        "qi": 100,
+        "qaState": "leave"
+      }
+    }
+  ]
+}

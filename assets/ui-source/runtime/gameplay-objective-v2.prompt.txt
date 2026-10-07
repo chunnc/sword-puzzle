@@ -1,0 +1,8 @@
+Use case: stylized-concept
+Asset type: transparent 2D xianxia mobile game objective and boss information panel sprite.
+Primary request: create a single wide rounded rectangular dark jade panel. Match the jade material, warm gold and painted 2D style of the reference equipment sockets, with quieter lighting and a much thinner gold rim. The previous panels have harsh cut-off corners; this replacement must have smoothly rounded corners, no chamfers, no diagonal cut corners, no pointed corners.
+Input images: slot-sword.png and slot-skill.png are material and palette references only; do not copy the sword socket silhouette.
+Composition: front-facing, orthographic, horizontal panel with approximately 3.6:1 visible width-to-height ratio, centered, all edges fully visible, small transparent margins. Large clean empty interior for code-rendered objective text, avatar and HP bar.
+Materials and colors: smooth deep jade #062427 and #0b5051, subtle soft painted texture, one slim warm gold #d7b76e edge, ivory-gold highlight. Rounded corner radius approximately 16 percent of panel height. Border only about 2 percent of panel height, delicate and restrained.
+Lighting: soft upper-left jade gleam, gentle gold edge highlight. Avoid strong specular streaks and heavy bevels.
+Constraints: truly transparent exterior alpha, no text, no numbers, no icons, no HP bar, no symbols, no ornaments, no scrollwork, no gemstones, no protrusions, no shadows beyond a tiny edge halo. One sprite only, no mockup, no sheet, no opaque backdrop.

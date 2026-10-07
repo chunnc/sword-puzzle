@@ -1,0 +1,12 @@
+[
+  {
+    "asset": "gameplay-objective-v3",
+    "sourceSha256": "4914e429ec5c7f068690aa63dafb8f4ec0b917936909113c86c03fcb0652de99",
+    "exactApprovedAttachment": true
+  },
+  {
+    "asset": "gameplay-moves-v3",
+    "sourceSha256": "c9d9a92c9cc1af7d99f3eb05e27a0dee31c19659d2e1f3d92c3fdbeea734d316",
+    "exactApprovedAttachment": true
+  }
+]

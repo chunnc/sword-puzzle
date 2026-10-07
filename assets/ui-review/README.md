@@ -67,3 +67,19 @@ objective and move panels, boss presentation, sword and two skill sockets.
 The four viewport sizes cover all five goal types; additional states cover
 locked/empty sockets, qi availability, targeting, exit confirmation and loss.
 See `gameplay-v1/README.md` for provenance and validation.
+
+## Gameplay with rounded panels and native bars
+
+`gameplay-v2/` contains the shared-height objective/boss section, two-row
+enemy name/HP presentation, rounded jade panels, native gradient pills,
+equipment without a dock background and compact Cancel/Cast buttons.
+Four viewport sizes and skill/bar/back fixtures are documented in
+`gameplay-v2/README.md`, with native board geometry and save preservation checks.
+
+## Gameplay sprites and corner cloud ornament
+
+`gameplay-v3/` reviews the two user-selected cloud corner panels and separate
+Cancel/Cast sprites at all four viewport sizes. It includes normal/boss
+goals, incomplete/complete target selection, busy presentation and exit
+confirmation. See `gameplay-v3/README.md` for source identity, geometry and
+save preservation checks.

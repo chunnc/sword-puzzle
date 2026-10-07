@@ -216,7 +216,7 @@ export default function GameScreen() {
                 <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} showTargetingHint={false} locked={busy || overlayOpen} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} />
               </View>
             </View>
-            <GameplayDock board={board} skillSlots={realmForExp(store.save.profile.totalExp).skillSlots} available={available} cost={id => engine.cost(id)} targetSkill={targetSkill} targetCount={required} canCast={targets.length === required} busy={busy} compact={compact} lost={lost}
+            <GameplayDock board={board} skillSlots={realmForExp(store.save.profile.totalExp).skillSlots} available={available} cost={id => engine.cost(id)} targetSkill={targetSkill} targetCount={required} canCast={targets.length === required} busy={busy} compact={compact}
               onSkill={id => { setTargetSkill(id); setTargets([]); setSelected(null); }}
               onCancel={() => { setTargetSkill(null); setTargets([]); }}
               onCast={() => { if (targetSkill) void perform(() => store.castSkill(targetSkill, targets)); }} />

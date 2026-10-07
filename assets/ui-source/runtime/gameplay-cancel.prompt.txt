@@ -1,0 +1,7 @@
+Use case: stylized-concept
+Asset type: transparent 2D xianxia mobile game Cancel button background sprite.
+Primary request: one small rounded rectangular dark jade button, matching the reference panels and equipment sockets in painted material and warm gold. Intended runtime size 64 by 44 pixels; visible silhouette aspect ratio exactly 64:44, approximately 1.45:1. Round corners with radius about 10 pixels at runtime. Thin gold rim, smooth dark jade face with a quiet upper-left gleam; large clean center for a code-rendered label.
+Input images: material and palette references only; do not use the cut-corner sword silhouette or tall portrait panel proportions.
+Style: Painted 2D xianxia UI, deep jade #062427/#0b5051, warm gold #d7b76e, subtle upper-left gleam, smooth rounded edges and thin restrained rim. Truly transparent exterior alpha.
+Composition: flat front-facing orthographic isolated sprite, no perspective, all edges visible, only a tiny transparent margin.
+Constraints: no text, numbers, icons, cloud ornaments, gems, patterns, protrusions, heavy bevels, large glare, shadows beyond a tiny edge halo, mockups or sheets. One sprite only, transparent outside.

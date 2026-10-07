@@ -42,9 +42,10 @@ export function ArtPanel({
   children,
   style,
   contentFit = 'fill',
-}: PropsWithChildren<{ art: Artwork; style?: StyleProp<ViewStyle>; contentFit?: ImageContentFit }>) {
+  testID,
+}: PropsWithChildren<{ art: Artwork; style?: StyleProp<ViewStyle>; contentFit?: ImageContentFit; testID?: string }>) {
   return (
-    <View style={[styles.artPanel, style]}>
+    <View testID={testID} style={[styles.artPanel, style]}>
       <Image source={ART[art]} contentFit={contentFit} style={StyleSheet.absoluteFill} />
       {children}
     </View>

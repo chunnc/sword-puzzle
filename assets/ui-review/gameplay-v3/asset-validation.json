@@ -1,0 +1,42 @@
+[
+  {
+    "name": "gameplay_objective_v3",
+    "size": [
+      1200,
+      265
+    ],
+    "bytes": 41998,
+    "alpha": true,
+    "sourceSha256": "4914e429ec5c7f068690aa63dafb8f4ec0b917936909113c86c03fcb0652de99",
+    "exactApprovedAttachment": true
+  },
+  {
+    "name": "gameplay_moves_v3",
+    "size": [
+      477,
+      512
+    ],
+    "bytes": 39112,
+    "alpha": true,
+    "sourceSha256": "c9d9a92c9cc1af7d99f3eb05e27a0dee31c19659d2e1f3d92c3fdbeea734d316",
+    "exactApprovedAttachment": true
+  },
+  {
+    "name": "gameplay_cancel",
+    "size": [
+      512,
+      307
+    ],
+    "bytes": 26682,
+    "alpha": true
+  },
+  {
+    "name": "gameplay_cast",
+    "size": [
+      1000,
+      274
+    ],
+    "bytes": 42928,
+    "alpha": true
+  }
+]

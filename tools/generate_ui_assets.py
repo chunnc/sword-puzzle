@@ -20,7 +20,10 @@ RUNTIME.mkdir(parents=True, exist_ok=True)
 
 
 def save(im, name):
-    im.save(OUT / (name + ".webp"), "WEBP", quality=90, method=6)
+    target = OUT / (name + ".webp")
+    temporary = target.with_suffix(".webp.tmp")
+    im.save(temporary, "WEBP", quality=90, method=6)
+    temporary.replace(target)
 
 
 def portrait_background(kind):
@@ -70,6 +73,10 @@ def build_runtime_previews():
     groups = {
         "runtime-preview-gameplay.png": ("Gameplay surfaces", [
             "gameplay-back", "gameplay-objective", "gameplay-moves", "gameplay-dock"]),
+        "runtime-preview-gameplay-v2.png": ("Gameplay: soft jade panels", [
+            "gameplay-objective-v2", "gameplay-moves-v2", "slot-sword", "slot-skill"]),
+        "runtime-preview-gameplay-v3.png": ("Gameplay: corner clouds and skill buttons", [
+            "gameplay-objective-v3", "gameplay-moves-v3", "gameplay-cancel", "gameplay-cast"]),
         "runtime-preview-shop.png": ("Shop surfaces", [
             "shop-card", "shop-dialog", "shop-button",
             "shop-button-disabled", "shop-close-button", "shop-close-icon"]),
@@ -140,6 +147,12 @@ def copy_runtime_art(names=None):
         "gameplay-back": 256,
         "gameplay-objective": 1200,
         "gameplay-moves": 512,
+        "gameplay-objective-v2": 1200,
+        "gameplay-moves-v2": 512,
+        "gameplay-objective-v3": 1200,
+        "gameplay-moves-v3": 512,
+        "gameplay-cancel": 512,
+        "gameplay-cast": 1000,
         "gameplay-dock": 1200,
         "shop-card": 800,
         "shop-dialog": 1000,
@@ -191,9 +204,17 @@ def copy_runtime_art(names=None):
             save(canvas, name)
             continue
         if image.stem in prepared:
-            visible = art.getchannel("A").point(lambda alpha: 255 if alpha >= 16 else 0).getbbox()
+            # Gameplay surfaces must share their visible height. Ignore the
+            # generated exterior glow when trimming; preserve alpha inside.
+            soft_gameplay = image.stem in {
+                "gameplay-objective-v2", "gameplay-moves-v2",
+                "gameplay-objective-v3", "gameplay-moves-v3",
+                "gameplay-cancel", "gameplay-cast",
+            }
+            threshold = 128 if soft_gameplay else 16
+            visible = art.getchannel("A").point(lambda alpha: 255 if alpha >= threshold else 0).getbbox()
             if visible:
-                padding = 8
+                padding = 2 if soft_gameplay else 8
                 left, top, right, bottom = visible
                 art = art.crop((max(0, left-padding), max(0, top-padding),
                                 min(art.width, right+padding), min(art.height, bottom+padding)))
