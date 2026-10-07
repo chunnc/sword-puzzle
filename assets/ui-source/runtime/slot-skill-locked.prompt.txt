@@ -1,0 +1,6 @@
+Use case: stylized-concept
+Asset type: one production-ready illustrated UI sprite for the portrait xianxia mobile game Kiem Khai Tien Lo.
+Style references: provided local images are style references only, not edit targets. Match their 2D painterly jade, ivory and polished warm gold materials, crisp edges, cloud-scroll motifs, upper-left ivory highlights and restrained celestial glow. No photorealism, pixel art, flat outline icons or Western medieval motifs.
+Primary request: ONE LOCKED circular skill equipment socket. Preserve the normal skill socket's circular geometry and cloud-scroll ornament positioning, but make its jade darker and its gold more muted and antique. Add ONLY a centered compact fantasy padlock, polished antique gold shackle, jade body, clean dark keyhole, about 38% of the circle's diameter. The lock is integrated inside the socket, not a standalone icon. No skill, sword, plus, text or requirement numbers.
+Composition: Square canvas, same silhouette, dimensions and margins as the normal circular skill socket. Genuinely transparent outside its silhouette.
+Constraints: one sprite only, actual transparent alpha outside its silhouette, no scene or ground, no text, letters, numbers, labels or watermark. Do not copy unwanted subjects from the references.

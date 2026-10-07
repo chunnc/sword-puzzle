@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { ScrollView, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BottomNav, TopHud } from '../Chrome';
 import { CollectionScreen } from '../CollectionScreen';
 import { navigateTab } from '../Navigation';
@@ -172,12 +172,24 @@ describe('scene navigation', () => {
     expect(renderer.root.findAll(node => node.props.art === SKILL_ART[skill.id])).toHaveLength(1);
   });
 
-  it('keeps EXP visible in the shared HUD by default', () => {
+  it('shows both currencies in the taller shared HUD without EXP or realm', () => {
     mockState.save.profile.totalExp = 500;
-    mount(React.createElement(TopHud, { onAccount: jest.fn() }));
-    expect(hasText('500 EXP')).toBe(true);
-    act(() => { renderer.update(React.createElement(TopHud, { onAccount: jest.fn(), showExp: false })); });
+    mockState.save.profile.coins = 12345;
+    const onAccount = jest.fn();
+    mount(React.createElement(TopHud, { onAccount }));
+    expect(hasText('12.3K')).toBe(true);
+    expect(hasText('0')).toBe(true);
     expect(hasText('500 EXP')).toBe(false);
+    expect(hasText('Luyện Khí')).toBe(false);
+    const tray = renderer.root.findAllByType(View).find(node => node.props.art === 'hudTrayV2')!;
+    expect(StyleSheet.flatten(tray.props.style).height).toBe(72);
+    expect(StyleSheet.flatten(tray.props.style).flexShrink).toBe(0);
+    act(() => { button('Linh Thạch: 12345, mở Cửa Hàng').props.onPress(); });
+    expect(mockRouter.push).toHaveBeenCalledWith('/shop');
+    const premium = renderer.root.findAllByType(View).find(node => node.props.accessibilityLabel === 'Linh Thạch Tinh Hoa: 0')!;
+    expect(premium.props.onPress).toBeUndefined();
+    act(() => { button('Tài khoản').props.onPress(); });
+    expect(onAccount).toHaveBeenCalledTimes(1);
   });
 
   it.each(['skill', 'sword', 'invalid', undefined])('opens inventory with category %s', category => {

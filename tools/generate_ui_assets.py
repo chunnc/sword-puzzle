@@ -68,6 +68,9 @@ def cutout(name, target, max_size):
 
 def build_runtime_previews():
     groups = {
+        "runtime-preview-hud-v2.png": ("HUD and equipment sockets", [
+            "hud-tray-v2", "icon-linh-thach", "icon-linh-thach-tinh-hoa",
+            "slot-sword", "slot-skill", "slot-skill-empty", "slot-skill-locked"]),
         "runtime-preview-surfaces.png": ("UI surfaces", [
             "panel-base", "panel-light", "banner", "hud-chip", "hud-tray", "nav",
             "chapter-card", "dialog-panel", "button-primary", "button-secondary",
@@ -132,6 +135,7 @@ def copy_runtime_art(names=None):
         "button-disabled": 1400,
         "hud-chip": 1024,
         "hud-tray": 1600,
+        "hud-tray-v2": 1600,
         "nav": 1600,
         "chapter-card": 840,
         "dialog-panel": 1024,
@@ -146,13 +150,14 @@ def copy_runtime_art(names=None):
             continue
         name = "panel" if image.stem == "panel-base" else image.stem.replace("-", "_")
         art = Image.open(image).convert("RGBA")
-        if image.stem.startswith(("icon-sword-", "icon-skill-", "icon-slot-")):
-            # Consistent 80% footprint for the 60 px character loadout icons.
+        if image.stem.startswith(("icon-sword-", "icon-skill-", "icon-slot-", "icon-linh-thach", "slot-")):
+            # Consistent 80% icon footprint; socket frames use 96% of the canvas.
             # Keep the source illustration and its alpha; only crop and resize.
             visible = art.getchannel("A").getbbox()
             if visible:
                 art = art.crop(visible)
-            art.thumbnail((410, 410), Image.Resampling.LANCZOS)
+            footprint = 492 if image.stem.startswith("slot-") else 410
+            art.thumbnail((footprint, footprint), Image.Resampling.LANCZOS)
             canvas = Image.new("RGBA", (512, 512))
             canvas.paste(art, ((512-art.width)//2, (512-art.height)//2))
             save(canvas, name)

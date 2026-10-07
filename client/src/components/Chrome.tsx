@@ -5,25 +5,29 @@ import { ART } from '../assets';
 import { colors, type } from '../theme';
 import { ArtPanel } from './Art';
 import { useGameStore } from '../state/gameStore';
-import { realmForExp } from '../game/domain';
 import { useRouter } from 'expo-router';
 import type { BottomNavId } from './Navigation';
+import { formatHudAmount } from './hudPresentation';
 
-export function TopHud({ onAccount, showExp = true }: { onAccount: () => void; showExp?: boolean }) {
+export function TopHud({ onAccount }: { onAccount: () => void }) {
   const { width } = useWindowDimensions();
   const profile = useGameStore(state => state.save.profile);
   const router = useRouter();
-  const realm = realmForExp(profile.totalExp);
 
   return (
-    <ArtPanel art="hudTray" style={[styles.hud, { width: width - 8 }]}>
+    <ArtPanel art="hudTrayV2" style={[styles.hud, { width: width - 8 }]}>
       <View style={styles.avatar}>
         <Art image="avatar" style={StyleSheet.absoluteFill} />
         <Art image="avatarFrame" style={StyleSheet.absoluteFill} />
       </View>
-      {showExp ? <HudStat image="iconJade" value={`${profile.totalExp} EXP`} /> : null}
-      <Pressable accessibilityRole="button" accessibilityLabel={`${profile.coins} linh thạch, mở cửa hàng`} onPress={() => router.push('/shop')}><HudStat image="iconCoin" value={String(profile.coins)} /></Pressable>
-      <Text numberOfLines={2} style={{ color: colors.ivory, fontSize: 10, fontWeight: '800', maxWidth: 58 }}>{realm.name}</Text>
+      <View style={styles.currencies}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Linh Thạch: ${profile.coins}, mở Cửa Hàng`} onPress={() => router.push('/shop')} style={styles.currency}>
+          <HudStat image="iconLinhThach" value={formatHudAmount(profile.coins)} />
+        </Pressable>
+        <View accessible accessibilityRole="text" accessibilityLabel="Linh Thạch Tinh Hoa: 0" style={styles.currency}>
+          <HudStat image="iconLinhThachTinhHoa" value="0" />
+        </View>
+      </View>
       <Pressable accessibilityRole="button" accessibilityLabel="Tài khoản" onPress={onAccount} style={styles.menu}>
         <Art image="iconMenu" style={styles.menuImage} />
       </Pressable>
@@ -35,13 +39,13 @@ function HudStat({ image, value }: { image: keyof typeof ART; value: string }) {
   return (
     <View style={styles.statDisplay}>
       <Art image={image} style={styles.statIcon} />
-      <Text style={styles.statValue}>{value}</Text>
+      <Text accessible={false} numberOfLines={1} maxFontSizeMultiplier={1.2} style={styles.statValue}>{value}</Text>
     </View>
   );
 }
 
 function Art({ image, style }: { image: keyof typeof ART; style: StyleProp<ImageStyle> }) {
-  return <Image source={ART[image]} contentFit="contain" style={style} />;
+  return <Image source={ART[image]} contentFit="contain" accessible={false} style={style} />;
 }
 
 const tabs = [
@@ -83,27 +87,28 @@ function ImageView({ source, selected }: { source: ImageSourcePropType; selected
 
 const styles = StyleSheet.create({
   hud: {
-    aspectRatio: 1600 / 195,
+    height: 72,
+    flexShrink: 0,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 9,
+    paddingHorizontal: 8,
+    gap: 4,
     marginBottom: 8,
   },
   avatar: {
-    width: 50,
-    height: 50,
+    width: 60,
+    height: 60,
     position: 'relative',
     flexShrink: 0,
-    marginRight: 4,
-    transform: [{ translateX: -3 }, { translateY: 3 }],
   },
-  statDisplay: { minWidth: 57, height: 37, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
-  statIcon: { width: 22, height: 22 },
-  statValue: { ...type.body, color: colors.ivory, fontSize: 14 },
-  menu: { width: 39, height: 39, justifyContent: 'center', alignItems: 'center' },
-  menuImage: { width: 34, height: 34 },
+  currencies: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  currency: { flex: 1, minWidth: 0, height: 48, justifyContent: 'center' },
+  statDisplay: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
+  statIcon: { width: 30, height: 30, flexShrink: 0 },
+  statValue: { ...type.body, color: colors.ivory, fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'], flexShrink: 1 },
+  menu: { width: 48, height: 48, flexShrink: 0, justifyContent: 'center', alignItems: 'center' },
+  menuImage: { width: 36, height: 36 },
   nav: {
     aspectRatio: 1600 / 365,
     alignSelf: 'center',

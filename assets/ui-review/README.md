@@ -18,3 +18,12 @@ The scene has no ScrollView; the character uses contain and the remaining
 flex height. Headers, EXP label, all three equipment slots, and bottom
 navigation stay visible at each size. Navigation, realm boundaries, locked
 and empty slots, and motion lifecycle are also covered by client tests.
+
+## HUD v2 and equipment sockets
+
+`hud-v2/` contains native review captures for the 72-point dual-currency HUD,
+outlined cultivation text, and square sword / circular skill sockets. The
+set includes character states and viewport sizes, map, inventory, shop,
+account, win, exploration, and boss scenes. See `hud-v2/README.md` for fixture
+and capture details. The read-only fixtures and viewport constraints were
+removed after verification; the real save and wallet were not changed.

@@ -61,3 +61,25 @@ WebP 512×512 quality 90, giữ alpha. 18 ảnh runtime có tổng dung lượng
 865 KiB. `runtime-preview-character-icons.png` là contact sheet riêng của bộ
 icon; toàn bộ sprite cũng đã được duyệt ở kích thước hiển thị khoảng 60 px
 cạnh các icon gốc.
+
+## HUD hai tiền tệ và khung trang bị
+
+Bảy ảnh mới được tạo riêng bằng ImageGen tích hợp, có nền ngoài trong suốt:
+`icon-linh-thach`, `icon-linh-thach-tinh-hoa`, `hud-tray-v2`, `slot-sword`,
+`slot-skill`, `slot-skill-empty` và `slot-skill-locked`. PNG gốc và prompt đầy
+đủ nằm trong `runtime/`; bản WebP trong `client/app-assets/ui/`.
+
+Linh Thạch là một tinh thể xanh ngọc; Tinh Hoa là cụm tinh thể tím ngà có
+điểm vàng. Tham chiếu trực tiếp từ ngọc và kiếm hiện có giúp giữ chất liệu,
+họa tiết mây, ánh sáng phía trên trái và khối nổi 2D. Header tham chiếu HUD,
+khung avatar và vòng kỹ năng. Ô kiếm vuông góc vát; ô kỹ năng tròn, với hai
+biến thể thêm dấu cộng hoặc khóa dựa trên cùng khung gốc.
+
+Header không chứa chữ, số hoặc icon cố định; client dựng các thành phần
+động trong chiều cao 72 px. Khung thường có lòng ngọc tối trống, client đặt
+icon kiếm/kỹ năng vào một lớp riêng. Số dư Tinh Hoa hiện là placeholder `0`;
+không có thay đổi schema hoặc tích hợp nạp trong bản UI này.
+
+Pipeline xuất header rộng tối đa 1600 px, icon và khung 512×512, WebP quality
+90 và giữ alpha. Khung chiếm khoảng 96% canvas; icon tiền khoảng 80%.
+`runtime-preview-hud-v2.png` là contact sheet để duyệt bộ ảnh mới.

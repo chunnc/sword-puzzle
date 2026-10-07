@@ -3,6 +3,13 @@ import { TileKind } from './game/types';
 import type { SkillId, SwordId } from './game/domain';
 
 export const ART = {
+  iconLinhThach: require('../app-assets/ui/icon_linh_thach.webp') as ImageSourcePropType,
+  iconLinhThachTinhHoa: require('../app-assets/ui/icon_linh_thach_tinh_hoa.webp') as ImageSourcePropType,
+  hudTrayV2: require('../app-assets/ui/hud_tray_v2.webp') as ImageSourcePropType,
+  slotSword: require('../app-assets/ui/slot_sword.webp') as ImageSourcePropType,
+  slotSkill: require('../app-assets/ui/slot_skill.webp') as ImageSourcePropType,
+  slotSkillEmpty: require('../app-assets/ui/slot_skill_empty.webp') as ImageSourcePropType,
+  slotSkillLocked: require('../app-assets/ui/slot_skill_locked.webp') as ImageSourcePropType,
   iconSwordThanhPhong: require('../app-assets/ui/icon_sword_thanh_phong.webp') as ImageSourcePropType,
   iconSwordTrongNhac: require('../app-assets/ui/icon_sword_trong_nhac.webp') as ImageSourcePropType,
   iconSwordHoaVan: require('../app-assets/ui/icon_sword_hoa_van.webp') as ImageSourcePropType,

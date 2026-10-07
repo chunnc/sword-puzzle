@@ -1,0 +1,6 @@
+Use case: stylized-concept
+Asset type: one production-ready illustrated UI sprite for the portrait xianxia mobile game Kiem Khai Tien Lo.
+Style references: provided local images are style references only, not edit targets. Match their 2D painterly jade, ivory and polished warm gold materials, crisp edges, cloud-scroll motifs, upper-left ivory highlights and restrained celestial glow. No photorealism, pixel art, flat outline icons or Western medieval motifs.
+Primary request: ONE empty circular skill equipment socket, polished warm gold circular rim with delicate jade cloud-scroll engraving and four SMALL rounded finial accents, subdued cyan inner bevel. Large center is EMPTY deep dark jade-blue enamel with barely visible cloud texture, no skill, sword, plus, lock, star or item inside. Keep decorative rim to approximately 12% of total width so existing skill sprites can fit inside. Same exact material rendering as the supplied reference, calmer and less spiky.
+Composition: Square canvas, front-facing and symmetric. Circular socket occupies about 94% of the canvas, at least 3% transparent margin, center item area clear, genuinely transparent outside the socket.
+Constraints: one sprite only, actual transparent alpha outside its silhouette, no scene or ground, no text, letters, numbers, labels or watermark. Do not copy unwanted subjects from the references.
