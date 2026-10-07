@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
-import { Image as NativeImage, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Canvas, ColorMatrix, Image as SkiaImage, useImage, type SkImage } from '@shopify/react-native-skia';
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useDerivedValue, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { runOnJS } from 'react-native-worklets';
@@ -9,6 +9,7 @@ import type { WinSummary } from '../game/types';
 import { colors } from '../theme';
 import { resultPanelScale, resultTimeline, starColorMatrix, starProgress, RESULT_REWARD_MS } from './gameplayResultVisuals';
 import { InventoryDialogPanel } from './InventoryDialogPanel';
+import { GameplayDialogButton } from './GameplayDialogButton';
 
 export type GameplayResult =
   | { kind: 'won'; runId: string; summary: WinSummary }
@@ -25,18 +26,6 @@ function ResultStar({ image, index, earned, elapsed, size }: { image: SkImage | 
       <SkiaImage image={image} x={4} y={4} width={size - 8} height={size - 8} fit="contain"><ColorMatrix matrix={matrix} /></SkiaImage>
     </Canvas>
   </Animated.View>;
-}
-
-function ResultButton({ title, art, width, disabled, onPress }: { title: string; art: 'buttonPrimary' | 'buttonSecondary'; width: number; disabled: boolean; onPress: () => void }) {
-  const source = NativeImage.resolveAssetSource(ART[art]);
-  const ratio = source?.width && source?.height ? source.width / source.height
-    : art === 'buttonPrimary' ? 1400 / 363 : 1400 / 356;
-  const imageHeight = width / ratio;
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled }} disabled={disabled} onPress={disabled ? undefined : onPress}
-    style={({ pressed }) => [styles.button, { width, height: Math.max(44, imageHeight) }, disabled && styles.disabled, pressed && !disabled && styles.pressed]}>
-    <Image source={ART[art]} contentFit="contain" accessible={false} style={[styles.buttonArt, { width, height: imageHeight }]} />
-    <Text numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2} style={[styles.buttonText, art === 'buttonPrimary' && styles.primaryText]}>{title}</Text>
-  </Pressable>;
 }
 
 export function GameplayResultPopup({ result, busy, reduceMotion, onReady, onContinue, onBack }: {
@@ -97,8 +86,8 @@ export function GameplayResultPopup({ result, busy, reduceMotion, onReady, onCon
             {coins > 0 ? <View style={styles.coinReward}><Image source={ART.iconLinhThach} contentFit="contain" accessible={false} style={styles.coin} /><Text accessibilityLabel={`+${coins} Linh Thạch`} maxFontSizeMultiplier={1.2} style={styles.reward}>+{coins}</Text></View> : null}
           </Animated.View> : null}
           <View testID="result-actions" style={[styles.actions, compact && styles.compactActions]}>
-            <ResultButton title={won ? 'TIẾP TỤC' : 'CHƠI LẠI'} art="buttonPrimary" width={buttonWidth} disabled={disabled} onPress={onContinue} />
-            <ResultButton title="QUAY VỀ" art="buttonSecondary" width={buttonWidth} disabled={disabled} onPress={onBack} />
+            <GameplayDialogButton title={won ? 'TIẾP TỤC' : 'CHƠI LẠI'} art="buttonPrimary" width={buttonWidth} disabled={disabled} onPress={onContinue} />
+            <GameplayDialogButton title="QUAY VỀ" art="buttonSecondary" width={buttonWidth} disabled={disabled} onPress={onBack} />
           </View>
         </View>
       </InventoryDialogPanel>
@@ -122,10 +111,4 @@ const styles = StyleSheet.create({
   coin: { width: 28, height: 28 },
   actions: { width: '100%', flexDirection: 'column', alignItems: 'center', gap: 6 },
   compactActions: { gap: 4 },
-  button: { minHeight: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 14 },
-  buttonArt: { position: 'absolute' },
-  buttonText: { color: colors.ivory, fontSize: 12, fontWeight: '900', letterSpacing: 0.3, textShadowColor: colors.inkDeep, textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1 },
-  primaryText: { color: colors.inkDeep, textShadowColor: 'transparent', textShadowRadius: 0 },
-  disabled: { opacity: 0.55 },
-  pressed: { opacity: 0.85 },
 });

@@ -1,0 +1,42 @@
+{
+  "device": "iPhone 16e",
+  "scale": 3,
+  "scenarios": [
+    {
+      "name": "back-320x568",
+      "params": {
+        "width": 320,
+        "height": 568
+      }
+    },
+    {
+      "name": "back-360x640",
+      "params": {
+        "width": 360,
+        "height": 640
+      }
+    },
+    {
+      "name": "back-360x780",
+      "params": {
+        "width": 360,
+        "height": 780
+      }
+    },
+    {
+      "name": "back-390x844",
+      "params": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "busy-320x568",
+      "params": {
+        "width": 320,
+        "height": 568,
+        "busy": "true"
+      }
+    }
+  ]
+}

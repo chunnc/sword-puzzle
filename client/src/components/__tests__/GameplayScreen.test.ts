@@ -187,6 +187,15 @@ describe('gameplay presentation and exit behavior', () => {
     expect(view('game-leave-panel').props.art).toBe('inventoryDialog');
     expect(view('game-leave-panel').props.contentFit).toBe('contain');
     expect(Native.StyleSheet.flatten(view('game-leave-panel').props.style)).toMatchObject({ maxWidth: 360, aspectRatio: 800 / 671 });
+    for (const label of ['Tiếp tục', 'Về Tiên Lộ']) {
+      const node = button(label);
+      const art = node.findAllByType(Native.View).find(view => view.props.source === ART.buttonPrimary || view.props.source === ART.buttonSecondary)!;
+      const dimensions = Native.StyleSheet.flatten(art.props.style);
+      expect(art.props.contentFit).toBe('contain');
+      expect(dimensions.width / dimensions.height).toBeCloseTo(art.props.source === ART.buttonPrimary ? 1400 / 363 : 1400 / 356);
+      expect(Native.StyleSheet.flatten(node.props.style({ pressed: false })).height).toBeGreaterThanOrEqual(44);
+      expect(Native.StyleSheet.flatten(node.props.style({ pressed: true })).transform).toBeUndefined();
+    }
     act(() => { button('Tiếp tục').props.onPress(); });
     expect(board().props.targets).toEqual([{ x: 0, y: 0 }]);
     act(() => { button('Rời màn chơi').props.onPress(); });

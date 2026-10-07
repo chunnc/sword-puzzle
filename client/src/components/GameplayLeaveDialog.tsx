@@ -1,19 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme';
-import { GameButton } from './Art';
+import { GameplayDialogButton } from './GameplayDialogButton';
 import { InventoryDialogPanel } from './InventoryDialogPanel';
 
 export function GameplayLeaveDialog({ busy, compact, onContinue, onBack }: {
   busy: boolean; compact: boolean; onContinue: () => void; onBack: () => void;
 }) {
+  const [panelWidth, setPanelWidth] = useState(0);
+  const buttonWidth = Math.min(panelWidth < 350 ? 168 : 184, panelWidth > 0 ? Math.max(0, panelWidth - 48) : 168);
   return <View testID="game-leave-confirmation" accessibilityViewIsModal style={styles.overlay}>
     <InventoryDialogPanel testID="game-leave-panel">
-      <View style={[styles.content, compact && styles.compactContent]}>
+      <View style={[styles.content, compact && styles.compactContent]} onLayout={event => setPanelWidth(event.nativeEvent.layout.width)}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.2} style={styles.title}>Rời màn chơi?</Text>
         <Text maxFontSizeMultiplier={1.2} style={styles.body}>Tiến trình màn này đã được lưu. Bạn có thể chơi tiếp khi quay lại.</Text>
-        <GameButton title="Tiếp tục" disabled={busy} onPress={onContinue} style={styles.button} />
-        <GameButton title="Về Tiên Lộ" disabled={busy} onPress={onBack} art="buttonSecondary" textStyle={styles.secondaryText} style={styles.button} />
+        <View testID="game-leave-actions" style={styles.actions}>
+          <GameplayDialogButton title="Tiếp tục" art="buttonPrimary" width={buttonWidth} disabled={busy} onPress={onContinue} />
+          <GameplayDialogButton title="Về Tiên Lộ" art="buttonSecondary" width={buttonWidth} disabled={busy} onPress={onBack} />
+        </View>
       </View>
     </InventoryDialogPanel>
   </View>;
@@ -25,6 +29,5 @@ const styles = StyleSheet.create({
   compactContent: { paddingVertical: 12, gap: 6 },
   title: { fontSize: 22, lineHeight: 28, fontWeight: '900', color: colors.ivory, textAlign: 'center' },
   body: { color: colors.ivory, fontSize: 13, lineHeight: 18, textAlign: 'center' },
-  button: { width: '100%' },
-  secondaryText: { color: colors.ivory },
+  actions: { width: '100%', alignItems: 'center', gap: 6 },
 });

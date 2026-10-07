@@ -276,3 +276,12 @@ tối thiểu 44 px. Màn nhỏ dùng canvas sao 56 px và khoảng cách gọn 
 dung vừa panel inventory đúng tỷ lệ. Animation và màu grayscale/vàng giữ
 nguyên. Ảnh native bốn viewport nằm trong
 [gameplay-dialog-v3](../ui-review/gameplay-dialog-v3/README.md).
+
+## Back dialog v4: nút quay về dùng chung tỷ lệ
+
+Dialog xác nhận rời màn hiện dùng chung `GameplayDialogButton` với popup
+thắng/thua. Hai ảnh nút dùng `contain`, lấy tỷ lệ riêng từ metadata và tính
+chiều cao từ chiều rộng; vùng nhấn tối thiểu 44 px, phản hồi nhấn bằng opacity.
+Nút rộng 168/184 px theo chiều rộng panel, giữ nhãn và thao tác hiện tại.
+Ảnh native bốn viewport và trạng thái khóa nằm trong
+[gameplay-back-v4](../ui-review/gameplay-back-v4/README.md).
