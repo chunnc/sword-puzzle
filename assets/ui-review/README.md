@@ -50,3 +50,12 @@ read-only fixture details and validation.
 sizes, five purchase states, and native geometry samples through 500 ms after
 opening. All 18 measured openings show zero position or size drift. See
 `shop-panel-v2/README.md` for details and `layout-stability.json` for samples.
+
+## Fixed-ratio purchase panel
+
+`shop-panel-v3/` contains the panel with its original artwork ratio, larger
+item icon, overhanging close target, and centered purchase button reduced by
+20%. Native captures cover three viewport sizes and five purchase states.
+All 132 geometry samples across 21 openings and state changes show zero
+position or size drift. See `shop-panel-v3/README.md` and its
+`layout-stability.json` for details.

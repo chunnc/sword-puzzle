@@ -16,12 +16,15 @@ import { Notice } from './Notice';
 type ShopItem = typeof SWORDS[number] | typeof SKILLS[number];
 type Selection = { category: CollectionCategory; id: ShopItem['id'] };
 const SAVE_ERROR = 'Không thể lưu thay đổi. Vui lòng thử lại.';
+// Match the exported shop_dialog.webp, including its transparent border.
+const DIALOG_ASPECT_RATIO = 824 / 1000;
+const CLOSE_OVERHANG = 12;
 
-function ItemArt({ item }: { item: ShopItem }) {
+function ItemArt({ item, detail = false }: { item: ShopItem; detail?: boolean }) {
   const skill = 'cost' in item;
   const art = skill ? SKILL_ART[item.id] : SWORD_ART[item.id];
   return (
-    <View style={styles.itemArt}>
+    <View style={[styles.itemArt, !detail && styles.cardItemArt]}>
       {skill ? <Image source={ART.slotSkill} contentFit="contain" accessible={false} style={StyleSheet.absoluteFill} /> : null}
       <Image source={ART[art]} contentFit="contain" accessible={false} style={StyleSheet.absoluteFill} />
     </View>
@@ -37,14 +40,15 @@ function Price({ value }: { value: number }) {
   );
 }
 
-function PurchaseButton({ price, label, disabled, onPress }: {
+function PurchaseButton({ price, label, width, disabled, onPress }: {
   price: number;
   label: string;
+  width: number;
   disabled: boolean;
   onPress: () => void;
 }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={disabled ? undefined : onPress} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={disabled ? undefined : onPress} style={({ pressed }) => [styles.button, { width }, pressed && styles.pressed]}>
       <Image source={ART[disabled ? 'shopButtonDisabled' : 'shopButton']} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />
       <View style={styles.buyContent}>
         <Text maxFontSizeMultiplier={1.2} style={[styles.buttonText, disabled && styles.secondaryText]}>Mua</Text>
@@ -61,6 +65,9 @@ export function ShopCollection({ initialCategory = 'sword' }: { initialCategory?
   const profile = store.save.profile;
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const dialogWidth = Math.min(340, width - insets.left - insets.right - 40);
+  const dialogHeight = dialogWidth / DIALOG_ASPECT_RATIO;
+  const detailIconSize = width <= 320 ? 96 : 104;
   const [gridWidth, setGridWidth] = useState<number | null>(null);
   const cardWidth = ((gridWidth ?? width - 24) - 8) / 2;
   const [category, setCategory] = useState<CollectionCategory>(initialCategory);
@@ -79,6 +86,8 @@ export function ShopCollection({ initialCategory = 'sword' }: { initialCategory?
   const locked = Boolean(selectedItem && profile.levels.length < selectedItem.unlock);
   const insufficient = Boolean(selectedItem && profile.coins < selectedItem.price);
   const buyDisabled = working || locked || insufficient;
+  const status = working ? 'Đang lưu…' : modalError || (locked ? `Cần vượt qua màn ${selectedItem!.unlock}` : insufficient ? 'Chưa đủ Linh Thạch.' : '');
+  const statusIsError = !working && Boolean(modalError);
 
   useEffect(() => {
     setCategory(initialCategory);
@@ -170,18 +179,21 @@ export function ShopCollection({ initialCategory = 'sword' }: { initialCategory?
         <View style={[styles.modalOverlay, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20, paddingLeft: insets.left + 20, paddingRight: insets.right + 20 }]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Đóng chi tiết vật phẩm" accessibilityState={{ disabled: working }} disabled={working} onPress={closeModal} style={StyleSheet.absoluteFill} />
           {selectedItem ? (
-            <View accessibilityViewIsModal style={styles.dialog}>
-              <Image source={ART.shopDialog} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />
-              <View style={styles.detailContent}>
-                <View style={styles.detailIcon}><ItemArt item={selectedItem} /></View>
-                <Text accessibilityRole="header" style={styles.detailTitle}>{selectedItem.name}</Text>
-                <Text style={styles.description}>{selectedItem.description}</Text>
-                {'cost' in selectedItem ? <Text style={styles.detailMeta}>Tiêu hao {selectedItem.cost} khí</Text> : null}
-              </View>
-              <View style={styles.footer}>
-                {working || locked || insufficient ? <Text accessibilityLiveRegion="polite" style={styles.reason}>{working ? 'Đang lưu…' : locked ? `Cần vượt qua màn ${selectedItem.unlock}` : 'Chưa đủ Linh Thạch.'}</Text> : null}
-                {modalError ? <Text accessibilityRole="alert" style={styles.modalError}>{modalError}</Text> : null}
-                <PurchaseButton price={selectedItem.price} label={`Mua ${selectedItem.name}, ${selectedItem.price} Linh Thạch`} disabled={buyDisabled} onPress={() => void purchase()} />
+            <View accessibilityViewIsModal pointerEvents="box-none" style={[styles.dialogWrapper, { width: dialogWidth + CLOSE_OVERHANG * 2, height: dialogHeight + CLOSE_OVERHANG * 2 }]}>
+              <View style={[styles.dialog, { width: dialogWidth, height: dialogHeight }]}>
+                <Image source={ART.shopDialog} contentFit="contain" accessible={false} style={StyleSheet.absoluteFill} />
+                <View style={[styles.detailContent, { gap: width <= 320 ? 6 : 8 }]}>
+                  <View style={[styles.detailIcon, { width: detailIconSize, height: detailIconSize }]}><ItemArt item={selectedItem} detail /></View>
+                  <Text accessibilityRole="header" style={styles.detailTitle}>{selectedItem.name}</Text>
+                  <Text style={styles.description}>{selectedItem.description}</Text>
+                  {'cost' in selectedItem ? <Text style={styles.detailMeta}>Tiêu hao {selectedItem.cost} khí</Text> : null}
+                </View>
+                <View style={styles.footer}>
+                  <View style={styles.statusSlot}>
+                    {status ? <Text accessibilityRole={statusIsError ? 'alert' : undefined} accessibilityLiveRegion="polite" style={statusIsError ? styles.modalError : styles.reason}>{status}</Text> : null}
+                  </View>
+                  <PurchaseButton width={(dialogWidth - 40) * 0.8} price={selectedItem.price} label={`Mua ${selectedItem.name}, ${selectedItem.price} Linh Thạch`} disabled={buyDisabled} onPress={() => void purchase()} />
+                </View>
               </View>
               <Pressable accessibilityRole="button" accessibilityLabel="Đóng" accessibilityState={{ disabled: working }} disabled={working} onPress={working ? undefined : closeModal} style={({ pressed }) => [styles.close, working && styles.closeDisabled, pressed && styles.pressed]}>
                 <Image source={ART.shopCloseIcon} contentFit="contain" accessible={false} style={styles.closeIcon} />
@@ -200,7 +212,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8 },
   card: { aspectRatio: 4 / 5, padding: 12, alignItems: 'center', gap: 4 },
   iconArea: { flex: 1, minHeight: 40, width: '100%', alignItems: 'center', justifyContent: 'center' },
-  itemArt: { width: '100%', height: '100%', maxWidth: 92, maxHeight: 92 },
+  itemArt: { width: '100%', height: '100%' },
+  cardItemArt: { maxWidth: 92, maxHeight: 92 },
   lockedArt: { opacity: 0.65 },
   name: { color: colors.ivory, fontSize: 15, lineHeight: 20, fontWeight: '800', textAlign: 'center', minHeight: 40 },
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 22 },
@@ -212,13 +225,15 @@ const styles = StyleSheet.create({
   empty: { backgroundColor: 'rgba(6,36,39,0.92)', borderColor: colors.gold, borderWidth: 1, borderRadius: 12, padding: 24 },
   emptyText: { color: colors.ivory, fontSize: 15, lineHeight: 22, textAlign: 'center' },
   modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.veil },
-  dialog: { width: '100%', maxWidth: 340, padding: 20 },
-  detailContent: { alignItems: 'center', gap: 8, paddingBottom: 4 },
-  detailIcon: { width: 72, height: 72 },
+  dialogWrapper: { padding: CLOSE_OVERHANG, flexShrink: 0 },
+  dialog: { padding: 20, flexShrink: 0 },
+  detailContent: { alignItems: 'center' },
+  detailIcon: { flexShrink: 0 },
   detailTitle: { color: colors.ivory, fontSize: 22, lineHeight: 28, fontWeight: '800', textAlign: 'center' },
   description: { color: colors.textMuted, fontSize: 14, lineHeight: 21, textAlign: 'center', alignSelf: 'stretch' },
   detailMeta: { color: colors.textMuted, fontSize: 12, lineHeight: 18, textAlign: 'center' },
-  footer: { flexShrink: 0, gap: 8, paddingTop: 12 },
+  footer: { position: 'absolute', bottom: 20, left: 20, right: 20, alignItems: 'center', gap: 8 },
+  statusSlot: { height: 36, width: '100%', justifyContent: 'center' },
   reason: { color: colors.goldBright, fontSize: 12, lineHeight: 18, textAlign: 'center' },
   modalError: { color: '#ffb7aa', fontSize: 12, lineHeight: 18, textAlign: 'center' },
   button: { height: 44, paddingHorizontal: 20, justifyContent: 'center', alignItems: 'center' },
@@ -226,7 +241,8 @@ const styles = StyleSheet.create({
   buyPrice: { fontVariant: ['tabular-nums'] },
   buttonText: { color: colors.inkDeep, fontSize: 13, fontWeight: '800', letterSpacing: 0.4 },
   secondaryText: { color: colors.ivory },
-  close: { position: 'absolute', top: 12, right: 12, width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
-  closeIcon: { width: 32, height: 32 },
+  // The wrapper begins 12 points outside the panel, so this target overhangs it.
+  close: { position: 'absolute', top: 0, right: 0, width: 56, height: 56, justifyContent: 'center', alignItems: 'center' },
+  closeIcon: { width: 44, height: 44 },
   closeDisabled: { opacity: 0.55 },
 });

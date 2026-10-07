@@ -11,12 +11,14 @@ import { emptySave } from '../../game/save';
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({ __esModule: true, default: () => mockDimensions }));
 jest.mock('../../state/gameStore', () => ({
   useGameStore: Object.assign((selector?: (state: typeof mockState) => unknown) => selector ? selector(mockState) : mockState, { getState: () => mockState }),
 }));
 jest.mock('../Art', () => ({ ScreenFrame: require('react-native').View, ArtPanel: require('react-native').View }));
 
 const mockRouter = { push: jest.fn(), replace: jest.fn() };
+let mockDimensions = { width: 390, height: 844, scale: 3, fontScale: 1 };
 const mockState = {
   save: emptySave(),
   notice: '',
@@ -39,11 +41,15 @@ describe('shop collection', () => {
   const text = () => renderer.root.findAllByType(Text).map(node => React.Children.toArray(node.props.children).filter(child => typeof child === 'string' || typeof child === 'number').join('')).join('\n');
   const sources = () => renderer.root.findAllByType(View).filter(node => node.props.source).map(node => node.props.source);
   const modal = () => renderer.root.findByType(Modal);
+  const panel = () => modal().findAllByType(View).find(node => node.props.source === ART.shopDialog)!.parent!;
+  const panelStyle = () => StyleSheet.flatten(panel().props.style);
+  const footerStyle = () => StyleSheet.flatten(buy().parent!.parent!.props.style);
   const open = (name = 'Trọng Nhạc') => { act(() => { button(`Xem ${name}`).props.onPress(); }); };
   const buy = () => button('Mua Trọng Nhạc, 200 Linh Thạch');
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockDimensions = { width: 390, height: 844, scale: 3, fontScale: 1 };
     mockState.save = emptySave();
     mockState.save.profile.coins = 1000;
     mockState.save.profile.levels = Array.from({ length: 40 }, (_, i) => ({ levelId: i + 1, stars: 3 as const }));
@@ -270,16 +276,81 @@ describe('shop collection', () => {
     expect(currencyIcons).toHaveLength(1);
   });
 
-  it('replaces the bottom close button with a 32-point icon in a 44-point corner target', () => {
+  it('keeps the larger overhanging close target inside a transparent wrapper', () => {
     mount();
     open();
     const close = button('Đóng');
     const style = StyleSheet.flatten(close.props.style({ pressed: false }));
-    expect(style).toMatchObject({ position: 'absolute', top: 12, right: 12, width: 44, height: 44 });
+    expect(style).toMatchObject({ position: 'absolute', top: 0, right: 0, width: 56, height: 56 });
     expect(close.findAllByType(Text)).toHaveLength(0);
     const icon = close.findAllByType(View).find(node => node.props.source === ART.shopCloseIcon)!;
-    expect(StyleSheet.flatten(icon.props.style)).toMatchObject({ width: 32, height: 32 });
+    expect(StyleSheet.flatten(icon.props.style)).toMatchObject({ width: 44, height: 44 });
+    const wrapper = modal().findAllByType(View).find(node => node.props.accessibilityViewIsModal)!;
+    const wrapperStyle = StyleSheet.flatten(wrapper.props.style);
+    expect(wrapper.props.pointerEvents).toBe('box-none');
+    expect(wrapperStyle.padding).toBe(12);
+    expect(wrapperStyle.width).toBe(panelStyle().width + 24);
+    expect(wrapperStyle.height).toBeCloseTo(panelStyle().height + 24);
+    expect(style.top - wrapperStyle.padding).toBe(-12);
+    expect(style.right - wrapperStyle.padding).toBe(-12);
     expect(sources()).not.toContain(ART.shopCloseButton);
+  });
+
+  it.each([320, 360, 390])('fixes the panel ratio and anchors a 20%% narrower purchase button at %s points', width => {
+    mockDimensions = { width, height: 844, scale: 3, fontScale: 1 };
+    mount();
+    open();
+    const layout = panelStyle();
+    const panelWidth = Math.min(340, width - 40);
+    expect(layout.width).toBe(panelWidth);
+    expect(layout.height).toBeCloseTo(panelWidth * 1000 / 824);
+    expect(panel().props.onLayout).toBeUndefined();
+    const art = modal().findAllByType(View).find(node => node.props.source === ART.shopDialog)!;
+    expect(art.props.contentFit).toBe('contain');
+    const buttonStyle = StyleSheet.flatten(buy().props.style({ pressed: false }));
+    expect(buttonStyle.width).toBeCloseTo((panelWidth - 40) * 0.8);
+    expect(buttonStyle.height).toBe(44);
+    expect(footerStyle()).toMatchObject({ position: 'absolute', bottom: 20, left: 20, right: 20, alignItems: 'center' });
+    const itemArt = modal().findAllByType(View).find(node => node.props.source === ART.iconSwordTrongNhac)!.parent!;
+    expect(StyleSheet.flatten(itemArt.props.style).maxWidth).toBeUndefined();
+    let iconArea = itemArt.parent!;
+    while (typeof StyleSheet.flatten(iconArea.props.style)?.width !== 'number') iconArea = iconArea.parent!;
+    expect(StyleSheet.flatten(iconArea.props.style)).toMatchObject({ width: width <= 320 ? 96 : 104, height: width <= 320 ? 96 : 104 });
+  });
+
+  it('keeps panel and purchase geometry unchanged through saving, errors and balance/progress updates', async () => {
+    let fail!: (error: Error) => void;
+    mockState.purchase.mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = reject; }));
+    mount();
+    open();
+    const layout = panelStyle();
+    const footer = footerStyle();
+    const purchaseStyle = StyleSheet.flatten(buy().props.style({ pressed: false }));
+    act(() => { buy().props.onPress(); });
+    expect(text()).toContain('Đang lưu…');
+    expect(panelStyle()).toEqual(layout);
+    expect(footerStyle()).toEqual(footer);
+    await act(async () => { fail(new Error('disk failure')); });
+    expect(panelStyle()).toEqual(layout);
+    expect(StyleSheet.flatten(buy().props.style({ pressed: false }))).toEqual(purchaseStyle);
+    mockState.save = { ...mockState.save, profile: { ...mockState.save.profile, coins: 0, levels: [] } };
+    refresh();
+    const messages = modal().findAllByType(Text).map(node => node.props.children);
+    expect(messages).toContain('Không thể lưu thay đổi. Vui lòng thử lại.');
+    expect(messages).not.toContain('Cần vượt qua màn 3');
+    expect(messages).not.toContain('Chưa đủ Linh Thạch.');
+    expect(buy().props.disabled).toBe(true);
+    expect(panelStyle()).toEqual(layout);
+    expect(footerStyle()).toEqual(footer);
+  });
+
+  it('prioritizes the unlock message over insufficient currency', () => {
+    mockState.save.profile.coins = 0;
+    mockState.save.profile.levels = [];
+    mount();
+    open();
+    expect(text()).toContain('Cần vượt qua màn 3');
+    expect(text()).not.toContain('Chưa đủ Linh Thạch.');
   });
 
   it('uses the existing screen safe-area padding from the first modal render', () => {
