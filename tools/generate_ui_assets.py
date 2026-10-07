@@ -69,7 +69,7 @@ def cutout(name, target, max_size):
 def build_runtime_previews():
     groups = {
         "runtime-preview-hud-v2.png": ("HUD and equipment sockets", [
-            "hud-tray-v2", "icon-linh-thach", "icon-linh-thach-tinh-hoa",
+            "hud-tray-v2", "icon-linh-thach", "icon-tien-ngoc",
             "slot-sword", "slot-skill", "slot-skill-empty", "slot-skill-locked"]),
         "runtime-preview-surfaces.png": ("UI surfaces", [
             "panel-base", "panel-light", "banner", "hud-chip", "hud-tray", "nav",
@@ -150,12 +150,16 @@ def copy_runtime_art(names=None):
             continue
         name = "panel" if image.stem == "panel-base" else image.stem.replace("-", "_")
         art = Image.open(image).convert("RGBA")
-        if image.stem.startswith(("icon-sword-", "icon-skill-", "icon-slot-", "icon-linh-thach", "slot-")):
+        if image.stem.startswith(("icon-sword-", "icon-skill-", "icon-slot-", "icon-linh-thach", "icon-tien-ngoc", "slot-")):
             # Consistent 80% icon footprint; socket frames use 96% of the canvas.
             # Keep the source illustration and its alpha; only crop and resize.
-            visible = art.getchannel("A").getbbox()
+            # Ignore nearly invisible stray pixels when measuring the footprint;
+            # keep the source alpha inside a small padded crop unchanged.
+            visible = art.getchannel("A").point(lambda alpha: 255 if alpha >= 8 else 0).getbbox()
             if visible:
-                art = art.crop(visible)
+                left, top, right, bottom = visible
+                art = art.crop((max(0, left-4), max(0, top-4),
+                                min(art.width, right+4), min(art.height, bottom+4)))
             footprint = 492 if image.stem.startswith("slot-") else 410
             art.thumbnail((footprint, footprint), Image.Resampling.LANCZOS)
             canvas = Image.new("RGBA", (512, 512))

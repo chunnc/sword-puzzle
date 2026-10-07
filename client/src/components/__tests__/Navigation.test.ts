@@ -9,7 +9,7 @@ import WinScreen from '../../../app/win';
 import AccountScreen from '../../../app/account';
 import InventoryScreen from '../../../app/inventory';
 import { REALMS, SKILLS, SWORDS } from '../../game/domain';
-import { SKILL_ART, SWORD_ART } from '../../assets';
+import { ART, SKILL_ART, SWORD_ART } from '../../assets';
 import { emptySave } from '../../game/save';
 import type { WinSummary } from '../../game/types';
 
@@ -186,8 +186,10 @@ describe('scene navigation', () => {
     expect(StyleSheet.flatten(tray.props.style).flexShrink).toBe(0);
     act(() => { button('Linh Thạch: 12345, mở Cửa Hàng').props.onPress(); });
     expect(mockRouter.push).toHaveBeenCalledWith('/shop');
-    const premium = renderer.root.findAllByType(View).find(node => node.props.accessibilityLabel === 'Linh Thạch Tinh Hoa: 0')!;
+    const premium = renderer.root.findAllByType(View).find(node => node.props.accessibilityLabel === 'Tiên Ngọc: 0')!;
     expect(premium.props.onPress).toBeUndefined();
+    expect(premium.findAllByType(View).some(node => node.props.source === ART.iconTienNgoc)).toBe(true);
+    expect(renderer.root.findAllByType(View).some(node => node.props.source === ART.iconLinhThach)).toBe(true);
     act(() => { button('Tài khoản').props.onPress(); });
     expect(onAccount).toHaveBeenCalledTimes(1);
   });

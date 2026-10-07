@@ -24,8 +24,8 @@ export function TopHud({ onAccount }: { onAccount: () => void }) {
         <Pressable accessibilityRole="button" accessibilityLabel={`Linh Thạch: ${profile.coins}, mở Cửa Hàng`} onPress={() => router.push('/shop')} style={styles.currency}>
           <HudStat image="iconLinhThach" value={formatHudAmount(profile.coins)} />
         </Pressable>
-        <View accessible accessibilityRole="text" accessibilityLabel="Linh Thạch Tinh Hoa: 0" style={styles.currency}>
-          <HudStat image="iconLinhThachTinhHoa" value="0" />
+        <View accessible accessibilityRole="text" accessibilityLabel="Tiên Ngọc: 0" style={styles.currency}>
+          <HudStat image="iconTienNgoc" value="0" />
         </View>
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel="Tài khoản" onPress={onAccount} style={styles.menu}>

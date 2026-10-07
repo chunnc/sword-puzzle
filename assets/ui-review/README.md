@@ -27,3 +27,11 @@ set includes character states and viewport sizes, map, inventory, shop,
 account, win, exploration, and boss scenes. See `hud-v2/README.md` for fixture
 and capture details. The read-only fixtures and viewport constraints were
 removed after verification; the real save and wallet were not changed.
+
+## Spiral currencies and simplified sockets
+
+`currency-slots-v3/` contains the latest 30-pixel currency / 84-pixel socket
+review sheet, native captures at 320×568, 360×640 and 360×780 points, and the
+final unconstrained player scene. It covers the green Linh Thach / purple
+Tien Ngoc discs, equipped items, and simplified empty/locked frames. See
+`currency-slots-v3/README.md` for read-only fixture and capture details.

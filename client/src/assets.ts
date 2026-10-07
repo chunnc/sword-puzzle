@@ -4,7 +4,7 @@ import type { SkillId, SwordId } from './game/domain';
 
 export const ART = {
   iconLinhThach: require('../app-assets/ui/icon_linh_thach.webp') as ImageSourcePropType,
-  iconLinhThachTinhHoa: require('../app-assets/ui/icon_linh_thach_tinh_hoa.webp') as ImageSourcePropType,
+  iconTienNgoc: require('../app-assets/ui/icon_tien_ngoc.webp') as ImageSourcePropType,
   hudTrayV2: require('../app-assets/ui/hud_tray_v2.webp') as ImageSourcePropType,
   slotSword: require('../app-assets/ui/slot_sword.webp') as ImageSourcePropType,
   slotSkill: require('../app-assets/ui/slot_skill.webp') as ImageSourcePropType,

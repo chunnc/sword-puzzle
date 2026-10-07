@@ -64,22 +64,30 @@ cạnh các icon gốc.
 
 ## HUD hai tiền tệ và khung trang bị
 
-Bảy ảnh mới được tạo riêng bằng ImageGen tích hợp, có nền ngoài trong suốt:
-`icon-linh-thach`, `icon-linh-thach-tinh-hoa`, `hud-tray-v2`, `slot-sword`,
-`slot-skill`, `slot-skill-empty` và `slot-skill-locked`. PNG gốc và prompt đầy
+Header `hud-tray-v2` và bộ sáu sprite `icon-linh-thach`, `icon-tien-ngoc`,
+`slot-sword`, `slot-skill`, `slot-skill-empty`, `slot-skill-locked` được tạo
+riêng bằng ImageGen tích hợp, có nền ngoài trong suốt. PNG gốc và prompt đầy
 đủ nằm trong `runtime/`; bản WebP trong `client/app-assets/ui/`.
 
-Linh Thạch là một tinh thể xanh ngọc; Tinh Hoa là cụm tinh thể tím ngà có
-điểm vàng. Tham chiếu trực tiếp từ ngọc và kiếm hiện có giúp giữ chất liệu,
-họa tiết mây, ánh sáng phía trên trái và khối nổi 2D. Header tham chiếu HUD,
-khung avatar và vòng kỹ năng. Ô kiếm vuông góc vát; ô kỹ năng tròn, với hai
-biến thể thêm dấu cộng hoặc khóa dựa trên cùng khung gốc.
+Bộ sáu sprite được làm mới: Linh Thạch là một đĩa ngọc xanh, Tiên Ngọc là
+một đĩa ngọc tím sáng, cùng đường xoắn ngà lớn đi vào tâm đặc và mép bo có
+độ dày nhẹ. Không có đế, cụm nhiều viên hoặc khung kim loại quanh tiền.
+Tham chiếu từ ngọc và bộ HUD hiện có giữ chất liệu ngọc nổi mềm, cách vẽ 2D
+và ánh sáng phía trên trái. Tiên Ngọc dùng thêm đĩa Linh Thạch mới để đồng
+bộ hình dáng. Header tham chiếu HUD, khung avatar và vòng kỹ năng.
+
+Ô kiếm vuông góc vát có viền vàng mảnh; ô kỹ năng tròn có viền ngọc mảnh.
+Bỏ họa tiết mây cuộn, dây chạm, đá đính và chi tiết viền phụ trên cả bốn
+khung; lòng ngọc tối trơn để icon trang bị nổi rõ. Ô rỗng có dấu cộng nhỏ
+chìm, ô khóa có khóa gọn và màu trầm, cùng hình dáng với khung kỹ năng thường.
 
 Header không chứa chữ, số hoặc icon cố định; client dựng các thành phần
 động trong chiều cao 72 px. Khung thường có lòng ngọc tối trống, client đặt
-icon kiếm/kỹ năng vào một lớp riêng. Số dư Tinh Hoa hiện là placeholder `0`;
+icon kiếm/kỹ năng vào một lớp riêng. Số dư Tiên Ngọc hiện là placeholder `0`;
 không có thay đổi schema hoặc tích hợp nạp trong bản UI này.
 
 Pipeline xuất header rộng tối đa 1600 px, icon và khung 512×512, WebP quality
 90 và giữ alpha. Khung chiếm khoảng 96% canvas; icon tiền khoảng 80%.
+Khi đo footprint, pipeline bỏ qua điểm alpha dưới 8 và chừa 4 px quanh
+vùng thấy rõ; alpha còn lại giữ nguyên để tránh lệch tâm do điểm mờ rời rạc.
 `runtime-preview-hud-v2.png` là contact sheet để duyệt bộ ảnh mới.

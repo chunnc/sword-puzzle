@@ -1,6 +1,0 @@
-Use case: stylized-concept
-Asset type: one production-ready illustrated UI sprite for the portrait xianxia mobile game Kiem Khai Tien Lo.
-Style references: provided local images are style references only, not edit targets. Match their 2D painterly jade, ivory and polished warm gold materials, crisp edges, cloud-scroll motifs, upper-left ivory highlights and restrained celestial glow. No photorealism, pixel art, flat outline icons or Western medieval motifs.
-Primary request: ONE compact cluster of THREE refined premium spirit crystals: a central tall lilac-violet crystal and two shorter side crystals, pearl-ivory luminous cores, polished warm gold prongs around their base and two tiny elegant gold glints. Violet and ivory are dominant, with restrained jade accents in the gold setting. Match the regular spirit crystal's scale and material rendering. The cluster must be readable at 30 pixels. No coin or gold ingot.
-Composition: Square canvas. Entire cluster centered, occupy about 80% of the canvas height, with at least 10% transparent margin on all sides.
-Constraints: one sprite only, actual transparent alpha outside its silhouette, no scene or ground, no text, letters, numbers, labels or watermark. Do not copy unwanted subjects from the references.
