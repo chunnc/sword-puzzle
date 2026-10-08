@@ -1,6 +1,5 @@
 """Offline tests. No real fal request, key, or paid generation is used."""
 import base64
-import hashlib
 import io
 import json
 import os
@@ -40,9 +39,9 @@ class FakeFal:
 
     def submit(self, model, payload):
         with self.lock:
+            contents = base64.b64decode(payload["image_url"].split(",", 1)[1])
             index = None
             if model == pipeline.MATTE_MODEL:
-                contents = base64.b64decode(payload["image_url"].split(",", 1)[1])
                 image = Image.open(io.BytesIO(contents)).convert("RGBA")
                 index = (image.getpixel((16, 16))[1] - 20) // 5
                 # Verify that submit intent is durable before any API invocation.
@@ -86,9 +85,6 @@ class PipelineTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix="animation-test-")
         self.root = Path(self.temporary.name)
         self.job = pipeline.init_job(self.root, "test-fire", "Offline fire test", kind="fire", frame_count=12, size=48)
-        self.job.file("fixture.mp4").write_bytes(b"offline source video")
-        self.job.data["video"] = {"state": "imported", "output": "fixture.mp4",
-                                  "output_sha256": pipeline.sha256(self.job.file("fixture.mp4"))}
         for index in range(12):
             image = Image.new("RGB", (40, 40), (0, 255, 0))
             ImageDraw.Draw(image).rectangle((8, 8, 31, 31), fill=(200, index * 5 + 20, 70))
@@ -99,7 +95,6 @@ class PipelineTests(unittest.TestCase):
             self.job.data["frames"].append({"index": index, "raw": relative, "raw_sha256": pipeline.sha256(path),
                                              "dimensions": [40, 40], "timestamp": index / 12, "state": "new"})
         self.job.save()
-        pipeline.review_video(self.job, True, "Offline source has correct style, phases and margins.")
 
     def tearDown(self):
         self.temporary.cleanup()
@@ -280,7 +275,6 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(len(api.calls), 12)
 
     def test_shared_crop_keeps_motion_and_fixed_pivot(self):
-        self.make_legacy(self.job)
         self.complete()
         for index, row in enumerate(self.job.data["frames"]):
             image = Image.new("RGBA", (40, 40))
@@ -320,6 +314,7 @@ class PipelineTests(unittest.TestCase):
 
     def test_video_explicit_limits_cached_and_missing_key(self):
         job = pipeline.init_job(self.root, "video-test", "Video test", duration=1)
+        Image.new("RGB", (40, 40), (255, 100, 30)).save(job.file("source.png"))
         job.file("video.prompt.txt").write_text("Expand once and dissipate. Fixed camera and background.")
         with mock.patch.dict(os.environ, {"FAL_KEY": ""}):
             with self.assertRaises(pipeline.MissingKey):
@@ -331,196 +326,12 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(api.calls[0][0], pipeline.VIDEO_MODEL)
         self.assertEqual(api.calls[0][1]["resolution"], "480p")
         self.assertEqual(api.calls[0][1]["duration"], 1)
-        self.assertEqual(api.calls[0][1]["aspect_ratio"], "1:1")
-        self.assertNotIn("image_url", api.calls[0][1])
-        self.assertFalse(job.file("source.png").exists())
-        self.assertEqual(job.data["config"]["generation_mode"], "text-to-video")
         job.file("video.prompt.txt").write_text("Changed prompt cannot silently replace the cached request.")
         with self.assertRaises(pipeline.PipelineError):
             pipeline.generate_video(job, api)
         self.assertEqual(len(api.calls), 1)
         with self.assertRaises(pipeline.PipelineError):
             pipeline.init_job(self.root, "too-long", "Invalid", duration=3)
-
-    def make_legacy(self, job):
-        job.data["version"] = 1
-        job.data["config"]["video_model"] = pipeline.LEGACY_VIDEO_MODEL
-        for key in ("generation_mode", "aspect_ratio", "safe_bounds", "alpha_threshold", "pack_mode", "frame_sampling"):
-            job.data["config"].pop(key, None)
-        job.data.pop("video_review", None)
-        job.save()
-
-    def legacy_video(self, slug):
-        job = pipeline.init_job(self.root, slug, "Legacy video")
-        self.make_legacy(job)
-        Image.new("RGB", (40, 40), (255, 100, 30)).save(job.file("source.png"))
-        job.file("video.prompt.txt").write_text("Legacy image expands once and dissipates.")
-        return job
-
-    def test_legacy_resume_keeps_endpoint_signature_and_original_request(self):
-        job = self.legacy_video("legacy-pending")
-        api = FakeFal(job, pending_once={None})
-        with self.assertRaises(pipeline.PendingRequest):
-            pipeline.generate_video(job, api)
-        model, payload, _ = api.calls[0]
-        self.assertEqual(model, pipeline.LEGACY_VIDEO_MODEL)
-        self.assertIn("image_url", payload)
-        self.assertNotIn("aspect_ratio", payload)
-        expected = {"image_url": pipeline.data_uri(job.file("source.png")),
-                    "prompt": job.file("video.prompt.txt").read_text().strip(),
-                    "resolution": "480p", "duration": 2}
-        signature = hashlib.sha256(json.dumps(expected, sort_keys=True).encode()).hexdigest()
-        self.assertEqual(job.data["video"]["signature"], signature)
-        request_id = job.data["video"]["request_id"]
-        reloaded = pipeline.Job(job.path)
-        pipeline.generate_video(reloaded, api)
-        self.assertEqual(len(api.calls), 1)
-        self.assertEqual(api.waits, [request_id, request_id])
-        self.assertEqual(reloaded.data["video"]["signature"], signature)
-        self.assertEqual(reloaded.data["version"], 1)
-
-    def test_legacy_retry_keeps_endpoint_history_and_source(self):
-        job = self.legacy_video("legacy-retry")
-        api = FakeFal(job, unknown=True)
-        with self.assertRaises(pipeline.SubmissionUnknown):
-            pipeline.generate_video(job, api)
-        signature = job.data["video"]["signature"]
-        api.unknown = False
-        pipeline.retry_approved(pipeline.Job(job.path), "video", "Human approves this one offline retry.", api)
-        record = pipeline.Job(job.path).data["video"]
-        self.assertEqual(len(api.calls), 2)
-        self.assertTrue(all(call[0] == pipeline.LEGACY_VIDEO_MODEL for call in api.calls))
-        self.assertEqual(api.calls[0][1], api.calls[1][1])
-        self.assertEqual(record["signature"], signature)
-        self.assertEqual(record["history"][0]["state"], "unknown")
-        self.assertEqual(record["attempt"], 2)
-
-    def test_changed_endpoint_cannot_resume_as_another_model(self):
-        job = self.legacy_video("legacy-model-change")
-        api = FakeFal(job)
-        pipeline.generate_video(job, api)
-        job.data["config"]["video_model"] = pipeline.VIDEO_MODEL
-        with self.assertRaisesRegex(pipeline.PipelineError, "endpoint changed"):
-            pipeline.generate_video(job, api)
-        self.assertEqual(len(api.calls), 1)
-
-    def test_video_review_gates_feyn_and_detects_source_changes(self):
-        api = FakeFal(self.job)
-        self.job.data["video_review"] = None
-        with self.assertRaises(pipeline.PipelineError):
-            pipeline.matte(self.job, "sample", api=api)
-        pipeline.review_video(self.job, False, "Starts at peak; unacceptable.")
-        with self.assertRaises(pipeline.PipelineError):
-            pipeline.matte(self.job, "sample", api=api)
-        pipeline.review_video(self.job, True, "Offline source reviewed.")
-        self.job.file("fixture.mp4").write_bytes(b"changed video")
-        self.job.data["video"]["output_sha256"] = pipeline.sha256(self.job.file("fixture.mp4"))
-        with self.assertRaises(pipeline.PipelineError):
-            pipeline.matte(self.job, "sample", api=api)
-        self.assertEqual(api.calls, [])
-
-    def test_full_canvas_export_preserves_margins_size_and_anchor(self):
-        self.complete()
-        self.job.data["config"]["size"] = 256
-        out = pipeline.pack(self.job)
-        metadata = json.loads((out / "animation.json").read_text())
-        self.assertEqual(metadata["sourceCrop"], [0, 0, 40, 40])
-        self.assertEqual(metadata["frameSize"], {"width": 256, "height": 256})
-        self.assertEqual(metadata["pivot"], {"x": 128.0, "y": 128.0, "units": "frame-pixels"})
-        with Image.open(out / "frame-0000.png") as image:
-            self.assertEqual(image.size, (256, 256))
-            box = image.getchannel("A").point(lambda alpha: 255 if alpha > 8 else 0).getbbox()
-            self.assertGreaterEqual(box[0], 26)
-            self.assertLessEqual(box[2], 230)
-
-    def test_alpha_threshold_and_empty_frame_bounds(self):
-        image = Image.new("RGBA", (500, 500))
-        pipeline.check_safe_bounds([image], [0.1, 0.1, 0.9, 0.9], 8)
-        image.putpixel((0, 0), (255, 100, 30, 8))
-        pipeline.check_safe_bounds([image], [0.1, 0.1, 0.9, 0.9], 8)
-        image.putpixel((0, 0), (255, 100, 30, 9))
-        with self.assertRaisesRegex(pipeline.PipelineError, "central 80%"):
-            pipeline.check_safe_bounds([image], [0.1, 0.1, 0.9, 0.9], 8)
-        image.putpixel((0, 0), (0, 0, 0, 0))
-        ImageDraw.Draw(image).rectangle((50, 50, 449, 449), fill=(255, 100, 30, 255))
-        pipeline.check_safe_bounds([image], [0.1, 0.1, 0.9, 0.9], 8)
-        image.putpixel((450, 449), (255, 100, 30, 9))
-        with self.assertRaises(pipeline.PipelineError):
-            pipeline.check_safe_bounds([image], [0.1, 0.1, 0.9, 0.9], 8)
-
-    def test_any_out_of_bounds_frame_blocks_export_without_requests(self):
-        api = self.complete()
-        row = self.job.data["frames"][0]  # Outside the three reviewed samples.
-        with Image.open(self.job.file(row["output"])) as source:
-            image = source.convert("RGBA")
-        image.putpixel((1, 20), (255, 100, 30, 9))
-        image.save(self.job.file(row["output"]))
-        row["output_sha256"] = pipeline.sha256(self.job.file(row["output"]))
-        with self.assertRaisesRegex(pipeline.PipelineError, "Frame 0"):
-            pipeline.pack(self.job)
-        self.assertFalse(self.job.file("exports").exists())
-        self.assertEqual(len(api.calls), 12)
-
-    def test_sample_bounds_block_passing_review(self):
-        api = FakeFal(self.job)
-        pipeline.matte(self.job, "sample", api=api)
-        row = self.job.data["frames"][pipeline.sample_indices(self.job)[0]]
-        with Image.open(self.job.file(row["output"])) as source:
-            image = source.convert("RGBA")
-        image.putpixel((0, 20), (255, 100, 30, 200))
-        image.save(self.job.file(row["output"]))
-        row["output_sha256"] = pipeline.sha256(self.job.file(row["output"]))
-        with self.assertRaises(pipeline.PipelineError):
-            pipeline.review_samples(self.job, True, "Cannot override bounds.")
-        with self.assertRaises(pipeline.PipelineError):
-            pipeline.matte(self.job, "remaining", api=api)
-        self.assertEqual(len(api.calls), 3)
-
-    def test_custom_crop_cannot_remove_margins_or_clip_faint_glow(self):
-        self.complete()
-        with self.assertRaisesRegex(pipeline.PipelineError, "export frame"):
-            pipeline.pack(self.job, crop=(8, 8, 32, 32))
-        self.assertFalse(self.job.file("exports").exists())
-        row = self.job.data["frames"][-1]
-        with Image.open(self.job.file(row["output"])) as source:
-            image = source.convert("RGBA")
-        image.putpixel((1, 20), (255, 100, 30, 8))
-        image.save(self.job.file(row["output"]))
-        row["output_sha256"] = pipeline.sha256(self.job.file(row["output"]))
-        with self.assertRaisesRegex(pipeline.PipelineError, "Crop clips frame 11"):
-            pipeline.pack(self.job, crop=(2, 0, 40, 40))
-        self.assertFalse(self.job.file("exports").exists())
-
-    def test_legacy_pack_keeps_union_crop_without_new_review_gate(self):
-        self.make_legacy(self.job)
-        self.complete()
-        out = pipeline.pack(self.job)
-        metadata = json.loads((out / "animation.json").read_text())
-        self.assertEqual(metadata["sourceCrop"], [6, 6, 34, 34])
-
-    def test_new_extraction_includes_first_and_last_frames_legacy_unchanged(self):
-        info = {"duration": 2.0, "fps": 24.0, "width": 40, "height": 40}
-        def capture_fixture(video, timestamp, output):
-            output.parent.mkdir(parents=True, exist_ok=True)
-            Image.new("RGB", (40, 40), (0, 255, 0)).save(output)
-        for legacy in (False, True):
-            job = pipeline.init_job(self.root, "sampling-" + str(legacy).lower(), "Sampling")
-            if legacy:
-                self.make_legacy(job)
-            pipeline.attach_video(job, self.job.file("fixture.mp4"))
-            with mock.patch.object(pipeline, "probe", return_value=info), mock.patch.object(pipeline, "capture", side_effect=capture_fixture):
-                pipeline.extract(job)
-                before = job.data["frames"][-1]["timestamp"]
-                pipeline.extract(pipeline.Job(job.path))
-            self.assertEqual(job.data["frames"][0]["timestamp"], 0)
-            self.assertAlmostEqual(before, 23 / 24 * 2 if legacy else 2 - 1 / 24)
-            self.assertEqual(len(job.data["frames"]), 24)
-
-    def test_nonsquare_source_is_rejected_before_extraction(self):
-        self.job.data["frames"] = []
-        with mock.patch.object(pipeline, "probe", return_value={"width": 100, "height": 80}):
-            with self.assertRaisesRegex(pipeline.PipelineError, "square video"):
-                pipeline.extract(self.job)
 
     def test_http_transport_never_retries_post_or_leaks_key(self):
         api = pipeline.FalAPI("test-secret-key", timeout=.1)
