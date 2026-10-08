@@ -13,7 +13,7 @@ Game ghép 3 tu tiên cho iOS/Android. [GAME_CONCEPT.md](GAME_CONCEPT.md) mô t�
 
 Yêu cầu Node.js 22.13+, Expo development build, Android Studio/Android SDK cho Android và Xcode 26.4+ cho iOS. Expo Go không hỗ trợ AdMob và các thư viện native của game.
 
-1. Trong `client/`, tạo `.env` từ `.env.example`. `EXPO_PUBLIC_GAME_API_URL` là bắt buộc; trỏ URL này tới HTTP Function `gameApi` tại `asia-southeast1`.
+1. Trong `client/`, tạo `.env` từ `.env.example`. App kết nối tới `gameApi` trong Firebase project `sword-puzzle` tại `asia-southeast1`.
 2. Chạy `npm install`.
 3. Chạy `npm run android` hoặc `npm run ios` để sinh native project theo Expo Prebuild, build và cài development app lên thiết bị/simulator.
 4. Sau khi cài development app, chạy `npm start` để mở Metro và nạp client.
