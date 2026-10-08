@@ -51,13 +51,26 @@ const mockReactions: (() => void)[] = [];
 jest.mock('@shopify/react-native-skia', () => {
   const React = require('react');
   const host = (name: string) => (props: { children?: React.ReactNode }) => React.createElement(name, props, props.children);
+  const buffer = (size: number, create: () => unknown, modifier: (value: never, index: number) => void) => {
+    const value = Array.from({ length: size }, create);
+    value.forEach((item, index) => modifier(item as never, index));
+    return { value };
+  };
   return {
-    Canvas: host('Canvas'), Group: host('Group'), Image: host('SkiaImage'),
+    Canvas: host('Canvas'), Group: host('Group'), Image: host('SkiaImage'), Atlas: host('Atlas'),
     RoundedRect: host('RoundedRect'), Paragraph: host('Paragraph'), Paint: host('Paint'),
     FontWeight: { Black: 900 },
-    useImage: jest.fn((asset: number) => ({ asset })),
+    useImage: jest.fn((asset: number) => ({ asset, width: () => 1024, height: () => 512 })),
+    useRectBuffer: jest.fn((size: number, modifier: (value: never, index: number) => void) => buffer(size, () => ({
+      setXYWH(x: number, y: number, width: number, height: number) { Object.assign(this, { x, y, width, height }); },
+    }), modifier)),
+    useRSXformBuffer: jest.fn((size: number, modifier: (value: never, index: number) => void) => buffer(size, () => ({
+      set(...values: number[]) { Object.assign(this, { values }); },
+    }), modifier)),
+    useColorBuffer: jest.fn((size: number, modifier: (value: never, index: number) => void) => buffer(size, () => new Float32Array(4), modifier)),
     Skia: {
       Color: (color: string) => color,
+      XYWHRect: (x: number, y: number, width: number, height: number) => ({ x, y, width, height }),
       ParagraphBuilder: {
         Make: (options: { textStyle: Record<string, unknown> }) => {
           // Native JSI treats present-but-undefined style properties as errors.
@@ -156,6 +169,54 @@ describe('Skia Board integration', () => {
 
   it('does not start animation when reduced motion is enabled', () => {
     mount({ reduceMotion: true, visualEffect: { id: 3, kind: 'fall', falls: [{ index: 0, fromY: 7 }] } });
+    expect(withTiming).not.toHaveBeenCalled();
+  });
+
+  it('draws fire flipbook and particles from one phase atlas batch', () => {
+    mount({ visualEffect: {
+      id: 70, kind: 'clear', cleared: [0, 1], changed: [],
+      effects: [{ kind: 'fire', cells: [0, 1], source: 0, damage: 2, qi: 0 }],
+    } });
+    const atlases = renderer.root.findAll(node => node.type === 'Atlas' as never);
+    expect(atlases).toHaveLength(2);
+    expect(atlases[0].props.sprites.value).toHaveLength(1);
+    expect(atlases[1].props.sprites).toHaveLength(16);
+    expect(atlases[1].props.transforms.value).toHaveLength(16);
+  });
+
+  it('draws chained lightning sprite segments and impacts only for the active cue', () => {
+    mount({ visualEffect: {
+      id: 71, kind: 'clear', cleared: [0, 1, 8], changed: [],
+      effects: [{ kind: 'lightning', cells: [1, 8], source: 0, damage: 3, qi: 0 }],
+    } });
+    const atlases = renderer.root.findAll(node => node.type === 'Atlas' as never);
+    expect(atlases).toHaveLength(1);
+    expect(atlases[0].props.sprites.length).toBeGreaterThan(2);
+    expect(atlases[0].props.transforms.value).toHaveLength(atlases[0].props.sprites.length);
+  });
+
+  it('keeps the same effect phase and atlas cues through HUD-only updates', () => {
+    const effect: BoardVisualEffect = {
+      id: 72, kind: 'clear', cleared: [0], changed: [],
+      effects: [{ kind: 'fire', cells: [0], source: 0, damage: 1, qi: 0 }],
+    };
+    mount({ visualEffect: effect });
+    (withTiming as jest.Mock).mockClear();
+    act(() => renderer.update(React.createElement(Board, {
+      ...props,
+      snapshot: { ...snapshot, swordQi: snapshot.swordQi + 1 },
+      visualEffect: { ...effect, effects: effect.effects.map(item => ({ ...item })) },
+    })));
+    expect(withTiming).not.toHaveBeenCalled();
+    expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(2);
+  });
+
+  it('skips the sprite emitter when reduced motion is enabled', () => {
+    mount({ reduceMotion: true, visualEffect: {
+      id: 73, kind: 'clear', cleared: [0], changed: [],
+      effects: [{ kind: 'lightning', cells: [0], source: 1, damage: 1, qi: 0 }],
+    } });
+    expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(0);
     expect(withTiming).not.toHaveBeenCalled();
   });
 

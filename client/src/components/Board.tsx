@@ -16,10 +16,11 @@ import { colors } from '../theme';
 import {
   BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS,
   BOARD_REJECT_OUT_MS, BOARD_REJECT_BACK_MS, BOARD_FLASH_IN_MS, BOARD_PULSE_IN_MS,
-  displayIndices, buildCellVisuals, cellBounds, pointToCell,
+  displayIndices, buildBoardEffectCues, buildCellVisuals, cellBounds, pointToCell,
   type BoardVisualEffect, type CellVisual,
 } from './boardVisuals';
 import { createBoardMotionSession, createBoardMotionFrame, updateBoardMotionFrame, finishBoardMotionSession, type CellMotionValues } from './boardMotion';
+import { BoardEffects } from './BoardEffects';
 
 export type { CellPosition } from '../game/types';
 export {
@@ -90,16 +91,19 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const [side, setSide] = useState(0);
   const sword = useImage(ART.tileSword), fire = useImage(ART.tileFire);
   const lightning = useImage(ART.tileLightning), orb = useImage(ART.tileSpiritOrb), rock = useImage(ART.tileRock);
+  const fxFireBurst = useImage(ART.fxFireBurst), fxFireParticles = useImage(ART.fxFireParticles), fxLightning = useImage(ART.fxLightningAtlas);
   const images = [sword, fire, lightning, orb, rock];
   const previousEffect = useRef<{ runId: string; effect: BoardVisualEffect | null; before: BoardVisualEffect | null } | null>(null);
   const id = visualEffect?.id ?? 0;
   const kind = reduceMotion ? undefined : visualEffect?.kind;
   const prior = previousEffect.current?.runId === snapshot.runId ? previousEffect.current : null;
   const before = prior?.effect?.id === id ? prior.before : prior?.effect ?? null;
+  const effectCues = useMemo(() => reduceMotion ? [] : buildBoardEffectCues(visualEffect, geometry, snapshot.runId),
+    [snapshot.runId, id, kind, reduceMotion, geometry]);
   // An effect ID identifies an immutable phase within a run. HUD updates and
   // equivalent effect objects must not replace that phase's clocks or outputs.
   const visuals = useMemo(() => buildCellVisuals(visualEffect, before,
-    reduceMotion, geometry), [snapshot.runId, id, kind, reduceMotion, geometry]);
+    reduceMotion, geometry, effectCues), [snapshot.runId, id, kind, reduceMotion, geometry, effectCues]);
   const motion = useMemo(() => createBoardMotionSession(kind), [snapshot.runId, id, kind, reduceMotion]);
   const frame = useMemo(() => createBoardMotionFrame(visuals, side / geometry.width), [visuals, side, geometry.width]);
   const frameRef = useRef(frame);
@@ -163,13 +167,17 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
           <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
             {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color="#0b4144" />)}
             {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} image={images[snapshot.tiles[index]!.kind]} visual={visuals[index]} motion={frame.cells[index]} labels={labels} />)}
+            {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
+              progress={motion.progress} fireBurstImage={fxFireBurst} fireParticleImage={fxFireParticles} lightningImage={fxLightning} /> : null}
             {indices.map(index => {
               const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
               const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
               const highlighted = selected?.x === x && selected.y === y || targetNumber > 0 || preview.includes(index);
               const targetLabel = targetNumber ? labels.targets[targetNumber - 1] : null;
+              const cellMotion = frame.cells[index];
               return <Group key={`overlay-${index}`}>
-                {visuals[index].flashing ? <RoundedRect {...bounds} r={5} color={visuals[index].flashColor} opacity={motion.flash} /> : null}
+                {visuals[index].flashing ? <RoundedRect {...bounds} r={5} color={visuals[index].flashColor}
+                  opacity={visuals[index].flashAt === null ? motion.flash : cellMotion?.flashOpacity ?? 0} /> : null}
                 {preview.includes(index) ? <RoundedRect {...bounds} r={5} color="rgba(242,213,142,.16)" /> : null}
                 {highlighted ? <RoundedRect x={bounds.x + 1} y={bounds.y + 1} width={bounds.width - 2} height={bounds.height - 2} r={4} color={colors.goldBright} style="stroke" strokeWidth={2} /> : null}
                 {targetLabel ? <Group>

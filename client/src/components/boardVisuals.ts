@@ -29,6 +29,23 @@ export type BoardVisualEffect = {
   falls: BoardAnimationFall[];
 };
 
+export interface BoardEffectTarget {
+  index: number;
+  x: number;
+  y: number;
+  impactAt: number;
+}
+
+export interface BoardEffectCue {
+  kind: 'fire' | 'lightning';
+  sourceX: number;
+  sourceY: number;
+  sourceIndex: number | null;
+  startAt: number;
+  seed: number;
+  targets: BoardEffectTarget[];
+}
+
 export interface CellVisual {
   dx: number;
   dy: number;
@@ -38,6 +55,8 @@ export interface CellVisual {
   changed: boolean;
   flashing: boolean;
   flashColor: string;
+  clearAt: number;
+  flashAt: number | null;
 }
 
 // The same bounds position both the artwork and its invisible touch target.
@@ -51,6 +70,77 @@ export function cellBounds(index: number, side: number, geometry: BoardGeometry 
   };
 }
 
+export function cellCenter(index: number, geometry: BoardGeometry = DEFAULT_GEOMETRY) {
+  return {
+    x: index % geometry.width + .5,
+    y: geometry.height - 1 - Math.floor(index / geometry.width) + .5,
+  };
+}
+
+function validCell(index: number, geometry: BoardGeometry) {
+  return Number.isInteger(index) && index >= 0 && index < geometry.width * geometry.height
+    && (!geometry.activeCells || geometry.activeCells[index] === true);
+}
+
+export function effectSeed(runId: string, effectId: number, index: number, kind: string) {
+  let hash = 2166136261;
+  const input = `${runId}:${effectId}:${index}:${kind}`;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0 || 1;
+}
+
+export function buildBoardEffectCues(
+  effect: BoardVisualEffect | null,
+  geometry: BoardGeometry = DEFAULT_GEOMETRY,
+  runId = '',
+): BoardEffectCue[] {
+  if (!effect || effect.kind !== 'clear') return [];
+  const events = effect.effects.filter(item => (item.kind === 'fire' || item.kind === 'lightning')
+    && item.cells.some(index => validCell(index, geometry)));
+  return events.map((event, eventIndex) => {
+    const targetIndices = [...new Set(event.cells.filter(index => validCell(index, geometry)))];
+    const points = targetIndices.map(index => ({ index, ...cellCenter(index, geometry) }));
+    const sourceIndex = event.source !== undefined && validCell(event.source, geometry) ? event.source : null;
+    const source = sourceIndex === null
+      ? points.reduce((sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length }), { x: 0, y: 0 })
+      : cellCenter(sourceIndex, geometry);
+    const startAt = events.length <= 1 ? 0 : eventIndex / (events.length - 1) * (80 / BOARD_CLEAR_MS);
+    let targets = points;
+    if (event.kind === 'fire') {
+      targets = [...points].sort((a, b) => Math.hypot(a.x - source.x, a.y - source.y)
+        - Math.hypot(b.x - source.x, b.y - source.y) || a.index - b.index);
+    }
+    const maxDistance = Math.max(1, ...targets.map(point => Math.hypot(point.x - source.x, point.y - source.y)));
+    return {
+      kind: event.kind as BoardEffectCue['kind'],
+      sourceX: source.x,
+      sourceY: source.y,
+      sourceIndex,
+      startAt,
+      seed: effectSeed(runId, effect.id, eventIndex, event.kind),
+      targets: targets.map((point, targetIndex) => ({
+        ...point,
+        impactAt: event.kind === 'fire'
+          ? startAt + .16 + .28 * Math.hypot(point.x - source.x, point.y - source.y) / maxDistance
+          : startAt + .12 + .3 * targetIndex / Math.max(1, targets.length - 1),
+      })),
+    };
+  });
+}
+
+export function cellImpactOpacity(visual: CellVisual, progress: number) {
+  'worklet';
+  if (visual.flashAt === null) return 0;
+  const age = progress - visual.flashAt;
+  const rise = .035, duration = .17;
+  if (age < 0 || age >= duration) return 0;
+  const envelope = age < rise ? age / rise : 1 - (age - rise) / (duration - rise);
+  return .68 * envelope;
+}
+
 export function pointToCell(px: number, py: number, side: number, geometry: BoardGeometry = DEFAULT_GEOMETRY): CellPosition | null {
   'worklet';
   if (side <= 0 || px < 0 || py < 0 || px >= side || py >= side * geometry.height / geometry.width) return null;
@@ -60,12 +150,25 @@ export function pointToCell(px: number, py: number, side: number, geometry: Boar
   return { x: column, y: row };
 }
 
-export function buildCellVisuals(effect: BoardVisualEffect | null, previous: BoardVisualEffect | null, reduceMotion = false, geometry: BoardGeometry = DEFAULT_GEOMETRY): CellVisual[] {
+export function buildCellVisuals(
+  effect: BoardVisualEffect | null,
+  previous: BoardVisualEffect | null,
+  reduceMotion = false,
+  geometry: BoardGeometry = DEFAULT_GEOMETRY,
+  cues: BoardEffectCue[] = buildBoardEffectCues(effect, geometry),
+): CellVisual[] {
   const previouslyCleared = new Set(previous?.kind === 'clear' ? previous.cleared : []);
+  const impacts = new Map<number, number>();
+  for (const cue of cues) {
+    for (const target of cue.targets) {
+      const current = impacts.get(target.index);
+      if (current === undefined || target.impactAt < current) impacts.set(target.index, target.impactAt);
+    }
+  }
   return Array.from({ length: geometry.width * geometry.height }, (_, index) => {
     const visual: CellVisual = {
       dx: 0, dy: 0, falling: false, clearing: false, hidden: false,
-      changed: false, flashing: false, flashColor: '#ffeab0',
+      changed: false, flashing: false, flashColor: '#ffeab0', clearAt: 0, flashAt: null,
     };
     if (!effect || reduceMotion) return visual;
     if (effect.kind === 'swap' || effect.kind === 'reject') {
@@ -91,6 +194,8 @@ export function buildCellVisuals(effect: BoardVisualEffect | null, previous: Boa
       visual.changed = !cleared && effect.changed.includes(index);
       const trace = effect.effects.find(item => item.cells.includes(index) || item.source === index);
       visual.flashing = !!trace;
+      visual.flashAt = impacts.get(index) ?? null;
+      visual.clearAt = cleared ? impacts.get(index) ?? 0 : 0;
       visual.flashColor = trace?.kind === 'fire' ? '#ffb063'
         : trace?.kind === 'lightning' ? '#c7a5ff'
         : trace?.kind === 'spirit' ? '#8efbd4' : '#ffeab0';
@@ -102,11 +207,12 @@ export function buildCellVisuals(effect: BoardVisualEffect | null, previous: Boa
 export function cellMotion(visual: CellVisual, pitch: number, progress: number, pulse: number) {
   'worklet';
   const travel = visual.falling ? 1 - progress : progress;
+  const clearProgress = Math.max(0, Math.min(1, (progress - visual.clearAt) / Math.max(.0001, 1 - visual.clearAt)));
   return {
     tx: visual.dx * pitch * travel,
     ty: visual.dy * pitch * travel,
-    opacity: visual.hidden ? 0 : visual.clearing ? 1 - progress : 1,
-    scale: visual.hidden ? .5 : visual.clearing ? 1 - .5 * progress : visual.changed ? pulse : 1,
+    opacity: visual.hidden ? 0 : visual.clearing ? 1 - clearProgress : 1,
+    scale: visual.hidden ? .5 : visual.clearing ? 1 - .5 * clearProgress : visual.changed ? pulse : 1,
   };
 }
 

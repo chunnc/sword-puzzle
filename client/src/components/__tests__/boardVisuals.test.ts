@@ -1,6 +1,6 @@
 import {
   DISPLAY_INDICES, BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_REJECT_MS,
-  buildCellVisuals, cellBounds, cellMotion, pointToCell, type BoardVisualEffect,
+  buildBoardEffectCues, buildCellVisuals, cellBounds, cellImpactOpacity, cellMotion, effectSeed, pointToCell, type BoardVisualEffect,
 } from '../boardVisuals';
 
 describe('Skia board coordinates and animation', () => {
@@ -72,5 +72,47 @@ describe('Skia board coordinates and animation', () => {
       expect(visual.flashing).toBe(false);
     }
     expect([BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_REJECT_MS]).toEqual([320, 360, 450, 300, 390]);
+  });
+
+  it('builds deterministic fire and lightning cues from source and target cells', () => {
+    const geometry = { width: 3, height: 3, activeCells: Array(9).fill(true) };
+    const effect: BoardVisualEffect = {
+      id: 17, kind: 'clear', cleared: [1, 4, 7], changed: [],
+      effects: [
+        { kind: 'fire', cells: [4, 1, 7], source: 4, damage: 1, qi: 0 },
+        { kind: 'lightning', cells: [7, 1], source: 4, damage: 2, qi: 0 },
+      ],
+    };
+    const cues = buildBoardEffectCues(effect, geometry, 'run-a');
+    expect(cues).toHaveLength(2);
+    expect(cues[0]).toMatchObject({ kind: 'fire', sourceIndex: 4, sourceX: 1.5, sourceY: 1.5, startAt: 0 });
+    expect(cues[0].targets.map(target => target.index)).toEqual([4, 1, 7]);
+    expect(cues[0].targets[0].impactAt).toBeCloseTo(.16);
+    expect(cues[0].targets[1].impactAt).toBeCloseTo(.44);
+    expect(cues[0].targets[2].impactAt).toBeCloseTo(.44);
+    expect(cues[1].startAt).toBeCloseTo(80 / BOARD_CLEAR_MS);
+    expect(cues[1].targets.map(target => target.index)).toEqual([7, 1]);
+    expect(cues[1].targets[0].impactAt).toBeCloseTo(80 / BOARD_CLEAR_MS + .12);
+    expect(cues[0].seed).toBe(buildBoardEffectCues(effect, geometry, 'run-a')[0].seed);
+    expect(cues[0].seed).not.toBe(buildBoardEffectCues(effect, geometry, 'run-b')[0].seed);
+    expect(effectSeed('run-a', 17, 0, 'fire')).not.toBe(effectSeed('run-a', 18, 0, 'fire'));
+  });
+
+  it('uses the target centroid when a visual event has no valid source and delays target clearing until impact', () => {
+    const geometry = { width: 3, height: 3, activeCells: Array(9).fill(true) };
+    const effect: BoardVisualEffect = {
+      id: 18, kind: 'clear', cleared: [0, 2], changed: [],
+      effects: [{ kind: 'fire', cells: [0, 2], damage: 1, qi: 0 }],
+    };
+    const cue = buildBoardEffectCues(effect, geometry)[0];
+    expect(cue.sourceIndex).toBeNull();
+    expect(cue.sourceX).toBe(1.5);
+    expect(cue.sourceY).toBe(2.5);
+    const visual = buildCellVisuals(effect, null, false, geometry, [cue]);
+    expect(visual[0].clearAt).toBeGreaterThan(0);
+    expect(cellMotion(visual[0], 20, visual[0].clearAt / 2, 1).opacity).toBe(1);
+    expect(cellMotion(visual[0], 20, 1, 1).opacity).toBe(0);
+    expect(cellImpactOpacity(visual[0], cue.targets[0].impactAt - .01)).toBe(0);
+    expect(cellImpactOpacity(visual[0], cue.targets[0].impactAt + .035)).toBeCloseTo(.68);
   });
 });

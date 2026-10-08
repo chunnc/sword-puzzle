@@ -1,10 +1,11 @@
 import { cancelAnimation, makeMutable, type SharedValue } from 'react-native-reanimated';
-import { cellMotion, type BoardVisualEffect, type CellVisual } from './boardVisuals';
+import { cellImpactOpacity, cellMotion, type BoardVisualEffect, type CellVisual } from './boardVisuals';
 
 type TileTransform = [{ translateX: number }, { translateY: number }, { scale: number }];
 export interface CellMotionValues {
   transform: SharedValue<TileTransform>;
   opacity: SharedValue<number>;
+  flashOpacity: SharedValue<number>;
 }
 export interface BoardMotionSession {
   kind: BoardVisualEffect['kind'] | undefined;
@@ -32,9 +33,13 @@ function tileTransform(frame: ReturnType<typeof cellMotion>): TileTransform {
 export function createBoardMotionFrame(visuals: CellVisual[], pitch: number): BoardMotionFrame {
   const animated: BoardMotionFrame['animated'] = [];
   const cells = visuals.map(visual => {
-    if (visual.hidden || !(visual.dx || visual.dy || visual.clearing || visual.changed)) return null;
+    if (visual.hidden || !(visual.dx || visual.dy || visual.clearing || visual.changed || visual.flashing)) return null;
     const frame = cellMotion(visual, pitch, 0, 1);
-    const values = { transform: makeMutable(tileTransform(frame)), opacity: makeMutable(frame.opacity) };
+    const values = {
+      transform: makeMutable(tileTransform(frame)),
+      opacity: makeMutable(frame.opacity),
+      flashOpacity: makeMutable(cellImpactOpacity(visual, 0)),
+    };
     animated.push({ visual, values });
     return values;
   });
@@ -47,6 +52,9 @@ export function updateBoardMotionFrame(frame: BoardMotionFrame, progress: number
     const next = cellMotion(cell.visual, frame.pitch, progress, pulse);
     cell.values.transform.value = tileTransform(next);
     if (cell.visual.clearing) cell.values.opacity.value = next.opacity;
+    if (cell.visual.flashing && cell.visual.flashAt !== null) {
+      cell.values.flashOpacity.value = cellImpactOpacity(cell.visual, progress);
+    }
   }
 }
 
