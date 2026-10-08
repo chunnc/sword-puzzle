@@ -1,4 +1,4 @@
-# Kiến trúc hệ thống — Kiếm Khai Tiên Lộ 1.2
+# Kiến trúc hệ thống — Kiếm Khai Tiên Lộ 1.3
 
 ## Quyền sở hữu dữ liệu
 
@@ -10,13 +10,17 @@ Firestore là nguồn dữ liệu cho catalog và profile. `content/game-content
 
 ## Khởi động và phiên khách
 
-1. Đọc session từ SecureStore; session hỏng hoặc không đọc được là lỗi, không tạo khách thay thế.
-2. Health check và tải bootstrap, kiểm tra minClientVersion và schema catalog.
-3. Nếu chưa có session, tạo tài khoản khách qua API và lưu token ngay.
-4. Tải profile server; đọc journal v3 đúng UID, tải catalog của màn/request đang dở nếu khác phiên bản hiện tại.
-5. Xử lý request chưa được xác nhận rồi mới mở game.
+1. Health check, tải bootstrap và kiểm tra phiên bản client/catalog.
+2. Đọc session và khóa bản cài đặt trong SecureStore. Token hỏng chỉ được phục hồi bằng khóa đã có; không tự thay bằng khách mới.
+3. Lần đầu tạo ID ngẫu nhiên 128 bit và khóa 256 bit, lưu trước khi gọi `/v2/auth/device-session`. Server lưu hash khóa, liên kết một UID; retry dùng lại cùng UID.
+4. Session Firebase custom token có claims `installationId` và `bindingVersion`. Mỗi bản cài đặt có một UID hiện tại; nhiều bản cài đặt có thể dùng chung UID đã liên kết email.
+5. Tải profile và journal đúng UID, gửi lại request chờ theo ID cũ rồi mở game.
 
-Initialize và health check dùng một promise chung để tránh tạo khách hoặc kiểm tra trùng. Tài khoản khách được tạo với profileV2 đầy đủ ngay trước khi API trả session. Đăng ký email liên kết trên cùng UID; đăng nhập tài khoản khác gộp profile khách trên server một lần bằng `mergedInto`.
+Đăng ký email giữ UID khách. Đăng nhập tài khoản có sẵn thay liên kết thiết bị, không gộp profile. Khi rời khách phải xác nhận nguy cơ không khôi phục được tiến trình; tài khoản đã liên kết không cần cảnh báo này. Đăng xuất liên kết một khách mới trên máy hiện tại, không thu hồi phiên máy khác. Hồ sơ cũ vẫn trên server.
+
+Các thao tác đổi danh tính có operation ID và receipt trong installations; retry không đổi liên kết lần nữa. Binding version tăng mỗi lần thay đổi. Middleware kiểm tra claims với bản ghi liên kết; transaction ghi profile/ad intent đọc lại liên kết để ngăn request cũ commit sau khi đổi tài khoản.
+
+Khóa thiết bị là thông tin đăng nhập dài hạn: chỉ SecureStore giữ bản rõ, server lưu SHA-256, không ghi log. Không dùng hardware ID. Mất khóa khi gỡ app/xóa dữ liệu có thể mất khả năng phục hồi khách. Khi đổi mật khẩu/thu hồi Firebase session, baseline `authValidAfter` ngăn khóa cũ tự cấp quyền lại; cần xác thực email/mật khẩu. Tài khoản bị khóa hoặc xóa không được phục hồi hay tạo lại cùng UID.
 
 ## Engine và nhiều mục tiêu
 
@@ -38,7 +42,7 @@ Mỗi request đang gửi được lưu vào journal v3 trước khi gọi API, 
 
 Kết quả thắng dùng catalog phiên bản đã chơi; mua/equip mới cần phiên bản hiện tại. Receipt đã có vẫn được replay sau khi catalog chuyển phiên bản. Profile trả về luôn dùng catalog hiện tại để kiểm tra sở hữu và hiển thị. Tiền/EXP đã ghi trên server được giữ nguyên khi đọc; client không tự tính lại profile.
 
-Journal chỉ giữ UID, snapshot, kết quả đã xác nhận và request chưa được xác nhận. Profile lấy từ server mỗi lần mở app. Save offline v1/v2 và archive cũ bị bỏ qua, không import. Logout xóa session và journal cục bộ, giữ profile database. Đăng nhập lại cùng UID giữ request chờ; không chuyển request sang UID khác.
+Journal chỉ giữ UID, snapshot, kết quả đã xác nhận và request chưa được xác nhận. Profile lấy từ server mỗi lần mở app. Save offline v1/v2 và archive cũ bị bỏ qua, không import. Logout thay liên kết bằng khách mới, xóa journal của UID cũ và giữ profile database. Đăng nhập lại cùng UID giữ request chờ; không chuyển request sang UID khác.
 
 ## Health check và refresh token
 
@@ -46,7 +50,9 @@ Journal chỉ giữ UID, snapshot, kết quả đã xác nhận và request chư
 
 Dialog mạng là Modal toàn app, không đóng bằng Back hoặc chạm ngoài. Retry gọi health; server trả thành công thì đóng dialog. Guard trong store cũng khóa gameplay/giao dịch khi disconnected, background, đang phục hồi, lỗi phiên hoặc còn request chờ.
 
-Mọi API có xác thực dùng chung xử lý HTTP 401: một refresh cho các request đồng thời, lưu token mới ngay, replay một lần. Response cũ bị loại nếu session generation thay đổi. Refresh lỗi mạng giữ token; refresh bị từ chối vĩnh viễn yêu cầu xác thực lại và không tự tạo khách. Firebase quản lý vòng đời refresh token; app không đặt TTL.
+Mọi API có xác thực dùng chung xử lý HTTP 401: một refresh cho các request đồng thời, lưu token mới ngay, replay một lần. Response cũ bị loại nếu session generation thay đổi. Refresh lỗi mạng giữ token; refresh trả 401 thì thử phục hồi cùng hồ sơ bằng khóa thiết bị. Phục hồi bị từ chối cho phép thử lại, đăng nhập hoặc chủ động xác nhận chơi khách mới. Không tự bỏ danh tính. Firebase quản lý vòng đời refresh token; app không đặt TTL.
+
+Health check định kỳ chỉ kiểm tra mạng khi danh tính đã bị từ chối; không gửi lại xác thực mỗi 5 giây. Khởi động app và nút thử khôi phục chủ động được phép thử lại, kể cả khi một health check đang chạy. Chuyển đổi legacy token đã xác minh không tiêu hạn mức tạo khách mới theo IP.
 
 ## API
 
@@ -57,10 +63,13 @@ Mọi API có xác thực dùng chung xử lý HTTP 401: một refresh cho các 
 | GET /v2/content/:version | Không | Catalog bất biến của màn đang chơi |
 | GET /v2/profile | Có | Profile chính thức, migrate dữ liệu server legacy nếu cần |
 | POST /v2/profile/sync | Có | win/purchase/equip, tối đa 50 operations |
-| POST /v1/auth/guest | Không | Tạo khách và profile đầy đủ |
-| POST /v1/auth/register | Khách hoặc không | Liên kết email |
-| POST /v1/auth/login | Có thể kèm khách | Đăng nhập/gộp khách một lần |
-| POST /v1/auth/refresh | Refresh token | Làm mới phiên |
+| POST /v2/auth/device-session | Khóa thiết bị; legacy bearer khi chuyển đổi | Tạo/khôi phục session, cùng UID nếu đã có liên kết |
+| POST /v2/auth/register | Khóa thiết bị, operation ID/version | Liên kết email vào UID khách |
+| POST /v2/auth/login | Khóa thiết bị, email/mật khẩu, operation ID/version | Đổi liên kết; khách cần confirmedDiscardGuest |
+| POST /v2/auth/logout | Khóa thiết bị, operation ID/version | Liên kết khách mới, giữ các máy khác |
+| POST /v2/auth/refresh | Refresh token | Refresh và kiểm tra binding |
+| POST /v1/auth/refresh | Legacy refresh token | Chỉ dùng chuyển đổi session cũ |
+| POST /v1/auth/guest, register, login | — | 426, cần client 1.3 |
 | GET /v1/progress | Có | Đọc tương thích; PUT trả 426 |
 | /v1/ads/* | Theo endpoint | Intent quảng cáo/AdMob SSV như hiện tại |
 
@@ -68,4 +77,10 @@ Sync body: `{contentVersion, operations}`. Win: `{id: runId, kind: 'win', levelI
 
 ## Phát hành
 
-Build backend, validate/seed catalog mới, đặt minClientVersion rồi phát hành client 1.2.0. Script seed mặc định dry run, yêu cầu `--apply --project ID` để ghi và không cho sửa document version đã xuất bản. Không tự deploy production. Xem DATABASE_SCHEMA.md và README.md để chạy emulator/kiểm thử.
+Build backend, validate/seed catalog mới, đặt minClientVersion rồi phát hành client 1.3.0. Script seed mặc định dry run, yêu cầu `--apply --project ID` để ghi và không cho sửa document version đã xuất bản. Không tự deploy production. Xem DATABASE_SCHEMA.md và README.md để chạy emulator/kiểm thử.
+
+## Kiểm thử acceptance
+
+Xem [ACCEPTANCE_GUEST.md](ACCEPTANCE_GUEST.md). Chỉ development build bật `EXPO_PUBLIC_ACCEPTANCE_TEST=1` và URL proxy localhost mới có bridge điều khiển test. Release không bật bridge. Proxy chỉ kết nối project demo trên Firebase Emulator; không có đường tới production. Chat Luna High chỉ chạy test và báo kết quả, không thay source.
+
+Production dùng service account có quyền ký `iam.serviceAccounts.signBlob` để Firebase Admin tạo custom token. Không đưa private key service account vào client hoặc repository.

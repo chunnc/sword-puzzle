@@ -5,6 +5,8 @@ Client chỉ gọi Game API. Mọi truy cập Firestore trực tiếp bị rules
 ```text
 gameConfig/current
 gameContent/{contentVersion}
+installations/{installationId}
+installations/{installationId}/operations/{operationId}
 players/{uid}
 players/{uid}/operations/{operationId}
 adIntents/{intentId}
@@ -86,3 +88,9 @@ Bị từ chối: accepted=false và reason; không có reward. Reward chỉ có
 ttlAt và authThrottle.expiresAt dùng Firestore Timestamp/Date cho TTL; các thời gian khác là Unix milliseconds.
 
 Firebase Auth quản lý UID/email/thông tin đăng nhập. Access token và refresh token chỉ lưu trong SecureStore trên thiết bị. Snapshot, RNG, objectiveProgress đang chơi và request chờ xác nhận nằm trong journal cục bộ; không ghi từng nước đi vào database.
+
+## installations/{installationId}
+
+ID ngẫu nhiên 128 bit dạng hex; mỗi document chỉ có một `playerUid` hiện tại. Nhiều document có thể trỏ cùng tài khoản. Trường: `secretHash` (SHA-256, không lưu khóa rõ), `playerUid`, `bindingVersion`, `status` (active/revoked), `isGuest`, `authValidAfter`, `createdAt`, `updatedAt`. Các timestamp là Unix milliseconds. `authValidAfter` là baseline Firebase `tokensValidAfterTime` tại lần xác thực hợp lệ, dùng ngăn khôi phục bằng khóa thiết bị sau thu hồi.
+
+Subcollection `operations` lưu `kind`, `targetUid`, `bindingVersion`, `createdAt`. Receipt không lưu mật khẩu, token hay khóa thiết bị. Operation đã bị một lần đổi liên kết mới thay thế không được replay để khôi phục binding cũ. `registration: {id, email}` tạm thời bảo vệ bước liên kết Firebase Auth/Firestore; nếu bị gián đoạn có thể hoàn tất bằng xác thực đúng email/mật khẩu.

@@ -17,6 +17,8 @@ jest.mock('../../services/api', () => ({
   fetchBootstrap: jest.fn(),
   fetchContent: jest.fn(),
   createGuest: jest.fn(),
+  deviceSession: jest.fn(),
+  logoutAccount: jest.fn(),
   syncProfile: jest.fn(),
   fetchProfile: jest.fn(),
   loginAccount: jest.fn(),
@@ -29,7 +31,9 @@ const guest: SessionData = {
   idToken: 'token',
   refreshToken: 'refresh',
   expiresIn: 3600,
-  isGuest: true
+  isGuest: true,
+  installationId: "a".repeat(32),
+  bindingVersion: 1
 };
 let api: typeof import('../../services/api'), session: typeof import('../../services/session'), domain: typeof import('../../game/domain'), saveTools: typeof import('../../game/save'), store: typeof import('../gameStore').useGameStore, storage: typeof import('@react-native-async-storage/async-storage').default;
 function ready(profile: PlayerProfile = domain.emptyProfile()) {
@@ -71,6 +75,7 @@ beforeEach(async () => {
     profile: domain.emptyProfile()
   });
   (api.createGuest as jest.Mock).mockResolvedValue(guest);
+  (api.deviceSession as jest.Mock).mockResolvedValue(guest);
   (api.fetchContent as jest.Mock).mockResolvedValue(domain.CONTENT);
 });
 it('creates a guest once for simultaneous initialization and waits for profile', async () => {
@@ -233,14 +238,20 @@ it('does not silently create a guest when refresh is rejected', async () => {
   expect(api.createGuest).not.toHaveBeenCalled();
   expect(session.getCurrentSession()?.uid).toBe('player');
 });
-it('logout clears session and journal without deleting server profile', async () => {
+it('logout binds a new guest and clears the previous local journal', async () => {
   ready();
+  const registered = { ...guest, isGuest: false };
+  await session.saveSession(registered);
+  store.setState({ session: registered });
   await store.getState().startLevel(1);
+  const next = { ...guest, uid: 'new-guest', bindingVersion: 2 };
+  (api.logoutAccount as jest.Mock).mockResolvedValue(next);
+  (api.fetchProfile as jest.Mock).mockResolvedValue({ session: next, profile: domain.emptyProfile() });
   await store.getState().logout();
-  expect(session.getCurrentSession()).toBeNull();
-  expect(store.getState().save.ownerId).toBeNull();
-  expect((await saveTools.loadSave('player')).active).toBeNull();
-  expect(api.syncProfile).not.toHaveBeenCalled();
+  expect(session.getCurrentSession()?.uid).toBe('new-guest');
+  expect(store.getState().save.ownerId).toBe('new-guest');
+  expect(store.getState().save.active).toBeNull();
+  expect(store.getState().initialized).toBe(true);
 });
 
 it('reauthenticates the same registered UID without discarding a pending request', async () => {
@@ -280,4 +291,36 @@ it('restores the pending journal after a cold boot with a revoked registered ses
   await store.getState().login('player@example.test', 'password-123');
   expect(store.getState().save.profile.ownedSkills).toContain('ngu-kiem');
   expect((api.syncProfile as jest.Mock).mock.calls[0][1][0].id).toBe(operation.id);
+});
+
+it('keeps the current guest usable when an optional login targets a disabled account', async () => {
+  ready();
+  (api.loginAccount as jest.Mock).mockRejectedValue(new api.GameApiError('ACCOUNT_DISABLED', 403));
+  await expect(store.getState().login('disabled@example.test', 'password-123', true)).rejects.toThrow();
+  expect(store.getState().authRequired).toBe(false);
+  expect(session.getCurrentSession()?.uid).toBe(guest.uid);
+  expect(await store.getState().startLevel(1)).toBe(true);
+});
+it('periodic health checks never repeatedly retry a rejected identity', async () => {
+  ready();
+  store.setState({ authRequired: true, bootError: 'Recovery denied' });
+  await store.getState().checkConnection(false);
+  await store.getState().checkConnection(false);
+  expect(api.deviceSession).not.toHaveBeenCalled();
+  expect(api.fetchProfile).not.toHaveBeenCalled();
+  expect(store.getState().authRequired).toBe(true);
+  expect(store.getState().bootError).toBe('Recovery denied');
+  expect(store.getState().online).toBe(true);
+});
+it('honors a manual identity retry arriving during a periodic health check', async () => {
+  ready(); store.setState({ authRequired: true });
+  require('expo-secure-store').getItemAsync.mockResolvedValue(JSON.stringify(guest));
+  let finish!: () => void;
+  (api.checkHealth as jest.Mock).mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+  const periodic = store.getState().checkConnection(false);
+  const manual = store.getState().checkConnection();
+  finish(); await Promise.all([periodic, manual]);
+  expect(api.deviceSession).toHaveBeenCalledTimes(1);
+  expect(store.getState().authRequired).toBe(false);
+  expect(store.getState().initialized).toBe(true);
 });

@@ -10,7 +10,9 @@ const initial: SessionData = {
   idToken: 'old',
   refreshToken: 'refresh-old',
   expiresIn: 3600,
-  isGuest: true
+  isGuest: true,
+  installationId: "a".repeat(32),
+  bindingVersion: 1
 };
 const updated: SessionData = {
   ...initial,
@@ -28,6 +30,7 @@ beforeEach(async () => {
   process.env.EXPO_PUBLIC_GAME_API_URL = 'http://localhost:5001/game';
   api = require('../api');
   session = require('../session');
+  require('expo-secure-store').getItemAsync.mockImplementation(async (key: string) => key === 'kiem-khai-installation' ? JSON.stringify({ installationId: initial.installationId, secret: 'b'.repeat(64) }) : null);
   await session.saveSession(initial);
   fetchMock = jest.fn();
   global.fetch = fetchMock;
@@ -141,16 +144,30 @@ it('rejects a late successful API response after account switch', async () => {
     code: 'SESSION_CHANGED'
   });
 });
-it('refreshes authenticated guest credential requests through the same path', async () => {
-  fetchMock.mockResolvedValueOnce(response({
-    error: 'EXPIRED'
-  }, 401)).mockResolvedValueOnce(response(updated)).mockResolvedValueOnce(response({
-    ...updated,
-    isGuest: false
-  }));
+it('uses the installation key and an idempotent operation when linking credentials', async () => {
+  fetchMock.mockResolvedValue(response({ ...updated, isGuest: false, bindingVersion: 2 }));
   const linked = await api.registerAccount('player@example.test', 'password-123', initial);
   expect(linked.isGuest).toBe(false);
-  expect(fetchMock.mock.calls[2][1].headers.get('Authorization')).toBe('Bearer new');
+  const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+  expect(body.installationId).toBe(initial.installationId);
+  expect(body.expectedBindingVersion).toBe(1);
+  expect(body.operationId).toHaveLength(32);
+  expect(fetchMock.mock.calls[0][1].headers.has('Authorization')).toBe(false);
+});
+it('recovers the same profile when refresh credentials are rejected', async () => {
+  fetchMock.mockResolvedValueOnce(response({ error: 'INVALID_SESSION' }, 401))
+    .mockResolvedValueOnce(response({ error: 'INVALID_SESSION' }, 401))
+    .mockResolvedValueOnce(response(updated)).mockResolvedValueOnce(response({ coins: 42 }));
+  expect((await api.fetchProfile(initial)).profile).toEqual({ coins: 42 });
+  expect(fetchMock.mock.calls[2][0]).toContain('/v2/auth/device-session');
+  expect(session.getCurrentSession()?.uid).toBe(initial.uid);
+});
+it('does not replace the session when device recovery is denied', async () => {
+  fetchMock.mockResolvedValueOnce(response({ error: 'INVALID_SESSION' }, 401))
+    .mockResolvedValueOnce(response({ error: 'INVALID_SESSION' }, 401))
+    .mockResolvedValueOnce(response({ error: 'DEVICE_REVOKED' }, 403));
+  await expect(api.fetchProfile(initial)).rejects.toMatchObject({ code: 'DEVICE_REVOKED' });
+  expect(session.getCurrentSession()?.uid).toBe(initial.uid);
 });
 it('health timeout retries once before reporting failure', async () => {
   jest.useFakeTimers();

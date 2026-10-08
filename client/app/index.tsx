@@ -30,7 +30,7 @@ export default function BootScreen() {
           {error || 'Đang mở tiên lộ…'}
         </Text>
         {error ? <GameButton title={checking ? 'ĐANG KẾT NỐI…' : 'THỬ LẠI'} disabled={checking} onPress={() => void initialize().catch(() => undefined)} /> : null}
-        {authRequired ? <GameButton title="ĐĂNG NHẬP" onPress={() => router.push('/account')} /> : null}
+        {authRequired ? <GameButton title="KHÔI PHỤC HỒ SƠ" onPress={() => router.push('/account')} /> : null}
       </View>
     </ScreenFrame>
   );

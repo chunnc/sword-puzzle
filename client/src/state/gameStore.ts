@@ -4,8 +4,9 @@ import { getLevel } from '../game/levels';
 import { CONTENT, getContentVersion, gradeStars, highestUnlocked, installContent, isCompleted, normalizeProfile, type Loadout, type PlayerOperation, type SkillId } from '../game/domain';
 import { clearSave, emptySave, loadSave, persistSave } from '../game/save';
 import type { BoardActionAnimation, CellPosition, SaveData, Stars, WinSummary } from '../game/types';
-import { checkHealth, createGuest, fetchBootstrap, fetchContent, fetchProfile, GameApiError, isApiConfigured, loginAccount, registerAccount, syncProfile, createAdIntent, checkAdIntent } from '../services/api';
+import { checkHealth, createGuest, fetchBootstrap, fetchContent, fetchProfile, GameApiError, isApiConfigured, loginAccount, registerAccount, syncProfile, createAdIntent, checkAdIntent, deviceSession, logoutAccount } from '../services/api';
 import { initializeRewardedAds, showRewardedForIntent } from '../services/ads';
+import { resetDeviceIdentity } from '../services/device';
 import { clearSession, getCurrentSession, getSessionGeneration, loadSession, saveSession, type SessionData } from '../services/session';
 export interface BoardActionResult {
   changed: boolean;
@@ -31,7 +32,7 @@ interface GameState {
   adsLoading: boolean;
   notice: string;
   initialize: () => Promise<string>;
-  checkConnection: () => Promise<void>;
+  checkConnection: (retryIdentity?: boolean) => Promise<void>;
   setForeground: (active: boolean) => void;
   startLevel: (id: number, restart?: boolean) => Promise<boolean>;
   swap: (x1: number, y1: number, x2: number, y2: number) => Promise<BoardActionResult>;
@@ -40,16 +41,19 @@ interface GameState {
   equip: (loadout: Loadout) => Promise<boolean>;
   requestExtraMoves: () => Promise<boolean>;
   register: (email: string, password: string) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, confirmedDiscardGuest?: boolean) => Promise<void>;
+  startFreshGuest: () => Promise<void>;
   logout: () => Promise<void>;
   syncProgress: () => Promise<void>;
   setNotice: (notice: string) => void;
 }
-const CLIENT_VERSION = '1.2.0';
+const CLIENT_VERSION = '1.3.0';
 let healthInFlight: Promise<void> | null = null,
   mutationQueue = Promise.resolve(),
   identityLoaded = false,
-  lifecycle = 0;
+  lifecycle = 0,
+  bindingChanged = false,
+  identityRetryRequested = false;
 function serialize<T>(work: () => Promise<T>): Promise<T> {
   const next = mutationQueue.then(work, work);
   mutationQueue = next.then(() => undefined, () => undefined);
@@ -84,7 +88,18 @@ export function apiErrorMessage(error: unknown): string {
     AUTH_FAILED: 'Không thể xác thực tài khoản.',
     TOO_MANY_ATTEMPTS: 'Bạn thử quá nhiều lần. Hãy đợi một lúc rồi thử lại.',
     ALREADY_REGISTERED: 'Tài khoản này đã được liên kết email.',
-    INVALID_SESSION: 'Phiên không còn hợp lệ. Vui lòng đăng nhập lại.',
+    INVALID_SESSION: 'Không thể khôi phục phiên chơi. Bạn có thể thử lại hoặc chọn hồ sơ khác.',
+    DEVICE_KEY_MISSING: 'Không tìm thấy khóa khôi phục hồ sơ trên thiết bị.',
+    INVALID_DEVICE_STORAGE: 'Không đọc được khóa thiết bị. Vui lòng thử lại.',
+    DEVICE_KEY_INVALID: 'Khóa khôi phục thiết bị không hợp lệ.',
+    DEVICE_REVOKED: 'Quyền truy cập của thiết bị đã bị thu hồi.',
+    DEVICE_REAUTH_REQUIRED: 'Quyền truy cập đã thay đổi. Hãy đăng nhập lại hoặc chơi khách mới.',
+    ACCOUNT_DISABLED: 'Tài khoản đã bị khóa.',
+    ACCOUNT_DELETED: 'Tài khoản không còn tồn tại.',
+    GUEST_DISCARD_CONFIRMATION_REQUIRED: 'Cần xác nhận trước khi rời hồ sơ khách.',
+    DEVICE_BINDING_CHANGED: 'Liên kết thiết bị đã thay đổi. Đang tải lại hồ sơ.',
+    IDENTITY_UNCERTAIN: 'Đang kiểm tra lại liên kết tài khoản. Vui lòng đợi.',
+    IDENTITY_OPERATION_PENDING: 'Thao tác liên kết trước chưa hoàn tất. Hãy thử lại thao tác đó.',
     INVALID_SESSION_STORAGE: 'Không đọc được phiên đã lưu. Vui lòng thử lại.',
     INSUFFICIENT_COINS: 'Chưa đủ linh thạch.',
     ALREADY_OWNED: 'Bạn đã sở hữu món này.',
@@ -104,9 +119,10 @@ function available(includePending = false) {
   const s = useGameStore.getState();
   return s.initialized && s.bootstrapLoaded && s.online && s.foreground && !s.recovering && !s.authRequired && (includePending || !s.save.pending);
 }
-async function failure(error: unknown) {
+async function failure(error: unknown, loginAttempt = false) {
   const s = useGameStore.getState();
-  const auth = error instanceof GameApiError && error.status === 401;
+  const code = error instanceof Error ? error.message : '';
+  const auth = error instanceof GameApiError && (error.status === 401 || ['DEVICE_KEY_MISSING', 'DEVICE_KEY_INVALID', 'DEVICE_REVOKED', 'DEVICE_REAUTH_REQUIRED', ...(!loginAttempt ? ['ACCOUNT_DISABLED', 'ACCOUNT_DELETED'] : [])].includes(error.code)) || ['INVALID_SESSION_STORAGE', 'INVALID_DEVICE_STORAGE'].includes(code);
   useGameStore.setState({
     notice: apiErrorMessage(error),
     ...(auth ? {
@@ -123,6 +139,7 @@ async function failure(error: unknown) {
       });
     }
   }
+  if (error instanceof GameApiError && ['DEVICE_BINDING_CHANGED', 'IDENTITY_UNCERTAIN'].includes(error.code)) { bindingChanged = true; useGameStore.setState({ initialized: false, authRequired: false }); }
   if (error instanceof GameApiError && error.code === 'CONTENT_MISMATCH') useGameStore.setState({
     bootstrapLoaded: false,
     bootError: apiErrorMessage(error)
@@ -247,13 +264,6 @@ async function record(engine: BoardEngine, previous: SaveData): Promise<BoardAct
 }
 async function hydrate() {
   const epoch = lifecycle;
-  if (!identityLoaded) {
-    const session = await loadSession();
-    identityLoaded = true;
-    useGameStore.setState({
-      session
-    });
-  }
   const bootstrap = await fetchBootstrap();
   const version = (v: string) => v.split('.').reduce((a, x) => a * 1000 + Number(x), 0);
   if (version(bootstrap.minClientVersion) > version(CLIENT_VERSION)) throw new GameApiError('CLIENT_UPDATE_REQUIRED');
@@ -264,14 +274,24 @@ async function hydrate() {
     bootstrapLoaded: true,
     adsEnabled: bootstrap.rewardedAdsEnabled
   });
+  if (!identityLoaded) {
+    let stored: SessionData | null;
+    try { stored = await loadSession(); }
+    catch (error) {
+      // A damaged token can be recovered only with an existing installation key.
+      try { stored = await deviceSession(null, false); await saveSession(stored); }
+      catch { throw error; }
+    }
+    identityLoaded = true;
+    useGameStore.setState({ session: stored });
+  }
   let session = getCurrentSession();
-  if (!session) {
-    session = await createGuest();
+  if (!session || !session.installationId || useGameStore.getState().authRequired || bindingChanged) {
+    session = session ? await deviceSession(session) : await createGuest();
     if (epoch !== lifecycle) return;
     await saveSession(session);
-    useGameStore.setState({
-      session
-    });
+    useGameStore.setState({ session });
+    bindingChanged = false;
   }
   const current = useGameStore.getState().save;
   const saved = current.ownerId === session.uid ? current : await loadSave(session.uid, fetchContent);
@@ -321,8 +341,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     const s = get().save;
     return s.active ? `/game/${s.active.levelId}` : '/map';
   },
-  checkConnection: async () => {
+  checkConnection: async (retryIdentity = true) => {
     if (!get().foreground) return;
+    if (retryIdentity) identityRetryRequested = true;
     if (healthInFlight) return healthInFlight;
     const epoch = lifecycle;
     healthInFlight = (async () => {
@@ -335,7 +356,13 @@ export const useGameStore = create<GameState>((set, get) => ({
         await checkHealth();
         healthy = true;
         if (epoch !== lifecycle || !get().foreground) return;
-        const recover = !get().online || !get().initialized || !get().bootstrapLoaded;
+        const retryRequested = identityRetryRequested;
+        identityRetryRequested = false;
+        if (get().authRequired && !retryRequested) {
+          set({ online: true });
+          return;
+        }
+        const recover = !get().online || !get().initialized || !get().bootstrapLoaded || get().authRequired;
         set({
           online: true,
           bootError: recover ? '' : get().bootError,
@@ -475,6 +502,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       });
       set({
         session: remote.session,
+        authRequired: false,
         notice: ''
       });
     } catch (error) {
@@ -482,54 +510,54 @@ export const useGameStore = create<GameState>((set, get) => ({
       throw new Error(apiErrorMessage(error));
     }
   }),
-  login: (email, password) => serialize(async () => {
-    if (!get().online || !get().foreground || get().save.pending && !get().authRequired) throw new Error(apiErrorMessage(new Error('CONNECTION_REQUIRED')));
+  login: (email, password, confirmedDiscardGuest = false) => serialize(async () => {
+    if (!get().online || !get().foreground) throw new Error(apiErrorMessage(new Error('CONNECTION_REQUIRED')));
     try {
+      // Recovery of the same owner is permitted when a pending request cannot yet authenticate.
+      if (get().save.pending && !get().authRequired) await submitPending();
       const previous = get().save;
-      const session = await loginAccount(email, password, get().authRequired ? undefined : getCurrentSession());
+      const session = await loginAccount(email, password, getCurrentSession(), confirmedDiscardGuest, previous.pending ? previous.ownerId ?? undefined : undefined);
       if (previous.pending && previous.ownerId !== session.uid) throw new Error('PROFILE_OWNER_MISMATCH');
       await saveSession(session);
-      set({
-        session
-      });
-      const remote = await fetchProfile(session),
-        profile = normalizeProfile(remote.profile);
+      set({ session });
+      const remote = await fetchProfile(session), profile = normalizeProfile(remote.profile);
       if (!profile) throw new GameApiError('INVALID_RESPONSE');
-      const saved = previous.ownerId === session.uid ? previous : await loadSave(session.uid, fetchContent);
+      const saved = previous.ownerId === session.uid ? previous : emptySave();
       const active = saved.active && saved.active.levelId <= highestUnlocked(profile.levels) ? saved.active : null;
       await persistNext({ ...saved, ownerId: session.uid, profile, active });
-      set({
-        session: remote.session,
-        initialized: true,
-        authRequired: false,
-        bootError: '',
-        notice: ''
-      });
+      set({ session: remote.session, initialized: true, authRequired: false, bootError: '', notice: '' });
       await submitPending();
     } catch (error) {
-      await failure(error);
+      await failure(error, true);
       throw new Error(apiErrorMessage(error));
     }
   }),
   logout: () => serialize(async () => {
-    if (!get().online || !get().foreground) return;
-    if (get().save.pending && !(await submitPending())) return;
-    lifecycle++;
-    await clearSession();
-    await clearSave();
-    identityLoaded = true;
-    set({
-      save: emptySave(),
-      session: null,
-      initialized: false,
-      bootstrapLoaded: false,
-      online: false,
-      checkingConnection: false,
-      recovering: false,
-      authRequired: false,
-      bootError: '',
-      notice: ''
-    });
+    if (!get().online || !get().foreground) throw new Error(apiErrorMessage(new Error('CONNECTION_REQUIRED')));
+    try {
+      if (get().save.pending) await submitPending();
+      const current = getCurrentSession();
+      if (!current || current.isGuest) return;
+      const session = await logoutAccount(current);
+      await saveSession(session);
+      identityLoaded = true;
+      set({ session, initialized: false, authRequired: false });
+      await clearSave();
+      set({ save: emptySave() });
+      await hydrate();
+    } catch (error) { await failure(error); throw new Error(apiErrorMessage(error)); }
+  }),
+  startFreshGuest: () => serialize(async () => {
+    if (!get().online || !get().foreground) throw new Error(apiErrorMessage(new Error('CONNECTION_REQUIRED')));
+    try {
+      // Explicitly confirmed abandonment; never called by automatic recovery.
+      await resetDeviceIdentity();
+      await clearSession();
+      await clearSave();
+      identityLoaded = true;
+      set({ session: null, save: emptySave(), initialized: false, authRequired: false });
+      await hydrate();
+    } catch (error) { await failure(error); throw new Error(apiErrorMessage(error)); }
   }),
   syncProgress: async () => {
     if (get().online && get().foreground) await serialize(async () => {

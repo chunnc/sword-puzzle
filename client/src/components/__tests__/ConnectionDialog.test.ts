@@ -191,7 +191,7 @@ it('keeps pending feedback stable and retries the operation instead of health', 
 it('keeps login usable during background checks and hides on the account route', () => {
   useGameStore.setState({ online: true, authRequired: true, checkingConnection: true });
   act(() => { renderer = create(tree()); });
-  expect(button().props.title).toBe('ĐĂNG NHẬP');
+  expect(button().props.title).toBe('KHÔI PHỤC HỒ SƠ');
   expect(button().props.disabled).not.toBe(true);
   act(() => button().props.onPress());
   expect(mockRouter.push).toHaveBeenCalledWith('/account');

@@ -114,7 +114,7 @@ it('allows reauthentication without the modal blocking account inputs', async ()
   mockState.online = true; mockState.authRequired = true;
   act(() => { renderer = create(React.createElement(ConnectionDialog)); });
   expect(renderer.root.findByType(Modal).props.visible).toBe(true);
-  act(() => renderer.root.findAll(node => node.props.accessibilityLabel === 'ĐĂNG NHẬP' && typeof node.props.onPress === 'function')[0].props.onPress());
+  act(() => renderer.root.findAll(node => node.props.accessibilityLabel === 'KHÔI PHỤC HỒ SƠ' && typeof node.props.onPress === 'function')[0].props.onPress());
   expect(mockRouter.push).toHaveBeenCalledWith('/account');
   mockPathname = '/account';
   act(() => renderer.update(React.createElement(ConnectionDialog)));

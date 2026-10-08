@@ -17,6 +17,6 @@ await db.runTransaction(async tx=>{
  const [existing,settings]=await Promise.all([tx.get(ref),tx.get(config)]);
  if(existing.exists && !isDeepStrictEqual(existing.data(),content))throw new Error('Published content is immutable. Increment its version instead.');
  if(!existing.exists)tx.create(ref,content);
- tx.set(config,{...(!settings.exists?{rewardedAdsEnabled:false}:{}),contentVersion:content.version,minClientVersion:'1.2.0'},{merge:true});
+ tx.set(config,{...(!settings.exists?{rewardedAdsEnabled:false}:{}),contentVersion:content.version,minClientVersion:'1.3.0'},{merge:true});
 });
 console.log(`Published content v${content.version} to ${project}.`);

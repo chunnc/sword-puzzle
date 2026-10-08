@@ -8,8 +8,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useGameStore } from '../src/state/gameStore';
 import { ConnectionDialog } from '../src/components/ConnectionDialog';
 import { colors } from '../src/theme';
+import { installAcceptanceBridge } from '../src/services/acceptance';
 
 export default function RootLayout() {
+  useEffect(() => { installAcceptanceBridge(); }, []);
   const initialized = useGameStore(s => s.initialized);
   const bootstrapLoaded = useGameStore(s => s.bootstrapLoaded);
   const [reduceMotion, setReduceMotion] = useState(true);
@@ -34,7 +36,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     let stopped = false;
-    const run = () => { if (!stopped && AppState.currentState === 'active') void useGameStore.getState().checkConnection(); };
+    const run = () => { if (!stopped && AppState.currentState === 'active') void useGameStore.getState().checkConnection(false); };
     const timer = setInterval(run, 5000);
     const subscription = AppState.addEventListener('change', state => {
       useGameStore.getState().setForeground(state === 'active');

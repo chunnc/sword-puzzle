@@ -9,7 +9,7 @@
   "scripts": {
     "build": "node ../tools/generate_game_content.mjs && tsc -p tsconfig.json",
     "test": "npm run build && node --test test/*.test.cjs",
-    "test:integration": "npm run build && node --test test/integration/integration.cjs",
+    "test:integration": "npm run build && node --test --test-concurrency=1 test/integration/*.cjs",
     "serve": "npm run build && cd .. && firebase emulators:start --only functions,firestore,auth"
   },
   "dependencies": {

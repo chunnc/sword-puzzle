@@ -5,6 +5,10 @@ export interface SessionData {
   refreshToken: string;
   expiresIn: number;
   isGuest: boolean;
+  email?: string;
+  // Optional only while adopting a legacy session.
+  installationId?: string;
+  bindingVersion?: number;
   acquiredAt?: number;
 }
 const SESSION_KEY = 'kiem-khai-session';
@@ -23,12 +27,14 @@ function write(work: () => Promise<void>) {
 }
 export async function loadSession(): Promise<SessionData | null> {
   // A corrupt/read-failed identity must not silently become a new guest.
-  const raw = await SecureStore.getItemAsync(SESSION_KEY);
+  let raw: string | null;
+  try { raw = await SecureStore.getItemAsync(SESSION_KEY); } catch { throw new Error('INVALID_SESSION_STORAGE'); }
   if (!raw) {
     current = null;
     return null;
   }
-  const session = JSON.parse(raw) as SessionData;
+  let session: SessionData;
+  try { session = JSON.parse(raw) as SessionData; } catch { throw new Error('INVALID_SESSION_STORAGE'); }
   if (!valid(session)) throw new Error('INVALID_SESSION_STORAGE');
   current = session;
   return session;

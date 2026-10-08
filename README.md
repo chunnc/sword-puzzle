@@ -20,7 +20,7 @@ Yêu cầu Node.js 22.13+, Expo development build, Android Studio/Android SDK ch
 
 App cần internet và dữ liệu server trước khi mở game. Lần đầu tự tạo hồ sơ khách; các lần sau dùng lại session. Health check mỗi 5 giây, timeout 2 giây và thử thêm một lần khi timeout; mất kết nối hiện dialog chặn thao tác, nút Thử lại chỉ đóng dialog sau khi server phản hồi thành công. Email/mật khẩu là tài khoản game; bản thử nghiệm chưa có xác minh email hoặc khôi phục mật khẩu.
 
-Client không chứa Firebase Auth/Firestore SDK. Token chỉ được dùng làm bearer token tới Game API; session lưu trong iOS Keychain/Android Keystore, còn profile, ví, trang bị và tiến trình được lưu trên server. Journal cục bộ v3 chỉ giữ bàn đang chơi và request chờ xác nhận, có bản dự phòng. Save offline v1/v2 bị bỏ qua. API trả 401 sẽ refresh token chung và gửi lại request một lần.
+Client không chứa Firebase Auth/Firestore SDK. Token chỉ được dùng làm bearer token tới Game API; session lưu trong iOS Keychain/Android Keystore, còn profile, ví, trang bị và tiến trình được lưu trên server. Journal cục bộ v3 chỉ giữ bàn đang chơi và request chờ xác nhận, có bản dự phòng. Save offline v1/v2 bị bỏ qua. API trả 401 sẽ refresh token chung; nếu refresh bị từ chối, thử khôi phục cùng UID bằng khóa thiết bị rồi gửi lại request một lần. Đăng nhập là tùy chọn.
 
 ## Chạy backend
 
@@ -45,13 +45,13 @@ API gọi Firebase Auth REST qua backend. Khi chạy Emulator Suite, API tự d�
 
 - `npm --prefix client run typecheck` kiểm tra TypeScript; `npm --prefix client test` kiểm tra engine, nhiều objectives, bàn chữ nhật/ô khuyết, catalog, EXP, cửa hàng, journal và refresh token. Fixture Unity cũ được giữ cho kiểm thử save migration.
 - `npm run api:test` chạy kiểm thử server hiện có.
-- `API_BASE_URL=http://127.0.0.1:5001/PROJECT_ID/asia-southeast1/gameApi npm --prefix server run test:integration` kiểm tra health/catalog, guest/email, EXP 0 sao, retry, objectives, catalog đổi phiên bản, mua cạnh tranh, gộp ví khách một lần và từ chối truy cập Firestore trực tiếp.
+- `API_BASE_URL=http://127.0.0.1:5001/PROJECT_ID/asia-southeast1/gameApi npm --prefix server run test:integration` kiểm tra health/catalog, guest/email, EXP 0 sao, retry, objectives, catalog đổi phiên bản, mua cạnh tranh, đổi tài khoản không gộp dữ liệu và từ chối truy cập Firestore trực tiếp.
 - Trên thiết bị thật, kiểm tra vùng an toàn màn hình, vuốt/chọn ô, save sau khi đóng app, mất mạng → Retry → tiếp tục cùng bàn và rewarded ad test trên Android 9+ 3 GB RAM/iOS 16.4+.
 
 Trước deploy, cấu hình IAM tối thiểu cho tài khoản chạy Functions, giữ rules Firestore/Storage từ chối truy cập client, thiết lập TTL cho `authThrottle.expiresAt` và `adIntents.ttlAt`, rồi theo dõi lỗi 5xx, đồng bộ và SSV. Backend production và AdMob IDs thật chưa được cấu hình trong workspace.
 
 
-## Nội dung phiên bản 3 / client 1.2.0
+## Nội dung phiên bản 3 / client 1.3.0
 
 Catalog server dùng content/game-content.json để seed Firestore. tools/generate_game_content.mjs chỉ chia sẻ schema/luật profile; không nhúng dữ liệu catalog vào client. Schema database: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
 
@@ -65,3 +65,11 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 PATH=/opt/homebrew/opt/openjdk@21/bin:$PA
 ```
 
 Điều chỉnh JAVA_HOME/PATH theo OpenJDK 21 trên máy. iOS Simulator dùng 127.0.0.1; Android Emulator dùng 10.0.2.2 để kết nối API trên máy host. Thiết bị thật dùng địa chỉ LAN của máy chạy emulator.
+
+## Phiên thiết bị / client 1.3.0
+
+Mở game tự chơi khách, vẫn cần internet. Tạo tài khoản giữ tiến trình khách; đăng nhập tài khoản có sẵn dùng dữ liệu tài khoản đó, không gộp. Khách phải xác nhận nguy cơ mất tiến trình trước khi đổi tài khoản. Mỗi bản cài đặt chỉ dùng một UID; một tài khoản dùng được nhiều máy. Đăng xuất chỉ chuyển máy hiện tại sang khách mới.
+
+Server cấp custom token Firebase có claims bản cài đặt và binding version. Production cần cấp quyền `iam.serviceAccounts.signBlob` cho service account chạy Functions. Phiên 1.2 còn hợp lệ được chuyển sang 1.3 giữ UID; khóa thiết bị chưa tồn tại thì không thể tự khôi phục khách có legacy token đã bị thu hồi. Gỡ app/xóa dữ liệu có thể làm mất khóa khách.
+
+Kiểm thử simulator và fault injection: [ACCEPTANCE_GUEST.md](ACCEPTANCE_GUEST.md). Không bật `EXPO_PUBLIC_ACCEPTANCE_TEST` trong release.

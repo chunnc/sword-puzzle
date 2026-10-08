@@ -20,8 +20,8 @@ const messages: Record<VisibleDialogMode, { title: string; body: string }> = {
     body: 'Thao tác đang chờ máy chủ xác nhận.',
   },
   authentication: {
-    title: 'PHIÊN CẦN XÁC THỰC',
-    body: 'Vui lòng đăng nhập lại để tiếp tục. Thao tác còn chờ sẽ được xác nhận sau khi đăng nhập.',
+    title: 'KHÔNG THỂ KHÔI PHỤC',
+    body: 'Hồ sơ đang được giữ lại. Bạn có thể thử khôi phục, đăng nhập hoặc chọn chơi khách mới.',
   },
 };
 
@@ -90,7 +90,7 @@ const ConnectionPanel = memo(function ConnectionPanel({ mode, onLogin }: {
         <Text accessibilityRole="header" style={styles.title}>{message.title}</Text>
         <Text style={styles.body}>{message.body}</Text>
         {mode === 'authentication'
-          ? <GameButton title="ĐĂNG NHẬP" onPress={onLogin} />
+          ? <GameButton title="KHÔI PHỤC HỒ SƠ" onPress={onLogin} />
           : <RetryAction mode={mode} />}
       </>}
     </ArtPanel>

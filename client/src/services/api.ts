@@ -1,4 +1,5 @@
 import { getCurrentSession, getSessionGeneration, saveRefreshedSession, type SessionData } from './session';
+import { loadDeviceIdentity, markDeviceProvisioned, identityOperation, clearIdentityOperation } from './device';
 import { requireContent, type GameContent, type PlayerOperation, type PlayerProfile, type SyncResponse } from '../game/domain';
 export interface BootstrapResponse {
   contentVersion: number;
@@ -73,8 +74,14 @@ async function refresh(session: SessionData, generation: number): Promise<Sessio
   let inFlight = refreshes.get(key);
   if (!inFlight) {
     inFlight = (async () => {
-      const updated = await refreshSession(session.refreshToken);
-      if (updated.uid !== session.uid) throw new GameApiError('INVALID_SESSION', 401);
+      let updated: SessionData;
+      try { updated = await refreshSession(session.refreshToken); }
+      catch (error) {
+        if (!(error instanceof GameApiError) || error.status !== 401) throw error;
+        if (getSessionGeneration() !== generation) throw new GameApiError('SESSION_CHANGED');
+        updated = await deviceSession(session);
+      }
+      if (updated.uid !== session.uid || updated.bindingVersion !== session.bindingVersion) throw new GameApiError('DEVICE_BINDING_CHANGED', 409);
       await saveRefreshedSession(updated, generation);
       return updated;
     })().finally(() => {
@@ -133,26 +140,49 @@ export async function fetchProfile(session: SessionData) {
     session: result.session
   };
 }
-export const createGuest = () => request<SessionData>('/v1/auth/guest', {
-  method: 'POST',
-  body: '{}'
-});
-async function credentials(path: string, email: string, password: string, current?: SessionData | null) {
-  if (current) return (await authorized<SessionData>(current, 'POST', path, {
-    email,
-    password
-  })).value;
-  return request<SessionData>(path, {
-    method: 'POST',
-    body: JSON.stringify({
-      email,
-      password
-    })
-  });
+export async function deviceSession(previous?: SessionData | null, create = !previous || !previous.installationId): Promise<SessionData> {
+  const device = await loadDeviceIdentity(create);
+  if (!device || previous?.installationId && previous.installationId !== device.installationId) throw new GameApiError('DEVICE_KEY_MISSING', 403);
+  let legacy = previous && !previous.installationId ? previous : undefined;
+  const send = () => request<SessionData>('/v2/auth/device-session', { method: 'POST', body: JSON.stringify({ ...device, requireExisting: device.provisioned === true || Boolean(previous?.installationId) || !create }) }, legacy);
+  let result: SessionData;
+  try { result = await send(); }
+  catch (error) {
+    if (!legacy || !(error instanceof GameApiError) || error.status !== 401) throw error;
+    legacy = await request<SessionData>('/v1/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken: legacy.refreshToken }) });
+    result = await send();
+  }
+  if (result.installationId !== device.installationId || !Number.isSafeInteger(result.bindingVersion) || result.bindingVersion! < 1) throw new GameApiError('INVALID_RESPONSE');
+  if (!device.provisioned) await markDeviceProvisioned(device);
+  return result;
 }
-export const registerAccount = (email: string, password: string, current?: SessionData | null) => credentials('/v1/auth/register', email, password, current);
-export const loginAccount = (email: string, password: string, current?: SessionData | null) => credentials('/v1/auth/login', email, password, current?.isGuest ? current : undefined);
-export const refreshSession = (refreshToken: string) => request<SessionData>('/v1/auth/refresh', {
+export const createGuest = () => deviceSession();
+async function changeIdentity(kind: 'login' | 'register' | 'logout', current: SessionData | null | undefined, email?: string, password?: string, confirmedDiscardGuest = false, preserveOwnerId?: string) {
+  const device = await loadDeviceIdentity(false);
+  if (!device || !current?.bindingVersion || device.installationId !== current.installationId) throw new GameApiError('DEVICE_KEY_MISSING', 403);
+  const operation = await identityOperation(kind, current.bindingVersion, email?.trim().toLowerCase());
+  const generation = getSessionGeneration();
+  const payload = { ...device, ...operation, email, password, confirmedDiscardGuest, preserveOwnerId };
+  let result: SessionData;
+  try {
+    result = await request<SessionData>(`/v2/auth/${kind}`, { method: 'POST', body: JSON.stringify(payload) });
+  } catch (error) {
+    if (!(error instanceof GameApiError) || !['NETWORK_ERROR', 'TIMEOUT'].includes(error.code)) throw error;
+    const recovered = await deviceSession(current);
+    const completed = recovered.bindingVersion! > current.bindingVersion &&
+      (kind === 'logout' ? recovered.isGuest : recovered.email?.toLowerCase() === email?.trim().toLowerCase());
+    if (!completed) throw new GameApiError('IDENTITY_UNCERTAIN', 409);
+    result = recovered;
+  }
+  if (generation !== getSessionGeneration()) throw new GameApiError('SESSION_CHANGED');
+  if (result.installationId !== device.installationId || !result.bindingVersion) throw new GameApiError('INVALID_RESPONSE');
+  await clearIdentityOperation();
+  return result;
+}
+export const registerAccount = (email: string, password: string, current?: SessionData | null) => changeIdentity('register', current, email, password);
+export const loginAccount = (email: string, password: string, current?: SessionData | null, confirmedDiscardGuest = false, preserveOwnerId?: string) => changeIdentity('login', current, email, password, confirmedDiscardGuest, preserveOwnerId);
+export const logoutAccount = (current: SessionData, confirmedDiscardGuest = false) => changeIdentity('logout', current, undefined, undefined, confirmedDiscardGuest);
+export const refreshSession = (refreshToken: string) => request<SessionData>('/v2/auth/refresh', {
   method: 'POST',
   body: JSON.stringify({
     refreshToken
