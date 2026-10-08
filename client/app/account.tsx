@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { TopHud } from '../src/components/Chrome';
 import { GameButton, ScreenFrame, TitleBanner } from '../src/components/Art';
@@ -9,6 +9,8 @@ import { colors, type } from '../src/theme';
 export default function AccountScreen() {
   const router = useRouter();
   const session = useGameStore((state) => state.session);
+  const authRequired = useGameStore(s=>s.authRequired);
+  const logout = useGameStore(s=>s.logout);
   const online = useGameStore((state) => state.online);
   const register = useGameStore((state) => state.register);
   const login = useGameStore((state) => state.login);
@@ -17,7 +19,7 @@ export default function AccountScreen() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const linked = session !== null && !session.isGuest;
+  const linked = session !== null && !session.isGuest && !authRequired;
   const goBack = () => {
     if (router.canGoBack()) router.back();
     else router.replace('/map');
@@ -37,6 +39,19 @@ export default function AccountScreen() {
     }
   };
 
+  const performLogout = () => {
+    setBusy(true);
+    void logout().then(() => router.replace('/')).catch(error => setStatus(String(error))).finally(() => setBusy(false));
+  };
+  const requestLogout = () => {
+    if (session?.isGuest) {
+      Alert.alert('Đăng xuất hồ sơ khách?', 'Hồ sơ chưa liên kết email. Sau khi đăng xuất, bạn không thể tự khôi phục hồ sơ này.', [
+        { text: 'Hủy', style: 'cancel' },
+        { text: 'Đăng xuất', style: 'destructive', onPress: performLogout },
+      ]);
+    } else performLogout();
+  };
+
   return (
     <ScreenFrame background="bgMap">
       <TopHud onAccount={goBack} />
@@ -44,8 +59,8 @@ export default function AccountScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
-            <Text style={styles.subtitle}>{linked ? 'Tài khoản đã liên kết' : 'Liên kết để đồng bộ tiến trình'}</Text>
-            {!online ? <Text style={styles.offline}>Đang ngoại tuyến. Bạn vẫn có thể tiếp tục chơi trên thiết bị này.</Text> : null}
+            <Text style={styles.subtitle}>{linked ? 'Tài khoản đã liên kết' : 'Liên kết để bảo vệ và chuyển tiến trình sang thiết bị khác'}</Text>
+            {!online ? <Text style={styles.offline}>Cần kết nối máy chủ để tiếp tục.</Text> : null}
             {!linked ? (
               <>
                 <TextInput
@@ -82,12 +97,13 @@ export default function AccountScreen() {
                   </Pressable>
                 </View>
                 {status ? <Text accessibilityRole="alert" style={styles.error}>{status}</Text> : null}
-                <GameButton title={busy ? 'ĐANG XỬ LÝ…' : 'TẠO TÀI KHOẢN'} onPress={() => void submit('register')} disabled={busy || !online} style={styles.action} />
+                <GameButton title={busy ? 'ĐANG XỬ LÝ…' : 'TẠO TÀI KHOẢN'} onPress={() => void submit('register')} disabled={busy || !online || authRequired} style={styles.action} />
                 <GameButton title="ĐĂNG NHẬP" onPress={() => void submit('login')} art="buttonSecondary" disabled={busy || !online} style={styles.action} />
               </>
             ) : (
-              <Text style={styles.body}>Tiến trình đã liên kết và sẽ được đồng bộ khi có mạng.</Text>
+              <Text style={styles.body}>Tiến trình được lưu trên máy chủ và đã liên kết với tài khoản.</Text>
             )}
+            {session ? <GameButton title="ĐĂNG XUẤT" art="buttonSecondary" disabled={busy || !online} onPress={requestLogout} style={styles.action} /> : null}
             <GameButton title="QUAY LẠI" onPress={goBack} art="buttonSecondary" style={styles.action} />
             <Text style={styles.small}>Bản thử nghiệm chưa có chức năng khôi phục mật khẩu.</Text>
           </View>

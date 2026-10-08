@@ -1,16 +1,99 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BoardEngine } from '../BoardEngine';
 import { getLevel } from '../levels';
-import { emptySave, loadSave, normalizeSave, normalizeSnapshot, persistSave, projectProfile } from '../save';
-import { applyOperation, emptyProfile } from '../domain';
-import legacy from './unity-board-fixtures.json';
+import { emptySave, loadSave, normalizeSave, normalizeSnapshot, persistSave } from '../save';
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
-describe('save v2', () => {
-    beforeEach(async () => { await AsyncStorage.clear(); });
-    it('starts with free gear', async () => expect(await loadSave()).toEqual(emptySave()));
-    it('migrates old stars once and discards old board snapshots', async () => { await AsyncStorage.setItem('kiemkhai.save.v1', JSON.stringify({ schemaVersion: 1, levels: [{ levelId: 1, stars: 2 }], active: legacy.levels[0].initial })); const save = await loadSave(); expect(save.profile.totalExp).toBe(80); expect(save.profile.coins).toBe(125); expect(save.active).toBeNull(); expect(save.operations[0].kind).toBe('importProgress'); expect((await loadSave()).operations[0].id).toBe(save.operations[0].id); });
-    it('recovers a v2 backup before falling back to legacy', async () => { const save = emptySave(); save.active = new BoardEngine(getLevel(1)).snapshot(); await persistSave(save); await persistSave({ ...save, active: null }); await AsyncStorage.setItem('kiemkhai.save.v2', '{broken'); expect((await loadSave()).active).toEqual(save.active); });
-    it('restores pending transactions without losing zero-star completion', () => { const save = emptySave(); save.operations = [{ id: 'win_zero_123', kind: 'win', levelId: 1, stars: 0 }]; save.profile = projectProfile(save.confirmed, save.operations); const restored = normalizeSave(save)!; expect(restored.profile.levels).toEqual([{ levelId: 1, stars: 0 }]); expect(restored.profile.totalExp).toBe(30); expect(restored.profile.coins).toBe(100); });
-    it('rejects malformed snapshots and duplicated transaction IDs', () => { const s = new BoardEngine(getLevel(1)).snapshot(); expect(normalizeSnapshot({ ...s, tiles: [] })).toBeNull(); expect(normalizeSnapshot({ ...s, swordQi: 101 })).toBeNull(); const save = emptySave(); save.operations = [{ id: 'same_id_123', kind: 'win', levelId: 1, stars: 0 }, { id: 'same_id_123', kind: 'win', levelId: 1, stars: 0 }]; expect(normalizeSave(save)).toBeNull(); });
-    it('preserves frozen loadout, RNG, charge and condensed status', () => { const save = emptySave(), s = new BoardEngine(getLevel(1)).snapshot(); s.tiles[0].chargeTier = 5; s.condensed = true; s.skillUsed = true; save.active = s; expect(normalizeSave(save)!.active).toEqual(s); });
+describe('server-backed journal v3', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+  });
+  it('ignores offline v1/v2 and their backups', async () => {
+    for (const key of ['kiemkhai.save.v1', 'kiemkhai.save.backup.v1', 'kiemkhai.save.v2', 'kiemkhai.save.backup.v2']) await AsyncStorage.setItem(key, JSON.stringify({
+      schemaVersion: 2,
+      levels: [{
+        levelId: 1,
+        stars: 3
+      }],
+      profile: {
+        coins: 99999
+      }
+    }));
+    expect(await loadSave('player')).toEqual(emptySave());
+  });
+  it('restores a snapshot from its v3 backup without restoring a profile', async () => {
+    const save = {
+      ...emptySave(),
+      ownerId: 'player',
+      active: new BoardEngine(getLevel(1)).snapshot()
+    };
+    save.profile.coins = 999;
+    await persistSave(save);
+    await persistSave({
+      ...save,
+      active: null
+    });
+    await AsyncStorage.setItem('kiemkhai.save.v3', '{broken');
+    const restored = await loadSave('player');
+    expect(restored.active).toEqual(save.active);
+    expect(restored.profile.coins).toBe(0);
+  });
+  it('does not restore another UID journal', async () => {
+    await persistSave({
+      ...emptySave(),
+      ownerId: 'other',
+      active: new BoardEngine(getLevel(1)).snapshot()
+    });
+    expect((await loadSave('player')).active).toBeNull();
+  });
+  it('preserves a pending zero-star result and its immutable ID', async () => {
+    const save = {
+      ...emptySave(),
+      ownerId: 'player',
+      pending: {
+        contentVersion: 3,
+        operation: {
+          id: 'win_zero_123',
+          kind: 'win' as const,
+          levelId: 1,
+          stars: 0 as const,
+          objectiveProgress: {
+            main: 18
+          }
+        }
+      }
+    };
+    await persistSave(save);
+    expect((await loadSave('player')).pending).toEqual(save.pending);
+  });
+  it('rejects malformed snapshots and incomplete progress maps', () => {
+    const s = new BoardEngine(getLevel(1)).snapshot();
+    expect(normalizeSnapshot({
+      ...s,
+      tiles: []
+    })).toBeNull();
+    expect(normalizeSnapshot({
+      ...s,
+      swordQi: 101
+    })).toBeNull();
+    expect(normalizeSnapshot({
+      ...s,
+      objectiveProgress: {}
+    })).toBeNull();
+    expect(normalizeSave({
+      schemaVersion: 2
+    })).toBeNull();
+  });
+  it('restores frozen loadout, RNG, charge, objectives and condensed status', () => {
+    const save = {
+        ...emptySave(),
+        ownerId: 'player'
+      },
+      s = new BoardEngine(getLevel(1)).snapshot();
+    s.tiles[0]!.chargeTier = 5;
+    s.condensed = true;
+    s.skillUsed = true;
+    s.objectiveProgress.main = 4;
+    save.active = s;
+    expect(normalizeSave(save)!.active).toEqual(s);
+  });
 });

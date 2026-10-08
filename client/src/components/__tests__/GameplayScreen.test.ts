@@ -37,7 +37,7 @@ jest.mock('../Art', () => {
 const mockParams = { levelId: '15' };
 let mockReduceMotion = true;
 const mockRouter = { push: jest.fn(), replace: jest.fn() };
-const mockState = { save: emptySave(), notice: '', online: false, adsEnabled: false, session: null, setNotice: jest.fn(), swap: jest.fn(), castSkill: jest.fn(), startLevel: jest.fn() };
+const mockState = { save: emptySave(), notice: '', online: true, foreground: true, initialized: true, recovering: false, authRequired: false, adsEnabled: false, session: null, setNotice: jest.fn(), swap: jest.fn(), castSkill: jest.fn(), startLevel: jest.fn() };
 
 describe('gameplay presentation and exit behavior', () => {
   let renderer: ReactTestRenderer, hardwareBack: () => boolean;
@@ -54,8 +54,8 @@ describe('gameplay presentation and exit behavior', () => {
     let before = swappedBoard;
     const steps: BoardResolutionStep[] = Array.from({ length: stepCount }, (_, index) => {
       const after = {
-        ...before, remaining: before.remaining - 1,
-        tiles: before.tiles.map((tile, cell) => cell === 0 ? { ...tile, kind: (tile.kind + 1) % 4 } : tile),
+        ...before, objectiveProgress: { main: before.objectiveProgress.main + 1 },
+        tiles: before.tiles.map((tile, cell) => cell === 0 ? { ...tile!, kind: (tile!.kind + 1) % 4 } : tile),
       };
       const step: BoardResolutionStep = {
         before, after, cleared: [0], changed: [],
@@ -138,7 +138,7 @@ describe('gameplay presentation and exit behavior', () => {
 
   it.each([false, true])('uses the same info and control dimensions for every goal (compact=%s)', compact => {
     const snapshots = Object.values(GoalKind).map(goal => {
-      const id = Array.from({ length: 40 }, (_, index) => index + 1).find(id => getLevel(id).goal === goal)!;
+      const id = Array.from({ length: 40 }, (_, index) => index + 1).find(id => getLevel(id).objectives[0].type === goal)!;
       mockParams.levelId = String(id); mockState.save.active = new BoardEngine(getLevel(id)).snapshot(); mount();
       act(() => { view('game-content').props.onLayout({ nativeEvent: { layout: { width: 320, height: compact ? 490 : 760 } } }); });
       const objective = Native.StyleSheet.flatten(view('game-objective-panel').props.style);
@@ -192,10 +192,10 @@ describe('gameplay presentation and exit behavior', () => {
   });
 
   it.each(Object.values(GoalKind))('shows goal, moves and appropriate HP for %s', goal => {
-    const id = Array.from({ length: 40 }, (_, index) => index + 1).find(id => getLevel(id).goal === goal)!;
+    const id = Array.from({ length: 40 }, (_, index) => index + 1).find(id => getLevel(id).objectives[0].type === goal)!;
     mockParams.levelId = String(id); mockState.save.active = new BoardEngine(getLevel(id)).snapshot(); mount();
     const info = renderer.root.findByType(GameplayInfo);
-    expect(info.props.board.moves).toBe(getLevel(id).moves); expect(info.props.board.remaining).toBe(getLevel(id).target);
+    expect(info.props.board.moves).toBe(getLevel(id).moves); expect(info.props.board.objectiveProgress.main).toBe(0);
     expect(renderer.root.findAllByType(Native.View).filter(node => String(node.props.accessibilityLabel).startsWith('Máu '))).toHaveLength(goal === GoalKind.Battle || goal === GoalKind.Boss ? 1 : 0);
   });
 
@@ -347,7 +347,7 @@ describe('gameplay presentation and exit behavior', () => {
     try {
       mockReduceMotion = false; mockParams.levelId = '1';
       const snapshot = new BoardEngine(getLevel(1)).snapshot();
-      snapshot.moves = 0; snapshot.remaining = 1; snapshot.swordQi = 60;
+      snapshot.moves = 0; snapshot.objectiveProgress.main = getLevel(1).objectives[0].target - 1; snapshot.swordQi = 60;
       for (let x = 0; x < 7; x++) snapshot.tiles[x] = { kind: 0, chargeTier: 0, locked: false };
       mockState.save.active = snapshot;
       const engine = new BoardEngine(getLevel(1), snapshot);

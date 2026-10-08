@@ -11,10 +11,11 @@ import { navigateTab, type BottomNavId } from '../src/components/Navigation';
 import { getHighestUnlocked, getLevelStars, getLevelCompleted, useGameStore } from '../src/state/gameStore';
 import { colors, type } from '../src/theme';
 
-const levelIds = Array.from({ length: LEVEL_COUNT }, (_, index) => index + 1);
+
 
 export default function MapScreen() {
   const router = useRouter();
+  const levelIds = Array.from({ length: LEVEL_COUNT }, (_, index) => index + 1);
   const save = useGameStore((state) => state.save);
   const notice = useGameStore((state) => state.notice);
   const setNotice = useGameStore((state) => state.setNotice);
@@ -83,9 +84,9 @@ export default function MapScreen() {
           }}
         />
         <ArtPanel art="chapterCard" style={styles.chapter}>
-          <Text style={styles.chapterEyebrow}>TIÊN LỘ · 40 MÀN</Text>
+          <Text style={styles.chapterEyebrow}>TIÊN LỘ · {LEVEL_COUNT} MÀN</Text>
           <Text style={styles.chapterName}>{getLevel(unlocked).chapter.toUpperCase()}</Text>
-          <Text style={styles.chapterStars}>{totalStars}/120 ★</Text>
+          <Text style={styles.chapterStars}>{totalStars}/{LEVEL_COUNT * 3} ★</Text>
         </ArtPanel>
       </View>
       <BottomNav active="map" onSelect={nav} />

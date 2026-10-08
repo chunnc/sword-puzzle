@@ -1,8 +1,9 @@
+require('../lib/domain/game').installContent(require('../../content/game-content.json'));
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const {emptyProfile,applyOperation,totalExp,realmForExp}=require('../lib/domain/game');
 const {processOperations,parseOperations,profileFromDocument,mergeProfiles}=require('../lib/domain/profile');
-const win=(id,levelId,stars)=>({id,kind:'win',levelId,stars});
+const win=(id,levelId,stars)=>({id,kind:'win',levelId,stars,objectiveProgress:{main:require('../lib/domain/game').getLevelData(levelId).objectives[0].target}});
 test('first win, replay and star improvement are idempotent by operation ID',()=>{
  let p=emptyProfile(),receipts=new Map();
  for(const op of [win('win_zero_1',1,0),win('win_one__1',1,1),win('win_two__1',1,2),win('win_three1',1,3)]){

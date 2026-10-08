@@ -1,5 +1,5 @@
-import type { Loadout, PlayerProfile, PlayerOperation, SkillId, Stars, LevelResult } from './domain';
-export type { Loadout, SkillId, Stars, PlayerProfile } from './domain';
+import type { Loadout, PlayerProfile, PlayerOperation, SkillId, Stars, LevelResult, LevelDefinition, ObjectiveProgress } from './domain';
+export type { Loadout, SkillId, Stars, PlayerProfile, LevelDefinition, ObjectiveProgress } from './domain';
 export enum TileKind {
     Sword = 0,
     Fire = 1,
@@ -24,11 +24,12 @@ export interface CellPosition {
     y: number;
 }
 export interface BoardSnapshot {
-    contentVersion: 2;
+    contentVersion: number;
+    level: LevelDefinition;
     runId: string;
     levelId: number;
     moves: number;
-    remaining: number;
+    objectiveProgress: ObjectiveProgress;
     swordQi: number;
     score: number;
     drops: number;
@@ -38,7 +39,7 @@ export interface BoardSnapshot {
     skillUsed: boolean;
     loadout: Loadout;
     damageScale: number;
-    tiles: Tile[];
+    tiles: (Tile | null)[];
 }
 export type BoardAnimationEffectKind = 'slash' | 'cross' | 'fire' | 'lightning' | 'spirit' | 'skill' | 'shuffle';
 export interface BoardAnimationEffect {
@@ -49,6 +50,7 @@ export interface BoardAnimationEffect {
     column?: number;
     damage: number;
     qi: number;
+    objectiveProgressAfter?: ObjectiveProgress;
 }
 export interface BoardAnimationFall {
     index: number;
@@ -77,18 +79,6 @@ export interface BoardActionAnimation {
     steps: BoardResolutionStep[];
     finalBoard: BoardSnapshot;
 }
-export interface LevelDefinition {
-    id: number;
-    moves: number;
-    goal: GoalKind;
-    collectKind: TileKind;
-    target: number;
-    rocks: number;
-    seals: number;
-    seed: number;
-    chapter: string;
-    baseExp: number;
-}
 export type LevelStar = LevelResult;
 export interface WinSummary {
     runId: string;
@@ -102,13 +92,12 @@ export interface WinSummary {
     realmAfter: number;
 }
 export interface SaveData {
-    schemaVersion: 2;
+    schemaVersion: 3;
     ownerId: string | null;
-    confirmed: PlayerProfile;
-    operations: PlayerOperation[];
     profile: PlayerProfile;
     active: BoardSnapshot | null;
     lastWin: WinSummary | null;
+    pending: { contentVersion: number; operation: PlayerOperation } | null;
 }
 export type ProgressResponse = {
     levels: LevelStar[];

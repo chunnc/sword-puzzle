@@ -17,9 +17,9 @@ describe('Skia board coordinates and animation', () => {
     expect(DISPLAY_INDICES.slice(0, 7)).toEqual([42, 43, 44, 45, 46, 47, 48]);
   });
 
-  it('keeps the existing swipe clamping and ignores gestures before layout', () => {
-    expect(pointToCell(-20, -20, 350)).toEqual({ x: 0, y: 6 });
-    expect(pointToCell(370, 370, 350)).toEqual({ x: 6, y: 0 });
+  it('rejects swipes outside the board and ignores gestures before layout', () => {
+    expect(pointToCell(-20, -20, 350)).toBeNull();
+    expect(pointToCell(370, 370, 350)).toBeNull();
     expect(pointToCell(100, 50, 350)).toEqual({ x: 2, y: 5 });
     expect(pointToCell(1, 1, 0)).toBeNull();
   });

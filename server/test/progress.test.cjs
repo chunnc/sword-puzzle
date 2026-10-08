@@ -1,3 +1,4 @@
+require('../lib/domain/game').installContent(require('../../content/game-content.json'));
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { mergeProgress, parseLevelResults, parseStoredStars, progressResponse } = require('../lib/domain/progress');

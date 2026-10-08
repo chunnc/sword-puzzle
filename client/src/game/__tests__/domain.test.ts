@@ -5,13 +5,13 @@ describe('content and cultivation', () => {
     it('has the complete published catalog and legal level goals', () => { expect([CONTENT.tiles.length, SKILLS.length, SWORDS.length, REALMS.length]).toEqual([4, 8, 8, 10]); for (let id = 1; id <= 40; id++) {
         const l = getLevel(id);
         expect(l.baseExp).toBe(100);
-        expect(l.rocks + l.seals).toBeLessThan(49);
+        expect(l.obstacles.rocks + l.obstacles.seals).toBeLessThan(49);
         expect(l.moves).toBeGreaterThan(0);
     } expect(REALMS[9].name).toBe('Chân Tiên'); });
     it.each([[0, 30], [1, 60], [2, 80], [3, 100]] as const)('awards %i stars = %i EXP', (stars, exp) => expect(expForStars(stars)).toBe(exp));
     it('zero-star completion unlocks the next stage and upgrades only the EXP difference', () => { let p = emptyProfile(); const rewards = []; for (const stars of [0, 1, 2, 3, 3, 0] as const) {
         const old = p.totalExp;
-        const result = applyOperation(p, { id: `win_id_${stars}`, kind: 'win', levelId: 1, stars });
+        const result = applyOperation(p, { id: `win_id_${stars}`, kind: 'win', levelId: 1, stars, objectiveProgress: { main: getLevel(1).objectives[0].target } });
         p = result.profile;
         rewards.push(p.totalExp - old);
     } expect(rewards).toEqual([30, 30, 20, 20, 0, 0]); expect(highestUnlocked(p.levels)).toBe(2); expect(p.coins).toBe(200); });

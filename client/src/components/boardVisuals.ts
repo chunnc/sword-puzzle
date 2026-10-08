@@ -1,6 +1,7 @@
 import type { BoardAnimationEffect, BoardAnimationFall, CellPosition } from '../game/types';
 
-export const BOARD_SIZE = 7;
+export interface BoardGeometry { width: number; height: number; activeCells?: boolean[] }
+const DEFAULT_GEOMETRY: BoardGeometry = { width: 7, height: 7 };
 export const BOARD_SWAP_MS = 320;
 export const BOARD_CLEAR_MS = 360;
 export const BOARD_FALL_MS = 450;
@@ -40,35 +41,35 @@ export interface CellVisual {
 }
 
 // The same bounds position both the artwork and its invisible touch target.
-export function cellBounds(index: number, side: number) {
-  const pitch = side / BOARD_SIZE;
+export function cellBounds(index: number, side: number, geometry: BoardGeometry = DEFAULT_GEOMETRY) {
+  const pitch = side / geometry.width;
   return {
-    x: (index % BOARD_SIZE) * pitch + 1,
-    y: (BOARD_SIZE - 1 - Math.floor(index / BOARD_SIZE)) * pitch + 1,
+    x: (index % geometry.width) * pitch + 1,
+    y: (geometry.height - 1 - Math.floor(index / geometry.width)) * pitch + 1,
     width: Math.max(0, pitch - 2),
     height: Math.max(0, pitch - 2),
   };
 }
 
-export function pointToCell(px: number, py: number, side: number): CellPosition | null {
+export function pointToCell(px: number, py: number, side: number, geometry: BoardGeometry = DEFAULT_GEOMETRY): CellPosition | null {
   'worklet';
-  if (side <= 0) return null;
-  const pitch = side / BOARD_SIZE;
-  const column = Math.max(0, Math.min(BOARD_SIZE - 1, Math.floor(px / pitch)));
-  const row = Math.max(0, Math.min(BOARD_SIZE - 1, Math.floor(py / pitch)));
-  return { x: column, y: BOARD_SIZE - 1 - row };
+  if (side <= 0 || px < 0 || py < 0 || px >= side || py >= side * geometry.height / geometry.width) return null;
+  const pitch = side / geometry.width;
+  const column = Math.floor(px / pitch), row = geometry.height - 1 - Math.floor(py / pitch);
+  if (geometry.activeCells && !geometry.activeCells[row * geometry.width + column]) return null;
+  return { x: column, y: row };
 }
 
-export function buildCellVisuals(effect: BoardVisualEffect | null, previous: BoardVisualEffect | null, reduceMotion = false): CellVisual[] {
+export function buildCellVisuals(effect: BoardVisualEffect | null, previous: BoardVisualEffect | null, reduceMotion = false, geometry: BoardGeometry = DEFAULT_GEOMETRY): CellVisual[] {
   const previouslyCleared = new Set(previous?.kind === 'clear' ? previous.cleared : []);
-  return Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, index) => {
+  return Array.from({ length: geometry.width * geometry.height }, (_, index) => {
     const visual: CellVisual = {
       dx: 0, dy: 0, falling: false, clearing: false, hidden: false,
       changed: false, flashing: false, flashColor: '#ffeab0',
     };
     if (!effect || reduceMotion) return visual;
     if (effect.kind === 'swap' || effect.kind === 'reject') {
-      const x = index % BOARD_SIZE, y = Math.floor(index / BOARD_SIZE);
+      const x = index % geometry.width, y = Math.floor(index / geometry.width);
       const first = effect.first.x === x && effect.first.y === y;
       const second = effect.second.x === x && effect.second.y === y;
       if (first || second) {
@@ -81,7 +82,7 @@ export function buildCellVisuals(effect: BoardVisualEffect | null, previous: Boa
       const fall = effect.falls.find(item => item.index === index);
       if (fall) {
         visual.falling = true;
-        visual.dy = Math.floor(index / BOARD_SIZE) - fall.fromY;
+        visual.dy = Math.floor(index / geometry.width) - fall.fromY;
       }
     } else if (effect.kind === 'clear') {
       const cleared = effect.cleared.includes(index);
@@ -110,5 +111,8 @@ export function cellMotion(visual: CellVisual, pitch: number, progress: number, 
 }
 
 // Match the old row traversal for screen reader order (top-left first).
-export const DISPLAY_INDICES = Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, displayIndex) =>
-  (BOARD_SIZE - 1 - Math.floor(displayIndex / BOARD_SIZE)) * BOARD_SIZE + displayIndex % BOARD_SIZE);
+export function displayIndices(geometry: BoardGeometry) {
+  return Array.from({ length: geometry.width * geometry.height }, (_, n) => (geometry.height-1-Math.floor(n/geometry.width))*geometry.width+n%geometry.width).filter(i => !geometry.activeCells || geometry.activeCells[i]);
+}
+// Legacy helper export retained for existing callers; the board uses its geometry.
+export const DISPLAY_INDICES = displayIndices(DEFAULT_GEOMETRY);

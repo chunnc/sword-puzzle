@@ -9,6 +9,7 @@ import { GameplayLeaveDialog } from '../../src/components/GameplayLeaveDialog';
 import { ArtPanel, GameButton, ScreenFrame } from '../../src/components/Art';
 import { Notice } from '../../src/components/Notice';
 import { BoardEngine } from '../../src/game/BoardEngine';
+import { skillTarget } from '../../src/game/skillTargets';
 import { getLevel } from '../../src/game/levels';
 import { CONTENT, LEVEL_COUNT, SKILLS, realmForExp, type SkillId } from '../../src/game/domain';
 import { GoalKind, TileKind, type BoardSnapshot, type CellPosition } from '../../src/game/types';
@@ -23,14 +24,14 @@ export default function GameScreen() {
 
 function GameplaySession({ levelId }: { levelId: number }) {
     const router = useRouter(), { width } = useWindowDimensions();
+    const store = useGameStore();
+    const persisted = store.save.active?.levelId === levelId ? store.save.active : null;
     const level = useMemo(() => { try {
-        return getLevel(levelId);
+        return persisted?.level ?? getLevel(levelId);
     }
     catch {
         return null;
-    } }, [levelId]);
-    const store = useGameStore();
-    const persisted = store.save.active?.levelId === levelId ? store.save.active : null;
+    } }, [levelId, persisted?.level]);
     const [board, setBoard] = useState<BoardSnapshot | null>(persisted);
     const [selected, setSelected] = useState<CellPosition | null>(null);
     const [targetSkill, setTargetSkill] = useState<SkillId | null>(null);
@@ -63,6 +64,11 @@ function GameplaySession({ levelId }: { levelId: number }) {
         if (new BoardEngine(level, persisted).lost)
             openResult({ kind: 'lost', runId: persisted.runId, levelId });
     }, [level, levelId, openResult, persisted]);
+    useEffect(() => {
+        const summary = store.save.lastWin;
+        if (!busy && summary && summary.levelId === levelId && summary.runId === persisted?.runId) openResult({ kind: 'won', runId: summary.runId, summary });
+        if (!busy && store.initialized && !persisted && !store.save.pending && !resultRef.current && !store.save.lastWin) router.replace('/map');
+    }, [busy, store.save.lastWin, store.initialized, store.save.pending, persisted, levelId, openResult, router]);
     const requestLeave = useCallback(() => {
         if (busyRef.current) return;
         if (resultRef.current) {
@@ -83,25 +89,27 @@ function GameplaySession({ levelId }: { levelId: number }) {
     }, [board, help, leave, requestLeave, router]));
     if (!board || !level || !engine)
         return <ScreenFrame background="bgGame"><Text style={styles.body}>Không tìm thấy màn chơi.</Text><GameButton title="VỀ TIÊN LỘ" onPress={() => router.replace('/map')}/></ScreenFrame>;
-    const battle = level.goal === GoalKind.Battle || level.goal === GoalKind.Boss;
+    const content = engine.contentDefinition;
+    const locked = !store.online || !store.foreground || store.recovering || store.authRequired || Boolean(store.save.pending);
     const available = engine.availableSkills();
-    const skill = SKILLS.find(s => s.id === targetSkill);
-    const required = skill?.target === 'triple' ? 3 : skill?.target === 'pair' || skill?.target === 'chargedPair' ? 2 : 1;
+    const skill = content.skills.find(s => s.id === targetSkill);
+    const targetMode = skillTarget(targetSkill);
+    const required = targetMode === 'triple' ? 3 : targetMode === 'pair' || targetMode === 'chargedPair' ? 2 : 1;
     const preview: number[] = [];
     if (targets.length) {
         const p = targets[0];
-        if (skill?.target === 'row')
-            for (let x = 0; x < 7; x++)
-                preview.push(p.y * 7 + x);
-        else if (skill?.id === 'hoa-lien' || skill?.id === 'pha-chuong' || skill?.id === 'hoi-linh')
+        if (targetMode === 'row') {
+            for (let x = 0; x < level.board.width; x++)
+                if (level.board.activeCells[p.y * level.board.width + x]) preview.push(p.y * level.board.width + x);
+        } else if (skill?.id === 'hoa-lien' || skill?.id === 'pha-chuong' || skill?.id === 'hoi-linh')
             for (let dy = -1; dy <= 1; dy++)
                 for (let dx = -1; dx <= 1; dx++) {
                     const x = p.x + dx, y = p.y + dy;
-                    if (x >= 0 && y >= 0 && x < 7 && y < 7)
-                        preview.push(y * 7 + x);
+                    if (x >= 0 && y >= 0 && x < level.board.width && y < level.board.height)
+                        if (level.board.activeCells[y * level.board.width + x]) preview.push(y * level.board.width + x);
                 }
-        else if (skill?.target === 'kind')
-            board.tiles.forEach((t, i) => { if (t.kind === board.tiles[p.y * 7 + p.x].kind)
+        else if (targetMode === 'kind')
+            board.tiles.forEach((t, i) => { if (t && t.kind === board.tiles[p.y * level.board.width + p.x]?.kind)
                 preview.push(i); });
     }
     const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
@@ -135,7 +143,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
                     cleared.add(i); });
                 if (trace.source !== undefined && step.cleared.includes(trace.source))
                     cleared.add(trace.source);
-                visual = { ...visual, swordQi: Math.min(100, visual.swordQi + trace.qi), remaining: battle ? Math.max(0, visual.remaining - trace.damage) : visual.remaining, condensed: visual.condensed || trace.kind === 'spirit' && trace.source !== undefined && step.before.tiles[trace.source].chargeTier === 5 };
+                visual = { ...visual, swordQi: Math.min(content.qiCap, visual.swordQi + trace.qi), objectiveProgress: trace.objectiveProgressAfter ?? visual.objectiveProgress, condensed: visual.condensed || trace.kind === 'spirit' && trace.source !== undefined && step.before.tiles[trace.source]?.chargeTier === 5 };
                 setBoard(visual);
                 emit({ kind: 'clear', cleared: [...cleared], changed: step.changed, effects: [trace] });
                 await wait(BOARD_CLEAR_MS);
@@ -163,7 +171,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
         CellPosition,
         CellPosition
     ]) => {
-        if (busyRef.current || resultRef.current)
+        if (busyRef.current || resultRef.current || locked)
             return;
         busyRef.current = true;
         setBusy(true);
@@ -207,11 +215,12 @@ function GameplaySession({ levelId }: { levelId: number }) {
         void perform(() => store.swap(x1, y1, x2, y2), [{ x: x1, y: y1 }, { x: x2, y: y2 }]);
     };
     const tap = (x: number, y: number) => {
-        if (busyRef.current || resultRef.current)
+        if (busyRef.current || resultRef.current || locked)
             return;
         if (targetSkill) {
-            const tile = board.tiles[y * 7 + x];
-            if (skill?.target === 'triple' && (tile.locked || tile.chargeTier || tile.kind === TileKind.Rock || tile.kind === TileKind.Lightning) || skill?.target === 'chargedPair' && (!tile.chargeTier || tile.locked) || skill?.target === 'pair' && (tile.locked || tile.kind === TileKind.Rock) || skill?.target === 'kind' && tile.kind === TileKind.Rock)
+            const tile = board.tiles[y * level.board.width + x];
+            if (!tile) return;
+            if (targetMode === 'triple' && (tile.locked || tile.chargeTier || tile.kind === TileKind.Rock || tile.kind === TileKind.Lightning) || targetMode === 'chargedPair' && (!tile.chargeTier || tile.locked) || targetMode === 'pair' && (tile.locked || tile.kind === TileKind.Rock) || targetMode === 'kind' && tile.kind === TileKind.Rock)
                 return;
             const exists = targets.some(p => p.x === x && p.y === y);
             setTargets(exists ? targets.filter(p => p.x !== x || p.y !== y) : required === 1 ? [{ x, y }] : [...targets.slice(-(required - 1)), { x, y }]);
@@ -255,26 +264,27 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const overlayOpen = help || leave || Boolean(result);
     const displayResult = result?.kind === 'won' && store.save.lastWin?.runId === result.runId
         ? { ...result, summary: store.save.lastWin } : result;
-    const boardSide = Math.min(Math.max(0, (viewport.width || width) - 28), Math.max(0, height - 6));
+    const cellSize = Math.min(Math.max(0, (viewport.width || width) - 28) / level.board.width, Math.max(0, height - 6) / level.board.height);
+    const boardWidth = cellSize * level.board.width, boardHeight = cellSize * level.board.height;
     return (
-      <ScreenFrame background={level.goal === GoalKind.Boss ? 'bgBoss' : 'bgGame'}>
+      <ScreenFrame background={level.objectives.some(o => o.type === 'Boss') ? 'bgBoss' : 'bgGame'}>
         <View testID="game-content" style={styles.gameContent} onLayout={event => setViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
           <View style={styles.scene} pointerEvents={overlayOpen ? 'none' : 'auto'} accessibilityElementsHidden={overlayOpen} importantForAccessibility={overlayOpen ? 'no-hide-descendants' : 'auto'}>
-            <GameplayHeader levelId={levelId} busy={busy || Boolean(result)} compact={compact} onBack={requestLeave} onHelp={() => { if (!busyRef.current && !resultRef.current) setHelp(true); }} />
+            <GameplayHeader levelId={levelId} busy={busy || Boolean(result) || locked} compact={compact} onBack={requestLeave} onHelp={() => { if (!busyRef.current && !resultRef.current) setHelp(true); }} />
             <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion} duration={BOARD_CLEAR_MS} />
             <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setHeight(event.nativeEvent.layout.height)}>
-              <View style={{ width: boardSide, height: boardSide }}>
-                <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} showTargetingHint={false} locked={busy || overlayOpen} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} />
+              <View style={{ width: boardWidth, height: boardHeight }}>
+                <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} showTargetingHint={false} locked={busy || overlayOpen || locked} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} />
               </View>
             </View>
-            <GameplayDock board={board} skillSlots={realmForExp(store.save.profile.totalExp).skillSlots} available={available} cost={id => engine.cost(id)} targetSkill={targetSkill} targetCount={required} canCast={targets.length === required} busy={busy || Boolean(result)} compact={compact}
+            <GameplayDock board={board} skillSlots={realmForExp(store.save.profile.totalExp).skillSlots} available={available} cost={id => engine.cost(id)} targetSkill={targetSkill} targetCount={required} canCast={targets.length === required} busy={busy || Boolean(result) || locked} compact={compact}
               onSkill={id => { if (!busyRef.current && !resultRef.current) { setTargetSkill(id); setTargets([]); setSelected(null); } }}
               onCancel={() => { if (!busyRef.current && !resultRef.current) { setTargetSkill(null); setTargets([]); } }}
               onCast={() => { if (targetSkill) void perform(() => store.castSkill(targetSkill, targets)); }} />
           </View>
           {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} /> : null}
           <View pointerEvents="box-none" style={styles.noticeLayer}><Notice message={store.notice} onDismiss={() => store.setNotice('')} /></View>
-          {help && !leave ? <View accessibilityViewIsModal style={styles.overlay}><ArtPanel art="dialogPanel" style={styles.dialog}><Text style={styles.dialogTitle}>LINH VẬT</Text><Text style={styles.body}>Ghép 3 nhận sát thương và khí. Ghép 4–5 giữ một ô cường hóa; ghép tiếp cùng loại để kích hoạt.</Text>{CONTENT.tiles.map(tile => <Text key={tile.id} style={styles.rule}>{tile.name}: {tile.damage} sát thương · {tile.qi} khí</Text>)}<Text style={styles.body}>Kiếm: hàng / chữ thập. Hỏa: 3×3 / 13 ô. Lôi: thêm 50% / toàn bộ Lôi. Châu: nhiều khí / Ngưng Khí.</Text><GameButton title="ĐÃ HIỂU" onPress={() => setHelp(false)} /></ArtPanel></View> : null}
+          {help && !leave ? <View accessibilityViewIsModal style={styles.overlay}><ArtPanel art="dialogPanel" style={styles.dialog}><Text style={styles.dialogTitle}>LINH VẬT</Text><Text style={styles.body}>Ghép 3 nhận sát thương và khí. Ghép 4–5 giữ một ô cường hóa; ghép tiếp cùng loại để kích hoạt.</Text>{content.tiles.map(tile => <Text key={tile.id} style={styles.rule}>{tile.name}: {tile.damage} sát thương · {tile.qi} khí</Text>)}<Text style={styles.body}>Kiếm: hàng / chữ thập. Hỏa: 3×3 / 13 ô. Lôi: thêm 50% / toàn bộ Lôi. Châu: nhiều khí / Ngưng Khí.</Text><GameButton title="ĐÃ HIỂU" onPress={() => setHelp(false)} /></ArtPanel></View> : null}
           {leave ? <GameplayLeaveDialog busy={busy} compact={(viewport.width || width) < 360} onContinue={() => setLeave(false)} onBack={() => { if (!busyRef.current) router.replace('/map'); }} /> : null}
         </View>
       </ScreenFrame>

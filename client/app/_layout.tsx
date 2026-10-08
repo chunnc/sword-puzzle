@@ -6,9 +6,12 @@ import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useGameStore } from '../src/state/gameStore';
+import { ConnectionDialog } from '../src/components/ConnectionDialog';
 import { colors } from '../src/theme';
 
 export default function RootLayout() {
+  const initialized = useGameStore(s => s.initialized);
+  const bootstrapLoaded = useGameStore(s => s.bootstrapLoaded);
   const [reduceMotion, setReduceMotion] = useState(true);
 
   useEffect(() => {
@@ -30,31 +33,14 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let delaySeconds = 5;
     let stopped = false;
-
-    const scheduleSync = (delay: number) => {
-      if (timer) clearTimeout(timer);
-      if (!stopped) timer = setTimeout(runSync, delay * 1000);
-    };
-    const runSync = async () => {
-      await useGameStore.getState().syncProgress();
-      delaySeconds = useGameStore.getState().online ? 30 : Math.min(delaySeconds * 2, 300);
-      scheduleSync(delaySeconds);
-    };
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        delaySeconds = 5;
-        scheduleSync(0);
-      }
+    const run = () => { if (!stopped && AppState.currentState === 'active') void useGameStore.getState().checkConnection(); };
+    const timer = setInterval(run, 5000);
+    const subscription = AppState.addEventListener('change', state => {
+      useGameStore.getState().setForeground(state === 'active');
+      if (state === 'active') run();
     });
-    scheduleSync(5);
-    return () => {
-      stopped = true;
-      if (timer) clearTimeout(timer);
-      subscription.remove();
-    };
+    return () => { stopped = true; clearInterval(timer); subscription.remove(); };
   }, []);
 
   return (
@@ -68,7 +54,20 @@ export default function RootLayout() {
           animationDuration: Platform.OS === 'ios' ? 150 : undefined,
           contentStyle: { backgroundColor: colors.ink },
           gestureEnabled: false,
-        }} />
+        }}>
+          <Stack.Screen name="index" />
+          <Stack.Protected guard={initialized}>
+            <Stack.Screen name="map" />
+            <Stack.Screen name="game/[levelId]" />
+            <Stack.Screen name="character" />
+            <Stack.Screen name="inventory" />
+            <Stack.Screen name="shop" />
+          </Stack.Protected>
+          <Stack.Protected guard={bootstrapLoaded}>
+            <Stack.Screen name="account" />
+          </Stack.Protected>
+        </Stack>
+        <ConnectionDialog />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

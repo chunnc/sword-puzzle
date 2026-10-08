@@ -5,9 +5,9 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
 import { defineString } from "firebase-functions/params";
-import { LEVEL_COUNT, emptyProgress, mergeProgress, parseStoredStars, parseLevelResults, progressResponse, Progress } from "./domain/progress";
 import { verifyAdmobCallback, CallbackFields } from "./domain/admob";
-import { CONTENT, applyOperation, type Stars } from './domain/game';
+import { highestUnlocked } from './domain/game';
+import { currentContent, loadContent } from './content';
 import { profileFromDocument, profileFields, mergeProfiles, parseOperations, processOperations, type OperationReceipt } from './domain/profile';
 
 if (getApps().length === 0) initializeApp();
@@ -25,7 +25,7 @@ class ApiError extends Error {
   constructor(public status: number, public code: string) { super(code); }
 }
 
-const app = express();
+export const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "32kb" }));
@@ -59,7 +59,8 @@ async function refreshIdentity(refreshToken: string): Promise<AuthResult> {
     { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken }), signal: AbortSignal.timeout(10000) });
   const data = await response.json() as { id_token?: string; refresh_token?: string; expires_in?: string; user_id?: string };
-  if (!response.ok || !data.id_token || !data.refresh_token || !data.user_id) throw new ApiError(401, "INVALID_SESSION");
+  if (!response.ok) throw new ApiError(response.status === 400 || response.status === 401 ? 401 : 502, response.status === 400 || response.status === 401 ? "INVALID_SESSION" : "AUTH_UNAVAILABLE");
+  if (!data.id_token || !data.refresh_token || !data.user_id) throw new ApiError(502, "AUTH_UNAVAILABLE");
   return { idToken: data.id_token, refreshToken: data.refresh_token, localId: data.user_id,
     expiresIn: data.expires_in || "3600" };
 }
@@ -105,16 +106,12 @@ function emailPassword(req: Request): { email: string; password: string } {
 }
 
 async function ensurePlayer(uid: string): Promise<void> {
+  const { content } = await currentContent();
   const ref = db.collection("players").doc(uid);
   await db.runTransaction(async tx => {
     const snap = await tx.get(ref);
-    if (!snap.exists) tx.create(ref, { ...emptyProgress(), updatedAt: Date.now() });
+    if (!snap.exists) tx.create(ref, { ...profileFields(profileFromDocument(undefined, content), {}, content), createdAt: Date.now() });
   });
-}
-
-function savedProgress(data: FirebaseFirestore.DocumentData | undefined): Progress {
-  if (!data) return emptyProgress();
-  return mergeProgress({}, parseStoredStars(data.stars || {}));
 }
 
 app.post("/v1/auth/guest", async (req, res, next) => {
@@ -157,6 +154,7 @@ app.post("/v1/auth/login", async (req, res, next) => {
       try { guest = await auth.verifyIdToken(guestToken); }
       catch { throw new ApiError(401, "INVALID_SESSION"); }
       if (guest.uid !== result.localId && !guest.email) {
+        const { content } = await currentContent();
         const guestRef = db.collection("players").doc(guest.uid);
         const targetRef = db.collection("players").doc(result.localId);
         await db.runTransaction(async tx => {
@@ -166,8 +164,8 @@ app.post("/v1/auth/login", async (req, res, next) => {
             if (guestData.mergedInto !== result.localId) throw new ApiError(409, "GUEST_ALREADY_MERGED");
             return;
           }
-          const combined = mergeProfiles(profileFromDocument(guestData), profileFromDocument(targetSnap.data()));
-          tx.set(targetRef, profileFields(combined, targetSnap.data()?.stars), { merge: true });
+          const combined = mergeProfiles(profileFromDocument(guestData, content), profileFromDocument(targetSnap.data(), content), content);
+          tx.set(targetRef, profileFields(combined, targetSnap.data()?.stars, content), { merge: true });
           tx.set(guestRef, { mergedInto: result.localId, updatedAt: Date.now() }, { merge: true });
         });
       }
@@ -181,36 +179,35 @@ app.post("/v1/auth/refresh", async (req, res, next) => {
     const token = typeof req.body?.refreshToken === "string" ? req.body.refreshToken : "";
     if (!token) throw new ApiError(400, "INVALID_SESSION");
     const result = await refreshIdentity(token);
-    const user = await auth.getUser(result.localId);
+    let user;
+    try { user = await auth.getUser(result.localId); }
+    catch(error) { if ((error as {code?:string}).code === 'auth/user-not-found') throw new ApiError(401, 'INVALID_SESSION'); throw error; }
+    if(user.disabled)throw new ApiError(401, 'INVALID_SESSION');
     replyAuth(res, result, !user.email);
   } catch (error) { next(error); }
 });
 
-app.get("/v1/bootstrap", async (_req, res, next) => {
-  try {
-    const snap = await db.collection("gameConfig").doc("current").get();
-    const config = snap.data();
-    res.json({ contentVersion: 1, levelCount: LEVEL_COUNT,
-      rewardedAdsEnabled: config?.rewardedAdsEnabled === true,
-      minClientVersion: config?.minClientVersion || "0.1.0" });
-  } catch (error) { next(error); }
-});
-
+app.get('/health', (_req, res) => { res.set('Cache-Control', 'no-store').json({ ok: true }); });
+app.get('/v1/bootstrap', (_req, _res, next) => next(new ApiError(426, 'CLIENT_UPDATE_REQUIRED')));
 app.get('/v2/bootstrap', async (_req, res, next) => {
   try {
-    const config = (await db.collection('gameConfig').doc('current').get()).data();
-    res.json({ contentVersion: CONTENT.version, levelCount: LEVEL_COUNT, rewardedAdsEnabled: config?.rewardedAdsEnabled === true, minClientVersion: config?.minClientVersion || '1.1.0' });
+    const { config, content } = await currentContent();
+    res.set('Cache-Control', 'no-store').json({ contentVersion: content.version, content, levelCount: content.levelCount, rewardedAdsEnabled: config.rewardedAdsEnabled === true, minClientVersion: config.minClientVersion || '1.2.0' });
   } catch (error) { next(error); }
+});
+app.get('/v2/content/:version', async (req, res, next) => {
+  try { res.json(await loadContent(Number(req.params.version))); } catch (error) { next(error); }
 });
 
 app.get('/v2/profile', requireAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
+    const { content } = await currentContent();
     const ref = db.collection('players').doc(req.playerId!);
     const profile = await db.runTransaction(async tx => {
       const snap = await tx.get(ref);
       if (snap.data()?.mergedInto) throw new ApiError(409, 'GUEST_ALREADY_MERGED');
-      const p = profileFromDocument(snap.data());
-      tx.set(ref, profileFields(p, snap.data()?.stars), { merge: true });
+      const p = profileFromDocument(snap.data(), content);
+      tx.set(ref, profileFields(p, snap.data()?.stars, content), { merge: true });
       return p;
     });
     res.json(profile);
@@ -219,9 +216,9 @@ app.get('/v2/profile', requireAuth, async (req: AuthenticatedRequest, res, next)
 
 app.post('/v2/profile/sync', requireAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
-    if (req.body?.contentVersion !== 2) throw new ApiError(409, 'CONTENT_MISMATCH');
+    const [{ content: profileContent }, content] = await Promise.all([currentContent(), loadContent(req.body?.contentVersion)]);
     let operations;
-    try { operations = parseOperations(req.body?.operations); } catch { throw new ApiError(400, 'INVALID_OPERATIONS'); }
+    try { operations = parseOperations(req.body?.operations, content); } catch { throw new ApiError(400, 'INVALID_OPERATIONS'); }
     const ref = db.collection('players').doc(req.playerId!);
     const response = await db.runTransaction(async tx => {
       // Firestore requires all reads before writes, including operation receipts.
@@ -229,8 +226,8 @@ app.post('/v2/profile/sync', requireAuth, async (req: AuthenticatedRequest, res,
       if (snap.data()?.mergedInto) throw new ApiError(409, 'GUEST_ALREADY_MERGED');
       const receipts = new Map<string, OperationReceipt>();
       receiptSnaps.forEach((s, i) => { if (s.exists) receipts.set(operations[i].id, s.data() as OperationReceipt); });
-      const processed = processOperations(profileFromDocument(snap.data()), operations, receipts);
-      tx.set(ref, profileFields(processed.profile, snap.data()?.stars), { merge: true });
+      const processed = processOperations(profileFromDocument(snap.data(), profileContent), operations, receipts, content, profileContent);
+      tx.set(ref, profileFields(processed.profile, snap.data()?.stars, profileContent), { merge: true });
       for (const [id, receipt] of processed.newReceipts) tx.create(ref.collection('operations').doc(id), { ...receipt, createdAt: Date.now() });
       return { profile: processed.profile, acknowledged: processed.acknowledged, rejected: processed.rejected, rewards: processed.rewards };
     });
@@ -238,43 +235,26 @@ app.post('/v2/profile/sync', requireAuth, async (req: AuthenticatedRequest, res,
   } catch (error) { next(error); }
 });
 
-app.get("/v1/progress", requireAuth, async (req: AuthenticatedRequest, res, next) => {
+app.get('/v1/progress', requireAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
-    const snap = await db.collection("players").doc(req.playerId!).get();
-    res.json(progressResponse(savedProgress(snap.data())));
-  } catch (error) { next(error); }
+    const { content } = await currentContent();
+    const snap = await db.collection('players').doc(req.playerId!).get();
+    const p = profileFromDocument(snap.data(), content);
+    res.json({ levels: p.levels, highestUnlocked: highestUnlocked(p.levels, content) });
+  } catch(error) { next(error); }
 });
-
-app.put("/v1/progress", requireAuth, async (req: AuthenticatedRequest, res, next) => {
-  try {
-    let incoming;
-    try { incoming = parseLevelResults(req.body?.levels); }
-    catch { throw new ApiError(400, "INVALID_PROGRESS"); }
-    const ref = db.collection("players").doc(req.playerId!);
-    const merged = await db.runTransaction(async tx => {
-      const snap = await tx.get(ref);
-      const data = snap.data();
-      if (data?.mergedInto) throw new ApiError(409, "GUEST_ALREADY_MERGED");
-      const progress = mergeProgress(savedProgress(data).stars, incoming);
-      const imported = applyOperation(profileFromDocument(data), { id: randomUUID(), kind: 'importProgress', levels: Object.entries(progress.stars).map(([levelId, stars]) => ({ levelId: Number(levelId), stars: stars as Stars })) }).profile;
-      tx.set(ref, profileFields(imported, data?.stars), { merge: true });
-      return progress;
-    });
-    res.json(progressResponse(merged));
-  } catch (error) {
-    next(error instanceof Error && error.message === "PROGRESS_GAP" ? new ApiError(400, "PROGRESS_GAP") : error);
-  }
-});
+app.put('/v1/progress', (_req, _res, next) => next(new ApiError(426, 'CLIENT_UPDATE_REQUIRED')));
 
 app.post("/v1/ads/intents", requireAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
+    const { content } = await currentContent();
     const levelId = Number(req.body?.levelId);
-    if (!Number.isInteger(levelId) || levelId < 1 || levelId > LEVEL_COUNT || req.body?.placement !== "extra_moves")
+    if (!Number.isInteger(levelId) || levelId < 1 || levelId > content.levelCount || req.body?.placement !== "extra_moves")
       throw new ApiError(400, "INVALID_INTENT");
     const config = await db.collection("gameConfig").doc("current").get();
     if (config.data()?.rewardedAdsEnabled !== true) throw new ApiError(409, "ADS_DISABLED");
     const player = await db.collection("players").doc(req.playerId!).get();
-    if (levelId > savedProgress(player.data()).highestUnlocked) throw new ApiError(400, "LEVEL_LOCKED");
+    if (levelId > highestUnlocked(profileFromDocument(player.data(), content).levels, content)) throw new ApiError(400, "LEVEL_LOCKED");
     const intentId = randomUUID();
     const expiresAt = Date.now() + 30 * 60 * 1000;
     await db.collection("adIntents").doc(intentId).create({ uid: req.playerId, levelId,
@@ -318,7 +298,7 @@ app.get("/v1/ads/admob-ssv", async (req, res, next) => {
 });
 
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  const problem = error instanceof ApiError ? error : new ApiError(500, "INTERNAL_ERROR");
+  const problem = error instanceof ApiError ? error : error instanceof Error && error.message === "CONTENT_MISMATCH" ? new ApiError(409, "CONTENT_MISMATCH") : error instanceof Error && error.message === "CONTENT_NOT_CONFIGURED" ? new ApiError(503, "CONTENT_NOT_CONFIGURED") : new ApiError(500, "INTERNAL_ERROR");
   if (problem.status >= 500) console.error("API failure", error);
   res.status(problem.status).json({ error: problem.code });
 });

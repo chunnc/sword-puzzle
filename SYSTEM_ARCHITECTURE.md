@@ -1,64 +1,71 @@
-# Kiến trúc hệ thống — Kiếm Khai Tiên Lộ
+# Kiến trúc hệ thống — Kiếm Khai Tiên Lộ 1.2
 
 ## Quyền sở hữu dữ liệu
 
-Expo/React Native xử lý nước đi và lưu offline. Firebase Functions là cổng HTTPS duy nhất tới Auth và Firestore; client không dùng Firebase SDK trực tiếp. Rules Firestore/Storage tiếp tục từ chối mọi truy cập trực tiếp.
+React Native chạy toàn bộ gameplay: sinh bàn, RNG, nước đi, cascade, kiếm thuật và animation. Firebase Functions là cổng HTTPS duy nhất tới Firebase Auth và Firestore. Client không dùng Firebase SDK; rules tiếp tục từ chối truy cập database trực tiếp.
 
-Catalog trong content/game-content.json và domain trong content/game-domain.ts là nguồn chung. Công cụ generate_game_content.mjs sinh module TypeScript vào thư mục src của client/server, phù hợp cấu hình build hiện có. Content version 2 có 40 màn, bốn ô, tám skill, tám bảo kiếm và mười cảnh giới.
+Firestore là nguồn dữ liệu cho catalog và profile. `content/game-content.json` là dữ liệu seed để xuất bản catalog; không được nhúng vào client. `content/game-domain.ts` chứa schema và luật profile dùng chung, được sinh thành module TypeScript cho client/server.
 
-## Client và engine
+`gameConfig/current.contentVersion` trỏ tới document bất biến `gameContent/{version}`. Mỗi catalog có metadata của 8 skill/8 kiếm, chỉ số ô, 10 cảnh giới, phần thưởng và map. Hiệu ứng và cách chọn mục tiêu của kiếm/skill xử lý case by case theo ID trên client; không lưu SwordModifier, SkillEffect hay target selection trong database. ID/hành vi mới cần cập nhật client.
 
-- BoardEngine xử lý match theo nhóm giao nhau, cường hóa 4/5, hàng đợi kích hoạt, chướng ngại, cascade và skill.
-- Trace mỗi hiệu ứng chứa vùng tác động, nguồn, sát thương và khí. UI phát trace tuần tự, rồi mới chạy rơi ô. Giảm chuyển động đi thẳng tới cùng kết quả cuối.
-- Snapshot giữ contentVersion, runId, RNG, loadout, hệ số sức mạnh, Ngưng Khí và cờ dùng skill. Loadout/sức mạnh cố định suốt màn.
-- Game store tuần tự hóa các thay đổi; ghi save trước khi công bố state mới. Thắng màn tạo một operation dùng runId; mua/equip có ID riêng.
-- Profile được chiếu từ confirmed profile và outbox. Chơi offline, mua và đổi trang bị đều dùng cùng domain với server.
-- Save v2 có backup. Migration giữ best stars và thưởng tiến độ bằng importProgress có ID ổn định; snapshot v1 bắt đầu lại màn.
-- Save gắn UID. Đăng nhập tài khoản khác lưu bản cũ vào archive theo UID, phục hồi các thao tác pending khi trở lại.
+## Khởi động và phiên khách
 
-## EXP, thành tích và kinh tế
+1. Đọc session từ SecureStore; session hỏng hoặc không đọc được là lỗi, không tạo khách thay thế.
+2. Health check và tải bootstrap, kiểm tra minClientVersion và schema catalog.
+3. Nếu chưa có session, tạo tài khoản khách qua API và lưu token ngay.
+4. Tải profile server; đọc journal v3 đúng UID, tải catalog của màn/request đang dở nếu khác phiên bản hiện tại.
+5. Xử lý request chưa được xác nhận rồi mới mở game.
 
-Kết quả 0 sao là đã thắng; chưa thắng là không có bản ghi. Mở màn theo chuỗi bản ghi liên tục. EXP là tổng EXP nền nhân tỷ lệ của best stars: 0/1/2/3 sao = 30/60/80/100%. Merge best stars rồi tính lại EXP, không cộng tổng EXP giữa hai thiết bị.
+Initialize và health check dùng một promise chung để tránh tạo khách hoặc kiểm tra trùng. Tài khoản khách được tạo với profileV2 đầy đủ ngay trước khi API trả session. Đăng ký email liên kết trên cùng UID; đăng nhập tài khoản khác gộp profile khách trên server một lần bằng `mergedInto`.
 
-Lần đầu thắng nhận 100 linh thạch và bonus thành tích 0/0/25/50. Chơi lại nhận 10 và chênh lệch bonus. Server tính giá/thưởng từ catalog, không nhận số dư hoặc tổng EXP do client khai.
+## Engine và nhiều mục tiêu
 
-Một bảo kiếm và một skill miễn phí ban đầu. Skill thứ hai mở tại 1.500 EXP. Các món tự dùng tu vi hiện tại, chưa có hệ nâng cấp độc lập. Cửa hàng mở theo màn, không theo EXP.
+Map gồm width, height, activeCells (index = y × width + x; y=0 ở dưới), moves, seed, obstacles, spawnPhases và mảng objectives. Mỗi objective có ID duy nhất. Có thể kết hợp nhiều mục tiêu Collect/BreakRocks/BreakSeals với tối đa một Battle/Boss; thắng khi tất cả hoàn thành.
+
+Snapshot lưu `objectiveProgress` theo ID, tổng đã thu thập/phá hoặc sát thương đã gây, được giới hạn từ 0 đến target. Một lần xóa ô có thể vừa tăng thu thập vừa gây sát thương. Mục tiêu đã xong không kết thúc màn nếu mục tiêu khác chưa xong. Điều kiện thắng được kiểm tra sau cascade; skill hợp lệ vẫn dùng được ở 0 lượt theo luật hiện có.
+
+Ô khuyết là null trong snapshot và false trong activeCells. Match không xuyên ô khuyết. Gravity refill từng đoạn cột ngăn bởi ô khuyết, đá hoặc phong ấn. Skill hàng/cột bỏ qua ô khuyết. Sinh bàn/xáo bàn có giới hạn thử; cấu hình không thể chơi trả NO_PLAYABLE_BOARD thay vì lặp vô hạn.
+
+spawnPhases được sắp tăng theo minMovesRemaining, bắt đầu từ 0. Chọn ngưỡng lớn nhất không vượt số lượt còn lại; weights theo thứ tự Kiếm/Hỏa/Lôi/Tụ Linh Châu, mỗi trọng số là số nguyên dương. Catalog ban đầu giữ 40 màn 7×7, trọng số đều và cân bằng cũ.
+
+Context màn cố định theo contentVersion: cấu hình level, metadata skill, trang bị, sức mạnh và RNG. Trace chứa objectiveProgressAfter để HUD cập nhật đúng thời điểm hiệu ứng; HUD hiển thị tất cả mục tiêu, dùng HP cho Battle/Boss.
+
+## Giao dịch và phục hồi
+
+Client không chiếu profile từ operation và không cho chơi offline. Mua/equip nhận profile mới sau xác nhận server. Thắng tạo operation dùng runId; server kiểm tra đủ objectives, màn đã mở, giá, ví, sở hữu và ô skill, rồi tính thưởng. Server không mô phỏng lại nước đi để xác minh kết quả.
+
+Mỗi request đang gửi được lưu vào journal v3 trước khi gọi API, với ID và contentVersion bất biến. Khi timeout hoặc đóng app, retry đúng payload/ID. Receipt lưu hash bao gồm phiên bản nội dung, kết quả accepted/reason và thưởng. Retry trả lại thưởng cũ, không cộng tiền hoặc EXP lần nữa. Các receipt được đọc trước khi ghi profile trong cùng Firestore transaction, bảo đảm hai thiết bị không tiêu quá ví.
+
+Kết quả thắng dùng catalog phiên bản đã chơi; mua/equip mới cần phiên bản hiện tại. Receipt đã có vẫn được replay sau khi catalog chuyển phiên bản. Profile trả về luôn dùng catalog hiện tại để kiểm tra sở hữu và hiển thị. Tiền/EXP đã ghi trên server được giữ nguyên khi đọc; client không tự tính lại profile.
+
+Journal chỉ giữ UID, snapshot, kết quả đã xác nhận và request chưa được xác nhận. Profile lấy từ server mỗi lần mở app. Save offline v1/v2 và archive cũ bị bỏ qua, không import. Logout xóa session và journal cục bộ, giữ profile database. Đăng nhập lại cùng UID giữ request chờ; không chuyển request sang UID khác.
+
+## Health check và refresh token
+
+`GET /health` không cần auth, không cache. Client kiểm tra mỗi 5 giây khi foreground, timeout 2 giây. Timeout thử thêm một lần; lỗi kết nối/HTTP lỗi khóa ngay. Không chạy chồng request health. Trở lại foreground phải kiểm tra trước khi cho thao tác.
+
+Dialog mạng là Modal toàn app, không đóng bằng Back hoặc chạm ngoài. Retry gọi health; server trả thành công thì đóng dialog. Guard trong store cũng khóa gameplay/giao dịch khi disconnected, background, đang phục hồi, lỗi phiên hoặc còn request chờ.
+
+Mọi API có xác thực dùng chung xử lý HTTP 401: một refresh cho các request đồng thời, lưu token mới ngay, replay một lần. Response cũ bị loại nếu session generation thay đổi. Refresh lỗi mạng giữ token; refresh bị từ chối vĩnh viễn yêu cầu xác thực lại và không tự tạo khách. Firebase quản lý vòng đời refresh token; app không đặt TTL.
 
 ## API
 
-| Endpoint | Auth | Chức năng |
+| Endpoint | Auth | Hành vi |
 | --- | --- | --- |
-| GET /v2/bootstrap | Không | Version, số màn, cờ quảng cáo, minClientVersion |
-| GET /v2/profile | Có | Khởi tạo/migrate và trả profile |
-| POST /v2/profile/sync | Có | Xử lý tối đa 50 operations theo thứ tự |
-| POST /v1/auth/guest | Không | Tạo khách |
-| POST /v1/auth/register | Khách hoặc không | Liên kết email trên cùng UID |
-| POST /v1/auth/login | Không, có thể kèm khách | Đăng nhập và gộp khách |
+| GET /health | Không | Kết nối API; no-store |
+| GET /v2/bootstrap | Không | Catalog hiện tại, version, quảng cáo, minClientVersion |
+| GET /v2/content/:version | Không | Catalog bất biến của màn đang chơi |
+| GET /v2/profile | Có | Profile chính thức, migrate dữ liệu server legacy nếu cần |
+| POST /v2/profile/sync | Có | win/purchase/equip, tối đa 50 operations |
+| POST /v1/auth/guest | Không | Tạo khách và profile đầy đủ |
+| POST /v1/auth/register | Khách hoặc không | Liên kết email |
+| POST /v1/auth/login | Có thể kèm khách | Đăng nhập/gộp khách một lần |
 | POST /v1/auth/refresh | Refresh token | Làm mới phiên |
-| GET/PUT /v1/progress | Có | Tương thích tiến trình cũ |
-| POST /v1/ads/intents | Có | Intent +3 lượt cho màn đã mở |
-| GET /v1/ads/intents/{id} | Có | Trạng thái thưởng |
-| GET /v1/ads/admob-ssv | Chữ ký | Xác minh và chống ghi thưởng lặp |
+| GET /v1/progress | Có | Đọc tương thích; PUT trả 426 |
+| /v1/ads/* | Theo endpoint | Intent quảng cáo/AdMob SSV như hiện tại |
 
-Sync body gồm contentVersion: 2 và operations. Các loại: win, purchase, equip, importProgress. Mỗi operation có ID bất biến. Response có profile, acknowledged IDs, rejected {id, reason} và rewards theo win ID. Rewards được giữ trong receipt để màn thắng hiển thị đúng EXP/tiền sau hòa giải với best stars trên server.
+Sync body: `{contentVersion, operations}`. Win: `{id: runId, kind: 'win', levelId, stars, objectiveProgress}`. Response: `{profile, acknowledged, rejected, rewards}`. Không nhận importProgress hoặc contentVersion < 3.
 
-API kiểm tra cấu trúc, cửa hàng, sở hữu, giá, tiền, ô skill và thứ tự màn. Giữ mô hình chơi đơn hiện tại: không mô phỏng lại nước cờ để chống gian lận.
+## Phát hành
 
-## Firestore và giao dịch
-
-- players/{uid}: profileV2 (levels, coins, ownedSkills, ownedSwords, loadout, revision, totalExp), cùng fields stars/highestUnlocked/realm để tương thích.
-- players/{uid}/operations/{operationId}: hash payload, accepted/reason, createdAt. Retry cùng payload trả kết quả đã xử lý; dùng lại ID với payload khác bị từ chối.
-- gameConfig/current: cờ quảng cáo và minClientVersion.
-- adIntents, adTransactions, authThrottle: giữ luồng và TTL hiện có.
-
-Mỗi batch sync đọc profile và tất cả receipts trước khi ghi, xử lý tuần tự trong một Firestore transaction. Hai thiết bị tranh số dư sẽ được Firestore retry dựa trên profile mới. Client bỏ thao tác đã nhận/từ chối, chiếu lại pending trên profile trả về. Màn đang chơi vẫn dùng context đã cố định.
-
-Trước khi login với khách, client flush outbox. Server hợp sở hữu, merge best stars, cộng số dư còn lại và đánh dấu mergedInto trong cùng transaction. Retry login không chuyển ví khách lần nữa. EXP luôn tính từ best stars đã hợp.
-
-Profile v2 được khởi tạo từ sao legacy đúng một lần. Các kết quả ngoài số màn phát hành được giữ trong storage legacy, không dùng trong profile hiện tại.
-
-## Kiểm chứng và phát hành
-
-Chạy typecheck, client tests, server tests và integration trên demo Firebase Emulator. Integration bao gồm Auth, cấm truy cập Firestore trực tiếp, EXP 0 sao, retry, hai thiết bị mua cạnh tranh và gộp ví khách một lần.
-
-Build backend trước khi phát hành client content v2. minClientVersion và cờ quảng cáo lấy từ cấu hình server. Backend production và bản native phát hành cần được cấu hình và kiểm tra riêng.
+Build backend, validate/seed catalog mới, đặt minClientVersion rồi phát hành client 1.2.0. Script seed mặc định dry run, yêu cầu `--apply --project ID` để ghi và không cho sửa document version đã xuất bản. Không tự deploy production. Xem DATABASE_SCHEMA.md và README.md để chạy emulator/kiểm thử.

@@ -1,8 +1,8 @@
 import React from 'react';
 import { Image } from 'expo-image';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ART, SKILL_ART, SWORD_ART, tileArtwork } from '../assets';
-import { CONTENT, SKILLS, SWORDS, type SkillId } from '../game/domain';
+import { getContentVersion, type SkillId } from '../game/domain';
 import { GoalKind, TileKind, type BoardSnapshot, type LevelDefinition } from '../game/types';
 import { colors } from '../theme';
 import { ArtPanel } from './Art';
@@ -28,26 +28,26 @@ export function GameplayHeader({ levelId, busy, compact, onBack, onHelp }: {
 export function GameplayInfo({ level, board, compact, reduceMotion, duration }: {
   level: LevelDefinition; board: BoardSnapshot; compact: boolean; reduceMotion: boolean; duration: number;
 }) {
-  const battle = level.goal === GoalKind.Battle || level.goal === GoalKind.Boss;
-  const goalName = battle ? level.goal === GoalKind.Boss ? 'Yêu vương' : 'Yêu thú'
-    : level.goal === GoalKind.Collect ? `Thu ${CONTENT.tiles.find(tile => tile.id === level.collectKind)?.name ?? 'linh vật'}`
-    : level.goal === GoalKind.BreakRocks ? 'Phá đá' : 'Phá phong ấn';
-  const goalIcon = battle ? ART.beast : level.goal === GoalKind.Collect ? tileArtwork(level.collectKind)
-    : level.goal === GoalKind.BreakRocks ? tileArtwork(TileKind.Rock) : ART.overlaySeal;
+  const content = getContentVersion(board.contentVersion);
   return (
     <View testID="game-info" style={[styles.info, compact && styles.compactInfo]}>
       <View style={styles.infoRow}>
-        <ArtPanel art="gameplayObjective" testID="game-objective-panel" style={[styles.objective, compact && styles.compactObjective]}>
-          <View style={styles.goalRow}>
-            {battle ? <View testID="game-enemy-avatar" style={[styles.avatar, compact && styles.compactAvatar]}>
-              <Image source={ART.beast} contentFit="contain" accessible={false} style={[styles.avatarArt, compact && styles.compactAvatarArt]} />
-            </View> : <Image source={goalIcon} contentFit="contain" accessible={false} style={styles.goalIcon} />}
-            <View style={[styles.goalText, battle && styles.enemyText]}>
-              <Text numberOfLines={1} maxFontSizeMultiplier={1.2} style={styles.eyebrow}>{goalName}</Text>
-              {battle ? <GameplayProgressBar value={board.remaining} max={level.target} tone="health" accessibilityLabel={`Máu ${goalName.toLowerCase()}`} animated={!reduceMotion} duration={duration} />
-                : <Text numberOfLines={1} maxFontSizeMultiplier={1.2} style={[styles.goalNumber, compact && styles.compactGoalNumber]}>{board.remaining}<Text style={styles.goalTotal}> / {level.target}</Text></Text>}
-            </View>
-          </View>
+        <ArtPanel art="gameplayObjective" testID="game-objective-panel" style={[styles.objective, compact && styles.compactObjective, level.objectives.length > 1 && { height: compact ? 116 : 140 }]}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {level.objectives.map(objective => {
+              const battle = objective.type === 'Battle' || objective.type === 'Boss';
+              const name = battle ? objective.enemy.name : objective.type === 'Collect' ? `Thu ${content.tiles.find(t => t.id === objective.tileKind)?.name ?? 'linh vật'}` : objective.type === 'BreakRocks' ? 'Phá đá' : 'Phá phong ấn';
+              const icon = battle ? ART[objective.enemy.artKey as keyof typeof ART] ?? ART.beast : objective.type === 'Collect' ? tileArtwork(objective.tileKind) : objective.type === 'BreakRocks' ? tileArtwork(TileKind.Rock) : ART.overlaySeal;
+              const progress = board.objectiveProgress[objective.id] ?? 0;
+              return <View key={objective.id} testID={`objective-${objective.id}`} style={[styles.goalRow, { minHeight: compact ? 48 : 58 }]}>
+                {battle ? <View testID="game-enemy-avatar" style={[styles.avatar, compact && styles.compactAvatar]}><Image source={icon} contentFit="cover" style={[styles.avatarArt, compact && styles.compactAvatarArt]} accessible={false} /></View> : <Image source={icon} contentFit="contain" style={styles.goalIcon} accessible={false} />}
+                <View style={[styles.goalText, styles.enemyText]}>
+                  <Text numberOfLines={1} style={styles.eyebrow}>{`${name}${progress >= objective.target ? ' ✓' : ''}`}</Text>
+                  {battle ? <GameplayProgressBar value={objective.target-progress} max={objective.target} tone="health" accessibilityLabel={`Máu ${name}`} animated={!reduceMotion} duration={duration} /> : <Text style={styles.goalNumber}>{progress}<Text style={styles.goalTotal}> / {objective.target}</Text></Text>}
+                </View>
+              </View>;
+            })}
+          </ScrollView>
         </ArtPanel>
         <ArtPanel art="gameplayMoves" testID="game-moves-panel" style={[styles.moves, compact && styles.compactMoves]}>
           <Text maxFontSizeMultiplier={1.2} style={styles.movesLabel}>Lượt</Text>
@@ -63,12 +63,13 @@ export function GameplayDock({ board, skillSlots, available, cost, targetSkill, 
   targetSkill: SkillId | null; targetCount: number; canCast: boolean; busy: boolean; compact: boolean;
   onSkill: (id: SkillId) => void; onCancel: () => void; onCast: () => void;
 }) {
-  const sword = SWORDS.find(item => item.id === board.loadout.sword)!;
+  const content = getContentVersion(board.contentVersion);
+  const sword = content.swords.find(item => item.id === board.loadout.sword)!;
   return (
     <View testID="game-skill-controls" style={[styles.controls, compact && styles.compactControls]}>
       <View style={styles.energy}>
-        <OutlinedText maxFontSizeMultiplier={1.2} style={styles.energyText}>Kiếm khí {board.swordQi}/100{board.condensed ? ' · Ngưng khí −25%' : ''}</OutlinedText>
-        <GameplayProgressBar value={board.swordQi} max={100} tone="qi" accessibilityLabel="Kiếm khí" />
+        <OutlinedText maxFontSizeMultiplier={1.2} style={styles.energyText}>Kiếm khí {board.swordQi}/{content.qiCap}{board.condensed ? ' · Ngưng khí −25%' : ''}</OutlinedText>
+        <GameplayProgressBar value={board.swordQi} max={content.qiCap} tone="qi" accessibilityLabel="Kiếm khí" />
       </View>
       <View testID="game-cast-actions" style={styles.actions}>
         {targetSkill ? <View style={styles.castRow}>
@@ -94,7 +95,7 @@ export function GameplayDock({ board, skillSlots, available, cost, targetSkill, 
         {[0, 1].map(slot => {
           const id = board.loadout.skills[slot];
           // Equipped skills belong to the run even if the live profile changes.
-          const definition = id ? SKILLS.find(item => item.id === id) : undefined;
+          const definition = id ? content.skills.find(item => item.id === id) : undefined;
           const locked = !definition && slot >= skillSlots;
           const selected = Boolean(id && targetSkill === id);
           const ready = Boolean(id && available.includes(id));

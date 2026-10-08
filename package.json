@@ -5,6 +5,7 @@
     "api:build": "npm --prefix server run build",
     "api:test": "npm --prefix server test",
     "api:serve": "npm --prefix server run serve",
-    "api:deploy": "npm run api:build && firebase deploy --only functions:game-api,firestore:rules"
+    "api:deploy": "npm run api:build && firebase deploy --only functions:game-api,firestore:rules",
+    "api:seed": "npm run api:build && node tools/seed_game_content.mjs"
   }
 }

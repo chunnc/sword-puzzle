@@ -11,13 +11,13 @@ import {
   type SharedValue,
 } from 'react-native-reanimated';
 import { ART } from '../assets';
-import { CONTENT } from '../game/domain';
+import { getContentVersion } from '../game/domain';
 import { TileKind, type BoardSnapshot, type CellPosition, type Tile } from '../game/types';
 import { colors } from '../theme';
 import {
-  BOARD_SIZE, BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS,
+  BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS,
   BOARD_REJECT_OUT_MS, BOARD_REJECT_BACK_MS, BOARD_FLASH_IN_MS, BOARD_PULSE_IN_MS,
-  DISPLAY_INDICES, buildCellVisuals, cellBounds, cellMotion, pointToCell,
+  displayIndices, buildCellVisuals, cellBounds, cellMotion, pointToCell,
   type BoardVisualEffect, type CellVisual,
 } from './boardVisuals';
 
@@ -89,21 +89,24 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   visualEffect?: BoardVisualEffect | null;
   reduceMotion?: boolean;
 }) {
+  const geometry = snapshot.level.board;
+  const content = getContentVersion(snapshot.contentVersion);
+  const indices = useMemo(() => displayIndices(geometry), [geometry]);
   const [side, setSide] = useState(0);
   const sword = useImage(ART.tileSword), fire = useImage(ART.tileFire);
   const lightning = useImage(ART.tileLightning), orb = useImage(ART.tileSpiritOrb), rock = useImage(ART.tileRock);
   const images = [sword, fire, lightning, orb, rock];
   const previousEffect = useRef<BoardVisualEffect | null>(null);
-  const visuals = useMemo(() => buildCellVisuals(visualEffect, previousEffect.current, reduceMotion), [visualEffect, reduceMotion]);
+  const visuals = useMemo(() => buildCellVisuals(visualEffect, previousEffect.current, reduceMotion, geometry), [visualEffect, reduceMotion, geometry]);
   const id = visualEffect?.id ?? 0;
   const phase = useSharedValue(id), progress = useSharedValue(0), pulse = useSharedValue(1), flash = useSharedValue(0);
   const motion = useMemo(() => ({ phase, progress, pulse }), [phase, progress, pulse]);
   const flashOpacity = useDerivedValue(() => phase.value === id ? flash.value : 0, [id]);
-  const labels = useBoardLabels(Math.max(0, side / BOARD_SIZE - 2), targets.length);
-  const drawOrder = useMemo(() => [...DISPLAY_INDICES].sort((a, b) => {
+  const labels = useBoardLabels(Math.max(0, side / geometry.width - 2), targets.length);
+  const drawOrder = useMemo(() => [...indices].sort((a, b) => {
     const moving = (index: number) => Number(visuals[index].falling || !!visuals[index].dx || !!visuals[index].dy);
     return moving(a) - moving(b);
-  }), [visuals]);
+  }), [visuals, indices]);
 
   useLayoutEffect(() => {
     previousEffect.current = visualEffect;
@@ -147,20 +150,20 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   }, [visualEffect, id, reduceMotion, phase, progress, pulse, flash]);
 
   const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onEnd(event => {
-    const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side);
-    const second = pointToCell(event.x, event.y, side);
+    const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side, geometry);
+    const second = pointToCell(event.x, event.y, side, geometry);
     if (first && second) runOnJS(onSwipe)(first.x, first.y, second.x, second.y);
-  }), [locked, targetingHint, side, onSwipe]);
+  }), [locked, targetingHint, side, onSwipe, geometry]);
 
   return <View style={styles.frame}>
     <GestureDetector gesture={gesture}>
       <View collapsable={false} onLayout={event => setSide(event.nativeEvent.layout.width)} style={styles.grid}>
-        {side > BOARD_SIZE * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
-          <Group clip={{ x: 0, y: 0, width: side, height: side }}>
-            {DISPLAY_INDICES.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side)} r={5} color="#0b4144" />)}
-            {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]} bounds={cellBounds(index, side)} pitch={side / BOARD_SIZE} image={images[snapshot.tiles[index].kind]} visual={visuals[index]} id={id} motion={motion} labels={labels} />)}
-            {DISPLAY_INDICES.map(index => {
-              const bounds = cellBounds(index, side), x = index % BOARD_SIZE, y = Math.floor(index / BOARD_SIZE);
+        {side > geometry.width * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
+          <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
+            {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color="#0b4144" />)}
+            {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} pitch={side / geometry.width} image={images[snapshot.tiles[index]!.kind]} visual={visuals[index]} id={id} motion={motion} labels={labels} />)}
+            {indices.map(index => {
+              const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
               const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
               const highlighted = selected?.x === x && selected.y === y || targetNumber > 0 || preview.includes(index);
               const targetLabel = targetNumber ? labels.targets[targetNumber - 1] : null;
@@ -176,10 +179,10 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
             })}
           </Group>
         </Canvas> : null}
-        {side > BOARD_SIZE * 2 ? DISPLAY_INDICES.map(index => {
-          const tile = snapshot.tiles[index], x = index % BOARD_SIZE, y = Math.floor(index / BOARD_SIZE);
-          const bounds = cellBounds(index, side);
-          const name = tile.kind === TileKind.Rock ? 'Đá chắn' : CONTENT.tiles[tile.kind].name;
+        {side > geometry.width * 2 ? indices.map(index => {
+          const tile = snapshot.tiles[index]!, x = index % geometry.width, y = Math.floor(index / geometry.width);
+          const bounds = cellBounds(index, side, geometry);
+          const name = tile.kind === TileKind.Rock ? 'Đá chắn' : content.tiles[tile.kind].name;
           return <Pressable key={index} accessibilityRole="button" accessibilityLabel={`${name}${tile.chargeTier ? `, cường hóa ${tile.chargeTier}` : ''}${tile.locked ? ', phong ấn' : ''}, hàng ${y + 1}, cột ${x + 1}`} accessibilityState={{ disabled: locked }} disabled={locked} onPress={() => onCellPress(x, y)} style={[styles.touchCell, { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }]} />;
         }) : null}
       </View>

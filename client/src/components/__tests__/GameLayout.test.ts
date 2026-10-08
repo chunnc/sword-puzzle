@@ -30,7 +30,7 @@ jest.mock('../Art', () => {
   };
 });
 
-const mockState = { save: emptySave(), notice: '', online: false, adsEnabled: false, session: null, setNotice: jest.fn() };
+const mockState = { save: emptySave(), notice: '', online: true, foreground: true, initialized: true, recovering: false, authRequired: false, adsEnabled: false, session: null, setNotice: jest.fn() };
 
 describe('gameplay layout with dedicated controls', () => {
   let renderer: ReactTestRenderer;
@@ -61,4 +61,24 @@ describe('gameplay layout with dedicated controls', () => {
     expect(boardSize()).toEqual(initialBoardSize);
     expect(Native.StyleSheet.flatten(view('game-skill-controls').props.style).height).toBe(initialControlsHeight);
   });
+});
+
+it('renders simultaneous collection/boss objectives and fits a rectangular board', () => {
+  const level = { ...getLevel(15), board: { width: 5, height: 6, activeCells: Array.from({ length: 30 }, (_, i) => i !== 12) }, objectives: [
+    { id: 'collect', type: 'Collect' as const, tileKind: 0, target: 18 },
+    { id: 'boss', type: 'Boss' as const, target: 360, enemy: { id: 'boss', name: 'Yêu Vương', artKey: 'beast' } },
+  ] };
+  mockState.save = emptySave();
+  mockState.save.active = new BoardEngine(level).snapshot();
+  let renderer: ReactTestRenderer;
+  act(() => { renderer = create(React.createElement(GameScreen)); });
+  expect(renderer!.root.findAll(node => node.props.testID === 'objective-collect').length).toBeGreaterThan(0);
+  expect(renderer!.root.findAll(node => node.props.testID === 'objective-boss').length).toBeGreaterThan(0);
+  const boardSpace = renderer!.root.findAllByType(Native.View).find(node => node.props.testID === 'game-board-space')!;
+  act(() => { boardSpace.props.onLayout({ nativeEvent: { layout: { height: 300 } } }); });
+  const board = renderer!.root.findAllByType(Board).find(node => node.props.snapshot)!;
+  const size = Native.StyleSheet.flatten(board.parent!.props.style);
+  expect(size.width / size.height).toBeCloseTo(5 / 6);
+  expect(board.props.snapshot.tiles[12]).toBeNull();
+  act(() => { renderer!.unmount(); });
 });

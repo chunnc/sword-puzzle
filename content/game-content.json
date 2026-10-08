@@ -1,50 +1,1495 @@
 {
-  "version": 2,
+  "version": 3,
   "levelCount": 40,
   "qiCap": 100,
   "expRates": [30, 60, 80, 100],
   "tiles": [
-    {"id": 0, "name": "Kiếm", "damage": 10, "qi": 1},
-    {"id": 1, "name": "Hỏa", "damage": 6, "qi": 2},
-    {"id": 2, "name": "Lôi", "damage": 4, "qi": 3},
-    {"id": 3, "name": "Tụ Linh Châu", "damage": 0, "qi": 6}
+    {
+      "id": 0,
+      "name": "Kiếm",
+      "damage": 10,
+      "qi": 1
+    },
+    {
+      "id": 1,
+      "name": "Hỏa",
+      "damage": 6,
+      "qi": 2
+    },
+    {
+      "id": 2,
+      "name": "Lôi",
+      "damage": 4,
+      "qi": 3
+    },
+    {
+      "id": 3,
+      "name": "Tụ Linh Châu",
+      "damage": 0,
+      "qi": 6
+    }
   ],
   "realms": [
-    {"id": "LuyenKhi", "name": "Luyện Khí", "exp": 0},
-    {"id": "TrucCo", "name": "Trúc Cơ", "exp": 1500},
-    {"id": "KimDan", "name": "Kim Đan", "exp": 4000},
-    {"id": "NguyenAnh", "name": "Nguyên Anh", "exp": 8000},
-    {"id": "HoaThan", "name": "Hóa Thần", "exp": 14000},
-    {"id": "LuyenHu", "name": "Luyện Hư", "exp": 23000},
-    {"id": "HopThe", "name": "Hợp Thể", "exp": 36000},
-    {"id": "DaiThua", "name": "Đại Thừa", "exp": 54000},
-    {"id": "DoKiep", "name": "Độ Kiếp", "exp": 78000},
-    {"id": "ChanTien", "name": "Chân Tiên", "exp": 110000}
+    {
+      "id": "LuyenKhi",
+      "name": "Luyện Khí",
+      "exp": 0
+    },
+    {
+      "id": "TrucCo",
+      "name": "Trúc Cơ",
+      "exp": 1500
+    },
+    {
+      "id": "KimDan",
+      "name": "Kim Đan",
+      "exp": 4000
+    },
+    {
+      "id": "NguyenAnh",
+      "name": "Nguyên Anh",
+      "exp": 8000
+    },
+    {
+      "id": "HoaThan",
+      "name": "Hóa Thần",
+      "exp": 14000
+    },
+    {
+      "id": "LuyenHu",
+      "name": "Luyện Hư",
+      "exp": 23000
+    },
+    {
+      "id": "HopThe",
+      "name": "Hợp Thể",
+      "exp": 36000
+    },
+    {
+      "id": "DaiThua",
+      "name": "Đại Thừa",
+      "exp": 54000
+    },
+    {
+      "id": "DoKiep",
+      "name": "Độ Kiếp",
+      "exp": 78000
+    },
+    {
+      "id": "ChanTien",
+      "name": "Chân Tiên",
+      "exp": 110000
+    }
   ],
   "skills": [
-    {"id": "nhat-kiem", "name": "Nhất Kiếm", "description": "Chém một hàng ngang được chọn.", "cost": 60, "unlock": 0, "price": 0, "target": "row", "icon": "剑"},
-    {"id": "ngu-kiem", "name": "Ngự Kiếm", "description": "Đổi hai ô cạnh nhau, ít nhất một ô Kiếm. Không cần tạo match.", "cost": 30, "unlock": 3, "price": 150, "target": "pair", "icon": "↔"},
-    {"id": "hoa-lien", "name": "Hỏa Liên", "description": "Nổ vùng 3×3 quanh ô chọn.", "cost": 65, "unlock": 5, "price": 200, "target": "cell", "icon": "火"},
-    {"id": "dan-loi", "name": "Dẫn Lôi", "description": "Chọn ba ô thường khác Lôi để chuyển thành Lôi.", "cost": 45, "unlock": 8, "price": 250, "target": "triple", "icon": "ϟ"},
-    {"id": "pha-chuong", "name": "Phá Chướng", "description": "Gỡ đá và phong ấn trong vùng 3×3.", "cost": 40, "unlock": 12, "price": 300, "target": "cell", "icon": "破"},
-    {"id": "lien-kiem", "name": "Liên Kiếm", "description": "Chọn hai ô cường hóa để kích hoạt lần lượt.", "cost": 80, "unlock": 15, "price": 350, "target": "chargedPair", "icon": "双"},
-    {"id": "hoi-linh", "name": "Hồi Linh", "description": "Xáo các ô di chuyển được trong vùng 3×3.", "cost": 35, "unlock": 20, "price": 450, "target": "cell", "icon": "↻"},
-    {"id": "van-kiem", "name": "Vạn Kiếm", "description": "Chọn một ô để xóa toàn bộ ô cùng loại.", "cost": 100, "unlock": 30, "price": 500, "target": "kind", "icon": "万"}
+    {
+      "id": "nhat-kiem",
+      "name": "Nhất Kiếm",
+      "description": "Chém một hàng ngang được chọn.",
+      "cost": 60,
+      "unlock": 0,
+      "price": 0,
+      "artKey": "iconSkillNhatKiem"
+    },
+    {
+      "id": "ngu-kiem",
+      "name": "Ngự Kiếm",
+      "description": "Đổi hai ô cạnh nhau, ít nhất một ô Kiếm. Không cần tạo match.",
+      "cost": 30,
+      "unlock": 3,
+      "price": 150,
+      "artKey": "iconSkillNguKiem"
+    },
+    {
+      "id": "hoa-lien",
+      "name": "Hỏa Liên",
+      "description": "Nổ vùng 3×3 quanh ô chọn.",
+      "cost": 65,
+      "unlock": 5,
+      "price": 200,
+      "artKey": "iconSkillHoaLien"
+    },
+    {
+      "id": "dan-loi",
+      "name": "Dẫn Lôi",
+      "description": "Chọn ba ô thường khác Lôi để chuyển thành Lôi.",
+      "cost": 45,
+      "unlock": 8,
+      "price": 250,
+      "artKey": "iconSkillDanLoi"
+    },
+    {
+      "id": "pha-chuong",
+      "name": "Phá Chướng",
+      "description": "Gỡ đá và phong ấn trong vùng 3×3.",
+      "cost": 40,
+      "unlock": 12,
+      "price": 300,
+      "artKey": "iconSkillPhaChuong"
+    },
+    {
+      "id": "lien-kiem",
+      "name": "Liên Kiếm",
+      "description": "Chọn hai ô cường hóa để kích hoạt lần lượt.",
+      "cost": 80,
+      "unlock": 15,
+      "price": 350,
+      "artKey": "iconSkillLienKiem"
+    },
+    {
+      "id": "hoi-linh",
+      "name": "Hồi Linh",
+      "description": "Xáo các ô di chuyển được trong vùng 3×3.",
+      "cost": 35,
+      "unlock": 20,
+      "price": 450,
+      "artKey": "iconSkillHoiLinh"
+    },
+    {
+      "id": "van-kiem",
+      "name": "Vạn Kiếm",
+      "description": "Chọn một ô để xóa toàn bộ ô cùng loại.",
+      "cost": 100,
+      "unlock": 30,
+      "price": 500,
+      "artKey": "iconSkillVanKiem"
+    }
   ],
   "swords": [
-    {"id": "thanh-phong", "name": "Thanh Phong", "description": "Ô Kiếm nhận thêm 1 kiếm khí.", "unlock": 0, "price": 0, "color": "#49c8e5"},
-    {"id": "trong-nhac", "name": "Trọng Nhạc", "description": "Sát thương ô Kiếm tăng 30%.", "unlock": 3, "price": 200, "color": "#d7b76e"},
-    {"id": "hoa-van", "name": "Hỏa Vân", "description": "Sát thương ô Hỏa tăng 50%.", "unlock": 5, "price": 200, "color": "#e35646"},
-    {"id": "loi-minh", "name": "Lôi Minh", "description": "Ô Lôi nhận thêm 1 kiếm khí.", "unlock": 8, "price": 250, "color": "#b79aff"},
-    {"id": "tu-linh", "name": "Tụ Linh", "description": "Khí cơ bản của Tụ Linh Châu tăng thêm 2.", "unlock": 12, "price": 300, "color": "#7ce4bd"},
-    {"id": "lien-tinh", "name": "Liên Tinh", "description": "Sát thương tăng 20% từ cascade thứ hai.", "unlock": 15, "price": 350, "color": "#f2d58e"},
-    {"id": "pha-quan", "name": "Phá Quân", "description": "Ô bị xóa phá chướng ngại cạnh bên theo tám hướng.", "unlock": 20, "price": 400, "color": "#efac82"},
-    {"id": "huyen-co", "name": "Huyền Cơ", "description": "Giảm 10% chi phí kiếm thuật.", "unlock": 30, "price": 450, "color": "#87c3dc"}
+    {
+      "id": "thanh-phong",
+      "name": "Thanh Phong",
+      "description": "Ô Kiếm nhận thêm 1 kiếm khí.",
+      "unlock": 0,
+      "price": 0,
+      "color": "#49c8e5",
+      "artKey": "iconSwordThanhPhong"
+    },
+    {
+      "id": "trong-nhac",
+      "name": "Trọng Nhạc",
+      "description": "Sát thương ô Kiếm tăng 30%.",
+      "unlock": 3,
+      "price": 200,
+      "color": "#d7b76e",
+      "artKey": "iconSwordTrongNhac"
+    },
+    {
+      "id": "hoa-van",
+      "name": "Hỏa Vân",
+      "description": "Sát thương ô Hỏa tăng 50%.",
+      "unlock": 5,
+      "price": 200,
+      "color": "#e35646",
+      "artKey": "iconSwordHoaVan"
+    },
+    {
+      "id": "loi-minh",
+      "name": "Lôi Minh",
+      "description": "Ô Lôi nhận thêm 1 kiếm khí.",
+      "unlock": 8,
+      "price": 250,
+      "color": "#b79aff",
+      "artKey": "iconSwordLoiMinh"
+    },
+    {
+      "id": "tu-linh",
+      "name": "Tụ Linh",
+      "description": "Khí cơ bản của Tụ Linh Châu tăng thêm 2.",
+      "unlock": 12,
+      "price": 300,
+      "color": "#7ce4bd",
+      "artKey": "iconSwordTuLinh"
+    },
+    {
+      "id": "lien-tinh",
+      "name": "Liên Tinh",
+      "description": "Sát thương tăng 20% từ cascade thứ hai.",
+      "unlock": 15,
+      "price": 350,
+      "color": "#f2d58e",
+      "artKey": "iconSwordLienTinh"
+    },
+    {
+      "id": "pha-quan",
+      "name": "Phá Quân",
+      "description": "Ô bị xóa phá chướng ngại cạnh bên theo tám hướng.",
+      "unlock": 20,
+      "price": 400,
+      "color": "#efac82",
+      "artKey": "iconSwordPhaQuan"
+    },
+    {
+      "id": "huyen-co",
+      "name": "Huyền Cơ",
+      "description": "Giảm 10% chi phí kiếm thuật.",
+      "unlock": 30,
+      "price": 450,
+      "color": "#87c3dc",
+      "artKey": "iconSwordHuyenCo"
+    }
   ],
-  "levelBands": [
-    {"chapter": "Vân Hải Tiên Sơn", "moves": 24, "collect": 18, "seals": 4, "rocks": 3, "battle": 220, "boss": 360},
-    {"chapter": "Huyền Kiếm Bí Cảnh", "moves": 24, "collect": 24, "seals": 6, "rocks": 4, "battle": 320, "boss": 520},
-    {"chapter": "Lôi Hỏa Thiên Môn", "moves": 22, "collect": 30, "seals": 8, "rocks": 5, "battle": 420, "boss": 680},
-    {"chapter": "Tinh Hà Kiếm Vực", "moves": 22, "collect": 36, "seals": 10, "rocks": 6, "battle": 520, "boss": 840}
-  ]
+  "levels": [
+    {
+      "id": 1,
+      "chapter": "Vân Hải Tiên Sơn",
+      "moves": 24,
+      "seed": 112648,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 18,
+          "tileKind": 0
+        }
+      ],
+      "obstacles": {
+        "rocks": 0,
+        "seals": 0
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "chapter": "Vân Hải Tiên Sơn",
+      "moves": 24,
+      "seed": 217377,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 18,
+          "tileKind": 1
+        }
+      ],
+      "obstacles": {
+        "rocks": 0,
+        "seals": 0
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "chapter": "Vân Hải Tiên Sơn",
+      "moves": 24,
+      "seed": 322106,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 18,
+          "tileKind": 2
+        }
+      ],
+      "obstacles": {
+        "rocks": 0,
+        "seals": 0
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "chapter": "Vân Hải Tiên Sơn",
+      "moves": 24,
+      "seed": 426835,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 18,
+          "tileKind": 3
+        }
+      ],
+      "obstacles": {
+        "rocks": 0,
+        "seals": 0
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "chapter": "Vân Hải Tiên Sơn",
+      "moves": 24,
+      "seed": 531564,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Battle",
+          "target": 220,
+          "enemy": {
+            "id": "enemy-5",
+            "name": "Yêu thú",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 0,
+        "seals": 0
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "chapter": "Vân Hải Tiên Sơn",
+      "moves": 24,
+      "seed": 636293,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "BreakSeals",
+          "target": 4
+        }
+      ],
+      "obstacles": {
+        "rocks": 0,
+        "seals": 4
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "chapter": "Vân Hải Tiên Sơn",
+      "moves": 24,
+      "seed": 741022,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Battle",
+          "target": 220,
+          "enemy": {
+            "id": "enemy-7",
+            "name": "Yêu thú",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 0,
+        "seals": 0
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "chapter": "Vân Hải Tiên Sơn",
+      "moves": 24,
+      "seed": 845751,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "BreakRocks",
+          "target": 3
+        }
+      ],
+      "obstacles": {
+        "rocks": 3,
+        "seals": 0
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "chapter": "Vân Hải Tiên Sơn",
+      "moves": 24,
+      "seed": 950480,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Battle",
+          "target": 220,
+          "enemy": {
+            "id": "enemy-9",
+            "name": "Yêu thú",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 0,
+        "seals": 0
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "chapter": "Vân Hải Tiên Sơn",
+      "moves": 24,
+      "seed": 1055209,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Boss",
+          "target": 360,
+          "enemy": {
+            "id": "enemy-10",
+            "name": "Yêu vương",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 0,
+        "seals": 0
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "chapter": "Huyền Kiếm Bí Cảnh",
+      "moves": 24,
+      "seed": 1159938,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 24,
+          "tileKind": 0
+        }
+      ],
+      "obstacles": {
+        "rocks": 1,
+        "seals": 1
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "chapter": "Huyền Kiếm Bí Cảnh",
+      "moves": 24,
+      "seed": 1264667,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 24,
+          "tileKind": 1
+        }
+      ],
+      "obstacles": {
+        "rocks": 1,
+        "seals": 1
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "chapter": "Huyền Kiếm Bí Cảnh",
+      "moves": 24,
+      "seed": 1369396,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 24,
+          "tileKind": 2
+        }
+      ],
+      "obstacles": {
+        "rocks": 1,
+        "seals": 1
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "chapter": "Huyền Kiếm Bí Cảnh",
+      "moves": 24,
+      "seed": 1474125,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 24,
+          "tileKind": 3
+        }
+      ],
+      "obstacles": {
+        "rocks": 1,
+        "seals": 1
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "chapter": "Huyền Kiếm Bí Cảnh",
+      "moves": 24,
+      "seed": 1578854,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Boss",
+          "target": 520,
+          "enemy": {
+            "id": "enemy-15",
+            "name": "Yêu vương",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 1,
+        "seals": 1
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "chapter": "Huyền Kiếm Bí Cảnh",
+      "moves": 24,
+      "seed": 1683583,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "BreakSeals",
+          "target": 6
+        }
+      ],
+      "obstacles": {
+        "rocks": 0,
+        "seals": 6
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "chapter": "Huyền Kiếm Bí Cảnh",
+      "moves": 24,
+      "seed": 1788312,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Battle",
+          "target": 320,
+          "enemy": {
+            "id": "enemy-17",
+            "name": "Yêu thú",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 1,
+        "seals": 1
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "chapter": "Huyền Kiếm Bí Cảnh",
+      "moves": 24,
+      "seed": 1893041,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "BreakRocks",
+          "target": 4
+        }
+      ],
+      "obstacles": {
+        "rocks": 4,
+        "seals": 0
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "chapter": "Huyền Kiếm Bí Cảnh",
+      "moves": 24,
+      "seed": 1997770,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Battle",
+          "target": 320,
+          "enemy": {
+            "id": "enemy-19",
+            "name": "Yêu thú",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 1,
+        "seals": 1
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "chapter": "Huyền Kiếm Bí Cảnh",
+      "moves": 24,
+      "seed": 2102499,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Boss",
+          "target": 520,
+          "enemy": {
+            "id": "enemy-20",
+            "name": "Yêu vương",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 1,
+        "seals": 1
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "chapter": "Lôi Hỏa Thiên Môn",
+      "moves": 22,
+      "seed": 2207228,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 30,
+          "tileKind": 0
+        }
+      ],
+      "obstacles": {
+        "rocks": 2,
+        "seals": 2
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "chapter": "Lôi Hỏa Thiên Môn",
+      "moves": 22,
+      "seed": 2311957,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 30,
+          "tileKind": 1
+        }
+      ],
+      "obstacles": {
+        "rocks": 2,
+        "seals": 2
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "chapter": "Lôi Hỏa Thiên Môn",
+      "moves": 22,
+      "seed": 2416686,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 30,
+          "tileKind": 2
+        }
+      ],
+      "obstacles": {
+        "rocks": 2,
+        "seals": 2
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "chapter": "Lôi Hỏa Thiên Môn",
+      "moves": 22,
+      "seed": 2521415,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 30,
+          "tileKind": 3
+        }
+      ],
+      "obstacles": {
+        "rocks": 2,
+        "seals": 2
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "chapter": "Lôi Hỏa Thiên Môn",
+      "moves": 22,
+      "seed": 2626144,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Battle",
+          "target": 420,
+          "enemy": {
+            "id": "enemy-25",
+            "name": "Yêu thú",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 2,
+        "seals": 2
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "chapter": "Lôi Hỏa Thiên Môn",
+      "moves": 22,
+      "seed": 2730873,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "BreakSeals",
+          "target": 8
+        }
+      ],
+      "obstacles": {
+        "rocks": 0,
+        "seals": 8
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "chapter": "Lôi Hỏa Thiên Môn",
+      "moves": 22,
+      "seed": 2835602,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Battle",
+          "target": 420,
+          "enemy": {
+            "id": "enemy-27",
+            "name": "Yêu thú",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 2,
+        "seals": 2
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "chapter": "Lôi Hỏa Thiên Môn",
+      "moves": 22,
+      "seed": 2940331,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "BreakRocks",
+          "target": 5
+        }
+      ],
+      "obstacles": {
+        "rocks": 5,
+        "seals": 0
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "chapter": "Lôi Hỏa Thiên Môn",
+      "moves": 22,
+      "seed": 3045060,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Battle",
+          "target": 420,
+          "enemy": {
+            "id": "enemy-29",
+            "name": "Yêu thú",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 2,
+        "seals": 2
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "chapter": "Lôi Hỏa Thiên Môn",
+      "moves": 22,
+      "seed": 3149789,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Boss",
+          "target": 680,
+          "enemy": {
+            "id": "enemy-30",
+            "name": "Yêu vương",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 2,
+        "seals": 2
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "chapter": "Tinh Hà Kiếm Vực",
+      "moves": 22,
+      "seed": 3254518,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 36,
+          "tileKind": 0
+        }
+      ],
+      "obstacles": {
+        "rocks": 3,
+        "seals": 3
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "chapter": "Tinh Hà Kiếm Vực",
+      "moves": 22,
+      "seed": 3359247,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 36,
+          "tileKind": 1
+        }
+      ],
+      "obstacles": {
+        "rocks": 3,
+        "seals": 3
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "chapter": "Tinh Hà Kiếm Vực",
+      "moves": 22,
+      "seed": 3463976,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 36,
+          "tileKind": 2
+        }
+      ],
+      "obstacles": {
+        "rocks": 3,
+        "seals": 3
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "chapter": "Tinh Hà Kiếm Vực",
+      "moves": 22,
+      "seed": 3568705,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Collect",
+          "target": 36,
+          "tileKind": 3
+        }
+      ],
+      "obstacles": {
+        "rocks": 3,
+        "seals": 3
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "chapter": "Tinh Hà Kiếm Vực",
+      "moves": 22,
+      "seed": 3673434,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Battle",
+          "target": 520,
+          "enemy": {
+            "id": "enemy-35",
+            "name": "Yêu thú",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 3,
+        "seals": 3
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "chapter": "Tinh Hà Kiếm Vực",
+      "moves": 22,
+      "seed": 3778163,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "BreakSeals",
+          "target": 10
+        }
+      ],
+      "obstacles": {
+        "rocks": 0,
+        "seals": 10
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "chapter": "Tinh Hà Kiếm Vực",
+      "moves": 22,
+      "seed": 3882892,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Battle",
+          "target": 520,
+          "enemy": {
+            "id": "enemy-37",
+            "name": "Yêu thú",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 3,
+        "seals": 3
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "chapter": "Tinh Hà Kiếm Vực",
+      "moves": 22,
+      "seed": 3987621,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "BreakRocks",
+          "target": 6
+        }
+      ],
+      "obstacles": {
+        "rocks": 6,
+        "seals": 0
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "chapter": "Tinh Hà Kiếm Vực",
+      "moves": 22,
+      "seed": 4092350,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Battle",
+          "target": 520,
+          "enemy": {
+            "id": "enemy-39",
+            "name": "Yêu thú",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 3,
+        "seals": 3
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "chapter": "Tinh Hà Kiếm Vực",
+      "moves": 22,
+      "seed": 4197079,
+      "baseExp": 100,
+      "board": {
+        "width": 7,
+        "height": 7,
+        "activeCells": [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true]
+      },
+      "objectives": [
+        {
+          "id": "main",
+          "type": "Boss",
+          "target": 840,
+          "enemy": {
+            "id": "enemy-40",
+            "name": "Yêu vương",
+            "artKey": "beast"
+          }
+        }
+      ],
+      "obstacles": {
+        "rocks": 3,
+        "seals": 3
+      },
+      "spawnPhases": [
+        {
+          "minMovesRemaining": 0,
+          "weights": [1, 1, 1, 1]
+        }
+      ]
+    }
+  ],
+  "rewards": {
+    "firstWinCoins": 100,
+    "replayWinCoins": 10,
+    "starBonus": [0, 0, 25, 50]
+  }
 }
