@@ -22,7 +22,8 @@ import time
 from datetime import datetime, timezone
 from urllib import error, parse, request
 
-VIDEO_MODEL = "xai/grok-imagine-video/v1.5/lite/image-to-video"
+VIDEO_MODEL = "xai/grok-imagine-video/v1.5/lite/text-to-video"
+LEGACY_VIDEO_MODEL = "xai/grok-imagine-video/v1.5/lite/image-to-video"
 MATTE_MODEL = "fal-ai/feynobg"
 QUEUE_BASE = "https://queue.fal.run/"
 BLOCKED = {"failed", "unknown", "submitting"}
@@ -187,13 +188,16 @@ def init_job(root, slug, description, image=None, image_prompt=None, video_promp
             else:
                 shutil.copyfile(source, path / target)
     atomic_json(path / "manifest.json", {
-        "version": 1, "id": slug, "description": description, "kind": kind,
+        "version": 2, "id": slug, "description": description, "kind": kind,
         "created_at": now(), "state": "prepared",
-        "config": {"video_model": VIDEO_MODEL, "resolution": "480p", "video_duration": duration,
+        "config": {"video_model": VIDEO_MODEL, "generation_mode": "text-to-video",
+                   "resolution": "480p", "aspect_ratio": "1:1", "video_duration": duration,
+                   "safe_bounds": [0.1, 0.1, 0.9, 0.9], "alpha_threshold": 8,
+                   "pack_mode": "full-canvas", "frame_sampling": "inclusive",
                    "matte_model": MATTE_MODEL, "matte_seed": 42, "frame_count": frame_count,
                    "size": size, "columns": columns, "padding": padding,
                    "playback_ms": playback_ms or (800 if kind == "fire" else 1000)},
-        "video": {}, "frames": [], "sample_review": None,
+        "video": {}, "frames": [], "video_review": None, "sample_review": None,
     })
     return Job(path)
 
@@ -355,27 +359,42 @@ def generate_video(job, api=None, **options):
     record = job.data["video"]
     if record.get("state") == "imported":
         return
-    image = job.file("source.png")
     prompt_file = job.file("video.prompt.txt")
-    if not image.is_file() or not prompt_file.is_file():
-        raise PipelineError("Create source.png and video.prompt.txt before video generation.")
+    if not prompt_file.is_file():
+        raise PipelineError("Create video.prompt.txt before video generation.")
     prompt = prompt_file.read_text().strip()
     if not prompt or len(prompt) > 4096:
         raise PipelineError("Video prompt must contain 1–4096 characters.")
     config = job.data["config"]
     if config["video_duration"] not in (1, 2):
         raise PipelineError("Video generation is limited to 1 or 2 seconds; refusing a longer request.")
-    payload = {"image_url": data_uri(image), "prompt": prompt, "resolution": "480p", "duration": config["video_duration"]}
+    model = config.get("video_model", LEGACY_VIDEO_MODEL)
+    if record.get("model") and record["model"] != model:
+        raise PipelineError("Video endpoint changed. Restore the original job configuration.")
+    if config.get("resolution", "480p") != "480p":
+        raise PipelineError("Video generation is limited to 480p.")
+    payload = {"prompt": prompt, "resolution": "480p", "duration": config["video_duration"]}
+    if model == VIDEO_MODEL:
+        if config.get("generation_mode") != "text-to-video" or config.get("aspect_ratio") != "1:1":
+            raise PipelineError("Text-to-video jobs require generation_mode=text-to-video and aspect_ratio=1:1.")
+        payload["aspect_ratio"] = "1:1"
+    elif model == LEGACY_VIDEO_MODEL:
+        image = job.file("source.png")
+        if not image.is_file():
+            raise PipelineError("Legacy image-to-video jobs still require their original source.png.")
+        payload["image_url"] = data_uri(image)
+    else:
+        raise PipelineError("Unsupported video endpoint; do not change models to bypass retry approval.")
     signature = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
     if record.get("signature") and record["signature"] != signature:
         raise PipelineError("Generation inputs changed. Do not overwrite an existing attempt; request an approved revision.")
     if record.get("state") == "completed" and job.file(record["output"]).is_file() and sha256(job.file(record["output"])) == record.get("output_sha256"):
         return
     api = require_api(job, api, **options)
-    record.update(signature=signature, model=VIDEO_MODEL)
+    record.update(signature=signature, model=model)
     job.data["state"] = "generating_video"
     job.save()
-    run_request(job, record, VIDEO_MODEL, payload, "video", api, threading.Event())
+    run_request(job, record, model, payload, "video", api, threading.Event())
     job.data["state"] = "video_ready"
     job.save()
 
@@ -473,6 +492,8 @@ def extract(job, start=0, end=None):
     Image, _, _ = pillow()
     video = video_file(job)
     info = probe(video)
+    if job.data["config"].get("pack_mode") == "full-canvas" and info["width"] != info["height"]:
+        raise PipelineError("A square video is required for the 500x500 composition; inspect the source before proceeding.")
     if end is None:
         end = info["duration"] if job.data["video"]["state"] == "imported" else min(info["duration"], job.data["config"]["video_duration"])
     if not all(math.isfinite(x) for x in (start, end)) or not 0 <= start < end <= info["duration"] + .001:
@@ -488,7 +509,13 @@ def extract(job, start=0, end=None):
             if not job.file(record["raw"]).is_file() or sha256(job.file(record["raw"])) != record["raw_sha256"]:
                 raise PipelineError("An extracted frame is missing or changed. Restore it before using cached requests.")
             continue
-        timestamp = min(start + index * (end - start) / selection["count"], max(0, info["duration"] - 1 / info["fps"]))
+        if job.data["config"].get("frame_sampling") == "inclusive":
+            # Include the first and last available frames inside the selected range.
+            last = max(start, end - 1 / info["fps"])
+            timestamp = start + index * (last - start) / (selection["count"] - 1)
+        else:
+            # Preserve existing jobs' frame timestamps and cached matting inputs.
+            timestamp = min(start + index * (end - start) / selection["count"], max(0, info["duration"] - 1 / info["fps"]))
         relative = f"frames/{index:04d}.png"
         capture(video, timestamp, job.file(relative))
         with Image.open(job.file(relative)) as image:
@@ -530,12 +557,52 @@ def sample_contact(job):
     sheet.save(job.file("sample-review.png"))
 
 
+def video_review_signature(job):
+    video = video_file(job)
+    frames = job.data["frames"]
+    if len(frames) != job.data["config"]["frame_count"]:
+        raise PipelineError("Extract all frames before recording the video review.")
+    for row in frames:
+        if not job.file(row["raw"]).is_file() or sha256(job.file(row["raw"])) != row["raw_sha256"]:
+            raise PipelineError("Raw frame changed; restore it before reviewing or matting.")
+    return {"video_sha256": sha256(video), "selection": job.data.get("selection"),
+            "frames": [row["raw_sha256"] for row in frames]}
+
+
+def review_video(job, passed, note):
+    job.data["video_review"] = {"passed": passed, "note": note, "at": now(),
+                                "signature": video_review_signature(job)}
+    job.data["state"] = "video_passed" if passed else "needs_attention"
+    job.save()
+
+
+def require_video_review(job):
+    if job.data["config"].get("pack_mode") != "full-canvas":
+        return  # Legacy jobs keep their existing review workflow.
+    review = job.data.get("video_review") or {}
+    if not review.get("passed") or review.get("signature") != video_review_signature(job):
+        raise PipelineError("Inspect the video and extracted first/peak/fade/last frames, then record review --stage video --pass before Feyn or export.")
+
+
+def check_safe_bounds(images, bounds, threshold, label="source"):
+    """Check visible alpha; faint glow still needs visual review."""
+    for index, image in enumerate(images):
+        width, height = image.size
+        allowed = (math.ceil(width * bounds[0]), math.ceil(height * bounds[1]),
+                   math.floor(width * bounds[2]), math.floor(height * bounds[3]))
+        visible = image.getchannel("A").point(lambda alpha: 255 if alpha > threshold else 0).getbbox()
+        if visible and (visible[0] < allowed[0] or visible[1] < allowed[1] or
+                        visible[2] > allowed[2] or visible[3] > allowed[3]):
+            raise PipelineError(f"Frame {index} ({label}) visible alpha exceeds the central 80% safe region: {visible}, allowed {allowed}. Inspect artifacts; no automatic paid retry.")
+
+
 def matte(job, stage="sample", concurrency=4, api=None, **options):
     if concurrency < 1:
         raise PipelineError("Concurrency must be positive.")
     frames = job.data["frames"]
     if len(frames) != job.data["config"]["frame_count"]:
         raise PipelineError("Extract all frames first.")
+    require_video_review(job)
     signature = {"model": MATTE_MODEL, "seed": job.data["config"]["matte_seed"],
                  "inputs": [row["raw_sha256"] for row in frames]}
     if job.data.get("matte_signature") and job.data["matte_signature"] != signature:
@@ -600,6 +667,12 @@ def review_samples(job, passed, note):
     indices = sample_indices(job)
     if not indices or not all(job.data["frames"][i].get("state") == "completed" for i in indices):
         raise PipelineError("Complete the three sample cutouts before review.")
+    if passed and job.data["config"].get("pack_mode") == "full-canvas":
+        Image, _, _ = pillow()
+        for index in indices:
+            with Image.open(job.file(job.data["frames"][index]["output"])) as image:
+                check_safe_bounds([image.convert("RGBA")], job.data["config"]["safe_bounds"],
+                                  job.data["config"]["alpha_threshold"], label=f"sample frame {index}")
     job.data["sample_review"] = {"passed": passed, "note": note, "at": now(), "signature": sample_signature(job)}
     job.data["state"] = "sample_passed" if passed else "needs_attention"
     job.save()
@@ -624,6 +697,8 @@ def retry_approved(job, target, approval, api=None, **options):
     api = require_api(job, api, **options)
     if target != "video" and (not job.file(record["raw"]).is_file() or sha256(job.file(record["raw"])) != record["raw_sha256"]):
         raise PipelineError("Raw frame changed; restore it before approving a retry of this target.")
+    if target != "video":
+        require_video_review(job)
     previous = {key: value for key, value in record.items() if key != "history"}
     history = record.get("history", []) + [previous]
     stable = {key: record[key] for key in ("index", "timestamp", "raw", "raw_sha256", "dimensions", "signature", "model") if key in record}
@@ -646,6 +721,7 @@ def pack(job, playback_ms=None, crop=None, pivot=None):
     records = job.data["frames"]
     if len(records) != job.data["config"]["frame_count"] or not all(row.get("state") == "completed" for row in records):
         raise PipelineError("Complete all cutouts before packing.")
+    require_video_review(job)
     images = []
     for row in records:
         path = job.file(row["output"])
@@ -656,16 +732,24 @@ def pack(job, playback_ms=None, crop=None, pivot=None):
     dimensions = images[0].size
     if any(image.size != dimensions for image in images):
         raise PipelineError("All cutouts must have the same dimensions.")
+    config = job.data["config"]
+    bounded = config.get("pack_mode") == "full-canvas"
+    if bounded:
+        if dimensions[0] != dimensions[1]:
+            raise PipelineError("Full-canvas export requires square frames.")
+        check_safe_bounds(images, config["safe_bounds"], config["alpha_threshold"])
     boxes = [image.getchannel("A").getbbox() for image in images]
     boxes = [box for box in boxes if box]
     if not boxes:
         raise PipelineError("All cutouts are empty; inspect Feyn output before approving any retry.")
     if crop is None:
-        crop = (max(0, min(b[0] for b in boxes) - 2), max(0, min(b[1] for b in boxes) - 2),
-                min(dimensions[0], max(b[2] for b in boxes) + 2), min(dimensions[1], max(b[3] for b in boxes) + 2))
+        if bounded:
+            crop = (0, 0, dimensions[0], dimensions[1])
+        else:
+            crop = (max(0, min(b[0] for b in boxes) - 2), max(0, min(b[1] for b in boxes) - 2),
+                    min(dimensions[0], max(b[2] for b in boxes) + 2), min(dimensions[1], max(b[3] for b in boxes) + 2))
     if not (0 <= crop[0] < crop[2] <= dimensions[0] and 0 <= crop[1] < crop[3] <= dimensions[1]):
         raise PipelineError("Crop must be left,top,right,bottom within the source frame.")
-    config = job.data["config"]
     duration = playback_ms if playback_ms is not None else config["playback_ms"]
     if duration < len(images):
         raise PipelineError("Playback duration must be at least 1 ms per frame.")
@@ -681,9 +765,11 @@ def pack(job, playback_ms=None, crop=None, pivot=None):
               (pivot[1] - crop[1]) * resized[1] / (crop[3] - crop[1]) + offset[1])
     signature = {"cutouts": [row["output_sha256"] for row in records], "crop": list(crop), "pivot": list(pivot),
                  "playback_ms": duration, "size": size, "padding": padding, "columns": columns}
+    if bounded:
+        signature.update(pack_mode=config["pack_mode"], safe_bounds=config["safe_bounds"],
+                         alpha_threshold=config["alpha_threshold"])
     digest = hashlib.sha256(json.dumps(signature, sort_keys=True).encode()).hexdigest()[:12]
     out = job.file("exports/" + digest)
-    out.mkdir(parents=True, exist_ok=True)
     pitch = size + 2 * padding
     rows = math.ceil(len(images) / columns)
     atlas = Image.new("RGBA", (columns * pitch, rows * pitch))
@@ -691,14 +777,24 @@ def pack(job, playback_ms=None, crop=None, pivot=None):
     for index, image in enumerate(images):
         canvas = Image.new("RGBA", (size, size))
         canvas.alpha_composite(image.crop(crop).resize(resized, Image.Resampling.LANCZOS), offset)
+        if bounded:
+            # A manual crop may not discard glow or defeat the exported safe margin.
+            alpha_box = image.getchannel("A").getbbox()
+            if alpha_box and (alpha_box[0] < crop[0] or alpha_box[1] < crop[1] or
+                              alpha_box[2] > crop[2] or alpha_box[3] > crop[3]):
+                raise PipelineError(f"Crop clips frame {index}; preserve the full effect and glow.")
+            check_safe_bounds([canvas], config["safe_bounds"], config["alpha_threshold"], label=f"export frame {index}")
         x, y = index % columns * pitch + padding, index // columns * pitch + padding
         atlas.paste(canvas, (x, y))
         frame_ms = round((index + 1) * duration / len(images)) - round(index * duration / len(images))
         frame_meta.append({"index": index, "rect": {"x": x, "y": y, "width": size, "height": size}, "durationMs": frame_ms})
         prepared.append(canvas)
         path = out / f"frame-{index:04d}.png"
-        canvas.save(path)
         paths.append(path)
+    # Validate every frame before writing any export files.
+    out.mkdir(parents=True, exist_ok=True)
+    for canvas, path in zip(prepared, paths):
+        canvas.save(path)
     atlas.save(out / "sheet.png")
     prepared[0].save(out / "preview.webp", save_all=True, append_images=prepared[1:], lossless=True,
                      duration=[frame["durationMs"] for frame in frame_meta], loop=1, background=(0, 0, 0, 0))
@@ -758,6 +854,7 @@ def main(argv=None):
             command.add_argument("--stage", choices=("sample", "remaining"), default="sample")
             command.add_argument("--concurrency", type=int, default=4)
         elif name == "review":
+            command.add_argument("--stage", choices=("video", "sample"), default="sample")
             group = command.add_mutually_exclusive_group(required=True)
             group.add_argument("--pass", dest="passed", action="store_true")
             group.add_argument("--fail", dest="passed", action="store_false")
@@ -796,7 +893,10 @@ def main(argv=None):
                 elif args.command == "matte":
                     matte(job, args.stage, args.concurrency, **options)
                 elif args.command == "review":
-                    review_samples(job, args.passed, args.note)
+                    if args.stage == "video":
+                        review_video(job, args.passed, args.note)
+                    else:
+                        review_samples(job, args.passed, args.note)
                 elif args.command == "retry":
                     retry_approved(job, args.target, args.approval, **options)
                 elif args.command == "pack":
