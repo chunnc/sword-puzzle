@@ -35,14 +35,11 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    let stopped = false;
-    const run = () => { if (!stopped && AppState.currentState === 'active') void useGameStore.getState().checkConnection(false); };
-    const timer = setInterval(run, 30000);
+    useGameStore.getState().setForeground(AppState.currentState === 'active');
     const subscription = AppState.addEventListener('change', state => {
       useGameStore.getState().setForeground(state === 'active');
-      if (state === 'active') run();
     });
-    return () => { stopped = true; clearInterval(timer); subscription.remove(); };
+    return () => subscription.remove();
   }, []);
 
   return (

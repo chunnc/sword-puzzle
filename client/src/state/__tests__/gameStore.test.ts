@@ -55,6 +55,7 @@ function ready(profile: PlayerProfile = domain.emptyProfile()) {
 }
 beforeEach(async () => {
   jest.resetModules();
+  process.env.EXPO_PUBLIC_GAME_API_URL = 'http://localhost:5001/game';
   domain = require('../../game/domain');
   domain.installContent(require('../../../../content/game-content.json'));
   api = require('../../services/api');
@@ -201,59 +202,77 @@ it('blocks boot and every game action while disconnected', async () => {
   })).toBe(false);
   expect((await store.getState().castSkill('nhat-kiem', [])).changed).toBe(false);
 });
-it('keeps an unchanged board during network loss and foreground checks', async () => {
+it.each([true, false])('preserves board and connection state on resume with online=%s', async (online) => {
   ready();
   await store.getState().startLevel(1);
   const board = store.getState().save.active;
+  store.setState({ online, connectionFailed: !online });
   store.getState().setForeground(false);
   expect(await store.getState().startLevel(1, true)).toBe(false);
-  expect(store.getState().save.active).toEqual(board);
   store.getState().setForeground(true);
-  expect(store.getState().online).toBe(false);
-  await store.getState().checkConnection();
-  expect(store.getState().online).toBe(true);
+  expect(store.getState()).toMatchObject({ online, connectionFailed: !online, foreground: true });
   expect(store.getState().save.active).toEqual(board);
+  expect(api.checkHealth).not.toHaveBeenCalled();
 });
-it.each([true, false])('waits for a foreground check, preserves the board and reports health success=%s', async (healthy) => {
+it.each(['TIMEOUT', 'NETWORK_ERROR'])('reports %s immediately without a supplementary health check', async (code) => {
   ready();
-  await store.getState().startLevel(1);
-  const board = store.getState().save.active;
-  store.getState().setForeground(false);
-  store.getState().setForeground(true);
-  expect(store.getState()).toMatchObject({ online: false, connectionFailed: false });
-  let complete!: () => void, reject!: (error: Error) => void;
-  (api.checkHealth as jest.Mock).mockRejectedValue(new api.GameApiError('NETWORK_ERROR'));
-  (api.checkHealth as jest.Mock).mockImplementationOnce(() => new Promise<void>((resolve, fail) => { complete = resolve; reject = fail; }));
-  const checking = store.getState().checkConnection();
-  expect(store.getState().connectionFailed).toBe(false);
-  expect(await store.getState().startLevel(1, true)).toBe(false);
-  if (healthy) complete();
-  else reject(new api.GameApiError('NETWORK_ERROR'));
-  await checking;
-  expect(store.getState()).toMatchObject({ online: healthy, connectionFailed: !healthy });
-  expect(store.getState().save.active).toEqual(board);
-
-  if (!healthy) {
-    store.getState().setForeground(false);
-    store.getState().setForeground(true);
-    expect(store.getState().connectionFailed).toBe(true);
-    (api.checkHealth as jest.Mock).mockImplementationOnce(() => new Promise<void>(resolve => { complete = resolve; }));
-    const retry = store.getState().checkConnection();
-    expect(store.getState().connectionFailed).toBe(true);
-    complete();
-    await retry;
-    expect(store.getState()).toMatchObject({ online: true, connectionFailed: false });
-    expect(store.getState().save.active).toEqual(board);
-  }
-});
-it.each([true, false])('uses the supplementary health check after a timed-out request with success=%s', async (healthy) => {
-  ready();
-  (api.syncProfile as jest.Mock).mockRejectedValue(new api.GameApiError('TIMEOUT'));
-  if (!healthy) (api.checkHealth as jest.Mock).mockRejectedValue(new api.GameApiError('NETWORK_ERROR'));
+  (api.syncProfile as jest.Mock).mockRejectedValue(new api.GameApiError(code));
   expect(await store.getState().purchase('skill', 'ngu-kiem')).toBe(false);
-  expect(api.checkHealth).toHaveBeenCalledTimes(1);
-  expect(store.getState()).toMatchObject({ online: healthy, connectionFailed: !healthy });
+  expect(api.checkHealth).not.toHaveBeenCalled();
+  expect(store.getState()).toMatchObject({ online: false, connectionFailed: true });
   expect(store.getState().save.pending?.operation.kind).toBe('purchase');
+});
+it.each(['fetchBootstrap', 'fetchProfile'] as const)('keeps the network dialog when %s times out after healthy ping', async (method) => {
+  (api[method] as jest.Mock).mockRejectedValue(new api.GameApiError('TIMEOUT'));
+  await expect(store.getState().initialize()).rejects.toThrow();
+  expect(api.checkHealth).toHaveBeenCalledTimes(1);
+  expect(store.getState()).toMatchObject({ online: false, connectionFailed: true });
+});
+it('keeps the network dialog through profile recovery after a successful ping', async () => {
+  ready(); store.setState({ online: false, connectionFailed: true });
+  let finish!: (value: unknown) => void;
+  (api.fetchProfile as jest.Mock).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const pending = store.getState().checkConnection();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  expect(api.fetchProfile).toHaveBeenCalledTimes(1);
+  expect(store.getState()).toMatchObject({ online: false, connectionFailed: true, recovering: true });
+  finish({ session: guest, profile: domain.emptyProfile() });
+  await pending;
+  expect(store.getState()).toMatchObject({ online: true, connectionFailed: false, recovering: false });
+});
+it('keeps the network dialog when profile recovery returns an invalid response', async () => {
+  ready(); store.setState({ online: false, connectionFailed: true });
+  (api.fetchProfile as jest.Mock).mockRejectedValueOnce(new api.GameApiError('INVALID_RESPONSE'));
+  await store.getState().checkConnection();
+  expect(store.getState()).toMatchObject({ online: false, connectionFailed: true, recovering: false });
+});
+it('does not clear a newer request failure when an older retry finishes', async () => {
+  ready();
+  let finish!: () => void;
+  (api.checkHealth as jest.Mock).mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+  const pending = store.getState().checkConnection();
+  const actualApi = jest.requireActual('../../services/api');
+  const originalFetch = global.fetch;
+  global.fetch = jest.fn().mockResolvedValue({ status: 504 });
+  try {
+    await expect(actualApi.fetchBootstrap()).rejects.toMatchObject({ code: 'TIMEOUT' });
+    finish(); await pending;
+    expect(store.getState()).toMatchObject({ online: false, connectionFailed: true });
+  } finally { global.fetch = originalFetch; }
+});
+it('reports a swallowed background ad timeout and stays disconnected after another API succeeds', async () => {
+  ready();
+  const actualApi = jest.requireActual('../../services/api');
+  const originalFetch = global.fetch;
+  global.fetch = jest.fn().mockResolvedValueOnce({ status: 504 })
+    .mockResolvedValueOnce({ ok: true, status: 200, text: async () => '{}' });
+  try {
+    await actualApi.checkAdIntent(guest, 'intent').catch(() => undefined);
+    expect(store.getState()).toMatchObject({ online: false, connectionFailed: true });
+    await actualApi.fetchBootstrap();
+    expect(store.getState()).toMatchObject({ online: false, connectionFailed: true });
+    expect(api.checkHealth).not.toHaveBeenCalled();
+  } finally { global.fetch = originalFetch; }
 });
 it('purchases only after server confirmation and freezes the run loadout', async () => {
   const p = domain.profileFromLegacy(Array.from({
@@ -324,7 +343,8 @@ it('retries a timed-out committed result with the same run ID without local rewa
       }]
     }
   });
-  await store.getState().syncProgress();
+  await store.getState().checkConnection();
+  expect(store.getState()).toMatchObject({ online: true, connectionFailed: false });
   expect(store.getState().save.pending).toBeNull();
   expect(store.getState().save.lastWin?.coinsGained).toBe(100);
   expect((api.syncProfile as jest.Mock).mock.calls[1][1][0].id).toBe(snapshot.runId);
@@ -427,26 +447,15 @@ it('keeps the current guest usable when an optional login targets a disabled acc
   expect(session.getCurrentSession()?.uid).toBe(guest.uid);
   expect(await store.getState().startLevel(1)).toBe(true);
 });
-it('periodic health checks never repeatedly retry a rejected identity', async () => {
-  ready();
-  store.setState({ authRequired: true, bootError: 'Recovery denied' });
-  await store.getState().checkConnection(false);
-  await store.getState().checkConnection(false);
-  expect(api.deviceSession).not.toHaveBeenCalled();
-  expect(api.fetchProfile).not.toHaveBeenCalled();
-  expect(store.getState().authRequired).toBe(true);
-  expect(store.getState().bootError).toBe('Recovery denied');
-  expect(store.getState().online).toBe(true);
-});
-it('honors a manual identity retry arriving during a periodic health check', async () => {
+it('deduplicates simultaneous manual retries of a rejected identity', async () => {
   ready(); store.setState({ authRequired: true });
   require('expo-secure-store').getItemAsync.mockResolvedValue(JSON.stringify(guest));
   let finish!: () => void;
   (api.checkHealth as jest.Mock).mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
-  const periodic = store.getState().checkConnection(false);
-  const manual = store.getState().checkConnection();
-  finish(); await Promise.all([periodic, manual]);
+  const first = store.getState().checkConnection();
+  const second = store.getState().checkConnection();
+  finish(); await Promise.all([first, second]);
+  expect(api.checkHealth).toHaveBeenCalledTimes(1);
   expect(api.deviceSession).toHaveBeenCalledTimes(1);
-  expect(store.getState().authRequired).toBe(false);
-  expect(store.getState().initialized).toBe(true);
+  expect(store.getState()).toMatchObject({ authRequired: false, initialized: true, online: true });
 });

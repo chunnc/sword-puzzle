@@ -60,7 +60,7 @@ test('disabled, deleted and revoked accounts cannot be restored by a device key'
  assert.equal((await auth.getUser(a.uid).catch(()=>null)),null);
 });
 test('legacy sessions are adopted without changing UID, but protected APIs reject unbound tokens',{skip:!base},async()=>{
- const raw=await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({returnSecureToken:true})});
+ const raw=await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({returnSecureToken:true})});
  const legacy=await raw.json();assert.ok(legacy.idToken);
  assert.equal((await request('/v2/profile',undefined,legacy.idToken)).status,426);
  const d=device(),m=await request('/v2/auth/device-session',d,legacy.idToken);assert.equal(m.status,200);assert.equal(m.data.uid,legacy.localId);
@@ -68,7 +68,7 @@ test('legacy sessions are adopted without changing UID, but protected APIs rejec
  assert.equal((await request('/v1/auth/login',{email:'old@example.test',password})).status,426);
 });
 test('verified legacy migration is not blocked by the new-guest IP quota',{skip:!base},async()=>{
- const raw=await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({returnSecureToken:true})});
+ const raw=await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({returnSecureToken:true})});
  const legacy=await raw.json();
  const refs=['127.0.0.1','::ffff:127.0.0.1','::1'].map(ip=>db.collection('authThrottle').doc(createHash('sha256').update(`device:${ip}:`).digest('hex')));
  await Promise.all(refs.map(ref=>ref.set({startsAt:Date.now(),count:30,expiresAt:new Date(Date.now()+3600000)})));

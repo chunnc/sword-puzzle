@@ -20,7 +20,7 @@ test('health, remote catalog and full guest profile are available immediately',{
  const g=await guest(),profile=await request('/v2/profile','GET',undefined,g.idToken);assert.equal(profile.status,200);assert.deepEqual(profile.data.loadout,{sword:'thanh-phong',skills:['nhat-kiem']});
  const {initializeApp,getApps}=require('firebase-admin/app');const {getFirestore}=require('firebase-admin/firestore');if(!getApps().length)initializeApp({projectId:'demo-kiem-khai'});
  const stored=(await getFirestore().collection('players').doc(g.uid).get()).data();assert.ok(stored.profileV2);assert.ok(stored.createdAt);assert.equal(stored.refreshToken,undefined);
- const direct=await fetch(`http://127.0.0.1:8080/v1/projects/demo-kiem-khai/databases/(default)/documents/players/${g.uid}`,{headers:{authorization:`Bearer ${g.idToken}`}});assert.equal(direct.status,403);
+ const direct=await fetch(`http://${process.env.FIRESTORE_EMULATOR_HOST}/v1/projects/demo-kiem-khai/databases/(default)/documents/players/${g.uid}`,{headers:{authorization:`Bearer ${g.idToken}`}});assert.equal(direct.status,403);
 });
 test('guest registration preserves UID and progress, login and refresh restore them',{skip:!base},async()=>{
  const g=await guest();assert.equal((await sync(g.idToken,[win('register_win01',1,2),win('register_win02',2,1)])).status,200);

@@ -4,7 +4,7 @@ import { getLevel } from '../game/levels';
 import { CONTENT, getContentVersion, gradeStars, highestUnlocked, installContent, isCompleted, normalizeProfile, type Loadout, type PlayerOperation, type SkillId } from '../game/domain';
 import { clearSave, emptySave, loadSave, persistSave } from '../game/save';
 import type { BoardActionAnimation, CellPosition, SaveData, Stars, WinSummary } from '../game/types';
-import { checkHealth, createGuest, fetchBootstrap, fetchContent, fetchProfile, GameApiError, isApiConfigured, loginAccount, registerAccount, syncProfile, createAdIntent, checkAdIntent, deviceSession, logoutAccount } from '../services/api';
+import { checkHealth, createGuest, fetchBootstrap, fetchContent, fetchProfile, GameApiError, isApiConfigured, isConnectionError, setConnectionErrorHandler, loginAccount, registerAccount, syncProfile, createAdIntent, checkAdIntent, deviceSession, logoutAccount } from '../services/api';
 import { initializeRewardedAds, showRewardedForIntent } from '../services/ads';
 import { resetDeviceIdentity } from '../services/device';
 import { clearSession, getCurrentSession, getSessionGeneration, loadSession, saveSession, type SessionData } from '../services/session';
@@ -33,7 +33,7 @@ interface GameState {
   adsLoading: boolean;
   notice: string;
   initialize: () => Promise<string>;
-  checkConnection: (retryIdentity?: boolean) => Promise<void>;
+  checkConnection: () => Promise<void>;
   setForeground: (active: boolean) => void;
   startLevel: (id: number, restart?: boolean) => Promise<boolean>;
   swap: (x1: number, y1: number, x2: number, y2: number) => Promise<BoardActionResult>;
@@ -49,12 +49,13 @@ interface GameState {
   setNotice: (notice: string) => void;
 }
 const CLIENT_VERSION = '1.3.0';
-let healthInFlight: Promise<void> | null = null,
+let recoveryInFlight: Promise<void> | null = null,
   mutationQueue = Promise.resolve(),
   identityLoaded = false,
   lifecycle = 0,
   bindingChanged = false,
-  identityRetryRequested = false;
+  connectionFailureGeneration = 0;
+const reportedConnectionErrors = new WeakSet<GameApiError>();
 function serialize<T>(work: () => Promise<T>): Promise<T> {
   const next = mutationQueue.then(work, work);
   mutationQueue = next.then(() => undefined, () => undefined);
@@ -120,6 +121,18 @@ function available(includePending = false) {
   const s = useGameStore.getState();
   return s.initialized && s.bootstrapLoaded && s.online && s.foreground && !s.recovering && !s.authRequired && (includePending || !s.save.pending);
 }
+function reportConnectionFailure(error: GameApiError) {
+  if (!reportedConnectionErrors.has(error)) {
+    reportedConnectionErrors.add(error);
+    connectionFailureGeneration++;
+  }
+  useGameStore.setState({
+    online: false,
+    connectionFailed: true,
+    notice: apiErrorMessage(error),
+    ...(!useGameStore.getState().initialized ? { bootError: apiErrorMessage(error) } : {})
+  });
+}
 async function failure(error: unknown, loginAttempt = false) {
   const s = useGameStore.getState();
   const code = error instanceof Error ? error.message : '';
@@ -131,17 +144,7 @@ async function failure(error: unknown, loginAttempt = false) {
       bootError: apiErrorMessage(error)
     } : {})
   });
-  if (error instanceof GameApiError && (error.code === 'TIMEOUT' || error.code === 'NETWORK_ERROR')) {
-    try {
-      await checkHealth();
-      useGameStore.setState({ online: true, connectionFailed: false });
-    } catch {
-      useGameStore.setState({
-        online: false,
-        connectionFailed: true
-      });
-    }
-  }
+  if (isConnectionError(error)) reportConnectionFailure(error);
   if (error instanceof GameApiError && ['DEVICE_BINDING_CHANGED', 'IDENTITY_UNCERTAIN'].includes(error.code)) { bindingChanged = true; useGameStore.setState({ initialized: false, authRequired: false }); }
   if (error instanceof GameApiError && error.code === 'CONTENT_MISMATCH') useGameStore.setState({
     bootstrapLoaded: false,
@@ -341,17 +344,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   notice: '',
   initialize: async () => {
     await get().checkConnection();
-    if (!get().initialized) throw new Error(get().bootError || 'CONNECTION_REQUIRED');
+    if (!get().initialized || !get().online) throw new Error(get().bootError || 'CONNECTION_REQUIRED');
     return '/map';
   },
-  checkConnection: async (retryIdentity = true) => {
+  checkConnection: async () => {
     if (!get().foreground) return;
-    if (retryIdentity) identityRetryRequested = true;
-    if (healthInFlight) return healthInFlight;
+    if (recoveryInFlight) return recoveryInFlight;
     const epoch = lifecycle;
-    healthInFlight = (async () => {
+    const failureGeneration = connectionFailureGeneration;
+    const wasConnectionFailed = get().connectionFailed;
+    recoveryInFlight = (async () => {
       set({
-        checkingConnection: true
+        checkingConnection: true,
+        recovering: true
       });
       let healthy = false;
       try {
@@ -359,28 +364,21 @@ export const useGameStore = create<GameState>((set, get) => ({
         await checkHealth();
         healthy = true;
         if (epoch !== lifecycle || !get().foreground) return;
-        const retryRequested = identityRetryRequested;
-        identityRetryRequested = false;
-        if (get().authRequired && !retryRequested) {
-          set({ online: true, connectionFailed: false });
-          return;
-        }
-        const recover = !get().online || !get().initialized || !get().bootstrapLoaded || get().authRequired;
-        set({
-          online: true,
-          connectionFailed: false,
-          bootError: recover ? '' : get().bootError,
-          recovering: recover
-        });
+        const recover = !get().online || !get().initialized || !get().bootstrapLoaded || get().authRequired || bindingChanged;
         if (recover) await serialize(hydrate);else if (get().save.pending) await serialize(submitPending);
+        if (epoch === lifecycle && get().foreground && failureGeneration === connectionFailureGeneration) {
+          set({ online: true, connectionFailed: false, bootError: '' });
+        }
       } catch (error) {
         if (epoch !== lifecycle) return;
+        await failure(error);
         set({
-          online: healthy,
-          connectionFailed: !healthy,
+          ...(!isConnectionError(error) && failureGeneration === connectionFailureGeneration ? {
+            online: healthy && (!wasConnectionFailed || get().authRequired),
+            connectionFailed: !healthy || wasConnectionFailed && !get().authRequired
+          } : {}),
           bootError: apiErrorMessage(error)
         });
-        await failure(error);
       } finally {
         if (epoch === lifecycle) set({
           checkingConnection: false,
@@ -388,18 +386,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
       }
     })().finally(() => {
-      healthInFlight = null;
+      recoveryInFlight = null;
     });
-    return healthInFlight;
+    return recoveryInFlight;
   },
-  setForeground: active => {
-    set({
-      foreground: active,
-      ...(active ? {
-        online: false
-      } : {})
-    });
-  },
+  setForeground: active => set({ foreground: active }),
   startLevel: (levelId, restart = false) => serialize(async () => {
     if (!available()) return false;
     const current = get().save;
@@ -577,6 +568,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     notice
   })
 }));
+setConnectionErrorHandler(reportConnectionFailure);
 export function getHighestUnlocked(save: SaveData) {
   return highestUnlocked(save.profile.levels);
 }

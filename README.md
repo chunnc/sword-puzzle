@@ -18,7 +18,7 @@ Yêu cầu Node.js 22.13+, Expo development build, Android Studio/Android SDK ch
 3. Chạy `npm run android` hoặc `npm run ios` để sinh native project theo Expo Prebuild, build và cài development app lên thiết bị/simulator.
 4. Sau khi cài development app, chạy `npm start` để mở Metro và nạp client.
 
-App cần internet và dữ liệu server trước khi mở game. Lần đầu tự tạo hồ sơ khách; các lần sau dùng lại session. Health check mỗi 30 giây, timeout 2 giây và thử thêm một lần khi timeout; mất kết nối hiện dialog chặn thao tác, nút Thử lại chỉ đóng dialog sau khi server phản hồi thành công. Email/mật khẩu là tài khoản game; bản thử nghiệm chưa có xác minh email hoặc khôi phục mật khẩu.
+App cần internet và dữ liệu server trước khi mở game. Lần đầu tự tạo hồ sơ khách; các lần sau dùng lại session. Health check chỉ chạy lúc mở app và khi bấm Thử lại; mọi request client có timeout 12 giây, server có timeout chung 10 giây. API timeout (kể cả HTTP 504) hoặc lỗi mạng lập tức hiện dialog chặn thao tác; nút Thử lại chỉ đóng dialog sau khi kiểm tra kết nối và phục hồi hồ sơ/thao tác chờ hoàn tất. Quay lại app từ nền không tự ping server. Email/mật khẩu là tài khoản game; bản thử nghiệm chưa có xác minh email hoặc khôi phục mật khẩu.
 
 Client không chứa Firebase Auth/Firestore SDK. Token chỉ được dùng làm bearer token tới Game API; session lưu trong iOS Keychain/Android Keystore, còn profile, ví, trang bị và tiến trình được lưu trên server. Journal cục bộ v3 chỉ giữ bàn đang chơi và request chờ xác nhận, có bản dự phòng. Save offline v1/v2 bị bỏ qua. API trả 401 sẽ refresh token chung; nếu refresh bị từ chối, thử khôi phục cùng UID bằng khóa thiết bị rồi gửi lại request một lần. Đăng nhập là tùy chọn.
 

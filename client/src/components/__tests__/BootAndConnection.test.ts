@@ -101,7 +101,7 @@ it('keeps boot failures reviewable and allows retry', async () => {
   expect(mockState.initialize).toHaveBeenCalledTimes(2);
   expect(mockRouter.replace).not.toHaveBeenCalled();
 });
-it('network modal ignores Back and only hides after health succeeds', async () => {
+it('network modal ignores Back and only hides after connection recovery succeeds', async () => {
   mockState.connectionFailed = true;
   act(() => {
     renderer = create(React.createElement(ConnectionDialog));

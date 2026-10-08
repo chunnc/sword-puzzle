@@ -16,6 +16,7 @@ const KEY_URL = "https://www.gstatic.com/admob/reward/verifier-keys.json";
 async function getKeys(force = false): Promise<Key[]> {
   if (!force && keyCache && keyCache.expiresAt > Date.now()) return keyCache.keys;
   const response = await fetch(KEY_URL, { signal: AbortSignal.timeout(5000) });
+  if (response.status === 504) throw new DOMException('Key request timed out', 'TimeoutError');
   if (!response.ok) throw new Error("KEY_FETCH_FAILED");
   const body = await response.json() as { keys?: Key[] };
   if (!Array.isArray(body.keys) || body.keys.length === 0) throw new Error("KEY_FETCH_FAILED");

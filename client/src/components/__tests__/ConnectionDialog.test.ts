@@ -130,7 +130,7 @@ it('reserves space above a bottom-anchored retry button and reduces text without
   expect(StyleSheet.flatten(button().parent!.props.style).minWidth).toBe(176);
 });
 
-it('keeps modal, panel and text unchanged across repeated background checks', () => {
+it('keeps modal, panel and text unchanged across repeated recovery state changes', () => {
   act(() => { renderer = create(tree()); });
   const originalModal = modal(), originalPanel = panel(), originalText = texts(), originalStyle = panel().props.style;
   commits.mockClear(); jest.mocked(ArtPanel).mockClear();
@@ -161,7 +161,7 @@ it('memoizes the panel when its parent renders without a presentation change', (
   expect(ArtPanel).not.toHaveBeenCalled();
 });
 
-it('does not commit dialog updates for background polling while online', () => {
+it('does not commit dialog updates for non-presentation state changes while online', () => {
   useGameStore.setState({ online: true });
   act(() => { renderer = create(tree()); });
   commits.mockClear();
@@ -224,7 +224,7 @@ it('keeps pending feedback stable and retries the operation instead of health', 
   expect(checkConnection()).not.toHaveBeenCalled();
 });
 
-it('keeps login usable during background checks and hides on the account route', () => {
+it('keeps login usable during recovery state changes and hides on the account route', () => {
   useGameStore.setState({ online: true, authRequired: true, checkingConnection: true });
   act(() => { renderer = create(tree()); });
   expect(button().props.title).toBe('KHÔI PHỤC HỒ SƠ');

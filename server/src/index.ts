@@ -10,6 +10,7 @@ import { ApiError, createIdentityApi, type AuthenticatedRequest } from './identi
 import { highestUnlocked } from './domain/game';
 import { currentContent, loadContent } from './content';
 import { profileFromDocument, profileFields, parseOperations, processOperations, type OperationReceipt } from './domain/profile';
+import { API_TIMEOUT_SECONDS, isTimeoutError } from './timeout';
 
 if (getApps().length === 0) initializeApp();
 const db = getFirestore();
@@ -121,7 +122,7 @@ app.get("/v1/ads/admob-ssv", async (req, res, next) => {
     try { callback = await verifyAdmobCallback(req.originalUrl,
       adUnits.value().split(",").map(value => value.trim()).filter(Boolean)); }
     catch (error) {
-      if (error instanceof Error && error.message === "KEY_FETCH_FAILED") throw error;
+      if (isTimeoutError(error) || error instanceof Error && error.message === "KEY_FETCH_FAILED") throw error;
       throw new ApiError(400, "INVALID_CALLBACK");
     }
     const intentRef = db.collection("adIntents").doc(callback.intentId);
@@ -141,9 +142,9 @@ app.get("/v1/ads/admob-ssv", async (req, res, next) => {
 });
 
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  const problem = error instanceof ApiError ? error : error instanceof Error && error.message === "CONTENT_MISMATCH" ? new ApiError(409, "CONTENT_MISMATCH") : error instanceof Error && error.message === "CONTENT_NOT_CONFIGURED" ? new ApiError(503, "CONTENT_NOT_CONFIGURED") : new ApiError(500, "INTERNAL_ERROR");
+  const problem = isTimeoutError(error) ? new ApiError(504, 'TIMEOUT') : error instanceof ApiError ? error : error instanceof Error && error.message === "CONTENT_MISMATCH" ? new ApiError(409, "CONTENT_MISMATCH") : error instanceof Error && error.message === "CONTENT_NOT_CONFIGURED" ? new ApiError(503, "CONTENT_NOT_CONFIGURED") : new ApiError(500, "INTERNAL_ERROR");
   if (problem.status >= 500) console.error("API failure", error);
   res.status(problem.status).json({ error: problem.code });
 });
 
-export const gameApi = onRequest({ region: "asia-southeast1", maxInstances: 20 }, app);
+export const gameApi = onRequest({ region: "asia-southeast1", maxInstances: 20, timeoutSeconds: API_TIMEOUT_SECONDS }, app);

@@ -19,53 +19,64 @@ export class GameApiError extends Error {
     this.name = 'GameApiError';
   }
 }
+export const API_TIMEOUT_MS = 12_000;
+let connectionErrorHandler: ((error: GameApiError) => void) | undefined;
+export function setConnectionErrorHandler(handler: (error: GameApiError) => void) {
+  connectionErrorHandler = handler;
+}
+export function isConnectionError(error: unknown): error is GameApiError {
+  return error instanceof GameApiError && ['TIMEOUT', 'NETWORK_ERROR'].includes(error.code);
+}
 const API_BASE = (process.env.EXPO_PUBLIC_GAME_API_URL ?? '').trim().replace(/\/+$/, '');
 export function isApiConfigured() {
   return API_BASE.length > 0 && !API_BASE.includes('YOUR_PROJECT');
 }
-async function request<T>(path: string, options: RequestInit = {}, session?: SessionData, timeoutMs = 12000): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}, session?: SessionData): Promise<T> {
   if (!isApiConfigured()) throw new GameApiError('API_NOT_CONFIGURED');
-  const controller = new AbortController(),
-    timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timeout = setTimeout(() => {
+      reject(new GameApiError('TIMEOUT'));
+      controller.abort();
+    }, API_TIMEOUT_MS);
+  });
   try {
-    const headers = new Headers(options.headers);
-    if (options.body !== undefined) headers.set('Content-Type', 'application/json');
-    if (session) headers.set('Authorization', `Bearer ${session.idToken}`);
-    const response = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers,
-      signal: controller.signal
-    });
-    const text = await response.text();
-    let payload: any = null;
-    try {
-      payload = text ? JSON.parse(text) : null;
-    } catch {/* Invalid successful payloads are rejected below. */}
-    if (!response.ok) throw new GameApiError(typeof payload?.error === 'string' ? payload.error : 'NETWORK_ERROR', response.status);
-    if (payload === null) throw new GameApiError('INVALID_RESPONSE');
-    return payload as T;
+    return await Promise.race([deadline, (async () => {
+      const headers = new Headers(options.headers);
+      if (options.body !== undefined) headers.set('Content-Type', 'application/json');
+      if (session) headers.set('Authorization', `Bearer ${session.idToken}`);
+      const response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+        signal: controller.signal
+      });
+      if (response.status === 504) throw new GameApiError('TIMEOUT', response.status);
+      const text = await response.text();
+      let payload: any = null;
+      try {
+        payload = text ? JSON.parse(text) : null;
+      } catch {/* Invalid successful payloads are rejected below. */}
+      if (!response.ok) throw new GameApiError(typeof payload?.error === 'string' ? payload.error : 'NETWORK_ERROR', response.status);
+      if (payload === null) throw new GameApiError('INVALID_RESPONSE');
+      return payload as T;
+    })()]);
   } catch (error) {
-    if (error instanceof GameApiError) throw error;
-    throw new GameApiError(error instanceof Error && error.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR');
+    const problem = error instanceof GameApiError ? error : new GameApiError(
+      controller.signal.aborted || error instanceof Error && ['AbortError', 'TimeoutError'].includes(error.name) ? 'TIMEOUT' : 'NETWORK_ERROR'
+    );
+    if (isConnectionError(problem)) connectionErrorHandler?.(problem);
+    throw problem;
   } finally {
     clearTimeout(timeout);
   }
 }
 export async function checkHealth(): Promise<void> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const result = await request<{
-        ok: boolean;
-      }>('/health', {
-        method: 'GET',
-        cache: 'no-store'
-      }, undefined, 2000);
-      if (result.ok !== true) throw new GameApiError('NETWORK_ERROR');
-      return;
-    } catch (error) {
-      if (attempt === 0 && error instanceof GameApiError && error.code === 'TIMEOUT') continue;
-      throw error;
-    }
+  const result = await request<{ ok: boolean }>('/health', { method: 'GET', cache: 'no-store' });
+  if (result.ok !== true) {
+    const error = new GameApiError('NETWORK_ERROR');
+    connectionErrorHandler?.(error);
+    throw error;
   }
 }
 const refreshes = new Map<string, Promise<SessionData>>();

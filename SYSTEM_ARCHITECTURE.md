@@ -43,7 +43,7 @@ Expo app ──HTTPS JSON──▶ gameApi (Express on Cloud Functions)
 sword-puzzle/
 ├── client/                     Expo / React Native app
 │   ├── app/                    expo-router routes (screens)
-│   │   ├── _layout.tsx         Stack + auth guards, 30s health timer, AppState wiring
+│   │   ├── _layout.tsx         Stack + auth guards, AppState wiring
 │   │   ├── index.tsx           boot / splash
 │   │   ├── map.tsx             level select
 │   │   ├── game/[levelId].tsx  gameplay screen
@@ -97,9 +97,8 @@ sword-puzzle/
 `_layout.tsx` mounts a Stack and a global `ConnectionDialog`. Screens under
 `map`, `game/[levelId]`, `character`, `inventory`, `shop` are wrapped in
 `Stack.Protected guard={initialized}`; `account` is guarded by `bootstrapLoaded`.
-The layout starts a 30s interval that calls `checkConnection(false)` while
-foreground, and an `AppState` listener that updates `foreground` and re-checks on
-resume.
+An `AppState` listener updates `foreground` without changing connection state
+or calling the server on resume. There is no health polling interval.
 
 ### 3.2 Store (`client/src/state/gameStore.ts`)
 
@@ -115,8 +114,14 @@ Single Zustand store. Key ideas:
 - **`hydrate()`** — the boot sequence: fetch bootstrap → install content →
   load/repair session → device session if needed → load journal → fetch profile →
   persist → `submitPending()` → mark `initialized`.
-- **`checkConnection(retryIdentity)`** — single-flight health check; on failure
-  sets `online/connectionFailed` and calls `failure()`.
+- **`checkConnection()`** — single-flight boot/manual recovery: health check,
+  then hydrate or submit pending work. The network dialog stays open until all
+  required recovery succeeds; a failure generation prevents an older successful
+  retry from clearing a newer connection error.
+- **`reportConnectionFailure()`** — subscribed directly to the shared API layer;
+  timeout/network errors immediately set `online = false` and
+  `connectionFailed = true`, including errors swallowed by background callers.
+  `failure()` does not issue supplementary health checks.
 - **`submitPending()`** — replays the journal's pending operation through
   `/v2/profile/sync`, applies the returned authoritative profile, and writes the
   win summary.
@@ -147,7 +152,10 @@ Single Zustand store. Key ideas:
 
 - `api.ts` — request wrapper with 12s timeout and typed `GameApiError`; injects
   `Bearer` token; on `401` runs a single-flight refresh and retries once, falling
-  back to device-session recovery. Contains all endpoint functions.
+  back to device-session recovery. The 12s deadline includes response body reads
+  and applies to health requests too. HTTP 504 is normalized to `TIMEOUT` even
+  without a JSON body. Connection errors notify the store before being rethrown.
+  Contains all endpoint functions.
 - `session.ts` — session in SecureStore; `generation` counter invalidates stale
   async work; `saveRefreshedSession` is generation-checked.
 - `device.ts` — 128-bit `installationId` + 256-bit `secret` (hex) generated and
@@ -170,10 +178,14 @@ and the `boardMotion`/`boardVisuals` helpers.
 ### 4.1 App (`server/src/index.ts`)
 
 An Express app mounted at one HTTP function, `gameApi`, region
-`asia-southeast1`, `maxInstances: 20`. `express.json({ limit: '32kb' })`,
+`asia-southeast1`, `maxInstances: 20`, `timeoutSeconds: 10` for all routes. `express.json({ limit: '32kb' })`,
 `trust proxy`, `x-powered-by` disabled. Routes are thin; heavy logic lives in
 `domain/`. A final error middleware maps `ApiError` → `{ error: code }` and
-returns generic `INTERNAL_ERROR` (with logging) for 5xx.
+normalizes upstream timeout errors to HTTP 504 `{ error: "TIMEOUT" }`; other
+unexpected failures return `INTERNAL_ERROR` (with logging). `timeout.ts` provides
+the shared 10s fetch default and timeout recognition for fetch, Firebase Admin,
+and Firestore; AdMob key retrieval keeps its shorter 5s deadline. Timeout does
+not guarantee rollback, so retries continue using operation receipts.
 
 ### 4.2 Identity (`server/src/identity.ts`)
 
@@ -293,10 +305,14 @@ All timestamps are Unix ms except Firestore TTL fields (`adIntents.ttlAt`,
 - If refresh returns 401, recover the same identity via device-session. Never
   auto-drop identity; identity is only replaced by an explicit user action.
 
-### Health
-- `GET /health` (no auth, no-store), 2s timeout, retried once on timeout. A
-  blocking `ConnectionDialog` appears after confirmed failures; Retry runs a
-  health check and only closes on success.
+### Connection and timeout
+- `GET /health` (no auth, no-store) runs only on boot and manual Retry, with the
+  common 12s client timeout and no automatic timeout retry.
+- Any API timeout or network error immediately opens the blocking
+  `ConnectionDialog`; no follow-up ping is required. Successful unrelated APIs
+  and returning to the foreground do not dismiss it.
+- Retry checks health and recovers the profile/pending journal before closing
+  the dialog. Failed retries preserve the board and pending operation IDs.
 
 ### Rewarded ads
 1. Client `POST /v1/ads/intents` → server checks level unlocked + ads enabled and

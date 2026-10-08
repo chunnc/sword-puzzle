@@ -169,36 +169,84 @@ it('does not replace the session when device recovery is denied', async () => {
   await expect(api.fetchProfile(initial)).rejects.toMatchObject({ code: 'DEVICE_REVOKED' });
   expect(session.getCurrentSession()?.uid).toBe(initial.uid);
 });
-it('health timeout retries once before reporting failure', async () => {
+it.each([
+  ['health', () => api.checkHealth()],
+  ['bootstrap', () => api.fetchBootstrap()],
+  ['content', () => api.fetchContent(3)],
+  ['profile', () => api.fetchProfile(initial)],
+  ['sync', () => api.syncProfile(initial, [], 3)],
+  ['refresh', () => api.refreshSession(initial.refreshToken)],
+  ['device session', () => api.deviceSession(initial)],
+  ['create ad intent', () => api.createAdIntent(initial, 1)],
+  ['check ad intent', () => api.checkAdIntent(initial, 'intent')],
+] as const)('reports %s timeout at 12 seconds without retrying', async (_name, call) => {
   jest.useFakeTimers();
-  fetchMock.mockImplementation((_url, options) => new Promise((_resolve, reject) => options.signal.addEventListener('abort', () => {
-    const e = new Error('timeout');
-    e.name = 'AbortError';
-    reject(e);
-  })));
-  const pending = api.checkHealth();
-  const result = expect(pending).rejects.toMatchObject({
-    code: 'TIMEOUT'
-  });
-  await jest.advanceTimersByTimeAsync(2000);
-  expect(fetchMock).toHaveBeenCalledTimes(2);
-  await jest.advanceTimersByTimeAsync(2000);
+  const handler = jest.fn();
+  api.setConnectionErrorHandler(handler);
+  fetchMock.mockImplementation(() => new Promise(() => undefined));
+  const result = expect(call()).rejects.toMatchObject({ code: 'TIMEOUT' });
+  await jest.advanceTimersByTimeAsync(11_999);
+  expect(handler).not.toHaveBeenCalled();
+  await jest.advanceTimersByTimeAsync(1);
   await result;
+  expect(handler).toHaveBeenCalledTimes(1);
+  expect(handler).toHaveBeenCalledWith(expect.objectContaining({ code: 'TIMEOUT' }));
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
+  expect(jest.getTimerCount()).toBe(0);
 });
-it('a successful second health check avoids an error', async () => {
+it('times out while reading a successful response body', async () => {
   jest.useFakeTimers();
-  fetchMock.mockImplementationOnce((_url, options) => new Promise((_resolve, reject) => options.signal.addEventListener('abort', () => {
-    const e = new Error('timeout');
-    e.name = 'AbortError';
-    reject(e);
-  }))).mockResolvedValueOnce(response({
-    ok: true
-  }));
-  const pending = api.checkHealth();
-  await jest.advanceTimersByTimeAsync(2000);
-  await pending;
-  expect(fetchMock).toHaveBeenCalledTimes(2);
-  expect(fetchMock.mock.calls[1][1].cache).toBe('no-store');
+  const handler = jest.fn();
+  api.setConnectionErrorHandler(handler);
+  fetchMock.mockResolvedValue({ ok: true, status: 200, text: () => new Promise(() => undefined) });
+  const result = expect(api.fetchBootstrap()).rejects.toMatchObject({ code: 'TIMEOUT' });
+  await jest.advanceTimersByTimeAsync(12_000);
+  await result;
+  expect(handler).toHaveBeenCalledTimes(1);
+});
+it.each(['{"error":"TIMEOUT"}', 'Gateway timeout', ''])('normalizes HTTP 504 with body %s', async (body) => {
+  const handler = jest.fn();
+  api.setConnectionErrorHandler(handler);
+  fetchMock.mockResolvedValue({ ok: false, status: 504, text: async () => body });
+  await expect(api.fetchBootstrap()).rejects.toMatchObject({ code: 'TIMEOUT', status: 504 });
+  expect(handler).toHaveBeenCalledTimes(1);
+});
+it.each(['login', 'register', 'logout'] as const)('reports %s timeout before identity reconciliation completes', async (kind) => {
+  const handler = jest.fn();
+  api.setConnectionErrorHandler(handler);
+  let finish!: (value: unknown) => void;
+  fetchMock.mockResolvedValueOnce(response({ error: 'TIMEOUT' }, 504))
+    .mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const pending = kind === 'logout' ? api.logoutAccount(initial)
+    : kind === 'login' ? api.loginAccount('player@example.test', 'password-123', initial)
+    : api.registerAccount('player@example.test', 'password-123', initial);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  expect(handler).toHaveBeenCalledTimes(1);
+  expect(fetchMock.mock.calls[1][0]).toContain('/v2/auth/device-session');
+  finish(response({ ...updated, bindingVersion: 2, isGuest: kind === 'logout', email: 'player@example.test' }));
+  await expect(pending).resolves.toMatchObject({ bindingVersion: 2 });
+  expect(handler).toHaveBeenCalledTimes(1);
+});
+it('notifies network errors but leaves business errors to the caller', async () => {
+  const handler = jest.fn();
+  api.setConnectionErrorHandler(handler);
+  fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'))
+    .mockResolvedValueOnce(response({ error: 'INSUFFICIENT_COINS' }, 400));
+  await expect(api.fetchBootstrap()).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
+  await expect(api.fetchBootstrap()).rejects.toMatchObject({ code: 'INSUFFICIENT_COINS' });
+  expect(handler).toHaveBeenCalledTimes(1);
+});
+it('clears the deadline after success and does not report a later timeout', async () => {
+  jest.useFakeTimers();
+  const handler = jest.fn();
+  api.setConnectionErrorHandler(handler);
+  fetchMock.mockResolvedValue(response({ ok: true }));
+  await api.checkHealth();
+  expect(fetchMock.mock.calls[0][1].cache).toBe('no-store');
+  await jest.advanceTimersByTimeAsync(12_000);
+  expect(handler).not.toHaveBeenCalled();
+  expect(jest.getTimerCount()).toBe(0);
 });
 it('HTTP errors are not retried as timeouts', async () => {
   fetchMock.mockResolvedValue(response({

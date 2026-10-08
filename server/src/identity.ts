@@ -4,6 +4,7 @@ import type { Auth, DecodedIdToken, UserRecord } from 'firebase-admin/auth';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import { currentContent } from './content';
 import { profileFields, profileFromDocument } from './domain/profile';
+import { API_TIMEOUT_MS, isTimeoutError } from './timeout';
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string) { super(code); }
@@ -37,6 +38,7 @@ export function createIdentityApi(db: Firestore, auth: Auth, apiKey: () => strin
   async function verify(token: string): Promise<DecodedIdToken> {
     try { return await auth.verifyIdToken(token, true); }
     catch (error) {
+      if (isTimeoutError(error)) throw error;
       if ((error as { code?: string }).code === 'auth/internal-error') throw new ApiError(503, 'AUTH_UNAVAILABLE');
       throw new ApiError(401, 'INVALID_SESSION');
     }
@@ -46,8 +48,9 @@ export function createIdentityApi(db: Firestore, auth: Auth, apiKey: () => strin
       ? `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1`
       : 'https://identitytoolkit.googleapis.com/v1';
     const response = await fetch(`${base}/${path}?key=${encodeURIComponent(apiKey())}`, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(10000)
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(API_TIMEOUT_MS)
     });
+    if (response.status === 504) throw new ApiError(504, 'TIMEOUT');
     const data = await response.json() as AuthResult & { error?: { message?: string } };
     if (!response.ok) {
       const reason = data.error?.message?.split(' : ')[0] || 'AUTH_FAILED';
@@ -63,8 +66,9 @@ export function createIdentityApi(db: Firestore, auth: Auth, apiKey: () => strin
       : 'https://securetoken.googleapis.com/v1';
     const response = await fetch(`${base}/token?key=${encodeURIComponent(apiKey())}`, {
       method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }), signal: AbortSignal.timeout(10000)
+      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }), signal: AbortSignal.timeout(API_TIMEOUT_MS)
     });
+    if (response.status === 504) throw new ApiError(504, 'TIMEOUT');
     const data = await response.json() as { id_token?: string; refresh_token?: string; user_id?: string; expires_in?: string };
     if (!response.ok) throw new ApiError(response.status < 500 ? 401 : 503, response.status < 500 ? 'INVALID_SESSION' : 'AUTH_UNAVAILABLE');
     if (!data.id_token || !data.refresh_token || !data.user_id) throw new ApiError(503, 'AUTH_UNAVAILABLE');
@@ -246,6 +250,8 @@ export function createIdentityApi(db: Firestore, auth: Auth, apiKey: () => strin
     if (!user.email) {
       try { user = await auth.updateUser(user.uid, input); }
       catch (error) {
+        // A timed-out update may have committed; keep the registration reservation for recovery.
+        if (isTimeoutError(error)) throw error;
         await db.runTransaction(async tx => {
           const data = (await tx.get(ref)).data() as Installation | undefined;
           if (data?.registration?.id === operationId) { const next = { ...data }; delete next.registration; tx.set(ref, next); }
