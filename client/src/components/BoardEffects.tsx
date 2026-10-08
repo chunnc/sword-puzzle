@@ -97,7 +97,7 @@ export function BoardEffects({
       rect.setXYWH(0, 0, 0, 0);
       return;
     }
-    const local = clamp01((progress.value - cue.startAt) / .62);
+    const local = clamp01((progress.value - cue.startAt) / .72);
     const frame = Math.min(7, Math.floor(local * 8));
     rect.setXYWH(frame % 4 * burstCellWidth, Math.floor(frame / 4) * burstCellHeight, burstCellWidth, burstCellHeight);
   });
@@ -108,7 +108,7 @@ export function BoardEffects({
       output.set(0, 0, 0, 0);
       return;
     }
-    const local = clamp01((progress.value - cue.startAt) / .62);
+    const local = clamp01((progress.value - cue.startAt) / .72);
     const grow = clamp01(local / .48);
     const shrink = local < .68 ? 1 : 1 - .32 * clamp01((local - .68) / .32);
     const cellsWide = (.35 + 1.55 * (1 - (1 - grow) * (1 - grow))) * shrink;
@@ -119,7 +119,7 @@ export function BoardEffects({
   const burstColors = useColorBuffer(fireCues.length, (color, index) => {
     'worklet';
     const cue = fireCues[index];
-    const local = cue ? clamp01((progress.value - cue.startAt) / .62) : 1;
+    const local = cue ? clamp01((progress.value - cue.startAt) / .72) : 1;
     setWhiteAlpha(color, local < .76 ? 1 : 1 - (local - .76) / .24);
   });
 

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BackHandler, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useReducedMotion } from 'react-native-reanimated';
-import { Board, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_SWAP_MS, BOARD_REJECT_MS, type BoardVisualEffect } from '../../src/components/Board';
+import { Board, boardClearDurationMs, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_SWAP_MS, BOARD_REJECT_MS, type BoardVisualEffect } from '../../src/components/Board';
 import { GameplayDock, GameplayHeader, GameplayInfo } from '../../src/components/GameplayChrome';
 import { GameplayResultPopup, type GameplayResult } from '../../src/components/GameplayResultPopup';
 import { GameplayLeaveDialog } from '../../src/components/GameplayLeaveDialog';
@@ -146,7 +146,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
                 visual = { ...visual, swordQi: Math.min(content.qiCap, visual.swordQi + trace.qi), objectiveProgress: trace.objectiveProgressAfter ?? visual.objectiveProgress, condensed: visual.condensed || trace.kind === 'spirit' && trace.source !== undefined && step.before.tiles[trace.source]?.chargeTier === 5 };
                 setBoard(visual);
                 emit({ kind: 'clear', cleared: [...cleared], changed: step.changed, effects: [trace] });
-                await wait(BOARD_CLEAR_MS);
+                await wait(boardClearDurationMs(trace.kind));
                 if (!alive.current)
                     return;
             }
@@ -271,7 +271,8 @@ function GameplaySession({ levelId }: { levelId: number }) {
         <View testID="game-content" style={styles.gameContent} onLayout={event => setViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
           <View style={styles.scene} pointerEvents={overlayOpen ? 'none' : 'auto'} accessibilityElementsHidden={overlayOpen} importantForAccessibility={overlayOpen ? 'no-hide-descendants' : 'auto'}>
             <GameplayHeader levelId={levelId} busy={busy || Boolean(result) || locked} compact={compact} onBack={requestLeave} onHelp={() => { if (!busyRef.current && !resultRef.current) setHelp(true); }} />
-            <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion} duration={BOARD_CLEAR_MS} />
+            <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion}
+                duration={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects.map(item => item.kind)) : BOARD_CLEAR_MS} />
             <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setHeight(event.nativeEvent.layout.height)}>
               <View style={{ width: boardWidth, height: boardHeight }}>
                 <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} showTargetingHint={false} locked={busy || overlayOpen || locked} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} />

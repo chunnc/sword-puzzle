@@ -153,11 +153,11 @@ describe('Skia Board integration', () => {
   });
 
   it('uses the slower timing sequence, ignores HUD-only updates and cancels on cleanup', () => {
-    const effect: BoardVisualEffect = { id: 1, kind: 'clear', cleared: [0], changed: [1], effects: [{ kind: 'fire', cells: [0], damage: 0, qi: 0 }] };
+    const effect: BoardVisualEffect = { id: 1, kind: 'clear', cleared: [0], changed: [1], effects: [{ kind: 'fire', cells: [0], source: 0, damage: 0, qi: 0 }] };
     mount({ visualEffect: effect });
     expect((withTiming as jest.Mock).mock.calls).toEqual([
-      [1, { duration: 360 }], [1.12, { duration: 150 }], [1, { duration: 210 }],
-      [.85, { duration: 105 }], [0, { duration: 255 }],
+      [1, { duration: 800 }], [1.12, { duration: 150 }], [1, { duration: 650 }],
+      [.85, { duration: 105 }], [0, { duration: 695 }],
     ]);
     (withTiming as jest.Mock).mockClear();
     act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: { ...snapshot, swordQi: 12 }, visualEffect: effect })); });
@@ -165,6 +165,17 @@ describe('Skia Board integration', () => {
     act(() => { renderer.update(React.createElement(Board, { ...props, visualEffect: { id: 2, kind: 'reject', first: { x: 0, y: 0 }, second: { x: 1, y: 0 } } })); });
     expect((withTiming as jest.Mock).mock.calls).toEqual([[.38, { duration: 165 }], [0, { duration: 225 }]]);
     expect(cancelAnimation).toHaveBeenCalled();
+  });
+
+  it('uses a 1000ms clear timeline for lightning', () => {
+    mount({ visualEffect: {
+      id: 11, kind: 'clear', cleared: [0, 1], changed: [],
+      effects: [{ kind: 'lightning', cells: [1], source: 0, damage: 0, qi: 0 }],
+    } });
+    expect((withTiming as jest.Mock).mock.calls).toEqual([
+      [1, { duration: 1000 }], [1.12, { duration: 150 }], [1, { duration: 850 }],
+      [.85, { duration: 105 }], [0, { duration: 895 }],
+    ]);
   });
 
   it('does not start animation when reduced motion is enabled', () => {
@@ -228,7 +239,7 @@ describe('Skia Board integration', () => {
     const canvas = renderer.root.findAll(node => node.type === 'Canvas' as never)[0];
     const sprite = oldTile.findAll(node => node.type === 'SkiaImage' as never)[0];
     act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: next === 'clear'
-      ? { id: 11, kind: 'clear', cleared: [48], changed: [], effects: [{ kind: 'fire', cells: [48], damage: 1, qi: 0 }] }
+      ? { id: 11, kind: 'clear', cleared: [48], changed: [], effects: [{ kind: 'fire', cells: [48], source: 48, damage: 1, qi: 0 }] }
       : null })));
     oldReaction();
     expect(oldTransform.value).toEqual([{ translateX: 0 }, { translateY: 0 }, { scale: 1 }]);
@@ -297,7 +308,7 @@ describe('Skia Board integration', () => {
     expect(layers()).toHaveLength(1);
     expect(layers()[0].props.layer.props.opacity).toEqual({ value: 0 });
     expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(49);
-    const second: BoardVisualEffect = { id: 5, kind: 'clear', cleared: [42, 43], changed: [], effects: [{ kind: 'fire', cells: [43], damage: 1, qi: 1 }] };
+    const second: BoardVisualEffect = { id: 5, kind: 'clear', cleared: [42, 43], changed: [], effects: [{ kind: 'fire', cells: [43], source: 42, damage: 1, qi: 1 }] };
     act(() => { renderer.update(React.createElement(Board, { ...props, visualEffect: second })); });
     expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(48);
     expect(layers()).toHaveLength(1);

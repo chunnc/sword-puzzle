@@ -64,6 +64,7 @@ export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpri
   for (const cue of cues) {
     if (cue.kind !== 'lightning') continue;
     let fromX = cue.sourceX, fromY = cue.sourceY;
+    let previousImpactAt = cue.startAt;
     const random = randomSource(cue.seed);
     for (let targetIndex = 0; targetIndex < cue.targets.length; targetIndex++) {
       const target = cue.targets[targetIndex];
@@ -72,7 +73,7 @@ export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpri
       const segmentCount = distance < .05 ? 0 : Math.min(14, Math.max(1, Math.ceil(distance / .58)));
       const normalX = distance > .05 ? -dy / distance : 0;
       const normalY = distance > .05 ? dx / distance : 0;
-      const travelStart = Math.max(cue.startAt, target.impactAt - .13);
+      const travelStart = previousImpactAt;
       for (let segment = 0; segment < segmentCount; segment++) {
         const t = (segment + .5) / segmentCount;
         const bend = (random() - .5) * .3;
@@ -120,7 +121,7 @@ export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpri
           angle: angle + Math.PI / 4,
           size: .22 + random() * .13,
           startAt: target.impactAt + .015 + random() * .045,
-          lifetime: .18 + random() * .07,
+          lifetime: .14 + random() * .05,
           kind: 'spark',
           driftX: Math.cos(angle) * speed,
           driftY: Math.sin(angle) * speed,
@@ -129,6 +130,7 @@ export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpri
       }
       fromX = target.x;
       fromY = target.y;
+      previousImpactAt = target.impactAt;
     }
   }
   return sprites;

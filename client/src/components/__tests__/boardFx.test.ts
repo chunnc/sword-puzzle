@@ -20,6 +20,7 @@ it('creates a fixed, varied atlas particle batch for a fire cue', () => {
   expect(particles).toEqual(createFireParticleSpecs(cue));
   expect(particles.slice(0, FIRE_EMBER_COUNT).every(particle => particle.spriteIndex >= 0 && particle.spriteIndex < 4)).toBe(true);
   expect(particles.slice(FIRE_EMBER_COUNT).every(particle => particle.spriteIndex >= 4 && particle.spriteIndex < 8)).toBe(true);
+  expect(particles.every(particle => particle.startAt + particle.lifetime <= cue.clearAt)).toBe(true);
   expect(new Set(particles.map(particle => particle.angle)).size).toBeGreaterThan(8);
 });
 
@@ -33,6 +34,11 @@ it('builds a chained lightning atlas with target impacts and caps secondary spar
   expect(sprites.filter(sprite => sprite.kind === 'bolt').length).toBeGreaterThan(0);
   expect(sprites.filter(sprite => sprite.kind === 'bolt').length).toBeLessThanOrEqual(LIGHTNING_BOLT_CAP);
   expect(sprites.every(sprite => sprite.spriteIndex >= 0 && sprite.spriteIndex < 8)).toBe(true);
+
+  const singleTarget = cueFor('lightning', [25]);
+  const singleTargetSprites = buildLightningSpriteSpecs([singleTarget]);
+  expect(singleTarget.targets[0].impactAt).toBe(.55);
+  expect(singleTargetSprites.every(sprite => sprite.startAt + sprite.lifetime <= singleTarget.clearAt + 1e-9)).toBe(true);
 });
 
 it('fades atlas sprites over their lifetime and hides them outside it', () => {

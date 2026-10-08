@@ -1,5 +1,6 @@
 import {
-  DISPLAY_INDICES, BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_REJECT_MS,
+  DISPLAY_INDICES, BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FIRE_MS, BOARD_LIGHTNING_MS, BOARD_FIRE_CLEAR_AT, BOARD_LIGHTNING_CLEAR_AT,
+  BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_REJECT_MS, boardClearDurationMs,
   buildBoardEffectCues, buildCellVisuals, cellBounds, cellImpactOpacity, cellMotion, effectSeed, pointToCell, type BoardVisualEffect,
 } from '../boardVisuals';
 
@@ -52,7 +53,7 @@ describe('Skia board coordinates and animation', () => {
 
   it('does not resurrect cumulative clears during sequential elemental traces', () => {
     const first: BoardVisualEffect = { id: 3, kind: 'clear', cleared: [0], changed: [3], effects: [{ kind: 'fire', cells: [0], source: 1, damage: 0, qi: 0 }] };
-    const second: BoardVisualEffect = { id: 4, kind: 'clear', cleared: [0, 2], changed: [3], effects: [{ kind: 'lightning', cells: [2], damage: 0, qi: 0 }] };
+    const second: BoardVisualEffect = { id: 4, kind: 'clear', cleared: [0, 2], changed: [3], effects: [{ kind: 'lightning', cells: [2], source: 3, damage: 0, qi: 0 }] };
     const start = buildCellVisuals(first, null), next = buildCellVisuals(second, first);
     expect(cellMotion(start[0], 50, 0, 1)).toMatchObject({ opacity: 1, scale: 1 });
     expect(cellMotion(start[0], 50, 1, 1)).toMatchObject({ opacity: 0, scale: .5 });
@@ -90,29 +91,60 @@ describe('Skia board coordinates and animation', () => {
     expect(cues[0].targets[0].impactAt).toBeCloseTo(.16);
     expect(cues[0].targets[1].impactAt).toBeCloseTo(.44);
     expect(cues[0].targets[2].impactAt).toBeCloseTo(.44);
-    expect(cues[1].startAt).toBeCloseTo(80 / BOARD_CLEAR_MS);
+    expect(cues[1].startAt).toBeCloseTo(80 / BOARD_LIGHTNING_MS);
     expect(cues[1].targets.map(target => target.index)).toEqual([7, 1]);
-    expect(cues[1].targets[0].impactAt).toBeCloseTo(80 / BOARD_CLEAR_MS + .12);
+    expect(cues[1].targets[0].impactAt).toBeCloseTo(80 / BOARD_LIGHTNING_MS + .2);
+    expect(cues[1].targets[1].impactAt).toBeCloseTo(80 / BOARD_LIGHTNING_MS + .55);
     expect(cues[0].seed).toBe(buildBoardEffectCues(effect, geometry, 'run-a')[0].seed);
     expect(cues[0].seed).not.toBe(buildBoardEffectCues(effect, geometry, 'run-b')[0].seed);
     expect(effectSeed('run-a', 17, 0, 'fire')).not.toBe(effectSeed('run-a', 18, 0, 'fire'));
   });
 
-  it('uses the target centroid when a visual event has no valid source and delays target clearing until impact', () => {
+  it('requires the game-provided source and keeps fire targets visible until the explosion finishes', () => {
     const geometry = { width: 3, height: 3, activeCells: Array(9).fill(true) };
     const effect: BoardVisualEffect = {
       id: 18, kind: 'clear', cleared: [0, 2], changed: [],
-      effects: [{ kind: 'fire', cells: [0, 2], damage: 1, qi: 0 }],
+      effects: [{ kind: 'fire', cells: [0, 2], source: 4, damage: 1, qi: 0 }],
     };
     const cue = buildBoardEffectCues(effect, geometry)[0];
-    expect(cue.sourceIndex).toBeNull();
+    expect(cue.sourceIndex).toBe(4);
     expect(cue.sourceX).toBe(1.5);
-    expect(cue.sourceY).toBe(2.5);
+    expect(cue.sourceY).toBe(1.5);
+    expect(cue.clearAt).toBe(BOARD_FIRE_CLEAR_AT);
     const visual = buildCellVisuals(effect, null, false, geometry, [cue]);
-    expect(visual[0].clearAt).toBeGreaterThan(0);
-    expect(cellMotion(visual[0], 20, visual[0].clearAt / 2, 1).opacity).toBe(1);
+    expect(visual[0].clearAt).toBe(BOARD_FIRE_CLEAR_AT);
+    expect(cellMotion(visual[0], 20, BOARD_FIRE_CLEAR_AT - .001, 1).opacity).toBe(1);
     expect(cellMotion(visual[0], 20, 1, 1).opacity).toBe(0);
     expect(cellImpactOpacity(visual[0], cue.targets[0].impactAt - .01)).toBe(0);
     expect(cellImpactOpacity(visual[0], cue.targets[0].impactAt + .035)).toBeCloseTo(.68);
+    expect(buildBoardEffectCues({ ...effect, effects: [{ ...effect.effects[0], source: undefined }] }, geometry)).toHaveLength(0);
+    expect(buildBoardEffectCues({ ...effect, effects: [{ ...effect.effects[0], source: 99 }] }, geometry)).toHaveLength(0);
+  });
+
+  it('keeps lightning targets visible until the source-to-target chain and impacts finish', () => {
+    const geometry = { width: 3, height: 3, activeCells: Array(9).fill(true) };
+    const effect: BoardVisualEffect = {
+      id: 19, kind: 'clear', cleared: [4, 1, 7], changed: [],
+      effects: [{ kind: 'lightning', cells: [7, 1], source: 4, damage: 1, qi: 0 }],
+    };
+    const cue = buildBoardEffectCues(effect, geometry)[0];
+    expect(cue.sourceIndex).toBe(4);
+    expect(cue.targets.map(target => target.index)).toEqual([7, 1]);
+    expect(cue.targets[0].impactAt).toBe(.2);
+    expect(cue.targets[1].impactAt).toBe(.55);
+    expect(cue.clearAt).toBe(BOARD_LIGHTNING_CLEAR_AT);
+    const visual = buildCellVisuals(effect, null, false, geometry, [cue]);
+    for (const index of [1, 7]) {
+      expect(visual[index].clearAt).toBe(BOARD_LIGHTNING_CLEAR_AT);
+      expect(cellMotion(visual[index], 20, BOARD_LIGHTNING_CLEAR_AT - .001, 1).opacity).toBe(1);
+      expect(cellMotion(visual[index], 20, 1, 1).opacity).toBe(0);
+    }
+  });
+
+  it('chooses clear durations by effect kind and the longest duration for combined cues', () => {
+    expect(boardClearDurationMs('fire')).toBe(BOARD_FIRE_MS);
+    expect(boardClearDurationMs('lightning')).toBe(BOARD_LIGHTNING_MS);
+    expect(boardClearDurationMs('spirit')).toBe(BOARD_CLEAR_MS);
+    expect(boardClearDurationMs(['fire', 'lightning', 'spirit'])).toBe(BOARD_LIGHTNING_MS);
   });
 });

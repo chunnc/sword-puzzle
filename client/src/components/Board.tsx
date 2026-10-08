@@ -16,7 +16,7 @@ import { colors } from '../theme';
 import {
   BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS,
   BOARD_REJECT_OUT_MS, BOARD_REJECT_BACK_MS, BOARD_FLASH_IN_MS, BOARD_PULSE_IN_MS,
-  displayIndices, buildBoardEffectCues, buildCellVisuals, cellBounds, pointToCell,
+  boardClearDurationMs, displayIndices, buildBoardEffectCues, buildCellVisuals, cellBounds, pointToCell,
   type BoardVisualEffect, type CellVisual,
 } from './boardVisuals';
 import { createBoardMotionSession, createBoardMotionFrame, updateBoardMotionFrame, finishBoardMotionSession, type CellMotionValues } from './boardMotion';
@@ -24,7 +24,8 @@ import { BoardEffects } from './BoardEffects';
 
 export type { CellPosition } from '../game/types';
 export {
-  BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_REJECT_MS,
+  BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FIRE_MS, BOARD_LIGHTNING_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_REJECT_MS,
+  boardClearDurationMs,
   type BoardVisualEffect,
 } from './boardVisuals';
 
@@ -100,6 +101,9 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const before = prior?.effect?.id === id ? prior.before : prior?.effect ?? null;
   const effectCues = useMemo(() => reduceMotion ? [] : buildBoardEffectCues(visualEffect, geometry, snapshot.runId),
     [snapshot.runId, id, kind, reduceMotion, geometry]);
+  const clearDurationMs = visualEffect?.kind === 'clear'
+    ? boardClearDurationMs(visualEffect.effects.map(item => item.kind))
+    : BOARD_CLEAR_MS;
   // An effect ID identifies an immutable phase within a run. HUD updates and
   // equivalent effect objects must not replace that phase's clocks or outputs.
   const visuals = useMemo(() => buildCellVisuals(visualEffect, before,
@@ -137,14 +141,14 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
       } else if (kind === 'swap' || kind === 'fall') {
         progress.value = withTiming(1, { duration: kind === 'swap' ? BOARD_SWAP_MS : BOARD_FALL_MS });
       } else if (kind === 'clear') {
-        progress.value = withTiming(1, { duration: BOARD_CLEAR_MS });
+        progress.value = withTiming(1, { duration: clearDurationMs });
         pulse.value = withSequence(
           withTiming(1.12, { duration: BOARD_PULSE_IN_MS }),
-          withTiming(1, { duration: BOARD_CLEAR_MS - BOARD_PULSE_IN_MS }),
+          withTiming(1, { duration: clearDurationMs - BOARD_PULSE_IN_MS }),
         );
         flash.value = withSequence(
           withTiming(.85, { duration: BOARD_FLASH_IN_MS }),
-          withTiming(0, { duration: BOARD_CLEAR_MS - BOARD_FLASH_IN_MS }),
+          withTiming(0, { duration: clearDurationMs - BOARD_FLASH_IN_MS }),
         );
       }
     })();
@@ -152,7 +156,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
       const completedFrame = frameRef.current;
       runOnUI(() => { finishBoardMotionSession(motion, completedFrame); })();
     };
-  }, [motion]);
+  }, [motion, clearDurationMs]);
 
   const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onEnd(event => {
     const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side, geometry);

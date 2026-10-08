@@ -4,6 +4,8 @@ export interface BoardGeometry { width: number; height: number; activeCells?: bo
 const DEFAULT_GEOMETRY: BoardGeometry = { width: 7, height: 7 };
 export const BOARD_SWAP_MS = 320;
 export const BOARD_CLEAR_MS = 360;
+export const BOARD_FIRE_MS = 800;
+export const BOARD_LIGHTNING_MS = 1000;
 export const BOARD_FALL_MS = 450;
 export const BOARD_CHAIN_DELAY_MS = 300;
 export const BOARD_REJECT_MS = 390;
@@ -11,6 +13,14 @@ export const BOARD_REJECT_OUT_MS = 165;
 export const BOARD_REJECT_BACK_MS = BOARD_REJECT_MS - BOARD_REJECT_OUT_MS;
 export const BOARD_FLASH_IN_MS = 105;
 export const BOARD_PULSE_IN_MS = 150;
+export const BOARD_FIRE_CLEAR_AT = .75;
+export const BOARD_LIGHTNING_CLEAR_AT = .8;
+
+export function boardClearDurationMs(kindOrKinds: BoardAnimationEffect['kind'] | readonly BoardAnimationEffect['kind'][]) {
+  const kinds = typeof kindOrKinds === 'string' ? [kindOrKinds] : kindOrKinds;
+  return kinds.reduce((duration, kind) => Math.max(duration,
+    kind === 'fire' ? BOARD_FIRE_MS : kind === 'lightning' ? BOARD_LIGHTNING_MS : BOARD_CLEAR_MS), BOARD_CLEAR_MS);
+}
 
 export type BoardVisualEffect = {
   id: number;
@@ -40,8 +50,9 @@ export interface BoardEffectCue {
   kind: 'fire' | 'lightning';
   sourceX: number;
   sourceY: number;
-  sourceIndex: number | null;
+  sourceIndex: number;
   startAt: number;
+  clearAt: number;
   seed: number;
   targets: BoardEffectTarget[];
 }
@@ -98,16 +109,19 @@ export function buildBoardEffectCues(
   runId = '',
 ): BoardEffectCue[] {
   if (!effect || effect.kind !== 'clear') return [];
-  const events = effect.effects.filter(item => (item.kind === 'fire' || item.kind === 'lightning')
+  const events = effect.effects.filter((item): item is BoardAnimationEffect & {
+    kind: 'fire' | 'lightning'; source: number;
+  } => (item.kind === 'fire' || item.kind === 'lightning')
+    && item.source !== undefined && validCell(item.source, geometry)
     && item.cells.some(index => validCell(index, geometry)));
+  const durationMs = boardClearDurationMs(effect.effects.map(item => item.kind));
   return events.map((event, eventIndex) => {
     const targetIndices = [...new Set(event.cells.filter(index => validCell(index, geometry)))];
     const points = targetIndices.map(index => ({ index, ...cellCenter(index, geometry) }));
-    const sourceIndex = event.source !== undefined && validCell(event.source, geometry) ? event.source : null;
-    const source = sourceIndex === null
-      ? points.reduce((sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length }), { x: 0, y: 0 })
-      : cellCenter(sourceIndex, geometry);
-    const startAt = events.length <= 1 ? 0 : eventIndex / (events.length - 1) * (80 / BOARD_CLEAR_MS);
+    // Fire and lightning events are emitted from a concrete charged/source cell.
+    const sourceIndex = event.source;
+    const source = cellCenter(sourceIndex, geometry);
+    const startAt = events.length <= 1 ? 0 : eventIndex / (events.length - 1) * (80 / durationMs);
     let targets = points;
     if (event.kind === 'fire') {
       targets = [...points].sort((a, b) => Math.hypot(a.x - source.x, a.y - source.y)
@@ -120,12 +134,13 @@ export function buildBoardEffectCues(
       sourceY: source.y,
       sourceIndex,
       startAt,
+      clearAt: startAt + (event.kind === 'fire' ? BOARD_FIRE_CLEAR_AT : BOARD_LIGHTNING_CLEAR_AT),
       seed: effectSeed(runId, effect.id, eventIndex, event.kind),
       targets: targets.map((point, targetIndex) => ({
         ...point,
         impactAt: event.kind === 'fire'
           ? startAt + .16 + .28 * Math.hypot(point.x - source.x, point.y - source.y) / maxDistance
-          : startAt + .12 + .3 * targetIndex / Math.max(1, targets.length - 1),
+          : startAt + (targets.length === 1 ? .55 : .2 + .35 * targetIndex / (targets.length - 1)),
       })),
     };
   });
@@ -159,10 +174,15 @@ export function buildCellVisuals(
 ): CellVisual[] {
   const previouslyCleared = new Set(previous?.kind === 'clear' ? previous.cleared : []);
   const impacts = new Map<number, number>();
+  const clearStarts = new Map<number, number>();
   for (const cue of cues) {
+    const sourceClear = clearStarts.get(cue.sourceIndex);
+    if (sourceClear === undefined || cue.clearAt < sourceClear) clearStarts.set(cue.sourceIndex, cue.clearAt);
     for (const target of cue.targets) {
       const current = impacts.get(target.index);
       if (current === undefined || target.impactAt < current) impacts.set(target.index, target.impactAt);
+      const clearStart = clearStarts.get(target.index);
+      if (clearStart === undefined || cue.clearAt < clearStart) clearStarts.set(target.index, cue.clearAt);
     }
   }
   return Array.from({ length: geometry.width * geometry.height }, (_, index) => {
@@ -195,7 +215,7 @@ export function buildCellVisuals(
       const trace = effect.effects.find(item => item.cells.includes(index) || item.source === index);
       visual.flashing = !!trace;
       visual.flashAt = impacts.get(index) ?? null;
-      visual.clearAt = cleared ? impacts.get(index) ?? 0 : 0;
+      visual.clearAt = cleared ? clearStarts.get(index) ?? 0 : 0;
       visual.flashColor = trace?.kind === 'fire' ? '#ffb063'
         : trace?.kind === 'lightning' ? '#c7a5ff'
         : trace?.kind === 'spirit' ? '#8efbd4' : '#ffeab0';

@@ -3,7 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import * as Native from 'react-native';
 import GameScreen from '../../../app/game/[levelId]';
 import { ART, SKILL_ART, SWORD_ART } from '../../assets';
-import { Board, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_SWAP_MS } from '../Board';
+import { Board, BOARD_CLEAR_MS, BOARD_FIRE_MS, BOARD_LIGHTNING_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_SWAP_MS } from '../Board';
 import { GameplayDock, GameplayInfo } from '../GameplayChrome';
 import { GameplayProgressBar } from '../GameplayProgressBar';
 import { GameplayResultPopup } from '../GameplayResultPopup';
@@ -404,6 +404,22 @@ describe('gameplay presentation and exit behavior', () => {
     expect(button('Rời màn chơi').props.disabled).toBe(false);
   });
 
+  it.each([
+    ['fire', BOARD_FIRE_MS],
+    ['lightning', BOARD_LIGHTNING_MS],
+  ] as const)('waits for the full %s phase before starting the fall', async (kind, duration) => {
+    jest.useFakeTimers(); mockReduceMotion = false;
+    const animation = cascadeAnimation(1);
+    animation.steps[0].effects = [{ kind, cells: [0], source: 24, damage: 1, qi: 0 }];
+    await startAnimation(animation);
+    await advance(BOARD_SWAP_MS);
+    expect(board().props.visualEffect.kind).toBe('clear');
+    await advance(duration - 1);
+    expect(board().props.visualEffect.kind).toBe('clear');
+    await advance(1);
+    expect(board().props.visualEffect.kind).toBe('fall');
+  });
+
   it.each(['won', 'lost'] as const)('waits for the final settle before opening the %s result', async outcome => {
     jest.useFakeTimers(); mockReduceMotion = false;
     const animation = cascadeAnimation(1);
@@ -440,7 +456,7 @@ describe('gameplay presentation and exit behavior', () => {
     expect(board().props.snapshot).toEqual(animation.finalBoard);
     expect(board().props.visualEffect).toBeNull();
     expect(board().props.locked).toBe(false);
-    for (const duration of [BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS]) {
+    for (const duration of [BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FIRE_MS, BOARD_LIGHTNING_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS]) {
       expect(timeout).not.toHaveBeenCalledWith(expect.any(Function), duration);
     }
   });
