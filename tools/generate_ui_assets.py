@@ -8,6 +8,7 @@ Run with: python3 tools/generate_ui_assets.py
 """
 
 from pathlib import Path
+import json
 from PIL import Image, ImageDraw, ImageEnhance, ImageFont, ImageOps
 
 
@@ -23,6 +24,33 @@ def save(im, name):
     target = OUT / (name + ".webp")
     temporary = target.with_suffix(".webp.tmp")
     im.save(temporary, "WEBP", quality=90, method=6)
+    temporary.replace(target)
+
+
+def write_dialog_panel_metadata():
+    def geometry(image):
+        left, top, right, bottom = image.getchannel("A").point(
+            lambda alpha: 255 if alpha >= 16 else 0).getbbox()
+        return {
+            "width": image.width,
+            "height": image.height,
+            "aspectRatio": image.width / image.height,
+            "visible": {
+                "left": left, "top": top,
+                "width": right-left, "height": bottom-top,
+                "aspectRatio": (right-left) / (bottom-top),
+            },
+        }
+
+    metadata = {}
+    for key, stem in [("dialogPanelWide", "dialog-panel-wide"),
+                      ("dialogPanel4x3", "dialog-panel-4x3")]:
+        with Image.open(RUNTIME / f"{stem}.png") as source:
+            with Image.open(OUT / f"{stem.replace('-', '_')}.webp") as runtime:
+                metadata[key] = {"source": geometry(source), "runtime": geometry(runtime)}
+    target = OUT / "dialog_panels.metadata.json"
+    temporary = target.with_suffix(".json.tmp")
+    temporary.write_text(json.dumps(metadata, indent=2) + "\n")
     temporary.replace(target)
 
 
@@ -182,6 +210,7 @@ def copy_runtime_art(names=None):
         "nav": 1600,
         "chapter-card": 840,
         "dialog-panel": 1024,
+        "dialog-panel-wide": 1200,
         "bar-track": 1600,
         "bar-blue": 1600,
         "bar-red": 1600,
@@ -193,6 +222,18 @@ def copy_runtime_art(names=None):
             continue
         name = "panel" if image.stem == "panel-base" else image.stem.replace("-", "_")
         art = Image.open(image).convert("RGBA")
+        if image.stem == "dialog-panel-4x3":
+            # Keep a fixed 4:3 canvas without stretching the generated frame.
+            visible = art.getchannel("A").point(lambda alpha: 255 if alpha >= 16 else 0).getbbox()
+            if visible:
+                left, top, right, bottom = visible
+                art = art.crop((max(0, left-8), max(0, top-8),
+                                min(art.width, right+8), min(art.height, bottom+8)))
+            art = ImageOps.contain(art, (1200, 900), Image.Resampling.LANCZOS)
+            canvas = Image.new("RGBA", (1200, 900))
+            canvas.paste(art, ((1200-art.width)//2, (900-art.height)//2))
+            save(canvas, name)
+            continue
         if image.stem.startswith(("icon-sword-", "icon-skill-", "icon-slot-", "icon-linh-thach", "icon-tien-ngoc", "slot-")):
             # Consistent 80% icon footprint; socket frames use 96% of the canvas.
             # Keep the source illustration and its alpha; only crop and resize.
@@ -229,6 +270,9 @@ def copy_runtime_art(names=None):
             size = 512 if image.stem.startswith(("icon-", "tile-", "overlay-", "stage-", "skill-")) else 1200
         art.thumbnail((size, size), Image.Resampling.LANCZOS)
         save(art, name)
+
+    if names is None or any(name in names for name in ("dialog-panel-wide", "dialog-panel-4x3")):
+        write_dialog_panel_metadata()
 
 
 def main():

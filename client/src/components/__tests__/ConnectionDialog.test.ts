@@ -1,8 +1,9 @@
 import React, { Profiler } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Modal, Text } from 'react-native';
+import { Modal, StyleSheet, Text } from 'react-native';
 import { ArtPanel, GameButton } from '../Art';
 import { ConnectionDialog } from '../ConnectionDialog';
+import { DIALOG_PANEL_METADATA } from '../../assets';
 import { emptySave } from '../../game/save';
 import { useGameStore } from '../../state/gameStore';
 
@@ -48,6 +49,50 @@ beforeEach(() => {
   syncProgress().mockReset().mockResolvedValue(undefined);
 });
 afterEach(() => { act(() => renderer?.unmount()); });
+
+it('uses the wide artwork and metadata ratio only for network failures and preserves it while closing', () => {
+  act(() => { renderer = create(tree()); });
+  expect(panel().props.art).toBe('dialogPanelWide');
+  expect(panel().props.contentFit).toBe('contain');
+  expect(StyleSheet.flatten(panel().props.style)).toMatchObject({
+    width: '100%', maxWidth: 380, aspectRatio: DIALOG_PANEL_METADATA.dialogPanelWide.runtime.aspectRatio,
+  });
+  act(() => useGameStore.setState({ online: true }));
+  expect(modal().props.visible).toBe(false);
+  expect(modal().props.children.props.children.props.mode).toBe('network');
+
+  act(() => useGameStore.setState({ authRequired: true }));
+  expect(panel().props.art).toBe('dialogPanel');
+  expect(panel().props.contentFit).toBe('fill');
+  expect(StyleSheet.flatten(panel().props.style).aspectRatio).toBeUndefined();
+
+  act(() => useGameStore.setState({
+    authRequired: false, notice: 'Timeout',
+    save: { ...emptySave(), pending: { contentVersion: 3, operation: { id: 'pending_purchase1', kind: 'purchase', category: 'skill', itemId: 'ngu-kiem' } } },
+  }));
+  expect(panel().props.art).toBe('dialogPanel');
+  expect(panel().props.contentFit).toBe('fill');
+  expect(StyleSheet.flatten(panel().props.style).aspectRatio).toBeUndefined();
+});
+
+it('reserves space above a bottom-anchored retry button and reduces text without shrinking its touch target', () => {
+  act(() => { renderer = create(tree()); });
+  const content = renderer.root.findByProps({ testID: 'connection-dialog-content' });
+  const footer = renderer.root.findByProps({ testID: 'connection-dialog-footer' });
+  expect(StyleSheet.flatten(content.props.style)).toMatchObject({
+    position: 'absolute', top: 20, bottom: 80, left: 20, right: 20, gap: 8,
+  });
+  expect(StyleSheet.flatten(footer.props.style)).toMatchObject({
+    position: 'absolute', bottom: 20, left: 20, right: 20, alignItems: 'center',
+  });
+  const textNodes = renderer.root.findAllByType(Text);
+  expect(StyleSheet.flatten(textNodes[0].props.style)).toMatchObject({ fontSize: 16, lineHeight: 20 });
+  expect(StyleSheet.flatten(textNodes[1].props.style)).toMatchObject({ fontSize: 13, lineHeight: 18 });
+  expect(StyleSheet.flatten(button().props.textStyle)).toMatchObject({ fontSize: 12 });
+  const touchTarget = button().findAllByProps({ accessibilityRole: 'button' })[0];
+  expect(StyleSheet.flatten(touchTarget.props.style).minHeight).toBe(48);
+  expect(StyleSheet.flatten(button().parent!.props.style).minWidth).toBe(176);
+});
 
 it('keeps modal, panel and text unchanged across repeated background checks', () => {
   act(() => { renderer = create(tree()); });

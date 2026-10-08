@@ -285,3 +285,41 @@ chiều cao từ chiều rộng; vùng nhấn tối thiểu 44 px, phản hồi 
 Nút rộng 168/184 px theo chiều rộng panel, giữ nhãn và thao tác hiện tại.
 Ảnh native bốn viewport và trạng thái khóa nằm trong
 [gameplay-back-v4](../ui-review/gameplay-back-v4/README.md).
+
+## Hai dialog panel ngang và metadata tỉ lệ
+
+Hai ảnh được tạo bằng ImageGen tích hợp với `runtime/dialog-panel.png` làm
+tham khảo. Asset 1 (`runtime/dialog-panel-wide.png`) là lượt tạo đầu tiên;
+asset 2 (`runtime/dialog-panel-4x3.png`) là lượt chỉnh tỷ lệ. Cả hai giữ nền
+ngọc xanh đậm, viền vàng kép, góc bo, đỉnh nhô giữa cạnh trên và mây bốn góc.
+Prompt từng ảnh được lưu trong file `.prompt.txt` cùng tên; ảnh không có chữ
+hoặc nút.
+
+| Asset | Canvas PNG nguồn | Khung nguồn nhìn thấy (alpha ≥16) | Canvas WebP runtime | Tỉ lệ runtime |
+| --- | --- | --- | --- | --- |
+| `dialogPanelWide` — asset 1 | 1448×1086 (4:3) | 1386×928 (≈1.494:1) | 1200×808 | ≈1.485:1 |
+| `dialogPanel4x3` — asset 2 | 1452×1089 (4:3) | 1381×1052 (≈1.313:1) | 1200×900 | 4:3 |
+
+Canvas nguồn của asset 1 có khoảng trong suốt trên/dưới, vì vậy tỉ lệ khung
+nhìn thấy gần 3:2. Pipeline trim theo alpha ≥16 với đệm 8 px, resize đồng
+đều và xuất `client/app-assets/ui/dialog_panel_wide.webp` quality 90, giữ
+alpha. Asset 2 giữ pipeline canvas cố định 1200×900 và file
+`client/app-assets/ui/dialog_panel_4x3.webp` hiện tại.
+
+`client/app-assets/ui/dialog_panels.metadata.json` được pipeline ghi tự
+động khi xuất một trong hai panel. Mỗi entry có `source` và `runtime`, mỗi
+phần lưu `width`, `height`, `aspectRatio` cùng `visible` (vị trí, kích thước,
+tỉ lệ vùng alpha ≥16). Canvas và khung nhìn thấy được ghi riêng để không
+nhầm khoảng trong suốt với hình vẽ. Asset registry export
+`DIALOG_PANEL_METADATA`, app dùng `runtime.aspectRatio` để tính layout.
+
+`ConnectionDialog` chỉ dùng `dialogPanelWide` cho mode `network`, với
+`contain`, rộng tối đa 380 px và lề màn hình 24 px. Tiêu đề 16/20 px,
+thông báo 13/18 px, nhãn nút 12 px; vùng bấm giữ tối thiểu 176×48 px.
+Vùng chữ cách trên/trái/phải 20 px, chừa 80 px dưới. Nút căn giữa và neo
+trong panel, cách đáy 20 px, độc lập với độ dài thông báo. Chờ xác nhận,
+xác thực và các dialog khác giữ panel hiện tại.
+
+Review mới nằm trong [connection-panel-wide](../ui-review/connection-panel-wide/README.md).
+[connection-panel-4x3](../ui-review/connection-panel-4x3/README.md) giữ ảnh
+review của bố cục 4:3 trước đây.

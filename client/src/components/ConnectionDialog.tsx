@@ -2,6 +2,7 @@ import React, { memo, useCallback, useEffect, useLayoutEffect, useRef, useState 
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { ArtPanel, GameButton } from './Art';
+import { DIALOG_PANEL_METADATA } from '../assets';
 import { useGameStore } from '../state/gameStore';
 import { colors, type } from '../theme';
 
@@ -69,13 +70,29 @@ const ConnectionPanel = memo(function ConnectionPanel({ mode, onLogin }: {
   onLogin: () => void;
 }) {
   const message = messages[mode];
+  const network = mode === 'network';
   return (
-    <ArtPanel art="dialogPanel" style={styles.panel} testID="connection-dialog-panel">
-      <Text accessibilityRole="header" style={styles.title}>{message.title}</Text>
-      <Text style={styles.body}>{message.body}</Text>
-      {mode === 'authentication'
-        ? <GameButton title="ĐĂNG NHẬP" onPress={onLogin} />
-        : <RetryAction mode={mode} />}
+    <ArtPanel
+      art={network ? 'dialogPanelWide' : 'dialogPanel'}
+      contentFit={network ? 'contain' : 'fill'}
+      style={network ? styles.networkPanel : styles.panel}
+      testID="connection-dialog-panel"
+    >
+      {network ? <>
+        <View testID="connection-dialog-content" style={styles.networkText}>
+          <Text accessibilityRole="header" style={styles.networkTitle}>{message.title}</Text>
+          <Text style={styles.networkBody}>{message.body}</Text>
+        </View>
+        <View testID="connection-dialog-footer" style={styles.networkFooter}>
+          <RetryAction mode="network" />
+        </View>
+      </> : <>
+        <Text accessibilityRole="header" style={styles.title}>{message.title}</Text>
+        <Text style={styles.body}>{message.body}</Text>
+        {mode === 'authentication'
+          ? <GameButton title="ĐĂNG NHẬP" onPress={onLogin} />
+          : <RetryAction mode={mode} />}
+      </>}
     </ArtPanel>
   );
 });
@@ -113,6 +130,7 @@ const RetryAction = memo(function RetryAction({ mode }: { mode: 'network' | 'pen
         disabledArt="buttonPrimary"
         disabled={retrying}
         style={styles.retryButton}
+        textStyle={mode === 'network' ? styles.networkButtonText : undefined}
         onPress={() => void retry()}
       />
       <View pointerEvents="none" style={styles.spinnerSlot}>
@@ -134,8 +152,14 @@ const RetryAction = memo(function RetryAction({ mode }: { mode: 'network' | 'pen
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,12,18,.85)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   panel: { width: '100%', maxWidth: 380, padding: 24, gap: 20 },
+  networkPanel: { position: 'relative', width: '100%', maxWidth: 380, aspectRatio: DIALOG_PANEL_METADATA.dialogPanelWide.runtime.aspectRatio },
+  networkText: { position: 'absolute', top: 20, bottom: 80, left: 20, right: 20, justifyContent: 'center', gap: 8 },
+  networkFooter: { position: 'absolute', bottom: 20, left: 20, right: 20, alignItems: 'center' },
   title: { ...type.heading, color: colors.goldBright, textAlign: 'center' },
+  networkTitle: { ...type.heading, fontSize: 16, lineHeight: 20, color: colors.goldBright, textAlign: 'center' },
   body: { ...type.body, color: colors.ivory, textAlign: 'center' },
+  networkBody: { ...type.body, fontSize: 13, lineHeight: 18, color: colors.ivory, textAlign: 'center' },
+  networkButtonText: { fontSize: 12 },
   retryAction: { alignSelf: 'center', minWidth: 176, maxWidth: '100%' },
   retryButton: { paddingHorizontal: 40 },
   spinnerSlot: { position: 'absolute', left: 12, top: '50%', marginTop: -12, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },

@@ -1,0 +1,54 @@
+{
+  "dialogPanelWide": {
+    "source": {
+      "width": 1448,
+      "height": 1086,
+      "aspectRatio": 1.3333333333333333,
+      "visible": {
+        "left": 32,
+        "top": 77,
+        "width": 1386,
+        "height": 928,
+        "aspectRatio": 1.4935344827586208
+      }
+    },
+    "runtime": {
+      "width": 1200,
+      "height": 808,
+      "aspectRatio": 1.4851485148514851,
+      "visible": {
+        "left": 7,
+        "top": 6,
+        "width": 1186,
+        "height": 795,
+        "aspectRatio": 1.491823899371069
+      }
+    }
+  },
+  "dialogPanel4x3": {
+    "source": {
+      "width": 1452,
+      "height": 1089,
+      "aspectRatio": 1.3333333333333333,
+      "visible": {
+        "left": 35,
+        "top": 10,
+        "width": 1381,
+        "height": 1052,
+        "aspectRatio": 1.3127376425855513
+      }
+    },
+    "runtime": {
+      "width": 1200,
+      "height": 900,
+      "aspectRatio": 1.3333333333333333,
+      "visible": {
+        "left": 18,
+        "top": 7,
+        "width": 1163,
+        "height": 886,
+        "aspectRatio": 1.3126410835214446
+      }
+    }
+  }
+}

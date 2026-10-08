@@ -1,6 +1,9 @@
 import { ImageSourcePropType } from 'react-native';
 import { TileKind } from './game/types';
 import type { SkillId, SwordId } from './game/domain';
+import dialogPanelMetadata from '../app-assets/ui/dialog_panels.metadata.json';
+
+export const DIALOG_PANEL_METADATA = dialogPanelMetadata;
 
 export const ART = {
   gameplayResultPanel: require('../app-assets/ui/gameplay_result_panel.webp') as ImageSourcePropType,
@@ -67,6 +70,8 @@ export const ART = {
   chapterCard: require('../app-assets/ui/chapter_card.webp') as ImageSourcePropType,
   cultivator: require('../app-assets/ui/cultivator.webp') as ImageSourcePropType,
   dialogPanel: require('../app-assets/ui/dialog_panel.webp') as ImageSourcePropType,
+  dialogPanelWide: require('../app-assets/ui/dialog_panel_wide.webp') as ImageSourcePropType,
+  dialogPanel4x3: require('../app-assets/ui/dialog_panel_4x3.webp') as ImageSourcePropType,
   hudChip: require('../app-assets/ui/hud_chip.webp') as ImageSourcePropType,
   hudTray: require('../app-assets/ui/hud_tray.webp') as ImageSourcePropType,
   iconBag: require('../app-assets/ui/icon_bag.webp') as ImageSourcePropType,

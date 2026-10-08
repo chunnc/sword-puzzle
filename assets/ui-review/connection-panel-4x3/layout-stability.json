@@ -1,0 +1,77 @@
+{
+  "method": "Exact RGB comparison of 24px frame strips in settled native captures; retry feedback excluded.",
+  "samples": [
+    {
+      "width": 320,
+      "height": 568,
+      "phase": "retrying",
+      "panel_bounds_px": [
+        72,
+        546,
+        888,
+        1158
+      ],
+      "frame_strips_identical": true
+    },
+    {
+      "width": 320,
+      "height": 568,
+      "phase": "failed",
+      "panel_bounds_px": [
+        72,
+        546,
+        888,
+        1158
+      ],
+      "frame_strips_identical": true
+    },
+    {
+      "width": 360,
+      "height": 640,
+      "phase": "retrying",
+      "panel_bounds_px": [
+        72,
+        609,
+        1008,
+        1311
+      ],
+      "frame_strips_identical": true
+    },
+    {
+      "width": 360,
+      "height": 640,
+      "phase": "failed",
+      "panel_bounds_px": [
+        72,
+        609,
+        1008,
+        1311
+      ],
+      "frame_strips_identical": true
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "phase": "retrying",
+      "panel_bounds_px": [
+        72,
+        881,
+        1098,
+        1651
+      ],
+      "frame_strips_identical": true
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "phase": "failed",
+      "panel_bounds_px": [
+        72,
+        881,
+        1098,
+        1651
+      ],
+      "frame_strips_identical": true
+    }
+  ]
+}

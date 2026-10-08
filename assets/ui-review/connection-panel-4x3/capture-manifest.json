@@ -1,0 +1,92 @@
+{
+  "device": "iPhone 16e",
+  "scale": 3,
+  "save_files_checked": 4,
+  "save_unchanged": true,
+  "scenarios": [
+    {
+      "name": "idle-320x568",
+      "width": 320,
+      "height": 568,
+      "phase": "idle",
+      "ocr_verified": true
+    },
+    {
+      "name": "retrying-320x568",
+      "width": 320,
+      "height": 568,
+      "phase": "retrying",
+      "ocr_verified": true
+    },
+    {
+      "name": "failed-320x568",
+      "width": 320,
+      "height": 568,
+      "phase": "failed",
+      "ocr_verified": true
+    },
+    {
+      "name": "success-320x568",
+      "width": 320,
+      "height": 568,
+      "phase": "success",
+      "ocr_verified": true
+    },
+    {
+      "name": "idle-360x640",
+      "width": 360,
+      "height": 640,
+      "phase": "idle",
+      "ocr_verified": true
+    },
+    {
+      "name": "retrying-360x640",
+      "width": 360,
+      "height": 640,
+      "phase": "retrying",
+      "ocr_verified": true
+    },
+    {
+      "name": "failed-360x640",
+      "width": 360,
+      "height": 640,
+      "phase": "failed",
+      "ocr_verified": true
+    },
+    {
+      "name": "success-360x640",
+      "width": 360,
+      "height": 640,
+      "phase": "success",
+      "ocr_verified": true
+    },
+    {
+      "name": "idle-390x844",
+      "width": 390,
+      "height": 844,
+      "phase": "idle",
+      "ocr_verified": true
+    },
+    {
+      "name": "retrying-390x844",
+      "width": 390,
+      "height": 844,
+      "phase": "retrying",
+      "ocr_verified": true
+    },
+    {
+      "name": "failed-390x844",
+      "width": 390,
+      "height": 844,
+      "phase": "failed",
+      "ocr_verified": true
+    },
+    {
+      "name": "success-390x844",
+      "width": 390,
+      "height": 844,
+      "phase": "success",
+      "ocr_verified": true
+    }
+  ]
+}

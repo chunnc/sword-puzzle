@@ -83,3 +83,19 @@ Cancel/Cast sprites at all four viewport sizes. It includes normal/boss
 goals, incomplete/complete target selection, busy presentation and exit
 confirmation. See `gameplay-v3/README.md` for source identity, geometry and
 save preservation checks.
+
+## Server connection dialog 4:3
+
+`connection-panel-4x3/` contains the new jade/gold landscape panel at 320×568,
+360×640 and 390×844 points. Each viewport covers idle, retrying, failed and
+successful retries. See `connection-panel-4x3/README.md` for image provenance,
+read-only fixture details, save preservation and the capture manifest.
+
+## Wide server connection dialog
+
+`connection-panel-wide/` contains the selected first generated panel with
+smaller text and a retry button anchored 20 points above the panel bottom.
+Native review covers 320×568, 360×640 and 390×844 points, each with idle,
+retrying, failed and successful retries. Native layout measurements verify
+the ratio, button offset, touch target and content clearance. The earlier
+`connection-panel-4x3/` captures remain as historical review.
