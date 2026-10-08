@@ -46,13 +46,13 @@ Journal chỉ giữ UID, snapshot, kết quả đã xác nhận và request chư
 
 ## Health check và refresh token
 
-`GET /health` không cần auth, không cache. Client kiểm tra mỗi 5 giây khi foreground, timeout 2 giây. Timeout thử thêm một lần; lỗi kết nối/HTTP lỗi khóa ngay. Không chạy chồng request health. Trở lại foreground phải kiểm tra trước khi cho thao tác.
+`GET /health` không cần auth, không cache. Client kiểm tra mỗi 30 giây khi foreground, timeout 2 giây. Timeout thử thêm một lần; lỗi kết nối/HTTP lỗi khóa ngay. Không chạy chồng request health. Trở lại foreground phải kiểm tra trước khi cho thao tác.
 
 Dialog mạng là Modal toàn app, không đóng bằng Back hoặc chạm ngoài. Retry gọi health; server trả thành công thì đóng dialog. Guard trong store cũng khóa gameplay/giao dịch khi disconnected, background, đang phục hồi, lỗi phiên hoặc còn request chờ.
 
 Mọi API có xác thực dùng chung xử lý HTTP 401: một refresh cho các request đồng thời, lưu token mới ngay, replay một lần. Response cũ bị loại nếu session generation thay đổi. Refresh lỗi mạng giữ token; refresh trả 401 thì thử phục hồi cùng hồ sơ bằng khóa thiết bị. Phục hồi bị từ chối cho phép thử lại, đăng nhập hoặc chủ động xác nhận chơi khách mới. Không tự bỏ danh tính. Firebase quản lý vòng đời refresh token; app không đặt TTL.
 
-Health check định kỳ chỉ kiểm tra mạng khi danh tính đã bị từ chối; không gửi lại xác thực mỗi 5 giây. Khởi động app và nút thử khôi phục chủ động được phép thử lại, kể cả khi một health check đang chạy. Chuyển đổi legacy token đã xác minh không tiêu hạn mức tạo khách mới theo IP.
+Health check định kỳ chỉ kiểm tra mạng khi danh tính đã bị từ chối; không gửi lại xác thực mỗi 30 giây. Khởi động app và nút thử khôi phục chủ động được phép thử lại, kể cả khi một health check đang chạy. Chuyển đổi legacy token đã xác minh không tiêu hạn mức tạo khách mới theo IP.
 
 ## API
 

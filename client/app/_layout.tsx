@@ -37,7 +37,7 @@ export default function RootLayout() {
   useEffect(() => {
     let stopped = false;
     const run = () => { if (!stopped && AppState.currentState === 'active') void useGameStore.getState().checkConnection(false); };
-    const timer = setInterval(run, 5000);
+    const timer = setInterval(run, 30000);
     const subscription = AppState.addEventListener('change', state => {
       useGameStore.getState().setForeground(state === 'active');
       if (state === 'active') run();
