@@ -29,6 +29,7 @@ const mockState = {
   save: emptySave(),
   initialized: false,
   online: false,
+  connectionFailed: false,
   checkingConnection: false,
   authRequired: false,
   bootError: '',
@@ -48,6 +49,7 @@ beforeEach(() => {
     save: emptySave(),
     initialized: false,
     online: false,
+    connectionFailed: false,
     checkingConnection: false,
     authRequired: false,
     bootError: '',
@@ -100,6 +102,7 @@ it('keeps boot failures reviewable and allows retry', async () => {
   expect(mockRouter.replace).not.toHaveBeenCalled();
 });
 it('network modal ignores Back and only hides after health succeeds', async () => {
+  mockState.connectionFailed = true;
   act(() => {
     renderer = create(React.createElement(ConnectionDialog));
   });

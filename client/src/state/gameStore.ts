@@ -23,6 +23,7 @@ interface GameState {
   initialized: boolean;
   bootstrapLoaded: boolean;
   online: boolean;
+  connectionFailed: boolean;
   foreground: boolean;
   recovering: boolean;
   checkingConnection: boolean;
@@ -133,9 +134,11 @@ async function failure(error: unknown, loginAttempt = false) {
   if (error instanceof GameApiError && (error.code === 'TIMEOUT' || error.code === 'NETWORK_ERROR')) {
     try {
       await checkHealth();
+      useGameStore.setState({ online: true, connectionFailed: false });
     } catch {
       useGameStore.setState({
-        online: false
+        online: false,
+        connectionFailed: true
       });
     }
   }
@@ -327,6 +330,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   initialized: false,
   bootstrapLoaded: false,
   online: false,
+  connectionFailed: false,
   foreground: true,
   recovering: false,
   checkingConnection: false,
@@ -358,12 +362,13 @@ export const useGameStore = create<GameState>((set, get) => ({
         const retryRequested = identityRetryRequested;
         identityRetryRequested = false;
         if (get().authRequired && !retryRequested) {
-          set({ online: true });
+          set({ online: true, connectionFailed: false });
           return;
         }
         const recover = !get().online || !get().initialized || !get().bootstrapLoaded || get().authRequired;
         set({
           online: true,
+          connectionFailed: false,
           bootError: recover ? '' : get().bootError,
           recovering: recover
         });
@@ -372,6 +377,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (epoch !== lifecycle) return;
         set({
           online: healthy,
+          connectionFailed: !healthy,
           bootError: apiErrorMessage(error)
         });
         await failure(error);

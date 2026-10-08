@@ -16,7 +16,7 @@ jest.mock('../../state/gameStore', () => {
   const { create } = require('zustand');
   return {
     useGameStore: create(() => ({
-      online: false, initialized: true, checkingConnection: false, authRequired: false, notice: '',
+      online: false, connectionFailed: true, initialized: true, checkingConnection: false, authRequired: false, notice: '',
       save: require('../../game/save').emptySave(),
       checkConnection: jest.fn(async () => undefined),
       syncProgress: jest.fn(async () => undefined),
@@ -44,11 +44,47 @@ const syncProgress = () => jest.mocked(useGameStore.getState().syncProgress);
 beforeEach(() => {
   jest.clearAllMocks();
   mockPathname = '/map';
-  useGameStore.setState({ online: false, initialized: true, checkingConnection: false, authRequired: false, notice: '', save: emptySave() });
+  useGameStore.setState({ online: false, connectionFailed: true, initialized: true, checkingConnection: false, authRequired: false, notice: '', save: emptySave() });
   checkConnection().mockReset().mockResolvedValue(undefined);
   syncProgress().mockReset().mockResolvedValue(undefined);
 });
 afterEach(() => { act(() => renderer?.unmount()); });
+
+it.each([false, true])('does not show a network error before a successful check with initialized=%s', (initialized) => {
+  useGameStore.setState({ initialized, online: false, connectionFailed: false });
+  act(() => { renderer = create(tree()); });
+  expect(modal().props.visible).toBe(false);
+  commits.mockClear();
+  act(() => useGameStore.setState({ checkingConnection: true }));
+  expect(modal().props.visible).toBe(false);
+  act(() => useGameStore.setState({ online: true, connectionFailed: false, checkingConnection: false }));
+  expect(modal().props.visible).toBe(false);
+  expect(commits).not.toHaveBeenCalled();
+});
+
+it.each([false, true])('shows a confirmed failure and keeps it open throughout retries with initialized=%s', (initialized) => {
+  useGameStore.setState({ initialized, online: false, connectionFailed: false });
+  act(() => { renderer = create(tree()); });
+  act(() => useGameStore.setState({ checkingConnection: true }));
+  expect(modal().props.visible).toBe(false);
+  act(() => useGameStore.setState({ checkingConnection: false, connectionFailed: true }));
+  expect(modal().props.visible).toBe(true);
+  commits.mockClear();
+  act(() => useGameStore.setState({ checkingConnection: true }));
+  expect(modal().props.visible).toBe(true);
+  act(() => useGameStore.setState({ checkingConnection: false }));
+  expect(modal().props.visible).toBe(true);
+  expect(commits).not.toHaveBeenCalled();
+  act(() => useGameStore.setState({ online: true, connectionFailed: false }));
+  expect(modal().props.visible).toBe(false);
+});
+
+it('keeps authentication visible while a foreground connection is unconfirmed', () => {
+  useGameStore.setState({ online: false, connectionFailed: false, authRequired: true });
+  act(() => { renderer = create(tree()); });
+  expect(modal().props.visible).toBe(true);
+  expect(button().props.title).toBe('KHÔI PHỤC HỒ SƠ');
+});
 
 it('uses the wide artwork and metadata ratio only for network failures and preserves it while closing', () => {
   act(() => { renderer = create(tree()); });

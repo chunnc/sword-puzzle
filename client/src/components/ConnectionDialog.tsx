@@ -27,7 +27,7 @@ const messages: Record<VisibleDialogMode, { title: string; body: string }> = {
 
 // Subscribe to presentation changes, not the lifecycle of background requests.
 function selectDialogMode(state: GameState): DialogMode {
-  if (!state.online) return 'network';
+  if (!state.online && state.connectionFailed) return 'network';
   if (state.authRequired) return 'authentication';
   if (state.initialized && state.save.pending && state.notice) return 'pending';
   return 'hidden';
