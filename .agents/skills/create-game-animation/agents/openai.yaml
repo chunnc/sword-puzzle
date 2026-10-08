@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Game Animation"
+  short_description: "Tạo video và sprite sheet cho hiệu ứng trong game"
+  default_prompt: "Dùng $create-game-animation để tạo bộ animation cho hiệu ứng tôi mô tả."

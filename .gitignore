@@ -18,3 +18,5 @@ client/Build/
 client/Logs/
 client/UserSettings/
 .DS_Store
+/.env
+__pycache__/
