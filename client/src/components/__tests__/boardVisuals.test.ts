@@ -93,7 +93,7 @@ describe('Skia board coordinates and animation', () => {
     expect(cues[0].targets[2].impactAt).toBeCloseTo(.44);
     expect(cues[1].startAt).toBeCloseTo(80 / BOARD_LIGHTNING_MS);
     expect(cues[1].targets.map(target => target.index)).toEqual([7, 1]);
-    expect(cues[1].targets[0].impactAt).toBeCloseTo(80 / BOARD_LIGHTNING_MS + .2);
+    expect(cues[1].targets[0].impactAt).toBeCloseTo(80 / BOARD_LIGHTNING_MS + .55);
     expect(cues[1].targets[1].impactAt).toBeCloseTo(80 / BOARD_LIGHTNING_MS + .55);
     expect(cues[0].seed).toBe(buildBoardEffectCues(effect, geometry, 'run-a')[0].seed);
     expect(cues[0].seed).not.toBe(buildBoardEffectCues(effect, geometry, 'run-b')[0].seed);
@@ -130,7 +130,7 @@ describe('Skia board coordinates and animation', () => {
     const cue = buildBoardEffectCues(effect, geometry)[0];
     expect(cue.sourceIndex).toBe(4);
     expect(cue.targets.map(target => target.index)).toEqual([7, 1]);
-    expect(cue.targets[0].impactAt).toBe(.2);
+    expect(cue.targets[0].impactAt).toBe(.55);
     expect(cue.targets[1].impactAt).toBe(.55);
     expect(cue.clearAt).toBe(BOARD_LIGHTNING_CLEAR_AT);
     const visual = buildCellVisuals(effect, null, false, geometry, [cue]);

@@ -136,11 +136,11 @@ export function buildBoardEffectCues(
       startAt,
       clearAt: startAt + (event.kind === 'fire' ? BOARD_FIRE_CLEAR_AT : BOARD_LIGHTNING_CLEAR_AT),
       seed: effectSeed(runId, effect.id, eventIndex, event.kind),
-      targets: targets.map((point, targetIndex) => ({
+      targets: targets.map(point => ({
         ...point,
         impactAt: event.kind === 'fire'
           ? startAt + .16 + .28 * Math.hypot(point.x - source.x, point.y - source.y) / maxDistance
-          : startAt + (targets.length === 1 ? .55 : .2 + .35 * targetIndex / (targets.length - 1)),
+          : startAt + .55,
       })),
     };
   });

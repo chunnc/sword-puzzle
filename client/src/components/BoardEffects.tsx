@@ -175,7 +175,13 @@ export function BoardEffects({
   const lightningColors = useColorBuffer(lightningSprites.length, (color, index) => {
     'worklet';
     const sprite = lightningSprites[index];
-    const alpha = sprite ? particleAlpha(progress.value - sprite.startAt, sprite.lifetime) : 0;
+    const holdUntil = sprite?.holdUntil ?? sprite?.startAt ?? 0;
+    const alpha = !sprite ? 0 : sprite.kind === 'bolt'
+      ? progress.value < sprite.startAt ? 0
+        : progress.value < holdUntil
+          ? clamp01((progress.value - sprite.startAt) / .025)
+          : 1 - clamp01((progress.value - holdUntil) / sprite.lifetime)
+      : particleAlpha(progress.value - sprite.startAt, sprite.lifetime);
     setWhiteAlpha(color, alpha);
   });
 

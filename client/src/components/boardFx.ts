@@ -17,12 +17,14 @@ export interface FireParticleSpec {
 
 export interface LightningSpriteSpec {
   spriteIndex: number;
+  targetIndex: number;
   x: number;
   y: number;
   angle: number;
   size: number;
   startAt: number;
   lifetime: number;
+  holdUntil?: number;
   kind: 'bolt' | 'impact' | 'spark';
   driftX: number;
   driftY: number;
@@ -63,17 +65,16 @@ export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpri
   let bolts = 0;
   for (const cue of cues) {
     if (cue.kind !== 'lightning') continue;
-    let fromX = cue.sourceX, fromY = cue.sourceY;
-    let previousImpactAt = cue.startAt;
     const random = randomSource(cue.seed);
     for (let targetIndex = 0; targetIndex < cue.targets.length; targetIndex++) {
       const target = cue.targets[targetIndex];
+      // Every target gets its own branch from the same charged source cell.
+      const fromX = cue.sourceX, fromY = cue.sourceY;
       const dx = target.x - fromX, dy = target.y - fromY;
       const distance = Math.hypot(dx, dy);
-      const segmentCount = distance < .05 ? 0 : Math.min(14, Math.max(1, Math.ceil(distance / .58)));
+      const segmentCount = distance < .05 ? 0 : Math.min(14, Math.max(2, Math.ceil(distance / .58)));
       const normalX = distance > .05 ? -dy / distance : 0;
       const normalY = distance > .05 ? dx / distance : 0;
-      const travelStart = previousImpactAt;
       for (let segment = 0; segment < segmentCount; segment++) {
         const t = (segment + .5) / segmentCount;
         const bend = (random() - .5) * .3;
@@ -81,15 +82,18 @@ export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpri
         const spriteIndex = Math.floor(random() * 4);
         const angleJitter = (random() - .5) * .22;
         const size = .82 + random() * .14;
+        const growProgress = segment / Math.max(1, segmentCount - 1);
         if (bolts < LIGHTNING_BOLT_CAP) {
           sprites.push({
             spriteIndex,
+            targetIndex,
             x: fromX + dx * (t + along) + normalX * bend,
             y: fromY + dy * (t + along) + normalY * bend,
             angle: Math.atan2(dy, dx) + Math.PI / 4 + angleJitter,
             size,
-            startAt: travelStart + (target.impactAt - travelStart) * (segment + 1) / segmentCount,
+            startAt: cue.startAt + (target.impactAt - cue.startAt) * growProgress,
             lifetime: .12,
+            holdUntil: target.impactAt,
             kind: 'bolt',
             driftX: 0,
             driftY: 0,
@@ -100,6 +104,7 @@ export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpri
       }
       sprites.push({
         spriteIndex: 4 + Math.floor(random() * 4),
+        targetIndex,
         x: target.x,
         y: target.y,
         angle: random() * Math.PI * 2,
@@ -116,6 +121,7 @@ export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpri
         const speed = .35 + random() * .55;
         sprites.push({
           spriteIndex: 4 + Math.floor(random() * 4),
+          targetIndex,
           x: target.x,
           y: target.y,
           angle: angle + Math.PI / 4,
@@ -128,9 +134,6 @@ export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpri
           spin: (random() - .5) * 4,
         });
       }
-      fromX = target.x;
-      fromY = target.y;
-      previousImpactAt = target.impactAt;
     }
   }
   return sprites;
