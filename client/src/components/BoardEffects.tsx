@@ -5,7 +5,7 @@ import {
 } from '@shopify/react-native-skia';
 import type { SharedValue } from 'react-native-reanimated';
 import type { BoardEffectCue, BoardGeometry } from './boardVisuals';
-import { createFireParticleSpecs, buildLightningSpriteSpecs, particleAlpha } from './boardFx';
+import { createFireParticleSpecs, buildLightningSpriteSpecs, lightningBoltFrame, particleAlpha } from './boardFx';
 
 const ATLAS_COLUMNS = 4;
 const ATLAS_ROWS = 2;
@@ -157,6 +157,7 @@ export function BoardEffects({
     }
     const age = progress.value - sprite.startAt;
     const t = clamp01(age / sprite.lifetime);
+    const boltFrame = sprite.kind === 'bolt' ? lightningBoltFrame(sprite, progress.value) : null;
     const drift = sprite.kind === 'spark' ? t : 0;
     const size = sprite.kind === 'spark' ? sprite.size * (1 - .68 * t)
       : sprite.kind === 'impact' ? sprite.size * (.72 + .32 * Math.sin(Math.PI * t))
@@ -164,9 +165,9 @@ export function BoardEffects({
     const scale = pitch * size / lightningCellWidth;
     setCenteredTransform(
       output,
-      (sprite.x + sprite.driftX * drift) * pitch,
-      (sprite.y + sprite.driftY * drift) * pitch,
-      sprite.angle + sprite.spin * t,
+      (sprite.x + sprite.driftX * drift + (boltFrame?.offsetX ?? 0)) * pitch,
+      (sprite.y + sprite.driftY * drift + (boltFrame?.offsetY ?? 0)) * pitch,
+      sprite.angle + sprite.spin * t + (boltFrame?.rotation ?? 0),
       scale,
       lightningCellWidth,
       lightningCellHeight,
@@ -175,12 +176,8 @@ export function BoardEffects({
   const lightningColors = useColorBuffer(lightningSprites.length, (color, index) => {
     'worklet';
     const sprite = lightningSprites[index];
-    const holdUntil = sprite?.holdUntil ?? sprite?.startAt ?? 0;
     const alpha = !sprite ? 0 : sprite.kind === 'bolt'
-      ? progress.value < sprite.startAt ? 0
-        : progress.value < holdUntil
-          ? clamp01((progress.value - sprite.startAt) / .025)
-          : 1 - clamp01((progress.value - holdUntil) / sprite.lifetime)
+      ? lightningBoltFrame(sprite, progress.value).alpha
       : particleAlpha(progress.value - sprite.startAt, sprite.lifetime);
     setWhiteAlpha(color, alpha);
   });

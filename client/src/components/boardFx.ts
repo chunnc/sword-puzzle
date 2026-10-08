@@ -15,7 +15,7 @@ export interface FireParticleSpec {
   spin: number;
 }
 
-export interface LightningSpriteSpec {
+interface LightningSpriteBase {
   spriteIndex: number;
   targetIndex: number;
   x: number;
@@ -24,12 +24,24 @@ export interface LightningSpriteSpec {
   size: number;
   startAt: number;
   lifetime: number;
-  holdUntil?: number;
-  kind: 'bolt' | 'impact' | 'spark';
   driftX: number;
   driftY: number;
   spin: number;
 }
+
+export type LightningSpriteSpec = LightningSpriteBase & (
+  | {
+      kind: 'bolt';
+      impactAt: number;
+      holdUntil: number;
+      jitterPhase: number;
+      jitterX: number;
+      jitterY: number;
+      jitterAngle: number;
+      flickerPhase: number;
+    }
+  | { kind: 'impact' | 'spark' }
+);
 
 function randomSource(seed: number) {
   let state = seed >>> 0 || 1;
@@ -75,6 +87,7 @@ export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpri
       const segmentCount = distance < .05 ? 0 : Math.min(14, Math.max(2, Math.ceil(distance / .58)));
       const normalX = distance > .05 ? -dy / distance : 0;
       const normalY = distance > .05 ? dx / distance : 0;
+      const flickerPhase = random() * Math.PI * 2;
       for (let segment = 0; segment < segmentCount; segment++) {
         const t = (segment + .5) / segmentCount;
         const bend = (random() - .5) * .3;
@@ -93,7 +106,13 @@ export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpri
             size,
             startAt: cue.startAt + (target.impactAt - cue.startAt) * growProgress,
             lifetime: .12,
-            holdUntil: target.impactAt,
+            impactAt: target.impactAt,
+            holdUntil: cue.clearAt,
+            jitterPhase: random() * Math.PI * 2,
+            jitterX: (random() - .5) * .08,
+            jitterY: (random() - .5) * .08,
+            jitterAngle: (random() - .5) * .12,
+            flickerPhase,
             kind: 'bolt',
             driftX: 0,
             driftY: 0,
@@ -137,6 +156,34 @@ export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpri
     }
   }
   return sprites;
+}
+
+export interface LightningBoltFrame {
+  offsetX: number;
+  offsetY: number;
+  rotation: number;
+  alpha: number;
+}
+
+function clamp01(value: number) {
+  'worklet';
+  return Math.max(0, Math.min(1, value));
+}
+
+export function lightningBoltFrame(sprite: Extract<LightningSpriteSpec, { kind: 'bolt' }>, progress: number): LightningBoltFrame {
+  'worklet';
+  if (progress < sprite.startAt) return { offsetX: 0, offsetY: 0, rotation: 0, alpha: 0 };
+  const joltAge = Math.max(0, progress - sprite.impactAt);
+  const jolt = clamp01(joltAge / .02);
+  const wave = Math.sin(joltAge * Math.PI * 2 * 12 + sprite.jitterPhase) * jolt;
+  const flicker = .62 + .38 * (.5 + .5 * Math.sin(joltAge * Math.PI * 2 * 14 + sprite.flickerPhase));
+  const fade = 1 - clamp01((progress - sprite.holdUntil) / sprite.lifetime);
+  return {
+    offsetX: sprite.jitterX * wave,
+    offsetY: sprite.jitterY * wave,
+    rotation: sprite.jitterAngle * wave,
+    alpha: flicker * fade,
+  };
 }
 
 export function particleAlpha(age: number, lifetime: number) {

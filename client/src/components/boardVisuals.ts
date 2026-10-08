@@ -140,7 +140,7 @@ export function buildBoardEffectCues(
         ...point,
         impactAt: event.kind === 'fire'
           ? startAt + .16 + .28 * Math.hypot(point.x - source.x, point.y - source.y) / maxDistance
-          : startAt + .55,
+          : startAt + .08,
       })),
     };
   });

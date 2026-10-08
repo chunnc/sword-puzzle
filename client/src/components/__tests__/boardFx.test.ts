@@ -1,7 +1,15 @@
 import { buildBoardEffectCues } from '../boardVisuals';
-import { buildLightningSpriteSpecs, createFireParticleSpecs, FIRE_EMBER_COUNT, FIRE_GLINT_COUNT, LIGHTNING_BOLT_CAP, LIGHTNING_SPARK_CAP, particleAlpha } from '../boardFx';
+import {
+  buildLightningSpriteSpecs, createFireParticleSpecs, FIRE_EMBER_COUNT, FIRE_GLINT_COUNT,
+  LIGHTNING_BOLT_CAP, LIGHTNING_SPARK_CAP, lightningBoltFrame, particleAlpha,
+  type LightningSpriteSpec,
+} from '../boardFx';
 
 const geometry = { width: 7, height: 7, activeCells: Array(49).fill(true) };
+
+function isBolt(sprite: LightningSpriteSpec): sprite is Extract<LightningSpriteSpec, { kind: 'bolt' }> {
+  return sprite.kind === 'bolt';
+}
 
 function cueFor(kind: 'fire' | 'lightning', cells: number[], source = 24) {
   return buildBoardEffectCues({
@@ -37,8 +45,11 @@ it('builds a deterministic lightning atlas and caps secondary sparks', () => {
 
   const singleTarget = cueFor('lightning', [25]);
   const singleTargetSprites = buildLightningSpriteSpecs([singleTarget]);
-  expect(singleTarget.targets[0].impactAt).toBe(.55);
-  expect(singleTargetSprites.every(sprite => sprite.startAt + sprite.lifetime <= singleTarget.clearAt + 1e-9)).toBe(true);
+  expect(singleTarget.targets[0].impactAt).toBe(.08);
+  expect(singleTargetSprites.filter(sprite => !isBolt(sprite))
+    .every(sprite => sprite.startAt + sprite.lifetime <= singleTarget.clearAt + 1e-9)).toBe(true);
+  expect(singleTargetSprites.filter(isBolt)
+    .every(sprite => sprite.holdUntil === singleTarget.clearAt)).toBe(true);
 });
 
 it('extends simultaneous branches from one source to each of three targets', () => {
@@ -47,16 +58,17 @@ it('extends simultaneous branches from one source to each of three targets', () 
   const impacts = sprites.filter(sprite => sprite.kind === 'impact');
 
   expect(cue.targets.map(target => target.index)).toEqual([10, 38, 26]);
-  expect(new Set(cue.targets.map(target => target.impactAt))).toEqual(new Set([.55]));
+  expect(new Set(cue.targets.map(target => target.impactAt))).toEqual(new Set([.08]));
   expect(impacts.map(sprite => sprite.targetIndex)).toEqual([0, 1, 2]);
-  expect(impacts.map(sprite => sprite.startAt)).toEqual([.55, .55, .55]);
+  expect(impacts.map(sprite => sprite.startAt)).toEqual([.08, .08, .08]);
 
   cue.targets.forEach((target, targetIndex) => {
-    const branch = sprites.filter(sprite => sprite.kind === 'bolt' && sprite.targetIndex === targetIndex);
+    const branch = sprites.filter((sprite): sprite is Extract<LightningSpriteSpec, { kind: 'bolt' }> =>
+      isBolt(sprite) && sprite.targetIndex === targetIndex);
     expect(branch.length).toBeGreaterThan(1);
     expect(branch[0].startAt).toBe(cue.startAt);
     expect(branch.at(-1)!.startAt).toBe(target.impactAt);
-    expect(branch.every(sprite => sprite.holdUntil === target.impactAt)).toBe(true);
+    expect(branch.every(sprite => sprite.holdUntil === cue.clearAt)).toBe(true);
 
     const dx = target.x - cue.sourceX, dy = target.y - cue.sourceY;
     const length = Math.hypot(dx, dy);
@@ -67,9 +79,18 @@ it('extends simultaneous branches from one source to each of three targets', () 
       expect(along).toBeLessThanOrEqual(1);
       expect(sideways).toBeLessThanOrEqual(.16);
     }
+
+    const bolt = branch[0];
+    const atSameProgress = lightningBoltFrame(bolt, .24);
+    expect(lightningBoltFrame(bolt, .24)).toEqual(atSameProgress);
+    expect(lightningBoltFrame(bolt, .24).alpha).toBeGreaterThan(0);
+    expect(lightningBoltFrame(bolt, .3)).not.toEqual(atSameProgress);
+    expect(lightningBoltFrame(bolt, .79).alpha).toBeGreaterThan(0);
+    expect(lightningBoltFrame(bolt, .92).alpha).toBe(0);
   });
 
-  expect(sprites.every(sprite => (sprite.holdUntil ?? sprite.startAt) + sprite.lifetime <= cue.clearAt + 1e-9)).toBe(true);
+  expect(sprites.filter(sprite => !isBolt(sprite))
+    .every(sprite => sprite.startAt + sprite.lifetime <= cue.clearAt + 1e-9)).toBe(true);
 });
 
 it('fades atlas sprites over their lifetime and hides them outside it', () => {
