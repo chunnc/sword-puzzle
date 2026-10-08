@@ -1,86 +1,413 @@
-# Kiến trúc hệ thống — Kiếm Khai Tiên Lộ 1.3
+# System Architecture — Sword Puzzle (Kiếm Khai Tiên Lộ)
 
-## Quyền sở hữu dữ liệu
+Agent-oriented map of the codebase. Read this before changing code. It covers the
+repository layout, the client/server boundary, the main runtime flows, the
+invariants you must not break, and where to make changes. Deep references:
+[README.md](README.md), [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md),
+[GAME_CONCEPT.md](GAME_CONCEPT.md), [ACCEPTANCE_GUEST.md](ACCEPTANCE_GUEST.md).
 
-React Native chạy toàn bộ gameplay: sinh bàn, RNG, nước đi, cascade, kiếm thuật và animation. Firebase Functions là cổng HTTPS duy nhất tới Firebase Auth và Firestore. Client không dùng Firebase SDK; rules tiếp tục từ chối truy cập database trực tiếp.
+## 1. Overview
 
-Firestore là nguồn dữ liệu cho catalog và profile. `content/game-content.json` là dữ liệu seed để xuất bản catalog; không được nhúng vào client. `content/game-domain.ts` chứa schema và luật profile dùng chung, được sinh thành module TypeScript cho client/server.
+- Genre: match-3 cultivation (tu tiên) game for iOS/Android.
+- Client: Expo SDK 57, React Native 0.86, React 19, TypeScript, expo-router,
+  Zustand, Reanimated/Skia. App version `1.3.0` (`client/package.json`,
+  `client/app.config.ts`).
+- Backend: Firebase Functions v2 (Express) on `asia-southeast1`, Firebase Auth +
+  Firestore via Admin SDK (`server/package.json`).
+- Content: versioned catalog (content v3), 40 seeded maps, 8 skills, 8 swords,
+  10 realms.
+- Monorepo root scripts (`package.json`): `api:build`, `api:test`, `api:serve`,
+  `api:deploy`, `api:seed`.
 
-`gameConfig/current.contentVersion` trỏ tới document bất biến `gameContent/{version}`. Mỗi catalog có metadata của 8 skill/8 kiếm, chỉ số ô, 10 cảnh giới, phần thưởng và map. Hiệu ứng và cách chọn mục tiêu của kiếm/skill xử lý case by case theo ID trên client; không lưu SwordModifier, SkillEffect hay target selection trong database. ID/hành vi mới cần cập nhật client.
+### Ownership boundary (the single most important rule)
 
-## Khởi động và phiên khách
+- The **client runs all gameplay**: board generation, RNG, moves, cascades,
+  skills, scoring, and animation. The server never simulates moves.
+- The **server is the only network authority** for identity, profile, economy,
+  purchases, and win validation. It is reached over one HTTPS API (`gameApi`).
+- The client has **no Firebase SDK**. It never talks to Firestore/Auth directly;
+  `firestore.rules` / `storage.rules` deny all direct client access.
+- The client does **not** restore coins/EXP from local state. Profile comes from
+  the server on every boot.
 
-1. Health check, tải bootstrap và kiểm tra phiên bản client/catalog.
-2. Đọc session và khóa bản cài đặt trong SecureStore. Token hỏng chỉ được phục hồi bằng khóa đã có; không tự thay bằng khách mới.
-3. Lần đầu tạo ID ngẫu nhiên 128 bit và khóa 256 bit, lưu trước khi gọi `/v2/auth/device-session`. Server lưu hash khóa, liên kết một UID; retry dùng lại cùng UID.
-4. Session Firebase custom token có claims `installationId` và `bindingVersion`. Mỗi bản cài đặt có một UID hiện tại; nhiều bản cài đặt có thể dùng chung UID đã liên kết email.
-5. Tải profile và journal đúng UID, gửi lại request chờ theo ID cũ rồi mở game.
+```text
+Expo app ──HTTPS JSON──▶ gameApi (Express on Cloud Functions)
+                              │
+                              ├─ firebase-admin/auth   (custom tokens, users, refresh)
+                              └─ firebase-admin/firestore (profiles, receipts, ads)
+```
 
-Đăng ký email giữ UID khách. Đăng nhập tài khoản có sẵn thay liên kết thiết bị, không gộp profile. Khi rời khách phải xác nhận nguy cơ không khôi phục được tiến trình; tài khoản đã liên kết không cần cảnh báo này. Đăng xuất liên kết một khách mới trên máy hiện tại, không thu hồi phiên máy khác. Hồ sơ cũ vẫn trên server.
+## 2. Repository map
 
-Các thao tác đổi danh tính có operation ID và receipt trong installations; retry không đổi liên kết lần nữa. Binding version tăng mỗi lần thay đổi. Middleware kiểm tra claims với bản ghi liên kết; transaction ghi profile/ad intent đọc lại liên kết để ngăn request cũ commit sau khi đổi tài khoản.
+```text
+sword-puzzle/
+├── client/                     Expo / React Native app
+│   ├── app/                    expo-router routes (screens)
+│   │   ├── _layout.tsx         Stack + auth guards, 30s health timer, AppState wiring
+│   │   ├── index.tsx           boot / splash
+│   │   ├── map.tsx             level select
+│   │   ├── game/[levelId].tsx  gameplay screen
+│   │   ├── character.tsx  inventory.tsx  shop.tsx  account.tsx
+│   ├── src/
+│   │   ├── state/gameStore.ts  Zustand store: the client's single source of truth
+│   │   ├── game/
+│   │   │   ├── BoardEngine.ts  gameplay engine (swap, skills, cascade, animation)
+│   │   │   ├── types.ts        board/save/animation types
+│   │   │   ├── domain.ts       GENERATED — do not edit
+│   │   │   ├── save.ts         local journal v3 (+ backup), schema validation
+│   │   │   ├── skillTargets.ts skill targeting rules by ID
+│   │   │   └── levels.ts       level lookup helpers
+│   │   ├── services/
+│   │   │   ├── api.ts          HTTP client, auth headers, 401 refresh, identity calls
+│   │   │   ├── session.ts      SecureStore session + generation counter
+│   │   │   ├── device.ts       installation key + identity-operation receipt
+│   │   │   ├── ads.ts          rewarded ad SDK wrapper
+│   │   │   └── acceptance.ts   dev-only test bridge (never in release)
+│   │   ├── components/         UI: Board, chrome, dialogs, progress, result popup
+│   │   ├── assets.ts  theme.ts
+│   ├── app.config.ts           Expo config (AdMob IDs, API URL, version)
+│   └── package.json
+├── server/
+│   ├── src/
+│   │   ├── index.ts            Express app + all routes + error middleware
+│   │   ├── identity.ts         device-bound sessions, requireAuth, rebinding
+│   │   ├── content.ts          catalog loader (current + published versions)
+│   │   └── domain/
+│   │       ├── game.ts         GENERATED — do not edit
+│   │       ├── profile.ts      operations, receipts, idempotent processing
+│   │       ├── progress.ts     legacy progress helpers
+│   │       └── admob.ts        SSV callback verification
+│   └── package.json
+├── content/
+│   ├── game-domain.ts          SOURCE of shared schema + pure rules
+│   └── game-content.json       seed catalog (40 levels)
+├── tools/
+│   ├── generate_game_content.mjs  copies game-domain.ts → client + server
+│   ├── seed_game_content.mjs      validate/publish catalog to Firestore
+│   ├── generate_ui_assets.py      WebP UI asset export
+│   └── acceptance-*.mjs           local acceptance emulator proxy
+├── firestore.rules  storage.rules  firebase.json  .firebaserc
+└── SYSTEM_ARCHITECTURE.md  DATABASE_SCHEMA.md  README.md  GAME_CONCEPT.md
+```
 
-Khóa thiết bị là thông tin đăng nhập dài hạn: chỉ SecureStore giữ bản rõ, server lưu SHA-256, không ghi log. Không dùng hardware ID. Mất khóa khi gỡ app/xóa dữ liệu có thể mất khả năng phục hồi khách. Khi đổi mật khẩu/thu hồi Firebase session, baseline `authValidAfter` ngăn khóa cũ tự cấp quyền lại; cần xác thực email/mật khẩu. Tài khoản bị khóa hoặc xóa không được phục hồi hay tạo lại cùng UID.
+## 3. Client architecture
 
-## Engine và nhiều mục tiêu
+### 3.1 Routes and guards (`client/app/`)
 
-Map gồm width, height, activeCells (index = y × width + x; y=0 ở dưới), moves, seed, obstacles, spawnPhases và mảng objectives. Mỗi objective có ID duy nhất. Có thể kết hợp nhiều mục tiêu Collect/BreakRocks/BreakSeals với tối đa một Battle/Boss; thắng khi tất cả hoàn thành.
+`_layout.tsx` mounts a Stack and a global `ConnectionDialog`. Screens under
+`map`, `game/[levelId]`, `character`, `inventory`, `shop` are wrapped in
+`Stack.Protected guard={initialized}`; `account` is guarded by `bootstrapLoaded`.
+The layout starts a 30s interval that calls `checkConnection(false)` while
+foreground, and an `AppState` listener that updates `foreground` and re-checks on
+resume.
 
-Snapshot lưu `objectiveProgress` theo ID, tổng đã thu thập/phá hoặc sát thương đã gây, được giới hạn từ 0 đến target. Một lần xóa ô có thể vừa tăng thu thập vừa gây sát thương. Mục tiêu đã xong không kết thúc màn nếu mục tiêu khác chưa xong. Điều kiện thắng được kiểm tra sau cascade; skill hợp lệ vẫn dùng được ở 0 lượt theo luật hiện có.
+### 3.2 Store (`client/src/state/gameStore.ts`)
 
-Ô khuyết là null trong snapshot và false trong activeCells. Match không xuyên ô khuyết. Gravity refill từng đoạn cột ngăn bởi ô khuyết, đá hoặc phong ấn. Skill hàng/cột bỏ qua ô khuyết. Sinh bàn/xáo bàn có giới hạn thử; cấu hình không thể chơi trả NO_PLAYABLE_BOARD thay vì lặp vô hạn.
+Single Zustand store. Key ideas:
 
-spawnPhases được sắp tăng theo minMovesRemaining, bắt đầu từ 0. Chọn ngưỡng lớn nhất không vượt số lượt còn lại; weights theo thứ tự Kiếm/Hỏa/Lôi/Tụ Linh Châu, mỗi trọng số là số nguyên dương. Catalog ban đầu giữ 40 màn 7×7, trọng số đều và cân bằng cũ.
+- **`available()`** — gate for all gameplay/mutations: requires `initialized`,
+  `bootstrapLoaded`, `online`, `foreground`, no `recovering`, no `authRequired`,
+  and (unless explicitly allowed) no pending operation.
+- **`serialize()`** — every mutation goes through one promise queue so the store
+  never runs concurrent mutations.
+- **`lifecycle` epoch** — incremented on identity changes; async results from an
+  older epoch are discarded.
+- **`hydrate()`** — the boot sequence: fetch bootstrap → install content →
+  load/repair session → device session if needed → load journal → fetch profile →
+  persist → `submitPending()` → mark `initialized`.
+- **`checkConnection(retryIdentity)`** — single-flight health check; on failure
+  sets `online/connectionFailed` and calls `failure()`.
+- **`submitPending()`** — replays the journal's pending operation through
+  `/v2/profile/sync`, applies the returned authoritative profile, and writes the
+  win summary.
+- **`command()` / `record()`** — write the operation into the journal *before*
+  calling the API, then submit. This is what makes retries safe.
 
-Context màn cố định theo contentVersion: cấu hình level, metadata skill, trang bị, sức mạnh và RNG. Trace chứa objectiveProgressAfter để HUD cập nhật đúng thời điểm hiệu ứng; HUD hiển thị tất cả mục tiêu, dùng HP cho Battle/Boss.
+### 3.3 Gameplay (`client/src/game/`)
 
-## Giao dịch và phục hồi
+- `BoardEngine.ts` — constructed from a level and an optional snapshot. It fills
+  the board from a seeded RNG, places rocks/seals, guarantees a playable move,
+  and exposes `trySwap`, `trySkill`, `grantExtraMoves`, `snapshot`, `won`,
+  `lost`, and the animation stream. Skill behavior is selected by skill ID
+  (e.g. `'ngu-kiem'` swaps a pair) — behavior is code, not data.
+- `types.ts` — `BoardSnapshot`, `BoardActionAnimation`, `BoardResolutionStep`,
+  `SaveData` (schema v3), `WinSummary`.
+- `domain.ts` — **generated**. Holds `GameContent`, `LevelDefinition`,
+  `ObjectiveDefinition`, validation, and pure rules (`applyOperation`,
+  `mergeProfiles`, `realmForExp`, `gradeStars`, `normalizeProfile`, ...).
+  `CONTENT` is installed only after bootstrap; no catalog is bundled.
+- `save.ts` — local journal v3 in AsyncStorage with a backup key. It stores
+  `ownerId`, `active` board snapshot, `lastWin`, and `pending`. **Profile is
+  stripped before persisting** — it is always fetched from the server. v1/v2
+  saves are ignored.
+- `skillTargets.ts` — target-selection rule per skill ID (`row`, `pair`,
+  `triple`, `chargedPair`, `kind`, `cell`).
 
-Client không chiếu profile từ operation và không cho chơi offline. Mua/equip nhận profile mới sau xác nhận server. Thắng tạo operation dùng runId; server kiểm tra đủ objectives, màn đã mở, giá, ví, sở hữu và ô skill, rồi tính thưởng. Server không mô phỏng lại nước đi để xác minh kết quả.
+### 3.4 Services (`client/src/services/`)
 
-Mỗi request đang gửi được lưu vào journal v3 trước khi gọi API, với ID và contentVersion bất biến. Khi timeout hoặc đóng app, retry đúng payload/ID. Receipt lưu hash bao gồm phiên bản nội dung, kết quả accepted/reason và thưởng. Retry trả lại thưởng cũ, không cộng tiền hoặc EXP lần nữa. Các receipt được đọc trước khi ghi profile trong cùng Firestore transaction, bảo đảm hai thiết bị không tiêu quá ví.
+- `api.ts` — request wrapper with 12s timeout and typed `GameApiError`; injects
+  `Bearer` token; on `401` runs a single-flight refresh and retries once, falling
+  back to device-session recovery. Contains all endpoint functions.
+- `session.ts` — session in SecureStore; `generation` counter invalidates stale
+  async work; `saveRefreshedSession` is generation-checked.
+- `device.ts` — 128-bit `installationId` + 256-bit `secret` (hex) generated and
+  stored before first contact; persists an `identityOperation` receipt so a
+  retried register/login/logout reuses the same operation ID.
+- `ads.ts` — initializes the AdMob SDK and shows a rewarded ad bound to an intent
+  via `serverSideVerificationOptions.customData`.
+- `acceptance.ts` — dev-only bridge installed only when `__DEV__` and
+  `EXPO_PUBLIC_ACCEPTANCE_TEST=1` and the API URL is exactly
+  `http://127.0.0.1:8787`. Never active in release builds.
 
-Kết quả thắng dùng catalog phiên bản đã chơi; mua/equip mới cần phiên bản hiện tại. Receipt đã có vẫn được replay sau khi catalog chuyển phiên bản. Profile trả về luôn dùng catalog hiện tại để kiểm tra sở hữu và hiển thị. Tiền/EXP đã ghi trên server được giữ nguyên khi đọc; client không tự tính lại profile.
+### 3.5 UI (`client/src/components/`)
 
-Journal chỉ giữ UID, snapshot, kết quả đã xác nhận và request chưa được xác nhận. Profile lấy từ server mỗi lần mở app. Save offline v1/v2 và archive cũ bị bỏ qua, không import. Logout thay liên kết bằng khách mới, xóa journal của UID cũ và giữ profile database. Đăng nhập lại cùng UID giữ request chờ; không chuyển request sang UID khác.
+Presentational + motion: `Board`, `GameplayChrome`, `GameplayProgressBar`,
+`GameplayResultPopup`, `ConnectionDialog`, collection/shop/inventory screens,
+and the `boardMotion`/`boardVisuals` helpers.
 
-## Health check và refresh token
+## 4. Server architecture
 
-`GET /health` không cần auth, không cache. Client kiểm tra mỗi 30 giây khi foreground, timeout 2 giây. Timeout thử thêm một lần; lỗi kết nối/HTTP lỗi khóa ngay. Không chạy chồng request health. Trở lại foreground phải kiểm tra trước khi cho thao tác.
+### 4.1 App (`server/src/index.ts`)
 
-Dialog mạng là Modal toàn app, không đóng bằng Back hoặc chạm ngoài. Retry gọi health; server trả thành công thì đóng dialog. Guard trong store cũng khóa gameplay/giao dịch khi disconnected, background, đang phục hồi, lỗi phiên hoặc còn request chờ.
+An Express app mounted at one HTTP function, `gameApi`, region
+`asia-southeast1`, `maxInstances: 20`. `express.json({ limit: '32kb' })`,
+`trust proxy`, `x-powered-by` disabled. Routes are thin; heavy logic lives in
+`domain/`. A final error middleware maps `ApiError` → `{ error: code }` and
+returns generic `INTERNAL_ERROR` (with logging) for 5xx.
 
-Mọi API có xác thực dùng chung xử lý HTTP 401: một refresh cho các request đồng thời, lưu token mới ngay, replay một lần. Response cũ bị loại nếu session generation thay đổi. Refresh lỗi mạng giữ token; refresh trả 401 thì thử phục hồi cùng hồ sơ bằng khóa thiết bị. Phục hồi bị từ chối cho phép thử lại, đăng nhập hoặc chủ động xác nhận chơi khách mới. Không tự bỏ danh tính. Firebase quản lý vòng đời refresh token; app không đặt TTL.
+### 4.2 Identity (`server/src/identity.ts`)
 
-Health check định kỳ chỉ kiểm tra mạng khi danh tính đã bị từ chối; không gửi lại xác thực mỗi 30 giây. Khởi động app và nút thử khôi phục chủ động được phép thử lại, kể cả khi một health check đang chạy. Chuyển đổi legacy token đã xác minh không tiêu hạn mức tạo khách mới theo IP.
+- A `Router` plus `requireAuth` and `assertInstallation` exported for other
+  routes.
+- `requireAuth` verifies the ID token, then checks the installation binding.
+  `assertInstallation` can run inside a Firestore transaction so an account
+  switch cannot race a pending write.
+- Device sessions: `POST /v2/auth/device-session` looks up
+  `installations/{installationId}`, verifies the secret with a timing-safe
+  SHA-256 compare, and issues a Firebase custom token carrying
+  `installationId` + `bindingVersion`.
+- Identity changes (`login`/`register`/`logout`) use `rebind()`: an idempotent
+  Firestore transaction keyed by `operationId` in
+  `installations/{id}/operations/{operationId}`, guarded by
+  `expectedBindingVersion`. Each successful rebind increments `bindingVersion`.
+- `authValidAfter` stores the user's `tokensValidAfterTime` baseline so a device
+  key cannot silently recover a revoked session.
+- Rate limiting uses `authThrottle/{hash(ip:email)}` windows.
+- Legacy `/v1/auth/*` writes return `426 CLIENT_UPDATE_REQUIRED`; only
+  `/v1/auth/refresh` is kept for migration.
 
-## API
+### 4.3 Domain (`server/src/domain/`)
 
-| Endpoint | Auth | Hành vi |
+- `game.ts` — **generated**, same code as the client `domain.ts`. Definitions,
+  validation, and pure rules.
+- `profile.ts` — `profileFromDocument` (reads `profileV2`, migrates legacy
+  `stars`), `profileFields` (writes projection fields), `operationHash` (SHA-256
+  of `{version, operation}`), `parseOperations`, and `processOperations`.
+  `processOperations` is the idempotency core: a receipt with the same hash is
+  replayed (reward returned, no double credit); a mismatched hash is rejected as
+  `OPERATION_CONFLICT`. Non-`win` operations on a stale `contentVersion` are
+  rejected with `CONTENT_MISMATCH`.
+- `progress.ts` — legacy `stars`/`highestUnlocked`/`realm` helpers.
+- `admob.ts` — verifies AdMob SSV callbacks against Google's rotating keys
+  (SHA-256 + PEM), validates `ad_unit`, reward item/amount, and timestamp
+  freshness.
+
+### 4.4 Catalog (`server/src/content.ts`)
+
+`currentContent()` reads `gameConfig/current` then loads that version;
+`loadContent(version)` validates and caches published `gameContent/{version}`
+documents. Published documents are immutable.
+
+## 5. Shared domain & content pipeline
+
+```text
+content/game-domain.ts ──(tools/generate_game_content.mjs)──▶
+     ├── client/src/game/domain.ts
+     └── server/src/domain/game.ts
+content/game-content.json ──(tools/seed_game_content.mjs)──▶ gameContent/{version}
+```
+
+- Edit **`content/game-domain.ts`** only; run the generator (`npm run start`,
+  `typecheck`, `test`, or `api:build` all invoke it). Never hand-edit the two
+  generated files.
+- The generator also supports `--check` to fail on stale output.
+- `seed_game_content.mjs` is dry-run by default; `--apply --project ID` writes.
+  It refuses to change an already-published version and sets
+  `gameConfig/current` (`contentVersion`, `minClientVersion`) in the same
+  transaction. Demo projects require `FIRESTORE_EMULATOR_HOST`.
+
+## 6. Data model
+
+See [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) for field details.
+
+```text
+gameConfig/current                          active version, minClientVersion, ad flag
+gameContent/{version}                       immutable catalog
+installations/{installationId}              device binding (secretHash, playerUid, bindingVersion, ...)
+installations/{id}/operations/{opId}        identity rebind receipts
+players/{uid}                               profileV2 + legacy projection
+players/{uid}/operations/{opId}             win/purchase/equip receipts (idempotency)
+adIntents/{intentId}                        rewarded-ad intents (pending → verified)
+adTransactions/{transactionId}              SSV replay protection
+authThrottle/{keyHash}                      rate-limit windows
+```
+
+All timestamps are Unix ms except Firestore TTL fields (`adIntents.ttlAt`,
+`authThrottle.expiresAt`), which are `Date`/Timestamp.
+
+## 7. Key flows
+
+### Boot / guest session
+1. `checkConnection` → `GET /health`.
+2. `GET /v2/bootstrap` → install content, check `minClientVersion`, read ad flag.
+3. Load session from SecureStore; if unreadable, recover with the existing device
+   key (never silently create a new guest).
+4. If no/invalid session, `loadDeviceIdentity(create)` then
+   `POST /v2/auth/device-session`; server creates or restores the bound UID.
+5. Load journal for the UID, `GET /v2/profile`, persist, replay pending op, then
+   `initialized = true`.
+
+### Gameplay and win
+- Engine runs entirely on device; every move is saved to the journal (`active`).
+- On win, `record()` computes stars, writes a `win` operation (id `runId`,
+  `objectiveProgress`) into `pending`, and submits.
+- `POST /v2/profile/sync` validates unlocked level, complete objectives, then
+  credits coins/EXP and writes a receipt. The response profile is authoritative.
+
+### Retry safety
+- The journal persists the request (ID + `contentVersion`) before the call.
+- Server receipts make replay return the original result without double-paying;
+  receipts are read before any profile write in the same transaction.
+- Purchases are validated server-side (ownership, wallet, unlock, skill slots).
+
+### Identity changes
+- `register` links email to the current guest UID; `login` rebinds the device to
+  an existing account (requires `confirmedDiscardGuest` if leaving a guest);
+  `logout` binds a fresh guest on this device only.
+- Each uses an `operationId` + `expectedBindingVersion` receipt; network errors
+  are resolved by re-reading the device session and checking it completed.
+
+### Token refresh (401)
+- One shared refresh per `generation:uid`; success stores the new token and
+  replays the request once.
+- If refresh returns 401, recover the same identity via device-session. Never
+  auto-drop identity; identity is only replaced by an explicit user action.
+
+### Health
+- `GET /health` (no auth, no-store), 2s timeout, retried once on timeout. A
+  blocking `ConnectionDialog` appears after confirmed failures; Retry runs a
+  health check and only closes on success.
+
+### Rewarded ads
+1. Client `POST /v1/ads/intents` → server checks level unlocked + ads enabled and
+   returns an `intentId`.
+2. Client shows the rewarded ad with `customData = intentId`.
+3. AdMob calls `GET /v1/ads/admob-ssv`; server verifies the signature, validates
+   reward (`moves`/3), marks the intent verified, and records the transaction to
+   block replays.
+4. Client grants +3 moves only after the SDK reports the reward.
+
+## 8. API reference
+
+| Endpoint | Auth | Behavior |
 | --- | --- | --- |
-| GET /health | Không | Kết nối API; no-store |
-| GET /v2/bootstrap | Không | Catalog hiện tại, version, quảng cáo, minClientVersion |
-| GET /v2/content/:version | Không | Catalog bất biến của màn đang chơi |
-| GET /v2/profile | Có | Profile chính thức, migrate dữ liệu server legacy nếu cần |
-| POST /v2/profile/sync | Có | win/purchase/equip, tối đa 50 operations |
-| POST /v2/auth/device-session | Khóa thiết bị; legacy bearer khi chuyển đổi | Tạo/khôi phục session, cùng UID nếu đã có liên kết |
-| POST /v2/auth/register | Khóa thiết bị, operation ID/version | Liên kết email vào UID khách |
-| POST /v2/auth/login | Khóa thiết bị, email/mật khẩu, operation ID/version | Đổi liên kết; khách cần confirmedDiscardGuest |
-| POST /v2/auth/logout | Khóa thiết bị, operation ID/version | Liên kết khách mới, giữ các máy khác |
-| POST /v2/auth/refresh | Refresh token | Refresh và kiểm tra binding |
-| POST /v1/auth/refresh | Legacy refresh token | Chỉ dùng chuyển đổi session cũ |
-| POST /v1/auth/guest, register, login | — | 426, cần client 1.3 |
-| GET /v1/progress | Có | Đọc tương thích; PUT trả 426 |
-| /v1/ads/* | Theo endpoint | Intent quảng cáo/AdMob SSV như hiện tại |
+| `GET /health` | no | Liveness; `no-store` |
+| `GET /v2/bootstrap` | no | Current catalog, version, ad flag, `minClientVersion` |
+| `GET /v2/content/:version` | no | Immutable catalog for a version |
+| `GET /v2/profile` | yes | Authoritative profile; migrates legacy data |
+| `POST /v2/profile/sync` | yes | Apply ≤50 win/purchase/equip operations |
+| `POST /v2/auth/device-session` | device key (legacy bearer for migration) | Create/restore session |
+| `POST /v2/auth/register` | device key + operation | Link email to guest UID |
+| `POST /v2/auth/login` | device key + credentials + operation | Rebind to existing account |
+| `POST /v2/auth/logout` | device key + operation | Bind a fresh guest on this device |
+| `POST /v2/auth/refresh` | refresh token | Refresh + verify binding |
+| `POST /v1/auth/refresh` | legacy refresh token | Migration only |
+| `POST /v1/auth/{guest,register,login}` | — | `426 CLIENT_UPDATE_REQUIRED` |
+| `GET /v1/progress` | yes | Legacy read; `PUT` returns 426 |
+| `/v1/ads/intents`, `/v1/ads/intents/:id`, `/v1/ads/admob-ssv` | mixed | Ad intent + SSV |
 
-Sync body: `{contentVersion, operations}`. Win: `{id: runId, kind: 'win', levelId, stars, objectiveProgress}`. Response: `{profile, acknowledged, rejected, rewards}`. Không nhận importProgress hoặc contentVersion < 3.
+`sync` body: `{ contentVersion, operations }`. Win operation:
+`{ id: runId, kind: 'win', levelId, stars, objectiveProgress }`. Response:
+`{ profile, acknowledged, rejected, rewards }`. `contentVersion < 3` and
+`importProgress` are not accepted.
 
-## Phát hành
+## 9. Invariants for agents
 
-Build backend, validate/seed catalog mới, đặt minClientVersion rồi phát hành client 1.3.0. Script seed mặc định dry run, yêu cầu `--apply --project ID` để ghi và không cho sửa document version đã xuất bản. Không tự deploy production. Xem DATABASE_SCHEMA.md và README.md để chạy emulator/kiểm thử.
+- Do **not** bundle or import the seed catalog into client code; content is
+  fetched after bootstrap.
+- Do **not** add Firebase Auth/Firestore SDKs to the client — only the Game API.
+- Edit `content/game-domain.ts`, then regenerate; never edit `domain.ts` /
+  `game.ts` directly.
+- Keep skill/sword effects and targeting in client code by ID; the catalog stores
+  metadata only (no `SwordModifier`, `SkillEffect`, or target selection).
+- Objectives are AND-combined; at most one `Battle`/`Boss`; win is checked after
+  cascade.
+- Operations must be idempotent and journaled before the network call; never
+  re-credit a replayed receipt.
+- The store must reject gameplay/mutations through `available()` when
+  disconnected, backgrounded, recovering, auth-required, or pending.
+- Never log or persist secrets/tokens in clear; server stores only SHA-256 of the
+  device secret.
+- Do not auto-deploy production or flip `rewardedAdsEnabled` without real AdMob
+  SSV configured.
+- `EXPO_PUBLIC_ACCEPTANCE_TEST` and its bridge are development-only.
 
-## Kiểm thử acceptance
+## 10. Commands
 
-Xem [ACCEPTANCE_GUEST.md](ACCEPTANCE_GUEST.md). Chỉ development build bật `EXPO_PUBLIC_ACCEPTANCE_TEST=1` và URL proxy localhost mới có bridge điều khiển test. Release không bật bridge. Proxy chỉ kết nối project demo trên Firebase Emulator; không có đường tới production. Chat Luna High chỉ chạy test và báo kết quả, không thay source.
+```sh
+# Client
+npm --prefix client run typecheck      # regenerate domain + tsc --noEmit
+npm --prefix client test               # regenerate + jest
+npm --prefix client start|android|ios  # dev-client workflows
 
-Production dùng service account có quyền ký `iam.serviceAccounts.signBlob` để Firebase Admin tạo custom token. Không đưa private key service account vào client hoặc repository.
+# Server / catalog
+npm run api:build                      # regenerate domain + tsc
+npm run api:test                       # build + unit tests
+npm run api:serve                      # build + Firebase emulator suite (needs JDK)
+npm run api:deploy                     # build + deploy functions + firestore rules
+npm run api:seed                       # build + validate catalog (dry run)
+
+# Publish catalog (example, emulator)
+node tools/seed_game_content.mjs --apply --project demo-kiem-khai
+```
+
+Integration tests (demo project, emulator):
+
+```sh
+npm run api:build
+JAVA_HOME=/opt/homebrew/opt/openjdk@21 PATH=/opt/homebrew/opt/openjdk@21/bin:$PATH \
+firebase emulators:exec --project demo-kiem-khai --only functions,auth,firestore \
+  'node tools/seed_game_content.mjs --apply --project demo-kiem-khai && \
+   API_BASE_URL=http://127.0.0.1:5001/demo-kiem-khai/asia-southeast1/gameApi \
+   npm --prefix server run test:integration'
+```
+
+iOS Simulator uses `127.0.0.1`; Android Emulator uses `10.0.2.2`; physical
+devices use the host's LAN IP.
+
+## 11. Where to change what
+
+| Change | Touch |
+| --- | --- |
+| Add/edit a skill or sword | `content/game-domain.ts` (schema/IDs) + behavior in `client/src/game/BoardEngine.ts` + `skillTargets.ts` + seed `content/game-content.json` |
+| Add an objective type | `content/game-domain.ts` types/validation, engine progress logic, HUD (`components/hudPresentation.ts`), server rule reuse |
+| Edit levels / difficulty / rewards | `content/game-content.json`, then regenerate + reseed (bump version if published) |
+| Change pure profile rules | `content/game-domain.ts` (`applyOperation`, `mergeProfiles`, rewards) |
+| Add/modify an API route | `server/src/index.ts` (+ `domain/*` for logic) |
+| Change identity/session behavior | `server/src/identity.ts` + `client/src/services/{api,session,device}.ts` + `gameStore.ts` |
+| Change journal/save format | `client/src/game/save.ts` + `types.ts` (`SaveData`) |
+| Change refresh/health handling | `client/src/services/api.ts`, `gameStore.ts`, `app/_layout.tsx` |
+| Ads flow | `server/src/index.ts` ad routes + `domain/admob.ts` + `client/src/services/ads.ts` |
+| UI / animation | `client/src/components/*`, `client/app/*` |
+
+## 12. Release notes
+
+- Build backend, validate + seed a new catalog version, set `minClientVersion`,
+  then ship the client. The seed script never mutates a published version.
+- Production needs the Functions service account to have
+  `iam.serviceAccounts.signBlob` for custom tokens. Never ship a service-account
+  private key to the client or repo.
+- Set Firestore TTL for `authThrottle.expiresAt` and `adIntents.ttlAt`; keep
+  Firestore/Storage rules denying direct client access.
+- Acceptance testing: [ACCEPTANCE_GUEST.md](ACCEPTANCE_GUEST.md). The test bridge
+  reaches only the local emulator proxy — there is no path to production.
