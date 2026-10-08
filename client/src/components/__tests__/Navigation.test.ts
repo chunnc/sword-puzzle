@@ -8,10 +8,11 @@ import { navigateTab } from '../Navigation';
 import CharacterScreen from '../../../app/character';
 import AccountScreen from '../../../app/account';
 import InventoryScreen from '../../../app/inventory';
+import MapScreen from '../../../app/map';
 import { REALMS, SKILLS, SWORDS } from '../../game/domain';
 import { ART, SKILL_ART, SWORD_ART } from '../../assets';
 import { emptySave } from '../../game/save';
-import type { WinSummary } from '../../game/types';
+import type { SaveData, WinSummary } from '../../game/types';
 
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
@@ -22,6 +23,9 @@ jest.mock('expo-router', () => ({
 jest.mock('../FloatingCultivator', () => ({ FloatingCultivator: require('react-native').View }));
 jest.mock('../../state/gameStore', () => ({
   useGameStore: (selector?: (state: typeof mockState) => unknown) => selector ? selector(mockState) : mockState,
+  getHighestUnlocked: (save: SaveData) => require('../../game/domain').highestUnlocked(save.profile.levels),
+  getLevelStars: (save: SaveData, id: number) => save.profile.levels.find(level => level.levelId === id)?.stars ?? 0,
+  getLevelCompleted: (save: SaveData, id: number) => require('../../game/domain').isCompleted(save.profile.levels, id),
 }));
 jest.mock('../Art', () => {
   const React = require('react');
@@ -68,6 +72,19 @@ describe('scene navigation', () => {
     mockState.startLevel.mockResolvedValue(true);
   });
   afterEach(() => { act(() => { renderer?.unmount(); }); });
+
+  it.each([true, false])('requests a fresh run from the map and navigates only after success=%s', async (success) => {
+    let finish!: (result: boolean) => void;
+    mockState.startLevel.mockImplementation(() => new Promise<boolean>(resolve => { finish = resolve; }));
+    mount(React.createElement(MapScreen));
+    act(() => { button('Màn 1, màn hiện tại').props.onPress(); });
+    expect(mockState.startLevel).toHaveBeenCalledWith(1, true);
+    expect(mockRouter.push).not.toHaveBeenCalled();
+
+    await act(async () => { finish(success); });
+    if (success) expect(mockRouter.push).toHaveBeenCalledWith('/game/1');
+    else expect(mockRouter.push).not.toHaveBeenCalled();
+  });
 
   it('does not replace the selected scene and opens the shop from the bottom bar', () => {
     const onSelect = jest.fn((id) => navigateTab(mockRouter as never, id));

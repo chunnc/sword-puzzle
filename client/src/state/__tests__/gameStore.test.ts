@@ -99,6 +99,77 @@ it('reuses the saved session and ignores offline progress', async () => {
   expect(api.createGuest).not.toHaveBeenCalled();
   expect(store.getState().save.profile.coins).toBe(0);
 });
+it.each(['unfinished', 'won', 'lost'])('boots to the map while preserving the saved %s journal', async (status) => {
+  const { BoardEngine }: typeof import('../../game/BoardEngine') = require('../../game/BoardEngine');
+  const level = domain.getLevelData(1);
+  const active = new BoardEngine(level).snapshot();
+  const saved = { ...saveTools.emptySave(), ownerId: guest.uid, active };
+  if (status === 'lost') active.moves = 0;
+  if (status === 'won') {
+    active.objectiveProgress = Object.fromEntries(level.objectives.map(goal => [goal.id, goal.target]));
+    saved.lastWin = {
+      runId: active.runId, levelId: 1, stars: 3, bestStars: 3,
+      expGained: 30, totalExp: 30, coinsGained: 100, realmBefore: 0, realmAfter: 0,
+    };
+  }
+  await saveTools.persistSave(saved);
+
+  expect(await store.getState().initialize()).toBe('/map');
+  expect(store.getState().save.active).toEqual(active);
+  expect(store.getState().save.lastWin).toEqual(saved.lastWin);
+  expect(await saveTools.loadSave(guest.uid)).toMatchObject({ active, lastWin: saved.lastWin });
+});
+it.each(['unfinished', 'won', 'lost'])('starts a fresh run instead of the previous %s run when restarting', async (status) => {
+  ready();
+  await store.getState().startLevel(1);
+  const active = store.getState().save.active!;
+  active.moves = status === 'lost' ? 0 : 1;
+  active.score = 123;
+  active.extraMovesUsed = true;
+  if (status === 'won') {
+    active.objectiveProgress = Object.fromEntries(active.level.objectives.map(goal => [goal.id, goal.target]));
+    store.setState({ save: { ...store.getState().save, lastWin: {
+      runId: active.runId, levelId: 1, stars: 3, bestStars: 3,
+      expGained: 30, totalExp: 30, coinsGained: 100, realmBefore: 0, realmAfter: 0,
+    } } });
+  }
+  const profile = store.getState().save.profile;
+
+  expect(await store.getState().startLevel(1, true)).toBe(true);
+  const next = store.getState().save.active!;
+  expect(next.runId).not.toBe(active.runId);
+  expect(next.moves).toBe(next.level.moves);
+  expect(next.objectiveProgress).toEqual(Object.fromEntries(next.level.objectives.map(goal => [goal.id, 0])));
+  expect(next.score).toBe(0);
+  expect(next.extraMovesUsed).toBe(false);
+  expect(next.loadout).toEqual(profile.loadout);
+  expect(store.getState().save.lastWin).toBeNull();
+  expect(store.getState().save.profile).toEqual(profile);
+  expect((await saveTools.loadSave(guest.uid)).active?.runId).toBe(next.runId);
+});
+it('settles a pending win during cold boot to the map without submitting it twice', async () => {
+  const { BoardEngine }: typeof import('../../game/BoardEngine') = require('../../game/BoardEngine');
+  const level = domain.getLevelData(1);
+  const active = new BoardEngine(level).snapshot();
+  active.objectiveProgress = Object.fromEntries(level.objectives.map(goal => [goal.id, goal.target]));
+  const operation = { id: active.runId, kind: 'win' as const, levelId: 1, stars: 3 as const, objectiveProgress: active.objectiveProgress };
+  const profile = domain.applyOperation(domain.emptyProfile(), operation).profile;
+  await saveTools.persistSave({ ...saveTools.emptySave(), ownerId: guest.uid, active, pending: { contentVersion: active.contentVersion, operation } });
+  (api.syncProfile as jest.Mock).mockResolvedValue({ session: guest, response: {
+    profile, acknowledged: [operation.id], rejected: [],
+    rewards: [{ id: operation.id, expGained: 30, coinsGained: 100, bestStars: 3, realmBefore: 0, realmAfter: 0 }],
+  } });
+
+  expect(await store.getState().initialize()).toBe('/map');
+  expect(api.syncProfile).toHaveBeenCalledWith(expect.anything(), [operation], active.contentVersion);
+  expect(store.getState().save.pending).toBeNull();
+  expect(store.getState().save.lastWin?.runId).toBe(active.runId);
+  expect(store.getState().save.profile).toEqual(profile);
+  await store.getState().initialize();
+  await store.getState().syncProgress();
+  expect(api.syncProfile).toHaveBeenCalledTimes(1);
+  expect(store.getState().save.profile).toEqual(profile);
+});
 it('blocks boot and every game action while disconnected', async () => {
   (api.checkHealth as jest.Mock).mockRejectedValue(new api.GameApiError('NETWORK_ERROR'));
   await expect(store.getState().initialize()).rejects.toThrow();

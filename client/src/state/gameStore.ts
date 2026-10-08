@@ -338,8 +338,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   initialize: async () => {
     await get().checkConnection();
     if (!get().initialized) throw new Error(get().bootError || 'CONNECTION_REQUIRED');
-    const s = get().save;
-    return s.active ? `/game/${s.active.levelId}` : '/map';
+    return '/map';
   },
   checkConnection: async (retryIdentity = true) => {
     if (!get().foreground) return;

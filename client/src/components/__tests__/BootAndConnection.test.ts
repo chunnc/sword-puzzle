@@ -3,6 +3,8 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Modal, Pressable, View } from 'react-native';
 import BootScreen from '../../../app/index';
 import { ConnectionDialog } from '../ConnectionDialog';
+import { BoardEngine } from '../../game/BoardEngine';
+import { getLevel } from '../../game/levels';
 import { emptySave } from '../../game/save';
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('expo-router', () => ({
@@ -61,6 +63,30 @@ it('mounts boot without invalid hooks and waits before navigating', async () => 
   mockState.initialized = true;
   act(() => renderer.update(React.createElement(BootScreen)));
   expect(mockRouter.replace).toHaveBeenCalledWith('/map');
+});
+it.each(['unfinished', 'won', 'lost'])('opens the map after boot with a saved %s run', async (status) => {
+  const level = getLevel(1);
+  const active = new BoardEngine(level).snapshot();
+  if (status === 'lost') active.moves = 0;
+  if (status === 'won') {
+    active.objectiveProgress = Object.fromEntries(level.objectives.map(goal => [goal.id, goal.target]));
+    mockState.save.lastWin = {
+      runId: active.runId, levelId: 1, stars: 3, bestStars: 3,
+      expGained: 30, totalExp: 30, coinsGained: 100, realmBefore: 0, realmAfter: 0,
+    };
+  }
+  mockState.save.active = active;
+  await act(async () => { renderer = create(React.createElement(BootScreen)); });
+  expect(mockRouter.replace).not.toHaveBeenCalled();
+
+  mockState.initialized = true;
+  act(() => renderer.update(React.createElement(BootScreen)));
+  expect(mockRouter.replace).toHaveBeenCalledTimes(1);
+  expect(mockRouter.replace).toHaveBeenCalledWith('/map');
+
+  mockState.save.active = new BoardEngine(level).snapshot();
+  act(() => renderer.update(React.createElement(BootScreen)));
+  expect(mockRouter.replace).toHaveBeenCalledTimes(1);
 });
 it('keeps boot failures reviewable and allows retry', async () => {
   mockState.bootError = 'Không thể kết nối';

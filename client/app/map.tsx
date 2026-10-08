@@ -24,7 +24,7 @@ export default function MapScreen() {
   const totalStars = save.profile.levels.reduce((sum, level) => sum + level.stars, 0);
 
   const openLevel = async (levelId: number) => {
-    if (await startLevel(levelId)) router.push(`/game/${levelId}` as never);
+    if (await startLevel(levelId, true)) router.push(`/game/${levelId}` as never);
   };
   const nav = (id: BottomNavId) => navigateTab(router, id);
 

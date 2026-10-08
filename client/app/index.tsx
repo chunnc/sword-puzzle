@@ -8,7 +8,6 @@ import { useGameStore } from '../src/state/gameStore';
 export default function BootScreen() {
   const router = useRouter();
   const initialized = useGameStore(state => state.initialized);
-  const active = useGameStore(state => state.save.active);
   const error = useGameStore(state => state.bootError);
   const authRequired = useGameStore(state => state.authRequired);
   const checking = useGameStore(state => state.checkingConnection);
@@ -19,8 +18,8 @@ export default function BootScreen() {
   }, [initialize]);
 
   useEffect(() => {
-    if (initialized) router.replace((active ? `/game/${active.levelId}` : '/map') as never);
-  }, [initialized, router, active]);
+    if (initialized) router.replace('/map');
+  }, [initialized, router]);
 
   return (
     <ScreenFrame background="bgMap" tint="rgba(2, 26, 32, 0.3)">
