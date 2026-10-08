@@ -1,0 +1,129 @@
+{
+  "baseline": {
+    "count": 8,
+    "frames": 914,
+    "meanMs": 16.7578409920147,
+    "maxMs": 78.79170833528042,
+    "p95Ms": 16,
+    "over25Ms": 2,
+    "heapBefore": {
+      "js_VMExperiments": 0,
+      "js_numGCs": 165,
+      "js_gcCPUTime": 0.36179599999999995,
+      "js_gcTime": 0.3906292490000002,
+      "js_totalAllocatedBytes": 540441176,
+      "js_allocatedBytes": 35130600,
+      "js_heapSize": 58720256,
+      "js_mallocSizeEstimate": 0,
+      "js_vaSize": 58720256,
+      "js_externalBytes": 57680070,
+      "js_markStackOverflows": 0
+    },
+    "heapAfter": {
+      "js_VMExperiments": 0,
+      "js_numGCs": 396,
+      "js_gcCPUTime": 0.8752849999999994,
+      "js_gcTime": 0.9031602110000001,
+      "js_totalAllocatedBytes": 1310102632,
+      "js_allocatedBytes": 47447360,
+      "js_heapSize": 62914560,
+      "js_mallocSizeEstimate": 0,
+      "js_vaSize": 62914560,
+      "js_externalBytes": 73408710,
+      "js_markStackOverflows": 0
+    }
+  },
+  "fixed": {
+    "count": 8,
+    "frames": 901,
+    "meanMs": 16.74065852758953,
+    "maxMs": 76.19112500548363,
+    "p95Ms": 16,
+    "over25Ms": 1,
+    "heapBefore": {
+      "js_VMExperiments": 0,
+      "js_numGCs": 410,
+      "js_gcCPUTime": 0.9248779999999994,
+      "js_gcTime": 0.9530427929999999,
+      "js_totalAllocatedBytes": 1338346024,
+      "js_allocatedBytes": 30659264,
+      "js_heapSize": 62914560,
+      "js_mallocSizeEstimate": 0,
+      "js_vaSize": 62914560,
+      "js_externalBytes": 67117254,
+      "js_markStackOverflows": 0
+    },
+    "heapAfter": {
+      "js_VMExperiments": 0,
+      "js_numGCs": 551,
+      "js_gcCPUTime": 1.2136869999999995,
+      "js_gcTime": 1.2404970549999996,
+      "js_totalAllocatedBytes": 1752537992,
+      "js_allocatedBytes": 41775928,
+      "js_heapSize": 54525952,
+      "js_mallocSizeEstimate": 0,
+      "js_vaSize": 54525952,
+      "js_externalBytes": 135274694,
+      "js_markStackOverflows": 0
+    }
+  },
+  "repeatedFixedBatches": [
+    {
+      "frames": 674,
+      "meanMs": 16.815034619181553,
+      "p95Ms": 16,
+      "over25Ms": 2,
+      "heap": {
+        "js_VMExperiments": 0,
+        "js_numGCs": 657,
+        "js_gcCPUTime": 1.5207609999999987,
+        "js_gcTime": 1.5850941779999985,
+        "js_totalAllocatedBytes": 2064083552,
+        "js_allocatedBytes": 36187872,
+        "js_heapSize": 54525952,
+        "js_mallocSizeEstimate": 0,
+        "js_vaSize": 54525952,
+        "js_externalBytes": 93331654,
+        "js_markStackOverflows": 0
+      }
+    },
+    {
+      "frames": 682,
+      "meanMs": 16.666666666586554,
+      "p95Ms": 16,
+      "over25Ms": 0,
+      "heap": {
+        "js_VMExperiments": 0,
+        "js_numGCs": 762,
+        "js_gcCPUTime": 1.7958229999999986,
+        "js_gcTime": 1.8645175119999988,
+        "js_totalAllocatedBytes": 2375609760,
+        "js_allocatedBytes": 40938752,
+        "js_heapSize": 54525952,
+        "js_mallocSizeEstimate": 0,
+        "js_vaSize": 54525952,
+        "js_externalBytes": 124788934,
+        "js_markStackOverflows": 0
+      }
+    },
+    {
+      "frames": 673,
+      "meanMs": 16.840019811780632,
+      "p95Ms": 16,
+      "over25Ms": 1,
+      "heap": {
+        "js_VMExperiments": 0,
+        "js_numGCs": 880,
+        "js_gcCPUTime": 2.0377219999999987,
+        "js_gcTime": 2.1061261339999993,
+        "js_totalAllocatedBytes": 2710477896,
+        "js_allocatedBytes": 39105336,
+        "js_heapSize": 54525952,
+        "js_mallocSizeEstimate": 0,
+        "js_vaSize": 54525952,
+        "js_externalBytes": 123740358,
+        "js_markStackOverflows": 0
+      }
+    }
+  ]
+}

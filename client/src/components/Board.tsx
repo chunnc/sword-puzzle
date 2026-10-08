@@ -7,8 +7,7 @@ import {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, runOnUI } from 'react-native-worklets';
 import {
-  cancelAnimation, useDerivedValue, useSharedValue, withSequence, withTiming,
-  type SharedValue,
+  useAnimatedReaction, withSequence, withTiming,
 } from 'react-native-reanimated';
 import { ART } from '../assets';
 import { getContentVersion } from '../game/domain';
@@ -17,9 +16,10 @@ import { colors } from '../theme';
 import {
   BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS,
   BOARD_REJECT_OUT_MS, BOARD_REJECT_BACK_MS, BOARD_FLASH_IN_MS, BOARD_PULSE_IN_MS,
-  displayIndices, buildCellVisuals, cellBounds, cellMotion, pointToCell,
+  displayIndices, buildCellVisuals, cellBounds, pointToCell,
   type BoardVisualEffect, type CellVisual,
 } from './boardVisuals';
+import { createBoardMotionSession, createBoardMotionFrame, updateBoardMotionFrame, finishBoardMotionSession, type CellMotionValues } from './boardMotion';
 
 export type { CellPosition } from '../game/types';
 export {
@@ -59,11 +59,6 @@ function useBoardLabels(cellWidth: number, targetCount: number) {
 }
 
 type BoardLabels = ReturnType<typeof useBoardLabels>;
-interface MotionValues {
-  phase: SharedValue<number>;
-  progress: SharedValue<number>;
-  pulse: SharedValue<number>;
-}
 
 // Retain this exported helper for callers outside the board; the board itself
 // draws every sprite into its one shared Canvas.
@@ -96,12 +91,24 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const sword = useImage(ART.tileSword), fire = useImage(ART.tileFire);
   const lightning = useImage(ART.tileLightning), orb = useImage(ART.tileSpiritOrb), rock = useImage(ART.tileRock);
   const images = [sword, fire, lightning, orb, rock];
-  const previousEffect = useRef<BoardVisualEffect | null>(null);
-  const visuals = useMemo(() => buildCellVisuals(visualEffect, previousEffect.current, reduceMotion, geometry), [visualEffect, reduceMotion, geometry]);
+  const previousEffect = useRef<{ runId: string; effect: BoardVisualEffect | null; before: BoardVisualEffect | null } | null>(null);
   const id = visualEffect?.id ?? 0;
-  const phase = useSharedValue(id), progress = useSharedValue(0), pulse = useSharedValue(1), flash = useSharedValue(0);
-  const motion = useMemo(() => ({ phase, progress, pulse }), [phase, progress, pulse]);
-  const flashOpacity = useDerivedValue(() => phase.value === id ? flash.value : 0, [id]);
+  const kind = reduceMotion ? undefined : visualEffect?.kind;
+  const prior = previousEffect.current?.runId === snapshot.runId ? previousEffect.current : null;
+  const before = prior?.effect?.id === id ? prior.before : prior?.effect ?? null;
+  // An effect ID identifies an immutable phase within a run. HUD updates and
+  // equivalent effect objects must not replace that phase's clocks or outputs.
+  const visuals = useMemo(() => buildCellVisuals(visualEffect, before,
+    reduceMotion, geometry), [snapshot.runId, id, kind, reduceMotion, geometry]);
+  const motion = useMemo(() => createBoardMotionSession(kind), [snapshot.runId, id, kind, reduceMotion]);
+  const frame = useMemo(() => createBoardMotionFrame(visuals, side / geometry.width), [visuals, side, geometry.width]);
+  const frameRef = useRef(frame);
+  useLayoutEffect(() => { frameRef.current = frame; }, [frame]);
+  useAnimatedReaction(
+    () => ({ progress: motion.progress.value, pulse: motion.pulse.value }),
+    value => { updateBoardMotionFrame(frame, value.progress, value.pulse); },
+    [motion, frame],
+  );
   const labels = useBoardLabels(Math.max(0, side / geometry.width - 2), targets.length);
   const drawOrder = useMemo(() => [...indices].sort((a, b) => {
     const moving = (index: number) => Number(visuals[index].falling || !!visuals[index].dx || !!visuals[index].dy);
@@ -109,18 +116,15 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   }), [visuals, indices]);
 
   useLayoutEffect(() => {
-    previousEffect.current = visualEffect;
-    // All cells share the phase clock. Reset and start it atomically on the UI
-    // thread; Canvas props guard the new phase's first frame while it is queued.
-    runOnUI((effectId: number, kind: string | undefined, motionOff: boolean) => {
-      cancelAnimation(progress);
-      cancelAnimation(pulse);
-      cancelAnimation(flash);
+    previousEffect.current = { runId: snapshot.runId, effect: visualEffect, before };
+    const { progress, pulse, flash } = motion;
+    runOnUI(() => {
+      // Also support React's effect setup/cleanup replay in development. These
+      // values belong only to this phase, never to a retired or future phase.
       progress.value = 0;
       pulse.value = 1;
       flash.value = 0;
-      phase.value = effectId;
-      if (motionOff || !kind) return;
+      if (!kind) return;
       if (kind === 'reject') {
         progress.value = withSequence(
           withTiming(.38, { duration: BOARD_REJECT_OUT_MS }),
@@ -139,15 +143,12 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
           withTiming(0, { duration: BOARD_CLEAR_MS - BOARD_FLASH_IN_MS }),
         );
       }
-    })(id, visualEffect?.kind, reduceMotion);
+    })();
     return () => {
-      runOnUI(() => {
-        cancelAnimation(progress);
-        cancelAnimation(pulse);
-        cancelAnimation(flash);
-      })();
+      const completedFrame = frameRef.current;
+      runOnUI(() => { finishBoardMotionSession(motion, completedFrame); })();
     };
-  }, [visualEffect, id, reduceMotion, phase, progress, pulse, flash]);
+  }, [motion]);
 
   const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onEnd(event => {
     const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side, geometry);
@@ -161,14 +162,14 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
         {side > geometry.width * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
           <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
             {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color="#0b4144" />)}
-            {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} pitch={side / geometry.width} image={images[snapshot.tiles[index]!.kind]} visual={visuals[index]} id={id} motion={motion} labels={labels} />)}
+            {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} image={images[snapshot.tiles[index]!.kind]} visual={visuals[index]} motion={frame.cells[index]} labels={labels} />)}
             {indices.map(index => {
               const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
               const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
               const highlighted = selected?.x === x && selected.y === y || targetNumber > 0 || preview.includes(index);
               const targetLabel = targetNumber ? labels.targets[targetNumber - 1] : null;
               return <Group key={`overlay-${index}`}>
-                {visuals[index].flashing ? <RoundedRect {...bounds} r={5} color={visuals[index].flashColor} opacity={flashOpacity} /> : null}
+                {visuals[index].flashing ? <RoundedRect {...bounds} r={5} color={visuals[index].flashColor} opacity={motion.flash} /> : null}
                 {preview.includes(index) ? <RoundedRect {...bounds} r={5} color="rgba(242,213,142,.16)" /> : null}
                 {highlighted ? <RoundedRect x={bounds.x + 1} y={bounds.y + 1} width={bounds.width - 2} height={bounds.height - 2} r={4} color={colors.goldBright} style="stroke" strokeWidth={2} /> : null}
                 {targetLabel ? <Group>
@@ -191,29 +192,21 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   </View>;
 }
 
-function TileVisual({ tile, bounds, pitch, image, visual, id, motion, labels }: {
+function TileVisual({ tile, bounds, image, visual, motion, labels }: {
   tile: Tile;
   bounds: ReturnType<typeof cellBounds>;
-  pitch: number;
   image: SkImage | null;
   visual: CellVisual;
-  id: number;
-  motion: MotionValues;
+  motion: CellMotionValues | null;
   labels: BoardLabels;
 }) {
-  const transform = useDerivedValue(() => {
-    const current = motion.phase.value === id;
-    const frame = cellMotion(visual, pitch, current ? motion.progress.value : 0, current ? motion.pulse.value : 1);
-    return [{ translateX: frame.tx }, { translateY: frame.ty }, { scale: frame.scale }];
-  }, [visual, pitch, id]);
-  const opacity = useDerivedValue(() => cellMotion(visual, pitch, motion.phase.value === id ? motion.progress.value : 0, 1).opacity, [visual, pitch, id]);
   const charge = tile.chargeTier === 5 ? labels.charge5 : labels.charge4;
   const chargeWidth = charge.width + 6, chargeHeight = charge.height + 2;
   const chargeX = bounds.x + bounds.width - 1 - chargeWidth, chargeY = bounds.y + bounds.height - 1 - chargeHeight;
   if (visual.hidden) return null;
   // Paragraph paints its own colors, so fade the complete tile as a layer.
   // Allocate that layer only during clears, not during swaps/falls or idle.
-  return <Group origin={{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }} transform={transform} layer={visual.clearing ? <Paint opacity={opacity} /> : undefined}>
+  return <Group origin={{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }} transform={motion?.transform} layer={visual.clearing ? <Paint opacity={motion!.opacity} /> : undefined}>
     <Image image={image} x={bounds.x + bounds.width * .06} y={bounds.y + bounds.height * .06} width={bounds.width * .88} height={bounds.height * .88} fit="contain" />
     {tile.kind === TileKind.SpiritOrb ? <Paragraph paragraph={labels.orb.paragraph} x={bounds.x + (bounds.width - labels.orb.width) / 2} y={bounds.y + (bounds.height - labels.orb.height) / 2} width={labels.orb.width} /> : null}
     {tile.chargeTier ? <Group>

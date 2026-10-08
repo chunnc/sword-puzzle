@@ -23,17 +23,30 @@ jest.mock('react-native-gesture-handler', () => ({
 }));
 
 jest.mock('react-native-worklets', () => ({
-  runOnUI: (fn: (...args: unknown[]) => unknown) => fn,
+  runOnUI: (fn: (...args: unknown[]) => unknown) => (...args: unknown[]) => {
+    if (mockQueueUI) mockUIQueue.push(() => fn(...args));
+    else fn(...args);
+  },
   runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
 }));
 
 jest.mock('react-native-reanimated', () => ({
-  useSharedValue: (value: number) => require('react').useRef({ value }).current,
-  useDerivedValue: (fn: () => unknown) => ({ value: fn() }),
+  makeMutable: (value: unknown) => ({ value }),
+  useAnimatedReaction: (prepare: () => unknown, react: (value: unknown) => void, dependencies: unknown[]) => {
+    require('react').useEffect(() => {
+      const run = () => react(prepare());
+      mockReactions.push(run);
+      run();
+    }, dependencies);
+  },
   cancelAnimation: jest.fn(),
   withTiming: jest.fn((value: number) => value),
   withSequence: (...values: number[]) => values[values.length - 1],
 }));
+
+let mockQueueUI = false;
+const mockUIQueue: (() => unknown)[] = [];
+const mockReactions: (() => void)[] = [];
 
 jest.mock('@shopify/react-native-skia', () => {
   const React = require('react');
@@ -75,7 +88,10 @@ describe('Skia Board integration', () => {
   }
 
   const buttons = () => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && typeof node.props.onPress === 'function');
+  const tile = (index: number) => renderer.root.findAll(node => node.type === 'Group' as never &&
+    node.props.origin?.x === index % 7 * 50 + 25 && node.props.origin?.y === (6 - Math.floor(index / 7)) * 50 + 25)[0];
 
+  beforeEach(() => { mockQueueUI = false; mockUIQueue.length = 0; mockReactions.length = 0; });
   afterEach(() => { act(() => { renderer?.unmount(); }); });
 
   it('renders one canvas and keeps 49 correctly positioned accessible buttons', () => {
@@ -141,6 +157,76 @@ describe('Skia Board integration', () => {
   it('does not start animation when reduced motion is enabled', () => {
     mount({ reduceMotion: true, visualEffect: { id: 3, kind: 'fall', falls: [{ index: 0, fromY: 7 }] } });
     expect(withTiming).not.toHaveBeenCalled();
+  });
+
+  it.each(['clear', 'idle'] as const)('keeps a landed tile still when an old UI reaction runs after transition to %s', next => {
+    mount({ visualEffect: { id: 10, kind: 'fall', falls: [{ index: 7, fromY: 4 }] } });
+    const oldTile = tile(7), oldTransform = oldTile.props.transform;
+    const oldReaction = mockReactions.at(-1)!;
+    expect(oldTransform.value).toEqual([{ translateX: 0 }, { translateY: 0 }, { scale: 1 }]);
+    const canvas = renderer.root.findAll(node => node.type === 'Canvas' as never)[0];
+    const sprite = oldTile.findAll(node => node.type === 'SkiaImage' as never)[0];
+    act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: next === 'clear'
+      ? { id: 11, kind: 'clear', cleared: [48], changed: [], effects: [{ kind: 'fire', cells: [48], damage: 1, qi: 0 }] }
+      : null })));
+    oldReaction();
+    expect(oldTransform.value).toEqual([{ translateX: 0 }, { translateY: 0 }, { scale: 1 }]);
+    expect(tile(7)).toBe(oldTile);
+    expect(tile(7).props.transform).toBeUndefined();
+    expect(renderer.root.findAll(node => node.type === 'Canvas' as never)[0]).toBe(canvas);
+    expect(tile(7).findAll(node => node.type === 'SkiaImage' as never)[0]).toBe(sprite);
+  });
+
+  it('initializes the new fall at its source even while UI worklets are queued', () => {
+    mockQueueUI = true;
+    mount({ visualEffect: { id: 20, kind: 'fall', falls: [{ index: 7, fromY: 4 }] } });
+    expect(tile(7).props.transform.value).toEqual([{ translateX: 0 }, { translateY: -150 }, { scale: 1 }]);
+    const oldTransform = tile(7).props.transform;
+    act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: {
+      id: 21, kind: 'fall', falls: [{ index: 48, fromY: 7 }],
+    } })));
+    const nextTransform = tile(48).props.transform;
+    expect(nextTransform.value).toEqual([{ translateX: 0 }, { translateY: -50 }, { scale: 1 }]);
+    // Even a late cleanup of the old phase cannot cancel or finish the new fall.
+    act(() => { mockUIQueue[1](); });
+    expect(oldTransform.value).toEqual([{ translateX: 0 }, { translateY: 0 }, { scale: 1 }]);
+    expect(nextTransform.value).toEqual([{ translateX: 0 }, { translateY: -50 }, { scale: 1 }]);
+    act(() => { mockUIQueue[2](); mockReactions.at(-1)!(); });
+    expect(nextTransform.value).toEqual([{ translateX: 0 }, { translateY: 0 }, { scale: 1 }]);
+  });
+
+  it('does not restart a phase for equivalent effect objects or selection updates', () => {
+    const effect: BoardVisualEffect = { id: 30, kind: 'fall', falls: [{ index: 7, fromY: 4 }] };
+    mount({ visualEffect: effect });
+    const transform = tile(7).props.transform;
+    (withTiming as jest.Mock).mockClear();
+    act(() => renderer.update(React.createElement(Board, { ...props, selected: { x: 2, y: 2 },
+      snapshot: { ...snapshot, swordQi: 22 }, visualEffect: { ...effect } })));
+    expect(tile(7).props.transform).toBe(transform);
+    expect(withTiming).not.toHaveBeenCalled();
+  });
+
+  it('starts a new run with fresh clocks even when the effect ID is reused', () => {
+    const effect: BoardVisualEffect = { id: 40, kind: 'fall', falls: [{ index: 7, fromY: 4 }] };
+    mount({ visualEffect: effect });
+    const transform = tile(7).props.transform;
+    act(() => renderer.update(React.createElement(Board, { ...props,
+      snapshot: { ...snapshot, runId: 'another-run' }, visualEffect: effect })));
+    expect(tile(7).props.transform).not.toBe(transform);
+    expect(transform.value).toEqual([{ translateX: 0 }, { translateY: 0 }, { scale: 1 }]);
+  });
+
+  it('retires motion when reduced motion changes without hiding the current clear on reenable', () => {
+    const effect: BoardVisualEffect = { id: 50, kind: 'clear', cleared: [7], changed: [], effects: [] };
+    mount({ visualEffect: effect });
+    const oldOpacity = tile(7).props.layer.props.opacity;
+    act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: effect, reduceMotion: true })));
+    expect(tile(7).props.transform).toBeUndefined();
+    expect(tile(7).props.layer).toBeUndefined();
+    expect(oldOpacity.value).toBe(0);
+    act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: effect, reduceMotion: false })));
+    expect(tile(7)).toBeDefined();
+    expect(tile(7).props.layer.props.opacity).not.toBe(oldOpacity);
   });
 
   it('fades sprite and text together and keeps prior cleared cells absent', () => {
