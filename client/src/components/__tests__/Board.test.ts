@@ -123,18 +123,18 @@ describe('Skia Board integration', () => {
     expect(seal.props.y + seal.props.paragraph.getHeight()).toBeLessThanOrEqual(bounds.top + bounds.height);
   });
 
-  it('uses the old timing sequence, ignores HUD-only updates and cancels on cleanup', () => {
+  it('uses the slower timing sequence, ignores HUD-only updates and cancels on cleanup', () => {
     const effect: BoardVisualEffect = { id: 1, kind: 'clear', cleared: [0], changed: [1], effects: [{ kind: 'fire', cells: [0], damage: 0, qi: 0 }] };
     mount({ visualEffect: effect });
     expect((withTiming as jest.Mock).mock.calls).toEqual([
-      [1, { duration: 240 }], [1.12, { duration: 100 }], [1, { duration: 140 }],
-      [.85, { duration: 70 }], [0, { duration: 170 }],
+      [1, { duration: 360 }], [1.12, { duration: 150 }], [1, { duration: 210 }],
+      [.85, { duration: 105 }], [0, { duration: 255 }],
     ]);
     (withTiming as jest.Mock).mockClear();
     act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: { ...snapshot, swordQi: 12 }, visualEffect: effect })); });
     expect(withTiming).not.toHaveBeenCalled();
     act(() => { renderer.update(React.createElement(Board, { ...props, visualEffect: { id: 2, kind: 'reject', first: { x: 0, y: 0 }, second: { x: 1, y: 0 } } })); });
-    expect((withTiming as jest.Mock).mock.calls).toEqual([[.38, { duration: 110 }], [0, { duration: 150 }]]);
+    expect((withTiming as jest.Mock).mock.calls).toEqual([[.38, { duration: 165 }], [0, { duration: 225 }]]);
     expect(cancelAnimation).toHaveBeenCalled();
   });
 
@@ -157,6 +157,6 @@ describe('Skia Board integration', () => {
     act(() => { renderer.update(React.createElement(Board, { ...props, visualEffect: { id: 6, kind: 'fall', falls: [{ index: 42, fromY: 7 }] } })); });
     expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(49);
     expect(layers()).toHaveLength(0);
-    expect(withTiming).toHaveBeenLastCalledWith(1, { duration: 280 });
+    expect(withTiming).toHaveBeenLastCalledWith(1, { duration: 450 });
   });
 });

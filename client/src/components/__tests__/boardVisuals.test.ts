@@ -1,5 +1,5 @@
 import {
-  DISPLAY_INDICES, BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_REJECT_MS,
+  DISPLAY_INDICES, BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_REJECT_MS,
   buildCellVisuals, cellBounds, cellMotion, pointToCell, type BoardVisualEffect,
 } from '../boardVisuals';
 
@@ -71,6 +71,6 @@ describe('Skia board coordinates and animation', () => {
       expect(cellMotion(visual, 50, .5, 1.12)).toEqual({ tx: 0, ty: 0, opacity: 1, scale: 1 });
       expect(visual.flashing).toBe(false);
     }
-    expect([BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_REJECT_MS]).toEqual([210, 240, 280, 260]);
+    expect([BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_REJECT_MS]).toEqual([320, 360, 450, 300, 390]);
   });
 });

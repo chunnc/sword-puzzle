@@ -1,15 +1,15 @@
 import type { BoardAnimationEffect, BoardAnimationFall, CellPosition } from '../game/types';
 
 export const BOARD_SIZE = 7;
-export const BOARD_SWAP_MS = 210;
-export const BOARD_CLEAR_MS = 240;
-export const BOARD_FALL_MS = 280;
-export const BOARD_CHAIN_DELAY_MS = 70;
-export const BOARD_REJECT_MS = 260;
-export const BOARD_REJECT_OUT_MS = 110;
+export const BOARD_SWAP_MS = 320;
+export const BOARD_CLEAR_MS = 360;
+export const BOARD_FALL_MS = 450;
+export const BOARD_CHAIN_DELAY_MS = 300;
+export const BOARD_REJECT_MS = 390;
+export const BOARD_REJECT_OUT_MS = 165;
 export const BOARD_REJECT_BACK_MS = BOARD_REJECT_MS - BOARD_REJECT_OUT_MS;
-export const BOARD_FLASH_IN_MS = 70;
-export const BOARD_PULSE_IN_MS = 100;
+export const BOARD_FLASH_IN_MS = 105;
+export const BOARD_PULSE_IN_MS = 150;
 
 export type BoardVisualEffect = {
   id: number;

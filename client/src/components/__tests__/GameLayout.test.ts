@@ -19,7 +19,7 @@ jest.mock('react-native-reanimated', () => ({
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: require('react-native').View }));
 jest.mock('../../services/ads', () => ({ hasRewardedAdUnit: () => false }));
 jest.mock('../../state/gameStore', () => ({ useGameStore: (selector?: (state: typeof mockState) => unknown) => selector ? selector(mockState) : mockState }));
-jest.mock('../Board', () => ({ Board: require('react-native').View, BOARD_CLEAR_MS: 0, BOARD_FALL_MS: 0, BOARD_SWAP_MS: 0, BOARD_REJECT_MS: 0 }));
+jest.mock('../Board', () => ({ Board: require('react-native').View, BOARD_CLEAR_MS: 0, BOARD_FALL_MS: 0, BOARD_CHAIN_DELAY_MS: 0, BOARD_SWAP_MS: 0, BOARD_REJECT_MS: 0 }));
 jest.mock('../GameplayResultPopup', () => ({ GameplayResultPopup: require('react-native').View }));
 jest.mock('../Chrome', () => ({ TopHud: require('react-native').View, BottomNav: require('react-native').View }));
 jest.mock('../Art', () => {

@@ -3,7 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import * as Native from 'react-native';
 import GameScreen from '../../../app/game/[levelId]';
 import { ART, SKILL_ART, SWORD_ART } from '../../assets';
-import { Board } from '../Board';
+import { Board, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_SWAP_MS } from '../Board';
 import { GameplayDock, GameplayInfo } from '../GameplayChrome';
 import { GameplayProgressBar } from '../GameplayProgressBar';
 import { GameplayResultPopup } from '../GameplayResultPopup';
@@ -11,7 +11,7 @@ import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
 import { emptySave } from '../../game/save';
 import type { BoardActionResult } from '../../state/gameStore';
-import { GoalKind } from '../../game/types';
+import { GoalKind, type BoardActionAnimation, type BoardResolutionStep } from '../../game/types';
 
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
@@ -25,7 +25,7 @@ jest.mock('react-native-reanimated', () => ({
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: require('react-native').View }));
 jest.mock('../../services/ads', () => ({ hasRewardedAdUnit: () => false }));
 jest.mock('../../state/gameStore', () => ({ useGameStore: Object.assign((selector?: (state: typeof mockState) => unknown) => selector ? selector(mockState) : mockState, { getState: () => mockState }) }));
-jest.mock('../Board', () => ({ Board: require('react-native').View, BOARD_CLEAR_MS: 30, BOARD_FALL_MS: 20, BOARD_SWAP_MS: 10, BOARD_REJECT_MS: 10 }));
+jest.mock('../Board', () => ({ ...jest.requireActual('../boardVisuals'), Board: require('react-native').View }));
 jest.mock('../GameplayResultPopup', () => ({ GameplayResultPopup: require('react-native').View }));
 jest.mock('../Art', () => {
   const React = require('react'), { View, Pressable, Text } = require('react-native');
@@ -47,6 +47,36 @@ describe('gameplay presentation and exit behavior', () => {
   const board = () => renderer.root.findAllByType(Board).find(node => node.props.snapshot)!;
   const popup = () => renderer.root.findAllByType(GameplayResultPopup).find(node => node.props.result)!;
   const mount = () => { act(() => { renderer = create(React.createElement(GameScreen)); }); };
+  const advance = async (ms: number) => { await act(async () => { await jest.advanceTimersByTimeAsync(ms); }); };
+
+  function cascadeAnimation(stepCount = 2): BoardActionAnimation {
+    const swappedBoard = { ...mockState.save.active!, moves: mockState.save.active!.moves - 1 };
+    let before = swappedBoard;
+    const steps: BoardResolutionStep[] = Array.from({ length: stepCount }, (_, index) => {
+      const after = {
+        ...before, remaining: before.remaining - 1,
+        tiles: before.tiles.map((tile, cell) => cell === 0 ? { ...tile, kind: (tile.kind + 1) % 4 } : tile),
+      };
+      const step: BoardResolutionStep = {
+        before, after, cleared: [0], changed: [],
+        effects: [{ kind: 'skill', cells: [0], damage: 1, qi: 0 }],
+        falls: [{ index: 0, fromY: 7 }], damage: 1, chain: index + 1,
+      };
+      before = after;
+      return step;
+    });
+    return { kind: 'swap', swap: { x1: 0, y1: 0, x2: 1, y2: 0 }, swappedBoard, steps, finalBoard: before };
+  }
+
+  async function startAnimation(animation: BoardActionAnimation, outcome: 'won' | 'lost' | null = null) {
+    const summary = outcome === 'won' ? {
+      runId: animation.finalBoard.runId, levelId: 15, stars: 0 as const, bestStars: 0 as const,
+      expGained: 30, totalExp: 30, coinsGained: 100, realmBefore: 0, realmAfter: 0,
+    } : undefined;
+    mockState.swap.mockResolvedValue({ changed: true, won: outcome === 'won', lost: outcome === 'lost', stars: 0, levelId: 15, animation, summary });
+    mount();
+    await act(async () => { board().props.onSwipe(0, 0, 1, 0); });
+  }
   beforeEach(() => {
     jest.clearAllMocks(); mockReduceMotion = true; mockParams.levelId = '15'; mockState.save = emptySave();
     mockState.save.active = new BoardEngine(getLevel(15)).snapshot(); mockState.save.active.swordQi = 100;
@@ -54,7 +84,7 @@ describe('gameplay presentation and exit behavior', () => {
     jest.spyOn(Native, 'useWindowDimensions').mockReturnValue({ width: 320, height: 568, scale: 3, fontScale: 1 });
     jest.spyOn(Native.BackHandler, 'addEventListener').mockImplementation((_event, handler) => { hardwareBack = handler as () => boolean; return { remove: removeBack }; });
   });
-  afterEach(() => { act(() => { renderer?.unmount(); }); jest.restoreAllMocks(); });
+  afterEach(() => { act(() => { renderer?.unmount(); }); jest.restoreAllMocks(); jest.useRealTimers(); });
 
   it('renders run equipment and two sockets with no shared HUD/navigation or sword navigation', () => {
     mockState.save.active!.loadout.sword = 'trong-nhac'; mount();
@@ -336,6 +366,101 @@ describe('gameplay presentation and exit behavior', () => {
       expect(board().props.snapshot).toEqual(engine.animation!.finalBoard);
       expect(mockRouter.replace).not.toHaveBeenCalled();
     } finally { jest.useRealTimers(); }
+  });
+
+  it('holds each landed board for 300ms before the next clear or accepting another action', async () => {
+    jest.useFakeTimers(); mockReduceMotion = false;
+    const animation = cascadeAnimation();
+    await startAnimation(animation);
+    expect(board().props.visualEffect.kind).toBe('swap');
+    await advance(BOARD_SWAP_MS);
+    expect(board().props.visualEffect.kind).toBe('clear');
+    await advance(BOARD_CLEAR_MS);
+    const firstFall = board().props.visualEffect;
+    expect(firstFall.kind).toBe('fall');
+    expect(board().props.snapshot).toEqual(animation.steps[0].after);
+    await advance(BOARD_FALL_MS);
+    expect(board().props.visualEffect).toBe(firstFall);
+    await advance(BOARD_CHAIN_DELAY_MS - 1);
+    expect(board().props.visualEffect).toBe(firstFall);
+    expect(board().props.snapshot).toEqual(animation.steps[0].after);
+    expect(board().props.locked).toBe(true);
+    expect(button('Rời màn chơi').props.disabled).toBe(true);
+    act(() => { board().props.onSwipe(0, 0, 1, 0); board().props.onCellPress(1, 1); hardwareBack(); });
+    expect(mockState.swap).toHaveBeenCalledTimes(1);
+    expect(board().props.selected).toBeNull();
+    expect(view('game-leave-confirmation')).toBeUndefined();
+    await advance(1);
+    expect(board().props.visualEffect.kind).toBe('clear');
+    await advance(BOARD_CLEAR_MS + BOARD_FALL_MS);
+    const finalFall = board().props.visualEffect;
+    await advance(BOARD_CHAIN_DELAY_MS - 1);
+    expect(board().props.visualEffect).toBe(finalFall);
+    expect(board().props.locked).toBe(true);
+    await advance(1);
+    expect(board().props.snapshot).toEqual(animation.finalBoard);
+    expect(board().props.visualEffect).toBeNull();
+    expect(board().props.locked).toBe(false);
+    expect(button('Rời màn chơi').props.disabled).toBe(false);
+  });
+
+  it.each(['won', 'lost'] as const)('waits for the final settle before opening the %s result', async outcome => {
+    jest.useFakeTimers(); mockReduceMotion = false;
+    const animation = cascadeAnimation(1);
+    await startAnimation(animation, outcome);
+    await advance(BOARD_SWAP_MS + BOARD_CLEAR_MS + BOARD_FALL_MS);
+    await advance(BOARD_CHAIN_DELAY_MS - 1);
+    expect(popup()).toBeUndefined();
+    expect(board().props.locked).toBe(true);
+    expect(board().props.visualEffect.kind).toBe('fall');
+    await advance(1);
+    expect(popup().props.result.kind).toBe(outcome);
+    expect(board().props.snapshot).toEqual(animation.finalBoard);
+  });
+
+  it('skips fall and settle timers for a step with no falling tiles', async () => {
+    jest.useFakeTimers(); mockReduceMotion = false;
+    const animation = cascadeAnimation(1);
+    animation.steps[0].falls = [];
+    await startAnimation(animation);
+    await advance(BOARD_SWAP_MS + BOARD_CLEAR_MS - 1);
+    expect(board().props.locked).toBe(true);
+    await advance(1);
+    expect(board().props.snapshot).toEqual(animation.finalBoard);
+    expect(board().props.visualEffect).toBeNull();
+    expect(board().props.locked).toBe(false);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('shows the final board immediately under reduced motion, without fall or settle timers', async () => {
+    jest.useFakeTimers();
+    const timeout = jest.spyOn(global, 'setTimeout');
+    const animation = cascadeAnimation();
+    await startAnimation(animation);
+    expect(board().props.snapshot).toEqual(animation.finalBoard);
+    expect(board().props.visualEffect).toBeNull();
+    expect(board().props.locked).toBe(false);
+    for (const duration of [BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS]) {
+      expect(timeout).not.toHaveBeenCalledWith(expect.any(Function), duration);
+    }
+  });
+
+  it.each(['fall', 'settle'] as const)('stops playback when the screen unmounts during %s', async phase => {
+    jest.useFakeTimers(); mockReduceMotion = false;
+    const animation = cascadeAnimation();
+    await startAnimation(animation, 'won');
+    await advance(BOARD_SWAP_MS + BOARD_CLEAR_MS + (phase === 'settle' ? BOARD_FALL_MS : 0));
+    expect(board().props.visualEffect.kind).toBe('fall');
+    act(() => { renderer.unmount(); });
+    await advance(phase === 'settle' ? BOARD_CHAIN_DELAY_MS : BOARD_FALL_MS);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+    expect(mockState.setNotice).not.toHaveBeenCalled();
+    mount();
+    expect(board().props.snapshot).toEqual(mockState.save.active);
+    expect(board().props.locked).toBe(false);
+    expect(board().props.visualEffect).toBeNull();
+    expect(popup()).toBeUndefined();
   });
 
   it('opens loss only after the final swap animation completes', async () => {

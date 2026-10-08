@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BackHandler, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useReducedMotion } from 'react-native-reanimated';
-import { Board, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_SWAP_MS, BOARD_REJECT_MS, type BoardVisualEffect } from '../../src/components/Board';
+import { Board, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_SWAP_MS, BOARD_REJECT_MS, type BoardVisualEffect } from '../../src/components/Board';
 import { GameplayDock, GameplayHeader, GameplayInfo } from '../../src/components/GameplayChrome';
 import { GameplayResultPopup, type GameplayResult } from '../../src/components/GameplayResultPopup';
 import { GameplayLeaveDialog } from '../../src/components/GameplayLeaveDialog';
@@ -143,8 +143,16 @@ function GameplaySession({ levelId }: { levelId: number }) {
                     return;
             }
             setBoard(step.after);
+            if (!step.falls.length) {
+                setEffect(null);
+                continue;
+            }
             setEffect({ id: ++effectId.current, kind: 'fall', falls: step.falls });
             await wait(BOARD_FALL_MS);
+            if (!alive.current)
+                return;
+            // Keep the completed fall in place while the new board settles.
+            await wait(BOARD_CHAIN_DELAY_MS);
             if (!alive.current)
                 return;
         }
