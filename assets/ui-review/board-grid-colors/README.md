@@ -1,5 +1,7 @@
 # Nền lưới sáng hơn và nền riêng cho ô 4/5
 
+Nền kem của ô 4/5 đã được thay bằng hạt lấp lánh chạy quanh ô. Xem [bản kiểm tra hiện tại](../charged-tile-particles/README.md) và [video native](../charged-tile-particles/orbit-native.mp4). Các ảnh trong thư mục này giữ lại để đối chiếu.
+
 Đã áp dụng ba màu trong cấu hình giao diện: khung bàn `#33494C`, nền ô thường `#53696B`, nền ô nâng cấp `#C4B580`. Cả cấp 4 và cấp 5 dùng nền kem vàng dưới ảnh tile. Giữ nguyên 12 asset, padding 3%, viền trong ảnh, vùng bấm và luật chơi; đá chắn dùng nền thường và padding 6% như trước.
 
 Nền nâng cấp được vẽ trong cùng lớp artwork nên đi cùng tile khi đổi chỗ, rơi, thu nhỏ hoặc mờ đi. Mảnh tile trong hiệu ứng chém dùng lại artwork này. Nền ô thường vẫn nằm cố định trên bàn, không để lại nền kem vàng ở vị trí cũ. Phong ấn, dấu chọn và mục tiêu tiếp tục nằm trên ảnh.

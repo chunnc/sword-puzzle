@@ -1,9 +1,11 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { StyleSheet, Text, View } from 'react-native';
+import { AppState, StyleSheet, Text, View } from 'react-native';
 import { Board, SpiritOrb, type BoardVisualEffect } from '../Board';
 import { ART, tileArtwork } from '../../assets';
 import { colors } from '../../theme';
+import { ChargedTileParticle } from '../ChargedTileParticle';
+import { chargedParticleStyle } from '../chargedTileParticles';
 import { BoardEffects } from '../BoardEffects';
 import { SpiritQiFlightOverlay } from '../SpiritQiFlightOverlay';
 import { buildSpiritFlightCues } from '../spiritParticles';
@@ -32,6 +34,8 @@ jest.mock('../../../app-assets/ui/tile_spirit_orb_4.webp', () => 111);
 jest.mock('../../../app-assets/ui/tile_spirit_orb_5.webp', () => 112);
 jest.mock('../../../app-assets/ui/tile_rock.webp', () => 113);
 
+jest.mock('expo-router', () => ({ useIsFocused: () => mockFocused }));
+
 jest.mock('react-native-gesture-handler', () => ({
   Gesture: {
     Pan: jest.fn(() => {
@@ -56,8 +60,24 @@ jest.mock('react-native-worklets', () => ({
 
 jest.mock('react-native-reanimated', () => ({
   Easing: { linear: (value: number) => value },
-  useDerivedValue: (updater: () => unknown) => ({ get value() { return updater(); } }),
+  useDerivedValue: (updater: () => unknown) => {
+    const React = require('react');
+    const latest = React.useRef(updater);
+    latest.current = updater;
+    return React.useRef({ get value() { return latest.current(); } }).current;
+  },
   makeMutable: (value: unknown) => ({ value }),
+  useSharedValue: (value: unknown) => require('react').useRef({ value }).current,
+  useFrameCallback: (callback: MockFrameClock['callback']) => {
+    const ref = require('react').useRef(null);
+    if (!ref.current) {
+      const clock: MockFrameClock = { callback, active: false, setActive: jest.fn((active: boolean) => { clock.active = active; }) };
+      ref.current = clock;
+      mockFrameClocks.push(clock);
+    }
+    ref.current.callback = callback;
+    return ref.current;
+  },
   useAnimatedReaction: (prepare: () => unknown, react: (value: unknown) => void, dependencies: unknown[]) => {
     require('react').useEffect(() => {
       const run = () => react(prepare());
@@ -70,6 +90,11 @@ jest.mock('react-native-reanimated', () => ({
   withSequence: (...values: number[]) => values[values.length - 1],
 }));
 
+type MockFrameClock = { callback: (frame: { timeSincePreviousFrame: number | null }) => void; active: boolean; setActive: jest.Mock };
+const mockFrameClocks: MockFrameClock[] = [];
+let mockFocused = true;
+let mockAppChanged: (state: 'active' | 'background') => void;
+const originalAppState = AppState.currentState;
 let mockQueueUI = false;
 const mockUIQueue: (() => unknown)[] = [];
 const mockReactions: (() => void)[] = [];
@@ -134,9 +159,20 @@ describe('Skia Board integration', () => {
   const buttons = () => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && typeof node.props.onPress === 'function');
   const tile = (index: number) => renderer.root.findAll(node => node.type === 'Group' as never &&
     node.props.origin?.x === index % 7 * 50 + 25 && node.props.origin?.y === (6 - Math.floor(index / 7)) * 50 + 25)[0];
+  const reactFrames = () => act(() => { mockReactions.forEach(run => run()); mockReactions.forEach(run => run()); });
 
-  beforeEach(() => { mockQueueUI = false; mockUIQueue.length = 0; mockReactions.length = 0; });
-  afterEach(() => { act(() => { renderer?.unmount(); }); });
+  beforeEach(() => {
+    mockQueueUI = false; mockUIQueue.length = 0; mockReactions.length = 0; mockFrameClocks.length = 0; mockFocused = true;
+    AppState.currentState = 'active';
+    const appListeners = new Set<(state: 'active' | 'background') => void>();
+    mockAppChanged = state => appListeners.forEach(listener => listener(state));
+    jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, listener) => {
+      appListeners.add(listener);
+      return { remove: jest.fn(() => appListeners.delete(listener)) };
+    });
+  });
+  afterEach(() => { act(() => { renderer?.unmount(); }); jest.restoreAllMocks(); });
+  afterAll(() => { AppState.currentState = originalAppState; });
 
   it.each([
     [TileKind.Sword, 101, 102, 103],
@@ -177,16 +213,18 @@ describe('Skia Board integration', () => {
       expect(sprite.props.image.asset).toBe(index < 12 ? expected[index] : ART.tileRock);
       expect(sprite.props.x).toBeCloseTo(bounds.left + bounds.width * (index < 12 ? .03 : .06));
       expect(sprite.props.width).toBeCloseTo(bounds.width * (index < 12 ? .94 : .88));
-      const backing = renderer.root.findAll(node => node.type === 'RoundedRect' as never
-        && node.props.color === colors.boardChargedCell && node.props.x === bounds.left && node.props.y === bounds.top);
-      expect(backing).toHaveLength(index < 12 && index % 3 !== 0 ? 1 : 0);
-      if (backing.length) expect(backing[0].props).toMatchObject({
-        x: bounds.left, y: bounds.top, width: bounds.width, height: bounds.height, r: 5,
+      const particle = renderer.root.findAllByType(ChargedTileParticle).filter(node =>
+        node.props.bounds.x === bounds.left && node.props.bounds.y === bounds.top);
+      expect(particle).toHaveLength(index < 12 && index % 3 !== 0 ? 1 : 0);
+      if (particle.length) expect(particle[0].props).toMatchObject({
+        bounds: { x: bounds.left, y: bounds.top, width: bounds.width, height: bounds.height },
+        color: chargedParticleStyle(next.tiles[index]!.kind)!.color,
       });
     }
     expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never
       && node.props.color === colors.boardCell)).toHaveLength(49);
     expect(StyleSheet.flatten(renderer.root.findAllByType(View)[0].props.style).backgroundColor).toBe(colors.boardFrame);
+    expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never && node.props.color === '#C4B580')).toHaveLength(0);
     const labels = renderer.root.findAll(node => node.type === 'Paragraph' as never).map(node => node.props.paragraph.text);
     expect(labels).not.toContain('氣');
     expect(labels.some(text => text.includes('✧') || text.includes('✦'))).toBe(false);
@@ -200,22 +238,91 @@ describe('Skia Board integration', () => {
     next.tiles[0] = { kind: TileKind.Fire, chargeTier: 0, locked: false };
     mount({ snapshot: next });
     const sprite = () => tile(0).findAll(node => node.type === 'SkiaImage' as never)[0];
-    const backing = () => tile(0).findAll(node => node.type === 'RoundedRect' as never
-      && node.props.color === colors.boardChargedCell);
+    const particle = () => tile(0).findAllByType(ChargedTileParticle);
     expect(sprite().props.image.asset).toBe(104);
-    expect(backing()).toHaveLength(0);
+    expect(particle()).toHaveLength(0);
     for (const chargeTier of [4, 5] as const) {
       const upgraded = { ...next, tiles: [...next.tiles] };
       upgraded.tiles[0] = { ...next.tiles[0]!, chargeTier };
       act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: upgraded })); });
       expect(sprite().props.image.asset).toBe(chargeTier === 4 ? 105 : 106);
-      expect(backing()).toHaveLength(1);
+      expect(particle()).toHaveLength(1);
     }
     act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: next })); });
-    expect(backing()).toHaveLength(0);
+    expect(particle()).toHaveLength(0);
   });
 
-  it.each(['swap', 'fall'] as const)('moves charged backing with the tile during %s without coloring its stationary cell', kind => {
+  it('shares one continuous clock across particles, HUD updates and action phases', () => {
+    mount();
+    reactFrames();
+    expect(mockFrameClocks).toHaveLength(1);
+    expect(mockFrameClocks[0].active).toBe(true);
+    const phases = renderer.root.findAllByType(ChargedTileParticle).map(node => node.props.phase);
+    expect(new Set(phases).size).toBe(1);
+    mockFrameClocks[0].callback({ timeSincePreviousFrame: 160 });
+    expect(phases[0].value).toBeCloseTo(.1);
+    act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: { ...snapshot, swordQi: 20 } })); });
+    act(() => { renderer.update(React.createElement(Board, { ...props,
+      visualEffect: { id: 94, kind: 'swap', first: { x: 0, y: 6 }, second: { x: 1, y: 6 } } })); });
+    const after = renderer.root.findAllByType(ChargedTileParticle)[0].props.phase;
+    expect(after).toBe(phases[0]);
+    expect(after.value).toBeCloseTo(.1);
+    expect(mockFrameClocks).toHaveLength(1);
+  });
+
+  it('pauses the clock on background, loss of focus, Reduce Motion and unmount', () => {
+    mount(); reactFrames();
+    const clock = mockFrameClocks[0];
+    clock.callback({ timeSincePreviousFrame: 160 });
+    const phase = renderer.root.findAllByType(ChargedTileParticle)[0].props.phase;
+    act(() => mockAppChanged('background'));
+    expect(clock.active).toBe(false);
+    act(() => mockAppChanged('active'));
+    expect(clock.active).toBe(true);
+    expect(phase.value).toBeCloseTo(.1);
+    mockFocused = false;
+    act(() => renderer.update(React.createElement(Board, { ...props })));
+    expect(clock.active).toBe(false);
+    mockFocused = true;
+    act(() => renderer.update(React.createElement(Board, { ...props, reduceMotion: true })));
+    expect(clock.active).toBe(false);
+    const particle = renderer.root.findAllByType(ChargedTileParticle)[0];
+    const dots = () => particle.findAll(node => node.type === 'Group' as never && node.props.transform && node.props.opacity);
+    const positions = dots().map(node => node.props.transform.value);
+    const opacity = dots().map(node => node.props.opacity.value);
+    phase.value = .9;
+    expect(dots().map(node => node.props.transform.value)).toEqual(positions);
+    expect(dots().map(node => node.props.opacity.value)).toEqual(opacity);
+    act(() => renderer.update(React.createElement(Board, { ...props })));
+    expect(clock.active).toBe(true);
+    act(() => renderer.unmount());
+    expect(clock.active).toBe(false);
+  });
+
+  it('runs only while a charged tile or its fragments remain visible', () => {
+    const next: typeof snapshot = { ...snapshot, tiles: snapshot.tiles.map(tile => ({ ...tile!, chargeTier: 0 as const })) };
+    mount({ snapshot: next }); reactFrames();
+    const clock = mockFrameClocks[0];
+    expect(clock.active).toBe(false);
+    next.tiles[0] = { kind: TileKind.Fire, chargeTier: 4, locked: false };
+    act(() => renderer.update(React.createElement(Board, { ...props, snapshot: { ...next } })));
+    reactFrames();
+    expect(clock.active).toBe(true);
+    const motionSession = createBoardMotionSession('clear');
+    act(() => renderer.update(React.createElement(Board, { ...props, snapshot: { ...next }, motionSession,
+      visualEffect: { id: 95, kind: 'clear', cleared: [0], changed: [], effects: [
+        { kind: 'slash', swordChargeTier: 4, source: 0, cells: [0], damage: 0, qi: 0 },
+      ] } })));
+    motionSession.progress.value = .7;
+    reactFrames();
+    expect(tile(0).props.layer.props.opacity.value).toBe(0);
+    expect(clock.active).toBe(true);
+    motionSession.progress.value = 1;
+    reactFrames();
+    expect(clock.active).toBe(false);
+  });
+
+  it.each(['swap', 'fall'] as const)('moves charged particles with the tile during %s without coloring its stationary cell', kind => {
     const next = { ...snapshot, tiles: [...snapshot.tiles] };
     next.tiles[0] = { kind: TileKind.Fire, chargeTier: 4, locked: false };
     const motionSession = createBoardMotionSession(kind);
@@ -226,9 +333,8 @@ describe('Skia Board integration', () => {
     motionSession.progress.value = .5;
     mockReactions.at(-1)!();
     const moving = tile(0);
-    const backing = moving.findAll(node => node.type === 'RoundedRect' as never
-      && node.props.color === colors.boardChargedCell);
-    expect(backing).toHaveLength(1);
+    const particle = moving.findAllByType(ChargedTileParticle);
+    expect(particle).toHaveLength(1);
     expect(moving.findAll(node => node.type === 'SkiaImage' as never)[0].props.image.asset).toBe(105);
     expect(moving.props.transform.value).toEqual([
       { translateX: kind === 'swap' ? 25 : 0 }, { translateY: kind === 'fall' ? -75 : 0 }, { scale: 1 },
@@ -238,7 +344,7 @@ describe('Skia Board integration', () => {
     expect(stationary).toHaveLength(1);
   });
 
-  it('fades charged backing with a cleared tile and removes it in the following clear phase', () => {
+  it('fades charged particles with a cleared tile and removes it in the following clear phase', () => {
     const next = { ...snapshot, tiles: [...snapshot.tiles] };
     next.tiles[0] = { kind: TileKind.Fire, chargeTier: 5, locked: true };
     const motionSession = createBoardMotionSession('clear');
@@ -247,8 +353,7 @@ describe('Skia Board integration', () => {
     motionSession.progress.value = .5;
     mockReactions.at(-1)!();
     expect(tile(0).props.layer.props.opacity.value).toBe(.5);
-    expect(tile(0).findAll(node => node.type === 'RoundedRect' as never
-      && node.props.color === colors.boardChargedCell)).toHaveLength(1);
+    expect(tile(0).findAllByType(ChargedTileParticle)).toHaveLength(1);
     expect(tile(0).findAll(node => node.type === 'Paragraph' as never)[0].props.paragraph.text).toBe('封');
     expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never
       && node.props.color === colors.goldBright && node.props.style === 'stroke')).toHaveLength(1);
@@ -271,10 +376,11 @@ describe('Skia Board integration', () => {
     const fragments = renderer.root.findByType(BoardEffects).findAll(node => node.type === 'SkiaImage' as never);
     expect(fragments.map(node => node.props.image.asset)).toEqual([102, 102, 109, 109]);
     for (const sprite of fragments) expect(sprite.props.width).toBeCloseTo(48 * .94);
-    const backings = renderer.root.findByType(BoardEffects).findAll(node => node.type === 'RoundedRect' as never
-      && node.props.color === colors.boardChargedCell);
-    expect(backings).toHaveLength(4);
-    for (const backing of backings) expect(backing.props).toMatchObject({ width: 48, height: 48, r: 5 });
+    const particles = renderer.root.findByType(BoardEffects).findAllByType(ChargedTileParticle);
+    expect(particles).toHaveLength(4);
+    for (const particle of particles) expect(particle.props.bounds).toMatchObject({ width: 48, height: 48 });
+    const phases = renderer.root.findAllByType(ChargedTileParticle).map(node => node.props.phase);
+    expect(new Set(phases).size).toBe(1);
   });
 
   it('renders the standalone spirit icon without a character overlay', () => {
@@ -373,7 +479,7 @@ describe('Skia Board integration', () => {
     expect(effects.findAll(node => node.type === 'Paragraph' as never)).toHaveLength(0);
     expect(effects.findAll(node => node.type === 'SkiaImage' as never && node.props.image.asset === ART.tileSpiritOrb5)).toHaveLength(2);
     expect(effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === colors.boardCell)).toHaveLength(0);
-    expect(effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === colors.boardChargedCell)).toHaveLength(2);
+    expect(effects.findAllByType(ChargedTileParticle)).toHaveLength(2);
     expect(effects.findAll(node => node.type === 'Path' as never)).toHaveLength(tier === 5 ? 6 : 3);
     const progress = effects.props.progress;
     const afterimages = effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === '#ffffff');

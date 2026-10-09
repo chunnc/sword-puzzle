@@ -1,0 +1,7 @@
+{
+  "scenario": "reduce-motion",
+  "active": false,
+  "phaseBefore": 0.56944444444038,
+  "phaseAfter": 0.56944444444038,
+  "passed": true
+}

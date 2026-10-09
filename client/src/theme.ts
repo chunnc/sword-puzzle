@@ -13,7 +13,18 @@ export const colors = {
   veil: 'rgba(1, 18, 23, 0.62)',
   boardFrame: '#33494C',
   boardCell: '#53696B',
-  boardChargedCell: '#C4B580',
+};
+
+export const chargedTileParticle = {
+  cycleMs: 1600,
+  insetRatio: .08,
+  cornerRatio: .05,
+  radiusRatio: .045,
+  maxRadius: 2.4,
+  haloRatio: 2.2,
+  tailCount: 4,
+  tailSpacing: .017,
+  colors: { sword: '#FFE08A', fire: '#FF765B', lightning: '#D79CFF', spirit: '#87F7A7' },
 };
 
 export const type = {

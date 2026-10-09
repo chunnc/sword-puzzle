@@ -7,7 +7,7 @@ import {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, runOnUI } from 'react-native-worklets';
 import {
-  Easing, useAnimatedReaction, withSequence, withTiming,
+  Easing, useAnimatedReaction, useDerivedValue, withSequence, withTiming, type SharedValue,
 } from 'react-native-reanimated';
 import { ART, tileArtwork } from '../assets';
 import { getContentVersion } from '../game/domain';
@@ -21,6 +21,8 @@ import {
 } from './boardVisuals';
 import { createBoardMotionSession, createBoardMotionFrame, updateBoardMotionFrame, finishBoardMotionSession, type BoardMotionSession, type CellMotionValues } from './boardMotion';
 import { BoardEffects } from './BoardEffects';
+import { ChargedTileParticle, useChargedParticleClock } from './ChargedTileParticle';
+import { chargedParticleStyle } from './chargedTileParticles';
 
 export type { CellPosition } from '../game/types';
 export {
@@ -141,6 +143,11 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const frame = useMemo(() => createBoardMotionFrame(visuals, side / geometry.width), [visuals, side, geometry.width]);
   const frameRef = useRef(frame);
   useLayoutEffect(() => { frameRef.current = frame; }, [frame]);
+  const particleCells = indices.filter(index => snapshot.tiles[index]!.chargeTier > 0
+    && snapshot.tiles[index]!.kind !== TileKind.Rock && !visuals[index].hidden);
+  const particlesVisible = useDerivedValue(() => side > geometry.width * 2 && particleCells.some(index =>
+    visuals[index].splitAt !== null ? motion.progress.value < 1 : (frame.cells[index]?.opacity.value ?? 1) > 0));
+  const particlePhase = useChargedParticleClock(particlesVisible, reduceMotion);
   useAnimatedReaction(
     () => ({ progress: motion.progress.value, pulse: motion.pulse.value }),
     value => { updateBoardMotionFrame(frame, value.progress, value.pulse); },
@@ -206,11 +213,11 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
         {side > geometry.width * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
           <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
             {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color={colors.boardCell} />)}
-            {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} visual={visuals[index]} motion={frame.cells[index]} labels={labels} />)}
+            {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} visual={visuals[index]} motion={frame.cells[index]} labels={labels} particlePhase={particlePhase} reduceMotion={reduceMotion} />)}
             {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
               progress={motion.progress} elapsedMs={motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning}
               renderTile={index => <TileArtwork tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)}
-                image={imageForTile(snapshot.tiles[index]!)} labels={labels} />} /> : null}
+                image={imageForTile(snapshot.tiles[index]!)} labels={labels} particlePhase={particlePhase} reduceMotion={reduceMotion} />} /> : null}
             {indices.map(index => {
               const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
               const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
@@ -242,31 +249,34 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   </View>;
 }
 
-function TileVisual({ tile, bounds, image, visual, motion, labels }: {
+function TileVisual({ tile, bounds, image, visual, motion, labels, particlePhase, reduceMotion }: {
   tile: Tile;
   bounds: ReturnType<typeof cellBounds>;
   image: SkImage | null;
   visual: CellVisual;
   motion: CellMotionValues | null;
   labels: BoardLabels;
+  particlePhase: SharedValue<number>;
+  reduceMotion: boolean;
 }) {
   if (visual.hidden) return null;
   // Paragraph paints its own colors, so fade the complete tile as a layer.
   // Allocate that layer only during clears, not during swaps/falls or idle.
   return <Group origin={{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }} transform={motion?.transform} layer={visual.clearing ? <Paint opacity={motion!.opacity} /> : undefined}>
-    <TileArtwork tile={tile} bounds={bounds} image={image} labels={labels} />
+    <TileArtwork tile={tile} bounds={bounds} image={image} labels={labels} particlePhase={particlePhase} reduceMotion={reduceMotion} />
   </Group>;
 }
 
-function TileArtwork({ tile, bounds, image, labels }: {
+function TileArtwork({ tile, bounds, image, labels, particlePhase, reduceMotion }: {
   tile: Tile; bounds: ReturnType<typeof cellBounds>; image: SkImage | null; labels: BoardLabels;
+  particlePhase: SharedValue<number>; reduceMotion: boolean;
 }) {
   const inset = tile.kind === TileKind.Rock ? .06 : .03;
+  const particle = tile.chargeTier > 0 ? chargedParticleStyle(tile.kind) : null;
   return <Group>
-    {/* Keep the charged backing inside the moving/fading artwork and sword fragments. */}
-    {tile.kind !== TileKind.Rock && tile.chargeTier > 0
-      ? <RoundedRect {...bounds} r={5} color={colors.boardChargedCell} /> : null}
     <Image image={image} x={bounds.x + bounds.width * inset} y={bounds.y + bounds.height * inset} width={bounds.width * (1 - 2 * inset)} height={bounds.height * (1 - 2 * inset)} fit="contain" />
+    {particle ? <ChargedTileParticle bounds={bounds} color={particle.color} elementPhase={particle.phase}
+      phase={particlePhase} reduced={reduceMotion} /> : null}
     {tile.locked ? <Group>
       <RoundedRect {...bounds} r={5} color="rgba(9,35,49,.45)" />
       <RoundedRect x={bounds.x + 1} y={bounds.y + 1} width={bounds.width - 2} height={bounds.height - 2} r={4} style="stroke" strokeWidth={2} color="#ae97cd" />

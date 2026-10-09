@@ -1,0 +1,45 @@
+{
+  "device": "iPhone 16e / iOS 26.3",
+  "scale": 3,
+  "renderer": "Actual native GameScreen and Skia Board, in-memory fixture",
+  "persistentSaveModified": false,
+  "userApprovedSimulator": true,
+  "cycleMs": 1600,
+  "radiusRatio": 0.045,
+  "maxRadius": 2.4,
+  "haloRatio": 2.2,
+  "tailDots": 4,
+  "pathInset": "max(8% cell size, head halo radius)",
+  "scenarios": [
+    {
+      "file": "native-320x568.png",
+      "viewport": [
+        320,
+        568
+      ]
+    },
+    {
+      "file": "native-390x844.png",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "file": "dense-320x568.png",
+      "viewport": [
+        320,
+        568
+      ],
+      "chargedTiles": 49
+    },
+    {
+      "file": "orbit-native.mp4",
+      "viewport": [
+        390,
+        844
+      ],
+      "durationSecondsApprox": 4
+    }
+  ]
+}
