@@ -1,5 +1,5 @@
 import { emptyProfile, realmForExp, skillCost, requireContent, getContentVersion, type GameContent, type SkillId } from './domain';
-import { BoardActionAnimation, BoardAnimationEffect, BoardAnimationFall, BoardSnapshot, CellPosition, GoalKind, LevelDefinition, Loadout, Tile, TileKind } from './types';
+import { BoardActionAnimation, BoardActionStart, BoardResolutionStep, BoardAnimationEffect, BoardAnimationFall, BoardSnapshot, CellPosition, GoalKind, LevelDefinition, Loadout, Tile, TileKind } from './types';
 export function newId(): string { return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 13)}_${Math.random().toString(36).slice(2, 13)}`; }
 const plain = (kind: TileKind): Tile => ({ kind, chargeTier: 0, locked: false });
 const copy = (tile: Tile): Tile => ({ ...tile });
@@ -11,6 +11,7 @@ export class BoardEngine {
     private loadout: Loadout;
     private damageScale: number;
     private lastAnimation: BoardActionAnimation | null = null;
+    private resolution: Generator<BoardResolutionStep, void> | null = null;
     moves: number;
     objectiveProgress: Record<string, number>;
     private readonly content: GameContent;
@@ -76,28 +77,36 @@ export class BoardEngine {
         return this.loadout.skills.filter(id => this.swordQi >= this.cost(id) && this.hasSkillTarget(id));
     }
     trySwap(x1: number, y1: number, x2: number, y2: number): boolean {
+        return this.drain(this.beginSwap(x1, y1, x2, y2));
+    }
+    beginSwap(x1: number, y1: number, x2: number, y2: number): BoardActionStart | null {
+        if (this.resolution) throw new Error('BOARD_ACTION_IN_PROGRESS');
         this.lastAnimation = null;
         const a = { x: x1, y: y1 }, b = { x: x2, y: y2 };
         if (this.won || this.moves <= 0 || !this.adjacent(a, b) || !this.movable(this.indexOf(a)) || !this.movable(this.indexOf(b)))
-            return false;
+            return null;
         const first = this.indexOf(a), second = this.indexOf(b);
         [this.tiles[first], this.tiles[second]] = [this.tiles[second], this.tiles[first]];
         const groups = this.findGroups();
         if (!groups.length) {
             [this.tiles[first], this.tiles[second]] = [this.tiles[second], this.tiles[first]];
-            return false;
+            return null;
         }
         this.moves--;
         this.skillUsed = false;
-        const animation = this.makeAnimation('swap');
+        const animation = this.makeActionStart('swap');
         animation.swap = { x1, y1, x2, y2 };
-        this.resolve(groups, animation, [second, first]);
-        return this.finish(animation);
+        this.resolution = this.resolve(groups, animation, [second, first]);
+        return animation;
     }
     trySkill(id: SkillId, targets: CellPosition[]): boolean {
+        return this.drain(this.beginSkill(id, targets));
+    }
+    beginSkill(id: SkillId, targets: CellPosition[]): BoardActionStart | null {
+        if (this.resolution) throw new Error('BOARD_ACTION_IN_PROGRESS');
         this.lastAnimation = null;
         if (this.won || this.skillUsed || !this.loadout.skills.includes(id) || this.swordQi < this.cost(id) || !this.validTargets(id, targets))
-            return false;
+            return null;
         const indices = targets.map(this.indexOf);
         this.swordQi -= this.cost(id);
         this.condensed = false;
@@ -140,12 +149,12 @@ export class BoardEngine {
             initial = indices;
         else if (id === 'van-kiem')
             initial = this.tiles.flatMap((t, i) => t?.kind === this.tiles[indices[0]]!.kind ? [i] : []);
-        const animation = this.makeAnimation('skill');
+        const animation = this.makeActionStart('skill');
         animation.skillId = id;
         if (id === 'ngu-kiem')
             animation.swap = { x1: targets[0].x, y1: targets[0].y, x2: targets[1].x, y2: targets[1].y };
-        this.resolve(initial ? [] : this.findGroups(), animation, mutation, initial, obstacleOnly);
-        return this.finish(animation);
+        this.resolution = this.resolve(initial ? [] : this.findGroups(), animation, mutation, initial, obstacleOnly);
+        return animation;
     }
     grantExtraMoves(): boolean {
         if (!this.lost || this.extraMovesUsed)
@@ -154,18 +163,27 @@ export class BoardEngine {
         this.extraMovesUsed = true;
         return true;
     }
-    private makeAnimation(kind: 'swap' | 'skill'): BoardActionAnimation {
-        const snapshot = this.snapshot();
-        return { kind, swappedBoard: snapshot, finalBoard: snapshot, steps: [] };
+    private makeActionStart(kind: 'swap' | 'skill'): BoardActionStart {
+        return { kind, swappedBoard: this.snapshot() };
     }
-    private finish(animation: BoardActionAnimation): boolean {
-        if (!this.won && !this.lost)
-            this.ensureMove();
-        animation.finalBoard = this.snapshot();
-        this.lastAnimation = animation;
+    // Production advances once per visible wave; synchronous callers drain the same iterator.
+    nextResolutionStep(): BoardResolutionStep | null {
+        if (!this.resolution) return null;
+        const next = this.resolution.next();
+        if (!next.done) return next.value;
+        this.resolution = null;
+        if (!this.won && !this.lost) this.ensureMove();
+        return null;
+    }
+    private drain(start: BoardActionStart | null): boolean {
+        if (!start) return false;
+        const steps: BoardResolutionStep[] = [];
+        let step: BoardResolutionStep | null;
+        while ((step = this.nextResolutionStep())) steps.push(step);
+        this.lastAnimation = { ...start, steps, finalBoard: this.snapshot() };
         return true;
     }
-    private resolve(groups: number[][], animation: BoardActionAnimation, anchors: number[] = [], initial?: number[], obstacleOnly = false): void {
+    private *resolve(groups: number[][], animation: BoardActionStart, anchors: number[] = [], initial?: number[], obstacleOnly = false): Generator<BoardResolutionStep, void> {
         let chain = 0;
         let mutation = animation.kind === 'skill' && !initial ? anchors : [];
         do {
@@ -315,7 +333,7 @@ export class BoardEngine {
                 } : undefined);
             }
             const falls = this.refill();
-            animation.steps.push({ before, after: this.snapshot(), cleared: [...cleared], changed: [...changed], effects, falls, damage: waveDamage, chain });
+            yield { before, after: this.snapshot(), cleared: [...cleared], changed: [...changed], effects, falls, damage: waveDamage, chain };
             initial = undefined;
             mutation = [];
             anchors = [];

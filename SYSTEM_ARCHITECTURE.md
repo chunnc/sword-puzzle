@@ -135,6 +135,19 @@ Single Zustand store. Key ideas:
   and exposes `trySwap`, `trySkill`, `grantExtraMoves`, `snapshot`, `won`,
   `lost`, and the animation stream. Skill behavior is selected by skill ID
   (e.g. `'ngu-kiem'` swaps a pair) — behavior is code, not data.
+- Live gameplay uses `beginSwap`/`beginSkill` and `nextResolutionStep` to produce
+  one wave at a time. `boardAction.ts` waits for the presenter's UI-start signal,
+  computes at most one future wave on JS while Reanimated/Skia plays on the UI
+  thread, and waits for playback completion before presenting it. The synchronous
+  `trySwap`/`trySkill` wrappers collect the same iterator for nonvisual callers.
+- `boardPresenter.ts` plays each wave's traces and falls sequentially. Board motion
+  callbacks identify the run and effect; native completion starts the 300ms landing
+  pause, including the final wave. Reduced motion skips effects and pauses, yielding
+  between waves. Final persistence can overlap the last wave; win submission still
+  follows the durable pending journal, and reward UI waits for both playback and
+  server acknowledgement. Intermediate waves are never saved. Cancellation before
+  the final write restores the preceding saved board; a write already begun is
+  allowed to finish before the serialized action releases its lock.
 - `types.ts` — `BoardSnapshot`, `BoardActionAnimation`, `BoardResolutionStep`,
   `SaveData` (schema v3), `WinSummary`.
 - `domain.ts` — **generated**. Holds `GameContent`, `LevelDefinition`,

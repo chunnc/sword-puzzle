@@ -158,7 +158,7 @@ describe('Skia Board integration', () => {
   it('uses the slower timing sequence, ignores HUD-only updates and cancels on cleanup', () => {
     const effect: BoardVisualEffect = { id: 1, kind: 'clear', cleared: [0], changed: [1], effects: [{ kind: 'fire', cells: [0], source: 0, damage: 0, qi: 0 }] };
     mount({ visualEffect: effect });
-    expect((withTiming as jest.Mock).mock.calls).toEqual([
+    expect((withTiming as jest.Mock).mock.calls.map(call => call.slice(0, 2))).toEqual([
       [1, { duration: 1200 }], [1.12, { duration: 150 }], [1, { duration: 1050 }],
       [.85, { duration: 105 }], [0, { duration: 1095 }],
     ]);
@@ -166,7 +166,7 @@ describe('Skia Board integration', () => {
     act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: { ...snapshot, swordQi: 12 }, visualEffect: effect })); });
     expect(withTiming).not.toHaveBeenCalled();
     act(() => { renderer.update(React.createElement(Board, { ...props, visualEffect: { id: 2, kind: 'reject', first: { x: 0, y: 0 }, second: { x: 1, y: 0 } } })); });
-    expect((withTiming as jest.Mock).mock.calls).toEqual([[.38, { duration: 165 }], [0, { duration: 225 }]]);
+    expect((withTiming as jest.Mock).mock.calls.map(call => call.slice(0, 2))).toEqual([[.38, { duration: 165 }], [0, { duration: 225 }]]);
     expect(cancelAnimation).toHaveBeenCalled();
   });
 
@@ -175,10 +175,26 @@ describe('Skia Board integration', () => {
       id: 11, kind: 'clear', cleared: [0, 1], changed: [],
       effects: [{ kind: 'lightning', cells: [1], source: 0, damage: 0, qi: 0 }],
     } });
-    expect((withTiming as jest.Mock).mock.calls).toEqual([
+    expect((withTiming as jest.Mock).mock.calls.map(call => call.slice(0, 2))).toEqual([
       [1, { duration: 1000 }], [1.12, { duration: 150 }], [1, { duration: 850 }],
       [.85, { duration: 105 }], [0, { duration: 895 }],
     ]);
+  });
+
+  it('reports UI start and successful completion without treating cancellation as completion', () => {
+    const onMotionStarted = jest.fn(), onMotionFinished = jest.fn();
+    mount({ onMotionStarted, onMotionFinished,
+      visualEffect: { id: 90, kind: 'fall', falls: [{ index: 7, fromY: 4 }] } });
+    expect(onMotionStarted).toHaveBeenCalledWith(snapshot.runId, 90);
+    expect(onMotionFinished).not.toHaveBeenCalled();
+    const completed = (withTiming as jest.Mock).mock.calls.at(-1)![2];
+    act(() => completed(false));
+    expect(onMotionFinished).not.toHaveBeenCalled();
+    act(() => completed(true));
+    expect(onMotionFinished).toHaveBeenCalledWith(snapshot.runId, 90);
+    onMotionFinished.mockClear();
+    act(() => renderer.unmount());
+    expect(onMotionFinished).not.toHaveBeenCalled();
   });
 
   it('uses a 1200ms clear timeline for combined fire and lightning', () => {
@@ -189,7 +205,7 @@ describe('Skia Board integration', () => {
         { kind: 'lightning', cells: [1], source: 0, damage: 1, qi: 0 },
       ],
     } });
-    expect(withTiming).toHaveBeenCalledWith(1, { duration: 1200 });
+    expect(withTiming).toHaveBeenCalledWith(1, { duration: 1200 }, expect.any(Function));
     expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(2);
   });
 
@@ -329,7 +345,7 @@ describe('Skia Board integration', () => {
     act(() => { renderer.update(React.createElement(Board, { ...props, visualEffect: { id: 6, kind: 'fall', falls: [{ index: 42, fromY: 7 }] } })); });
     expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(49);
     expect(layers()).toHaveLength(0);
-    expect(withTiming).toHaveBeenLastCalledWith(1, { duration: 450 });
+    expect(withTiming).toHaveBeenLastCalledWith(1, { duration: 450 }, expect.any(Function));
   });
 });
 

@@ -1,5 +1,6 @@
 import type { SessionData } from '../../services/session';
 import type { PlayerProfile } from '../../game/domain';
+import type { BoardActionPhase, BoardActionPresenter } from '../../game/types';
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(async () => null),
@@ -303,6 +304,75 @@ it('purchases only after server confirmation and freezes the run loadout', async
   expect(await buying).toBe(true);
   expect(store.getState().save.profile.ownedSkills).toContain('ngu-kiem');
   expect(store.getState().save.active!.loadout.skills).toEqual(['nhat-kiem']);
+});
+const flushAction = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
+function livePresenter(lastWave: number) {
+  let waves = 0;
+  let finish!: () => void;
+  const landing = new Promise<void>(resolve => { finish = resolve; });
+  const controller = new AbortController();
+  const phases: BoardActionPhase[] = [];
+  const presenter: BoardActionPresenter = { signal: controller.signal, present(phase) {
+    phases.push(phase);
+    return { started: Promise.resolve(), finished: phase.kind === 'step' && ++waves === lastWave ? landing : Promise.resolve() };
+  } };
+  return { presenter, phases, finish, controller };
+}
+it('starts live animation before storage and keeps the final animation independent of a slow write', async () => {
+  ready(); await store.getState().startLevel(1);
+  const { BoardEngine } = require('../../game/BoardEngine');
+  const snapshot = store.getState().save.active!;
+  snapshot.level = { ...snapshot.level, objectives: [{ id: 'main', type: 'Battle', target: 1000000 }] } as typeof snapshot.level;
+  snapshot.objectiveProgress = { main: 0 };
+  const expected = new BoardEngine(snapshot.level, snapshot);
+  const move = expected.legalMoves()[0]; expected.trySwap(...move);
+  const live = livePresenter(expected.animation.steps.length);
+  let releaseRead!: (value: string | null) => void;
+  (storage.getItem as jest.Mock).mockImplementationOnce(() => new Promise(resolve => { releaseRead = resolve; }));
+  const action = store.getState().swap(...move as [number, number, number, number], live.presenter);
+  let done = false; void action.then(() => { done = true; });
+  await flushAction();
+  expect(live.phases[0].kind).toBe('start');
+  expect(live.phases.at(-1)!.kind).toBe('step');
+  expect(releaseRead).toBeDefined();
+  expect(store.getState().save.active).toBe(snapshot);
+  live.finish(); await flushAction();
+  expect(live.phases.at(-1)!.kind).toBe('settled');
+  expect(done).toBe(false);
+  releaseRead(null);
+  const result = await action;
+  expect(result).toMatchObject({ changed: true, won: false, animation: null });
+  expect(store.getState().save.active).toEqual(expected.snapshot());
+  expect(api.syncProfile).not.toHaveBeenCalled();
+});
+it('runs winning animation while server confirmation is pending and never grants rewards early', async () => {
+  ready(); await store.getState().startLevel(1);
+  const { BoardEngine } = require('../../game/BoardEngine');
+  const snapshot = store.getState().save.active!;
+  snapshot.moves = 0; snapshot.objectiveProgress.main = 17; snapshot.swordQi = 60;
+  for (let x = 0; x < 7; x++) snapshot.tiles[x] = { kind: 0, chargeTier: 0, locked: false };
+  const expected = new BoardEngine(snapshot.level, snapshot);
+  expected.trySkill('nhat-kiem', [{ x: 0, y: 0 }]);
+  const live = livePresenter(expected.animation.steps.length);
+  let confirm!: (value: unknown) => void;
+  (api.syncProfile as jest.Mock).mockImplementationOnce(() => new Promise(resolve => { confirm = resolve; }));
+  const action = store.getState().castSkill('nhat-kiem', [{ x: 0, y: 0 }], live.presenter);
+  let done = false; void action.then(() => { done = true; });
+  await flushAction();
+  expect(api.syncProfile).toHaveBeenCalledTimes(1);
+  expect(live.phases.at(-1)!.kind).toBe('step');
+  expect(store.getState().save.profile.coins).toBe(0);
+  expect(store.getState().save.lastWin).toBeNull();
+  live.finish(); await flushAction();
+  expect(live.phases.at(-1)!.kind).toBe('settled');
+  expect(done).toBe(false);
+  const operation = store.getState().save.pending!.operation;
+  const canonical = domain.applyOperation(domain.emptyProfile(), operation).profile;
+  confirm({ session: guest, response: { profile: canonical, acknowledged: [operation.id], rejected: [],
+    rewards: [{ id: operation.id, expGained: 30, coinsGained: 100, bestStars: 0, realmBefore: 0, realmAfter: 0 }] } });
+  const result = await action;
+  expect(result).toMatchObject({ won: true, animation: null, summary: { coinsGained: 100 } });
+  expect(store.getState().save.pending).toBeNull();
 });
 it('retries a timed-out committed result with the same run ID without local rewards', async () => {
   ready();

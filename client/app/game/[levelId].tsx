@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BackHandler, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useReducedMotion } from 'react-native-reanimated';
-import { Board, boardClearDurationMs, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_SWAP_MS, BOARD_REJECT_MS, type BoardVisualEffect } from '../../src/components/Board';
+import { Board, boardClearDurationMs, BOARD_CLEAR_MS, type BoardVisualEffect } from '../../src/components/Board';
+import { createBoardPresenter } from '../../src/components/boardPresenter';
+import { BoardActionCancelled } from '../../src/game/boardAction';
 import { GameplayDock, GameplayHeader, GameplayInfo } from '../../src/components/GameplayChrome';
 import { GameplayResultPopup, type GameplayResult } from '../../src/components/GameplayResultPopup';
 import { GameplayLeaveDialog } from '../../src/components/GameplayLeaveDialog';
@@ -12,7 +14,7 @@ import { BoardEngine } from '../../src/game/BoardEngine';
 import { skillTarget } from '../../src/game/skillTargets';
 import { getLevel } from '../../src/game/levels';
 import { CONTENT, LEVEL_COUNT, SKILLS, realmForExp, type SkillId } from '../../src/game/domain';
-import { GoalKind, TileKind, type BoardSnapshot, type CellPosition } from '../../src/game/types';
+import { GoalKind, TileKind, type BoardActionPresenter, type BoardSnapshot, type CellPosition } from '../../src/game/types';
 import { useGameStore, type BoardActionResult } from '../../src/state/gameStore';
 import { colors } from '../../src/theme';
 export default function GameScreen() {
@@ -45,6 +47,13 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const resultRef = useRef<GameplayResult | null>(null), resultReady = useRef(false);
     const busyRef = useRef(false), alive = useRef(true), effectId = useRef(0);
     const reduceMotion = useReducedMotion();
+    const activeAction = useRef<{ controller: AbortController; playback: ReturnType<typeof createBoardPresenter> } | null>(null);
+    const onMotionStarted = useCallback((runId: string, id: number) => activeAction.current?.playback.onMotionStarted(runId, id), []);
+    const onMotionFinished = useCallback((runId: string, id: number) => activeAction.current?.playback.onMotionFinished(runId, id), []);
+    useEffect(() => {
+        if (!store.foreground) activeAction.current?.controller.abort();
+    }, [store.foreground]);
+    useEffect(() => { activeAction.current?.playback.setReduceMotion(reduceMotion); }, [reduceMotion]);
     const engine = useMemo(() => board && level ? new BoardEngine(level, board) : null, [board, level]);
     const openResult = useCallback((next: GameplayResult) => {
         if (resultRef.current?.runId === next.runId) return;
@@ -57,7 +66,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
         setLeave(false);
         setResult(next);
     }, []);
-    useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+    useEffect(() => { alive.current = true; return () => { alive.current = false; activeAction.current?.controller.abort(); }; }, []);
     useEffect(() => {
         if (busyRef.current || !persisted || !level) return;
         setBoard(persisted);
@@ -112,62 +121,22 @@ function GameplaySession({ levelId }: { levelId: number }) {
             board.tiles.forEach((t, i) => { if (t && t.kind === board.tiles[p.y * level.board.width + p.x]?.kind)
                 preview.push(i); });
     }
-    const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
-    const emit = (value: Omit<Extract<BoardVisualEffect, {
-        kind: 'clear';
-    }>, 'id'>) => setEffect({ ...value, id: ++effectId.current });
-    const play = async (result: BoardActionResult) => {
+    // Support callers that still return a collected animation. Live store actions
+    // use the presenter directly and return animation: null.
+    const play = async (result: BoardActionResult, presenter: BoardActionPresenter) => {
         const animation = result.animation;
-        if (!animation)
-            return;
-        if (reduceMotion) {
-            setBoard(animation.finalBoard);
-            return;
-        }
-        if (animation.swap) {
-            const { x1, y1, x2, y2 } = animation.swap;
-            setEffect({ id: ++effectId.current, kind: 'swap', first: { x: x1, y: y1 }, second: { x: x2, y: y2 } });
-            await wait(BOARD_SWAP_MS);
-            if (!alive.current)
-                return;
-        }
-        setBoard(animation.swappedBoard);
-        setEffect(null);
-        for (const step of animation.steps) {
-            const cleared = new Set<number>();
-            let visual = step.before;
-            setBoard(visual);
-            // Each trace is played independently; overlapping blasts never run together.
-            for (const trace of step.effects) {
-                trace.cells.forEach(i => { if (step.cleared.includes(i))
-                    cleared.add(i); });
-                if (trace.source !== undefined && step.cleared.includes(trace.source))
-                    cleared.add(trace.source);
-                visual = { ...visual, swordQi: Math.min(content.qiCap, visual.swordQi + trace.qi), objectiveProgress: trace.objectiveProgressAfter ?? visual.objectiveProgress, condensed: visual.condensed || trace.kind === 'spirit' && trace.source !== undefined && step.before.tiles[trace.source]?.chargeTier === 5 };
-                setBoard(visual);
-                emit({ kind: 'clear', cleared: [...cleared], changed: step.changed, effects: [trace] });
-                await wait(boardClearDurationMs(trace.kind));
-                if (!alive.current)
-                    return;
-            }
-            setBoard(step.after);
-            if (!step.falls.length) {
-                setEffect(null);
-                continue;
-            }
-            setEffect({ id: ++effectId.current, kind: 'fall', falls: step.falls });
-            await wait(BOARD_FALL_MS);
-            if (!alive.current)
-                return;
-            // Keep the completed fall in place while the new board settles.
-            await wait(BOARD_CHAIN_DELAY_MS);
-            if (!alive.current)
-                return;
-        }
-        setBoard(animation.finalBoard);
-        setEffect(null);
+        if (!animation) return;
+        if (reduceMotion) { setBoard(animation.finalBoard); return; }
+        const show = async (phase: Parameters<BoardActionPresenter['present']>[0]) => {
+            const playback = presenter.present(phase);
+            await playback.started;
+            await playback.finished;
+        };
+        await show({ kind: 'start', action: animation });
+        for (const step of animation.steps) await show({ kind: 'step', step });
+        await show({ kind: 'settled', board: animation.finalBoard });
     };
-    const perform = async (work: () => Promise<BoardActionResult>, rejectedSwap?: [
+    const perform = async (work: (presenter: BoardActionPresenter) => Promise<BoardActionResult>, rejectedSwap?: [
         CellPosition,
         CellPosition
     ]) => {
@@ -176,14 +145,23 @@ function GameplaySession({ levelId }: { levelId: number }) {
         busyRef.current = true;
         setBusy(true);
         setSelected(null);
+        const controller = new AbortController();
+        const playback = createBoardPresenter({
+            runId: board.runId, signal: controller.signal, reduceMotion, qiCap: content.qiCap,
+            nextId: () => ++effectId.current, setBoard, setEffect,
+            onStart: () => { setTargetSkill(null); setTargets([]); },
+        });
+        const action = { controller, playback };
+        activeAction.current = action;
+        let completed = false;
         try {
-            const result = await work();
+            const result = await work(playback.presenter);
+            if (controller.signal.aborted) throw new BoardActionCancelled();
             if (!alive.current)
                 return;
             if (!result.changed) {
                 if (rejectedSwap && !reduceMotion) {
-                    setEffect({ id: ++effectId.current, kind: 'reject', first: rejectedSwap[0], second: rejectedSwap[1] });
-                    await wait(BOARD_REJECT_MS);
+                    await playback.rejectSwap(rejectedSwap[0], rejectedSwap[1]);
                 }
                 else
                     store.setNotice('Chọn mục tiêu hợp lệ cho kiếm thuật.');
@@ -191,19 +169,25 @@ function GameplaySession({ levelId }: { levelId: number }) {
             }
             setTargetSkill(null);
             setTargets([]);
-            await play(result);
+            await play(result, playback.presenter);
+            completed = true;
             if (alive.current && result.won && result.summary)
                 openResult({ kind: 'won', runId: result.summary.runId, summary: result.summary });
             else if (alive.current && result.lost)
                 openResult({ kind: 'lost', runId: board.runId, levelId });
         }
-        catch {
-            if (alive.current)
+        catch (error) {
+            if (alive.current && !(error instanceof BoardActionCancelled))
                 store.setNotice('Không thể hoàn tất thao tác. Vui lòng thử lại.');
         }
         finally {
+            controller.abort();
+            playback.dispose();
+            if (activeAction.current === action) activeAction.current = null;
             busyRef.current = false;
             if (alive.current) {
+                const saved = useGameStore.getState().save.active;
+                if (!completed && saved?.runId === board.runId) setBoard(saved);
                 setBusy(false);
                 setEffect(null);
             }
@@ -212,7 +196,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const swap = (x1: number, y1: number, x2: number, y2: number) => {
         if (targetSkill || Math.abs(x1 - x2) + Math.abs(y1 - y2) !== 1)
             return;
-        void perform(() => store.swap(x1, y1, x2, y2), [{ x: x1, y: y1 }, { x: x2, y: y2 }]);
+        void perform(presenter => store.swap(x1, y1, x2, y2, presenter), [{ x: x1, y: y1 }, { x: x2, y: y2 }]);
     };
     const tap = (x: number, y: number) => {
         if (busyRef.current || resultRef.current || locked)
@@ -275,13 +259,13 @@ function GameplaySession({ levelId }: { levelId: number }) {
                 duration={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects.map(item => item.kind)) : BOARD_CLEAR_MS} />
             <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setHeight(event.nativeEvent.layout.height)}>
               <View style={{ width: boardWidth, height: boardHeight }}>
-                <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} showTargetingHint={false} locked={busy || overlayOpen || locked} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} />
+                <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} showTargetingHint={false} locked={busy || overlayOpen || locked} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} onMotionStarted={onMotionStarted} onMotionFinished={onMotionFinished} />
               </View>
             </View>
             <GameplayDock board={board} skillSlots={realmForExp(store.save.profile.totalExp).skillSlots} available={available} cost={id => engine.cost(id)} targetSkill={targetSkill} targetCount={required} canCast={targets.length === required} busy={busy || Boolean(result) || locked} compact={compact}
               onSkill={id => { if (!busyRef.current && !resultRef.current) { setTargetSkill(id); setTargets([]); setSelected(null); } }}
               onCancel={() => { if (!busyRef.current && !resultRef.current) { setTargetSkill(null); setTargets([]); } }}
-              onCast={() => { if (targetSkill) void perform(() => store.castSkill(targetSkill, targets)); }} />
+              onCast={() => { if (targetSkill) void perform(presenter => store.castSkill(targetSkill, targets, presenter)); }} />
           </View>
           {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} /> : null}
           <View pointerEvents="box-none" style={styles.noticeLayer}><Notice message={store.notice} onDismiss={() => store.setNotice('')} /></View>

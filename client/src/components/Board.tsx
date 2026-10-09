@@ -73,7 +73,7 @@ export function SpiritOrb({ size = 34 }: { size?: number }) {
   </Canvas>;
 }
 
-export function Board({ snapshot, selected, targets = [], preview = [], targetingHint, showTargetingHint = true, onCellPress, onSwipe, locked = false, visualEffect = null, reduceMotion = false }: {
+export function Board({ snapshot, selected, targets = [], preview = [], targetingHint, showTargetingHint = true, onCellPress, onSwipe, locked = false, visualEffect = null, reduceMotion = false, onMotionStarted, onMotionFinished }: {
   snapshot: BoardSnapshot;
   selected: CellPosition | null;
   targets?: CellPosition[];
@@ -85,6 +85,8 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   locked?: boolean;
   visualEffect?: BoardVisualEffect | null;
   reduceMotion?: boolean;
+  onMotionStarted?: (runId: string, phaseId: number) => void;
+  onMotionFinished?: (runId: string, phaseId: number) => void;
 }) {
   const geometry = snapshot.level.board;
   const content = getContentVersion(snapshot.contentVersion);
@@ -96,6 +98,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const images = [sword, fire, lightning, orb, rock];
   const previousEffect = useRef<{ runId: string; effect: BoardVisualEffect | null; before: BoardVisualEffect | null } | null>(null);
   const id = visualEffect?.id ?? 0;
+  const runId = snapshot.runId;
   const kind = reduceMotion ? undefined : visualEffect?.kind;
   const prior = previousEffect.current?.runId === snapshot.runId ? previousEffect.current : null;
   const before = prior?.effect?.id === id ? prior.before : prior?.effect ?? null;
@@ -133,15 +136,19 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
       pulse.value = 1;
       flash.value = 0;
       if (!kind) return;
+      const completed = (finished?: boolean) => {
+        'worklet';
+        if (finished && onMotionFinished) runOnJS(onMotionFinished)(runId, id);
+      };
       if (kind === 'reject') {
         progress.value = withSequence(
           withTiming(.38, { duration: BOARD_REJECT_OUT_MS }),
-          withTiming(0, { duration: BOARD_REJECT_BACK_MS }),
+          withTiming(0, { duration: BOARD_REJECT_BACK_MS }, completed),
         );
       } else if (kind === 'swap' || kind === 'fall') {
-        progress.value = withTiming(1, { duration: kind === 'swap' ? BOARD_SWAP_MS : BOARD_FALL_MS });
+        progress.value = withTiming(1, { duration: kind === 'swap' ? BOARD_SWAP_MS : BOARD_FALL_MS }, completed);
       } else if (kind === 'clear') {
-        progress.value = withTiming(1, { duration: clearDurationMs });
+        progress.value = withTiming(1, { duration: clearDurationMs }, completed);
         pulse.value = withSequence(
           withTiming(1.12, { duration: BOARD_PULSE_IN_MS }),
           withTiming(1, { duration: clearDurationMs - BOARD_PULSE_IN_MS }),
@@ -151,12 +158,13 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
           withTiming(0, { duration: clearDurationMs - BOARD_FLASH_IN_MS }),
         );
       }
+      if (onMotionStarted) runOnJS(onMotionStarted)(runId, id);
     })();
     return () => {
       const completedFrame = frameRef.current;
       runOnUI(() => { finishBoardMotionSession(motion, completedFrame); })();
     };
-  }, [motion, clearDurationMs]);
+  }, [motion, clearDurationMs, onMotionStarted, onMotionFinished]);
 
   const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onEnd(event => {
     const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side, geometry);

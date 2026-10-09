@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { BoardEngine, newId } from '../game/BoardEngine';
+import { BoardActionCancelled, runBoardAction } from '../game/boardAction';
 import { getLevel } from '../game/levels';
 import { CONTENT, getContentVersion, gradeStars, highestUnlocked, installContent, isCompleted, normalizeProfile, type Loadout, type PlayerOperation, type SkillId } from '../game/domain';
 import { clearSave, emptySave, loadSave, persistSave } from '../game/save';
-import type { BoardActionAnimation, CellPosition, SaveData, Stars, WinSummary } from '../game/types';
+import type { BoardActionAnimation, BoardActionPresenter, BoardActionStart, CellPosition, SaveData, Stars, WinSummary } from '../game/types';
 import { checkHealth, createGuest, fetchBootstrap, fetchContent, fetchProfile, GameApiError, isApiConfigured, isConnectionError, setConnectionErrorHandler, loginAccount, registerAccount, syncProfile, createAdIntent, checkAdIntent, deviceSession, logoutAccount } from '../services/api';
 import { initializeRewardedAds, showRewardedForIntent } from '../services/ads';
 import { resetDeviceIdentity } from '../services/device';
@@ -36,8 +37,8 @@ interface GameState {
   checkConnection: () => Promise<void>;
   setForeground: (active: boolean) => void;
   startLevel: (id: number, restart?: boolean) => Promise<boolean>;
-  swap: (x1: number, y1: number, x2: number, y2: number) => Promise<BoardActionResult>;
-  castSkill: (id: SkillId, targets: CellPosition[]) => Promise<BoardActionResult>;
+  swap: (x1: number, y1: number, x2: number, y2: number, presenter?: BoardActionPresenter) => Promise<BoardActionResult>;
+  castSkill: (id: SkillId, targets: CellPosition[], presenter?: BoardActionPresenter) => Promise<BoardActionResult>;
   purchase: (category: 'skill' | 'sword', id: string) => Promise<boolean>;
   equip: (loadout: Loadout) => Promise<boolean>;
   requestExtraMoves: () => Promise<boolean>;
@@ -268,6 +269,16 @@ async function record(engine: BoardEngine, previous: SaveData): Promise<BoardAct
     animation: engine.animation
   };
 }
+function presentAndRecord(engine: BoardEngine, start: BoardActionStart, previous: SaveData, presenter: BoardActionPresenter) {
+  const epoch = getSessionGeneration();
+  return runBoardAction(engine, start, presenter, () => {
+    const state = useGameStore.getState();
+    if (presenter.signal.aborted || !state.foreground || epoch !== getSessionGeneration() ||
+        state.save.ownerId !== previous.ownerId || state.save.active?.runId !== previous.active?.runId)
+      throw new BoardActionCancelled();
+    return record(engine, previous);
+  });
+}
 async function hydrate() {
   const epoch = lifecycle;
   const bootstrap = await fetchBootstrap();
@@ -411,27 +422,43 @@ export const useGameStore = create<GameState>((set, get) => ({
       return false;
     }
   }),
-  swap: (x1, y1, x2, y2) => serialize(async () => {
+  swap: (x1, y1, x2, y2, presenter) => serialize(async () => {
     const current = get().save;
     if (!available() || !current.active) return emptyResult();
     try {
+      if (presenter?.signal.aborted) throw new BoardActionCancelled();
       const engine = new BoardEngine(current.active.level, current.active);
+      if (presenter) {
+        const start = engine.beginSwap(x1, y1, x2, y2);
+        if (!start) return emptyResult(current.active.levelId);
+        return await presentAndRecord(engine, start, current, presenter);
+      }
       if (!engine.trySwap(x1, y1, x2, y2)) return emptyResult(current.active.levelId);
       return await record(engine, current);
     } catch (error) {
+      if (error instanceof BoardActionCancelled) throw error;
       await failure(error);
+      if (presenter) throw error;
       return emptyResult(current.active.levelId);
     }
   }),
-  castSkill: (id, targets) => serialize(async () => {
+  castSkill: (id, targets, presenter) => serialize(async () => {
     const current = get().save;
     if (!available() || !current.active) return emptyResult();
     try {
+      if (presenter?.signal.aborted) throw new BoardActionCancelled();
       const engine = new BoardEngine(current.active.level, current.active);
+      if (presenter) {
+        const start = engine.beginSkill(id, targets);
+        if (!start) return emptyResult(current.active.levelId);
+        return await presentAndRecord(engine, start, current, presenter);
+      }
       if (!engine.trySkill(id, targets)) return emptyResult(current.active.levelId);
       return await record(engine, current);
     } catch (error) {
+      if (error instanceof BoardActionCancelled) throw error;
       await failure(error);
+      if (presenter) throw error;
       return emptyResult(current.active.levelId);
     }
   }),

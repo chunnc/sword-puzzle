@@ -18,6 +18,45 @@ function matching(size: number, kind: TileKind, tier: 0 | 4 | 5 = 0) {
     return b;
 }
 describe('board rules v2', () => {
+    it('resolves incrementally with identical waves and RNG across all stages', () => {
+        for (let id = 1; id <= 40; id++) {
+            const sync = new BoardEngine(getLevel(id));
+            const live = new BoardEngine(getLevel(id), sync.snapshot());
+            for (let turn = 0; turn < 5 && !sync.won && !sync.lost; turn++) {
+                const move = sync.legalMoves()[0];
+                if (!move) break;
+                sync.trySwap(...move);
+                const start = live.beginSwap(...move)!;
+                expect(start.swappedBoard).toEqual(sync.animation!.swappedBoard);
+                expect(live.snapshot()).toEqual(start.swappedBoard);
+                expect(live.animation).toBeNull();
+                const steps = [];
+                let step;
+                while ((step = live.nextResolutionStep())) steps.push(step);
+                expect(steps).toEqual(sync.animation!.steps);
+                expect(live.snapshot()).toEqual(sync.snapshot());
+                expect(live.nextResolutionStep()).toBeNull();
+            }
+        }
+    });
+    it('begins skills without resolving their effects and keeps rejected actions unchanged', () => {
+        const snapshot = fixture();
+        const sync = new BoardEngine(snapshot.level, snapshot);
+        sync.trySkill('nhat-kiem', [{ x: 0, y: 3 }]);
+        const live = new BoardEngine(snapshot.level, snapshot);
+        const before = live.snapshot();
+        expect(live.beginSwap(0, 0, 2, 0)).toBeNull();
+        expect(live.snapshot()).toEqual(before);
+        const start = live.beginSkill('nhat-kiem', [{ x: 0, y: 3 }])!;
+        expect(live.snapshot()).toEqual(start.swappedBoard);
+        expect(live.score).toBe(before.score);
+        expect(() => live.beginSkill('nhat-kiem', [{ x: 0, y: 3 }])).toThrow('BOARD_ACTION_IN_PROGRESS');
+        const steps = [];
+        let step;
+        while ((step = live.nextResolutionStep())) steps.push(step);
+        expect(steps).toEqual(sync.animation!.steps);
+        expect(live.snapshot()).toEqual(sync.snapshot());
+    });
     it('generates all four types with a legal move in all 40 stages', () => { for (let id = 1; id <= 40; id++) {
         const b = new BoardEngine(getLevel(id));
         expect(new Set(b.snapshot().tiles.filter(t => t!.kind !== TileKind.Rock).map(t => t!.kind)).size).toBe(4);

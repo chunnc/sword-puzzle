@@ -79,6 +79,19 @@ export interface BoardActionAnimation {
     steps: BoardResolutionStep[];
     finalBoard: BoardSnapshot;
 }
+export type BoardActionStart = Pick<BoardActionAnimation, 'kind' | 'swap' | 'skillId' | 'swappedBoard'>;
+export type BoardActionPhase =
+    | { kind: 'start'; action: BoardActionStart }
+    | { kind: 'step'; step: BoardResolutionStep }
+    | { kind: 'settled'; board: BoardSnapshot };
+export interface BoardPhasePlayback {
+    started: Promise<void>;
+    finished: Promise<void>;
+}
+export interface BoardActionPresenter {
+    signal: AbortSignal;
+    present: (phase: BoardActionPhase) => BoardPhasePlayback;
+}
 export type LevelStar = LevelResult;
 export interface WinSummary {
     runId: string;
