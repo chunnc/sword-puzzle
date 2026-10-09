@@ -1,0 +1,24 @@
+{
+  "status": "passed",
+  "frameCount": 24,
+  "frameSize": [
+    256,
+    256
+  ],
+  "sheetSize": [
+    1560,
+    1040
+  ],
+  "durationMs": 1000,
+  "loop": true,
+  "opaque_interior_all_frames": true,
+  "source_canvas_preserved": true,
+  "method": "local-exterior-blue-chroma",
+  "thresholds": [
+    20,
+    100
+  ],
+  "source_url": "https://v3b.fal.media/files/b/0aadab61/yzb1aKTgqxf69IY2osGw6_TknT6EmT.mp4",
+  "source_video_sha256": "9f13d3855093513c61f97768956ceca47a7d3f80789a140cb855964306160686",
+  "paid_requests": 0
+}

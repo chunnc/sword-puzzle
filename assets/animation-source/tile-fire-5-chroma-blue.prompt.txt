@@ -1,0 +1,7 @@
+Created with the built-in image_gen tool.
+Reference: assets/ui-source/tiles-v2/tile-fire-5.png
+
+Replace only the transparent exterior of the complete fire tier 5 tile with a flat opaque chroma blue background (#0000FF). Preserve the complete tile, its red interior, gold border, rounded corners, five-tipped flame emblem, framing and padding. No blue inside the tile, exterior shadows, gradients, text or new objects.
+
+Additional image-to-video instruction:
+Keep the exterior chroma blue background perfectly uniform and static throughout the video. Keep the red tile background and gold border static. Animate only the flame emblem inside the tile in a continuous seamless idle loop.

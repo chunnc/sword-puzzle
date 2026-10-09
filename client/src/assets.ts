@@ -103,6 +103,7 @@ export const ART = {
   tileFire: require('../app-assets/ui/tile_fire.webp') as number,
   tileFire4: require('../app-assets/ui/tile_fire_4.webp') as number,
   tileFire5: require('../app-assets/ui/tile_fire_5.webp') as number,
+  tileFire5Idle: require('../app-assets/ui/tile_fire_5_idle.png') as number,
   tileHerb: require('../app-assets/ui/tile_herb.webp') as ImageSourcePropType,
   tileLightning: require('../app-assets/ui/tile_lightning.webp') as number,
   tileLightning4: require('../app-assets/ui/tile_lightning_4.webp') as number,

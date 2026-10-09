@@ -274,6 +274,28 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(preview.info["loop"], 1)
         self.assertEqual(len(api.calls), 12)
 
+    def test_loop_export_is_versioned_and_preserves_non_loop_export(self):
+        api = self.complete()
+        original = pipeline.pack(self.job)
+        original_metadata = (original / "animation.json").read_bytes()
+        original_preview = (original / "preview.webp").read_bytes()
+        with mock.patch.object(pipeline.FalAPI, "submit", side_effect=AssertionError("Pack must be local")):
+            self.assertEqual(pipeline.main(["--root", str(self.root), "pack", "test-fire", "--loop"]), 0)
+        out = self.job.path / pipeline.Job(self.job.path).data["latest_export"]
+        self.assertNotEqual(out, original)
+        metadata = json.loads((out / "animation.json").read_text())
+        self.assertTrue(metadata["loop"])
+        self.assertEqual(sum(frame["durationMs"] for frame in metadata["frames"]), metadata["durationMs"])
+        with Image.open(out / "preview.webp") as preview:
+            self.assertEqual(preview.info["loop"], 0)
+            self.assertEqual(preview.n_frames, 12)
+        self.assertEqual((original / "animation.json").read_bytes(), original_metadata)
+        self.assertEqual((original / "preview.webp").read_bytes(), original_preview)
+        self.assertEqual(pipeline.pack(self.job), original)
+        with Image.open(original / "preview.webp") as preview:
+            self.assertEqual(preview.info["loop"], 1)
+        self.assertEqual(len(api.calls), 12)
+
     def test_shared_crop_keeps_motion_and_fixed_pivot(self):
         self.complete()
         for index, row in enumerate(self.job.data["frames"]):

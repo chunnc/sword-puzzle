@@ -1,0 +1,549 @@
+{
+  "version": 1,
+  "id": "tile-fire-5-idle-20261009",
+  "description": "Tile Lửa 5 lặp liên tục, giữ nền đỏ và viền vàng, xóa chroma xanh bên ngoài",
+  "kind": "fire",
+  "created_at": "2026-10-09T09:24:13.199007+00:00",
+  "state": "ready",
+  "config": {
+    "video_model": "xai/grok-imagine-video/v1.5/lite/image-to-video",
+    "resolution": "480p",
+    "video_duration": 1,
+    "matte_model": "fal-ai/feynobg",
+    "matte_seed": 42,
+    "frame_count": 24,
+    "size": 256,
+    "columns": 6,
+    "padding": 2,
+    "playback_ms": 1000
+  },
+  "video": {
+    "state": "imported",
+    "output": "video/imported.mp4",
+    "output_sha256": "9f13d3855093513c61f97768956ceca47a7d3f80789a140cb855964306160686",
+    "previous_generation": {},
+    "probe": {
+      "duration": 1.041667,
+      "fps": 24.0,
+      "width": 544,
+      "height": 544
+    }
+  },
+  "frames": [
+    {
+      "index": 0,
+      "timestamp": 0.0,
+      "raw": "frames/0000.png",
+      "raw_sha256": "c4ddfb9536da79124578b92f1b21c42c477f9d26f404c4ee60c216ebf745c7c1",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:25:53.213529+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffb-c17c-7553-96ff-e5a8e5fcc431",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-c17c-7553-96ff-e5a8e5fcc431/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-c17c-7553-96ff-e5a8e5fcc431",
+      "output": "cutouts/0000-attempt-1.png",
+      "output_sha256": "b855ebfcf39dcd5630b59c6a647e90f5d2d1425f410816cda7a7875316cae51b",
+      "completed_at": "2026-10-09T09:26:01.651590+00:00"
+    },
+    {
+      "index": 1,
+      "timestamp": 0.041666666666666664,
+      "raw": "frames/0001.png",
+      "raw_sha256": "1ffa4abd0ccf3d5a6fdb7b1759099e1dfe00ec20036584e02c0214ae7c3ab675",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:25:53.215217+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffb-c198-7cb0-947e-b87058e3760a",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-c198-7cb0-947e-b87058e3760a/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-c198-7cb0-947e-b87058e3760a",
+      "output": "cutouts/0001-attempt-1.png",
+      "output_sha256": "ba924d093c94c084fb6c1590c46789283ab43fcd41c71a0e6f39a611a79b9581",
+      "completed_at": "2026-10-09T09:26:01.656121+00:00"
+    },
+    {
+      "index": 2,
+      "timestamp": 0.08333333333333333,
+      "raw": "frames/0002.png",
+      "raw_sha256": "9f3f0c5cf9718f96189599d51e7408d1640f48b056f133fba2a2ec55c6782053",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:25:53.218363+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffb-c184-76d1-91bf-8b25fd13bc1b",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-c184-76d1-91bf-8b25fd13bc1b/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-c184-76d1-91bf-8b25fd13bc1b",
+      "output": "cutouts/0002-attempt-1.png",
+      "output_sha256": "b4fe31b4ae30c7f66ae60bdeb6166894a713c60309fc0cc10ba8e6f2b4bf395d",
+      "completed_at": "2026-10-09T09:26:02.018250+00:00"
+    },
+    {
+      "index": 3,
+      "timestamp": 0.125,
+      "raw": "frames/0003.png",
+      "raw_sha256": "fe8daeb3abd757a3ffde34a2d071f6920e9dcacf70263945ac6bdf82ed254c84",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:25:53.221052+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffb-c177-79f0-8e89-052f156dd369",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-c177-79f0-8e89-052f156dd369/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-c177-79f0-8e89-052f156dd369",
+      "output": "cutouts/0003-attempt-1.png",
+      "output_sha256": "16114c4606379da567b28fe36626cdaa5616c45bb9d5b311e2d8606a50b4bf88",
+      "completed_at": "2026-10-09T09:26:01.657051+00:00"
+    },
+    {
+      "index": 4,
+      "timestamp": 0.16666666666666666,
+      "raw": "frames/0004.png",
+      "raw_sha256": "67e98e1206022a1e3e6a2f9cc1bf645460ff8d57b6c38962c3c79817908dbea3",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:01.652561+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffb-e296-7201-8dc0-d283dc9b7d87",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-e296-7201-8dc0-d283dc9b7d87/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-e296-7201-8dc0-d283dc9b7d87",
+      "output": "cutouts/0004-attempt-1.png",
+      "output_sha256": "0b227495b0dc12607a1e557cc71c008e04b63957e82eb8a777639cd6846030c7",
+      "completed_at": "2026-10-09T09:26:10.509808+00:00"
+    },
+    {
+      "index": 5,
+      "timestamp": 0.20833333333333334,
+      "raw": "frames/0005.png",
+      "raw_sha256": "f070ac1681c6886323d24b2b7b21902bbb0d7e284cddab146d86b58ef1701d01",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:01.657518+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffb-e297-7b92-82bf-3e7c8591208a",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-e297-7b92-82bf-3e7c8591208a/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-e297-7b92-82bf-3e7c8591208a",
+      "output": "cutouts/0005-attempt-1.png",
+      "output_sha256": "e5f4a7c49c9861c7a3a2e505971eb60997e88992bfa734e38958e6eb2c38f85d",
+      "completed_at": "2026-10-09T09:26:10.469162+00:00"
+    },
+    {
+      "index": 6,
+      "timestamp": 0.25,
+      "raw": "frames/0006.png",
+      "raw_sha256": "16706ea041f4f0a924c179f4777cf50435e4644ca59ea7424c2b56bb474edba0",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:25:19.122561+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffb-3d83-7b00-9e4f-1814eda80b4f",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-3d83-7b00-9e4f-1814eda80b4f/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-3d83-7b00-9e4f-1814eda80b4f",
+      "output": "cutouts/0006-attempt-1.png",
+      "output_sha256": "94aa51f99724b4c8487f1905852b453cfbfc92a54904cbfeb42f657700c2a6df",
+      "completed_at": "2026-10-09T09:25:29.110960+00:00"
+    },
+    {
+      "index": 7,
+      "timestamp": 0.2916666666666667,
+      "raw": "frames/0007.png",
+      "raw_sha256": "a0baa23da825655fd1d62981cb555d665dab7fc88c3842c979f8f1c6f35e0834",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:01.658873+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffb-e269-7b12-ac18-d4fd0227d37f",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-e269-7b12-ac18-d4fd0227d37f/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-e269-7b12-ac18-d4fd0227d37f",
+      "output": "cutouts/0007-attempt-1.png",
+      "output_sha256": "e8efd0290ae0f14ce062d269e1464adf865a5ea1bc19d316b3fedc4ca38d9119",
+      "completed_at": "2026-10-09T09:26:07.539576+00:00"
+    },
+    {
+      "index": 8,
+      "timestamp": 0.3333333333333333,
+      "raw": "frames/0008.png",
+      "raw_sha256": "2884eb38da8c4ce833146c17cde22589760562a1eb819003dbe4b2de0e1ee257",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:02.019660+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffb-e41b-76c3-9c9b-13140fa40ddc",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-e41b-76c3-9c9b-13140fa40ddc/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-e41b-76c3-9c9b-13140fa40ddc",
+      "output": "cutouts/0008-attempt-1.png",
+      "output_sha256": "2148b6cc09c8221f735c1c0c03c9b6d63763579013b2c4faed7933ea4b8d9ace",
+      "completed_at": "2026-10-09T09:26:10.514985+00:00"
+    },
+    {
+      "index": 9,
+      "timestamp": 0.375,
+      "raw": "frames/0009.png",
+      "raw_sha256": "d7a1e0dc423d012feb32866bffce655dad1c53a674b137b1a5ab59c331d8a564",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:07.541366+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffb-f96c-7b61-bb15-061af9019ed5",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-f96c-7b61-bb15-061af9019ed5/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-f96c-7b61-bb15-061af9019ed5",
+      "output": "cutouts/0009-attempt-1.png",
+      "output_sha256": "077eaba77129c756e7aeab4d63af0de49d687ad5b7edb18d86094ae9618657b1",
+      "completed_at": "2026-10-09T09:26:19.419552+00:00"
+    },
+    {
+      "index": 10,
+      "timestamp": 0.4166666666666667,
+      "raw": "frames/0010.png",
+      "raw_sha256": "c633a27e0a95ea9476829ad5649d411b70758c987792212188e6bdae313460f8",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:10.470457+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffc-04f7-7172-9405-4afeadab3ea8",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-04f7-7172-9405-4afeadab3ea8/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-04f7-7172-9405-4afeadab3ea8",
+      "output": "cutouts/0010-attempt-1.png",
+      "output_sha256": "247ace5709bc62eb0a48c568f9331e487885e92cf6ae6c4b80d60870f6eae0fa",
+      "completed_at": "2026-10-09T09:26:19.451182+00:00"
+    },
+    {
+      "index": 11,
+      "timestamp": 0.4583333333333333,
+      "raw": "frames/0011.png",
+      "raw_sha256": "c9bbee00597f0cc552d588d58b3c9c1cf357a098d74cb3fd66adf991c022b15e",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:10.510792+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffc-0520-78d0-a735-8d3d4a0e6548",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-0520-78d0-a735-8d3d4a0e6548/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-0520-78d0-a735-8d3d4a0e6548",
+      "output": "cutouts/0011-attempt-1.png",
+      "output_sha256": "2b036532ce37b7f30f71a7bdb9692fce85c8ec6661b381cc09466f607339f3bd",
+      "completed_at": "2026-10-09T09:26:19.469207+00:00"
+    },
+    {
+      "index": 12,
+      "timestamp": 0.5,
+      "raw": "frames/0012.png",
+      "raw_sha256": "f50eba66b4e74634761774375d6f56215382921e98360ad3a6babb5ace5c2dde",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:25:19.124443+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffb-3daa-7380-885f-8917d5b4506d",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-3daa-7380-885f-8917d5b4506d/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-3daa-7380-885f-8917d5b4506d",
+      "output": "cutouts/0012-attempt-1.png",
+      "output_sha256": "1b720aca799b2a5c24dd1028d1ea7ba40b3e4c0b245d4b5a3f2938432dea5eb1",
+      "completed_at": "2026-10-09T09:25:29.109309+00:00"
+    },
+    {
+      "index": 13,
+      "timestamp": 0.5416666666666666,
+      "raw": "frames/0013.png",
+      "raw_sha256": "a3e05f12923904a4a193a3764a4d65b89a48138cff49efa63d1c1d015984ccda",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:10.516032+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffc-0531-7e51-adda-5d2cd9d65717",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-0531-7e51-adda-5d2cd9d65717/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-0531-7e51-adda-5d2cd9d65717",
+      "output": "cutouts/0013-attempt-1.png",
+      "output_sha256": "74a538cca85dcf82d54a828daf966160e2fb1f3a82939403ac7c5d58b99fe447",
+      "completed_at": "2026-10-09T09:26:19.175779+00:00"
+    },
+    {
+      "index": 14,
+      "timestamp": 0.5833333333333334,
+      "raw": "frames/0014.png",
+      "raw_sha256": "b88a3b0ad7e2f3e23e1aec933b9ec6603a1c71b35e058fa5e9dfdba89ed96ab2",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:19.177354+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffc-26ea-73f3-9b0b-a2950721a9f2",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-26ea-73f3-9b0b-a2950721a9f2/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-26ea-73f3-9b0b-a2950721a9f2",
+      "output": "cutouts/0014-attempt-1.png",
+      "output_sha256": "7c246facc664489fba1180e63a84bf9527258f8071accba094787201190ac829",
+      "completed_at": "2026-10-09T09:26:25.231426+00:00"
+    },
+    {
+      "index": 15,
+      "timestamp": 0.625,
+      "raw": "frames/0015.png",
+      "raw_sha256": "9392c4d0d0904c02322a7669a7601292762bc1edd1c063cc929b4f948af24702",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:19.421152+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffc-27c1-7341-90df-6f5b46bcf7a9",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-27c1-7341-90df-6f5b46bcf7a9/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-27c1-7341-90df-6f5b46bcf7a9",
+      "output": "cutouts/0015-attempt-1.png",
+      "output_sha256": "8776e35ccd963a129b9a52d41da5d8643cb3ee4718c313e2478809a07faf34a5",
+      "completed_at": "2026-10-09T09:26:27.884206+00:00"
+    },
+    {
+      "index": 16,
+      "timestamp": 0.6666666666666666,
+      "raw": "frames/0016.png",
+      "raw_sha256": "f98e955b3ac4d67418b5d3682eae0f59d64f0d8f412cca48fc5b2e5025a6bb60",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:19.452424+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffc-27ca-7e50-a7aa-35e8e6c0abd1",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-27ca-7e50-a7aa-35e8e6c0abd1/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-27ca-7e50-a7aa-35e8e6c0abd1",
+      "output": "cutouts/0016-attempt-1.png",
+      "output_sha256": "f564101d0ba1ab14087e64dd308dc3703be8c53d528c343bc3cb91c416ca5ab6",
+      "completed_at": "2026-10-09T09:26:28.123109+00:00"
+    },
+    {
+      "index": 17,
+      "timestamp": 0.7083333333333334,
+      "raw": "frames/0017.png",
+      "raw_sha256": "12c607ae5086b6eff64790b91b7b633d63072ad85a2d137fac202c9c3c50a674",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:19.470239+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffc-2820-7302-b58f-144d89a291da",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-2820-7302-b58f-144d89a291da/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-2820-7302-b58f-144d89a291da",
+      "output": "cutouts/0017-attempt-1.png",
+      "output_sha256": "7073282dfebf99faf6a384f6c315976911f57a85d15d832c6eda79eb9a73b417",
+      "completed_at": "2026-10-09T09:26:27.935384+00:00"
+    },
+    {
+      "index": 18,
+      "timestamp": 0.75,
+      "raw": "frames/0018.png",
+      "raw_sha256": "6bd0fc9838a9836a8e9fd5c58e8d0e6ca273103a4e2ec0990dcbf07c54048cb6",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:25:19.125428+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffb-3d93-7a33-b7ab-736c3eecd915",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-3d93-7a33-b7ab-736c3eecd915/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffb-3d93-7a33-b7ab-736c3eecd915",
+      "output": "cutouts/0018-attempt-1.png",
+      "output_sha256": "b36055abc445e36b9223dcbcc0415f0f9e0f66a52bcaaf63f315a5ff9baba852",
+      "completed_at": "2026-10-09T09:25:29.164311+00:00"
+    },
+    {
+      "index": 19,
+      "timestamp": 0.7916666666666666,
+      "raw": "frames/0019.png",
+      "raw_sha256": "9468d763daf95cce92f913136e28b97b768c46728b7b1a2d7070e20e75418b61",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:25.232968+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffc-3ead-7e02-a9ec-fa241c0f4fb2",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-3ead-7e02-a9ec-fa241c0f4fb2/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-3ead-7e02-a9ec-fa241c0f4fb2",
+      "output": "cutouts/0019-attempt-1.png",
+      "output_sha256": "dfe3d9902173aeeb9e39d69c7be37569a8f32159a9f603fdb3fcdf41dce0aede",
+      "completed_at": "2026-10-09T09:26:34.148660+00:00"
+    },
+    {
+      "index": 20,
+      "timestamp": 0.8333333333333334,
+      "raw": "frames/0020.png",
+      "raw_sha256": "30af4cbdb357a0aedc6d0e978172a62ebe31be08068cfcac4fab2470779faf8f",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:27.885680+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffc-4926-70a1-b7be-b83edf8d2fce",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-4926-70a1-b7be-b83edf8d2fce/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-4926-70a1-b7be-b83edf8d2fce",
+      "output": "cutouts/0020-attempt-1.png",
+      "output_sha256": "6706e16dfb5cc99b6ddb7e65e478ff0daad815f1b99da425890daaf0cc218f06",
+      "completed_at": "2026-10-09T09:26:36.764279+00:00"
+    },
+    {
+      "index": 21,
+      "timestamp": 0.875,
+      "raw": "frames/0021.png",
+      "raw_sha256": "395f0045498e018c200d7fdfb4c96791e5532f814a23c497e88f0c950c07380d",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:27.936367+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffc-48f9-7d72-b37b-22813212164d",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-48f9-7d72-b37b-22813212164d/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-48f9-7d72-b37b-22813212164d",
+      "output": "cutouts/0021-attempt-1.png",
+      "output_sha256": "f5f326d1e3ef51dd3a33631f6d511b8069ff4c984533047c7d9ce8cedada5eba",
+      "completed_at": "2026-10-09T09:26:33.591077+00:00"
+    },
+    {
+      "index": 22,
+      "timestamp": 0.9166666666666666,
+      "raw": "frames/0022.png",
+      "raw_sha256": "ef309c7242234682bd927d639ce916fbba760c5008aadb2b8aee20058b2f1070",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:28.124350+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffc-4a15-7d32-91a2-bbea9b4743f7",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-4a15-7d32-91a2-bbea9b4743f7/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-4a15-7d32-91a2-bbea9b4743f7",
+      "output": "cutouts/0022-attempt-1.png",
+      "output_sha256": "de39dfd08fd2fb149dee05ec968ec0ce15b6871127d4cc7c255f878d5c6ed2fb",
+      "completed_at": "2026-10-09T09:26:37.061783+00:00"
+    },
+    {
+      "index": 23,
+      "timestamp": 0.9583333333333334,
+      "raw": "frames/0023.png",
+      "raw_sha256": "4356b3009538fb39686560a01551cb417bfc47f33bb42b9910accb5579a13f71",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-09T09:26:33.592179+00:00",
+      "attempt": 1,
+      "request_id": "01a11ffc-5f0b-70e1-aa35-0ae89d9eb489",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-5f0b-70e1-aa35-0ae89d9eb489/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11ffc-5f0b-70e1-aa35-0ae89d9eb489",
+      "output": "cutouts/0023-attempt-1.png",
+      "output_sha256": "b8889c1fbd5b462a638669691ca6c658c38505fcd7db6d025c8dd85636e8462d",
+      "completed_at": "2026-10-09T09:26:42.405292+00:00"
+    }
+  ],
+  "sample_review": {
+    "passed": false,
+    "note": "Post-export pixel-level alpha inspection supersedes initial visual pass: samples and other cutouts contain semitransparent red interior patches (sample 18 minimum alpha 20) and a thin blue fringe. Preserve existing export as a draft; no paid retries authorized. Needs local chroma-mask cleanup or explicit approval for specific retries.",
+    "at": "2026-10-09T09:29:06.266149+00:00",
+    "signature": [
+      "94aa51f99724b4c8487f1905852b453cfbfc92a54904cbfeb42f657700c2a6df",
+      "1b720aca799b2a5c24dd1028d1ea7ba40b3e4c0b245d4b5a3f2938432dea5eb1",
+      "b36055abc445e36b9223dcbcc0415f0f9e0f66a52bcaaf63f315a5ff9baba852"
+    ]
+  },
+  "updated_at": "2026-10-09T09:29:06.266480+00:00",
+  "selection": {
+    "video_sha256": "9f13d3855093513c61f97768956ceca47a7d3f80789a140cb855964306160686",
+    "start": 0.0,
+    "end": 1.0,
+    "count": 24
+  },
+  "matte_signature": {
+    "model": "fal-ai/feynobg",
+    "seed": 42,
+    "inputs": [
+      "c4ddfb9536da79124578b92f1b21c42c477f9d26f404c4ee60c216ebf745c7c1",
+      "1ffa4abd0ccf3d5a6fdb7b1759099e1dfe00ec20036584e02c0214ae7c3ab675",
+      "9f3f0c5cf9718f96189599d51e7408d1640f48b056f133fba2a2ec55c6782053",
+      "fe8daeb3abd757a3ffde34a2d071f6920e9dcacf70263945ac6bdf82ed254c84",
+      "67e98e1206022a1e3e6a2f9cc1bf645460ff8d57b6c38962c3c79817908dbea3",
+      "f070ac1681c6886323d24b2b7b21902bbb0d7e284cddab146d86b58ef1701d01",
+      "16706ea041f4f0a924c179f4777cf50435e4644ca59ea7424c2b56bb474edba0",
+      "a0baa23da825655fd1d62981cb555d665dab7fc88c3842c979f8f1c6f35e0834",
+      "2884eb38da8c4ce833146c17cde22589760562a1eb819003dbe4b2de0e1ee257",
+      "d7a1e0dc423d012feb32866bffce655dad1c53a674b137b1a5ab59c331d8a564",
+      "c633a27e0a95ea9476829ad5649d411b70758c987792212188e6bdae313460f8",
+      "c9bbee00597f0cc552d588d58b3c9c1cf357a098d74cb3fd66adf991c022b15e",
+      "f50eba66b4e74634761774375d6f56215382921e98360ad3a6babb5ace5c2dde",
+      "a3e05f12923904a4a193a3764a4d65b89a48138cff49efa63d1c1d015984ccda",
+      "b88a3b0ad7e2f3e23e1aec933b9ec6603a1c71b35e058fa5e9dfdba89ed96ab2",
+      "9392c4d0d0904c02322a7669a7601292762bc1edd1c063cc929b4f948af24702",
+      "f98e955b3ac4d67418b5d3682eae0f59d64f0d8f412cca48fc5b2e5025a6bb60",
+      "12c607ae5086b6eff64790b91b7b633d63072ad85a2d137fac202c9c3c50a674",
+      "6bd0fc9838a9836a8e9fd5c58e8d0e6ca273103a4e2ec0990dcbf07c54048cb6",
+      "9468d763daf95cce92f913136e28b97b768c46728b7b1a2d7070e20e75418b61",
+      "30af4cbdb357a0aedc6d0e978172a62ebe31be08068cfcac4fab2470779faf8f",
+      "395f0045498e018c200d7fdfb4c96791e5532f814a23c497e88f0c950c07380d",
+      "ef309c7242234682bd927d639ce916fbba760c5008aadb2b8aee20058b2f1070",
+      "4356b3009538fb39686560a01551cb417bfc47f33bb42b9910accb5579a13f71"
+    ]
+  },
+  "latest_export": "local-chroma/exports/6c1649cef56d",
+  "feyn_draft_export": "exports/c6558e6952ed",
+  "local_processing": {
+    "method": "local-exterior-blue-chroma",
+    "thresholds": [
+      20,
+      100
+    ],
+    "source_url": "https://v3b.fal.media/files/b/0aadab61/yzb1aKTgqxf69IY2osGw6_TknT6EmT.mp4",
+    "source_video_sha256": "9f13d3855093513c61f97768956ceca47a7d3f80789a140cb855964306160686",
+    "paid_requests": 0
+  }
+}

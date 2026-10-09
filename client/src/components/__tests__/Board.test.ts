@@ -6,6 +6,8 @@ import { ART, tileArtwork } from '../../assets';
 import { colors } from '../../theme';
 import { ChargedTileParticle } from '../ChargedTileParticle';
 import { chargedParticleStyle } from '../chargedTileParticles';
+import { Fire5Tile } from '../Fire5Tile';
+import { FIRE5_IDLE, fire5FrameAt } from '../fire5Animation';
 import { BoardEffects } from '../BoardEffects';
 import { SpiritQiFlightOverlay } from '../SpiritQiFlightOverlay';
 import { buildSpiritFlightCues } from '../spiritParticles';
@@ -26,6 +28,7 @@ jest.mock('../../../app-assets/ui/tile_sword_5.webp', () => 103);
 jest.mock('../../../app-assets/ui/tile_fire.webp', () => 104);
 jest.mock('../../../app-assets/ui/tile_fire_4.webp', () => 105);
 jest.mock('../../../app-assets/ui/tile_fire_5.webp', () => 106);
+jest.mock('../../../app-assets/ui/tile_fire_5_idle.png', () => 114);
 jest.mock('../../../app-assets/ui/tile_lightning.webp', () => 107);
 jest.mock('../../../app-assets/ui/tile_lightning_4.webp', () => 108);
 jest.mock('../../../app-assets/ui/tile_lightning_5.webp', () => 109);
@@ -208,11 +211,21 @@ describe('Skia Board integration', () => {
           && bounds.top === (6 - Math.floor(index / 7)) * side / 7 + 1;
       })!;
       const bounds = StyleSheet.flatten(cell.props.style);
-      const sprite = sprites.find(node => node.props.x > bounds.left && node.props.x < bounds.left + bounds.width
-        && node.props.y > bounds.top && node.props.y < bounds.top + bounds.height)!;
-      expect(sprite.props.image.asset).toBe(index < 12 ? expected[index] : ART.tileRock);
-      expect(sprite.props.x).toBeCloseTo(bounds.left + bounds.width * (index < 12 ? .03 : .06));
-      expect(sprite.props.width).toBeCloseTo(bounds.width * (index < 12 ? .94 : .88));
+      if (index === 5) {
+        const animated = renderer.root.findAllByType(Fire5Tile).find(node =>
+          node.props.bounds.x > bounds.left && node.props.bounds.x < bounds.left + bounds.width
+          && node.props.bounds.y > bounds.top && node.props.bounds.y < bounds.top + bounds.height)!;
+        expect(animated.props.idle.image.asset).toBe(114);
+        expect(animated.props.bounds.x).toBeCloseTo(bounds.left + bounds.width * .03);
+        expect(animated.props.bounds.width).toBeCloseTo(bounds.width * .94);
+        expect(animated.findByType('Atlas' as never).props.sprites.value[0]).toMatchObject(FIRE5_IDLE.frames[0].rect);
+      } else {
+        const sprite = sprites.find(node => node.props.x > bounds.left && node.props.x < bounds.left + bounds.width
+          && node.props.y > bounds.top && node.props.y < bounds.top + bounds.height)!;
+        expect(sprite.props.image.asset).toBe(index < 12 ? expected[index] : ART.tileRock);
+        expect(sprite.props.x).toBeCloseTo(bounds.left + bounds.width * (index < 12 ? .03 : .06));
+        expect(sprite.props.width).toBeCloseTo(bounds.width * (index < 12 ? .94 : .88));
+      }
       const particle = renderer.root.findAllByType(ChargedTileParticle).filter(node =>
         node.props.bounds.x === bounds.left && node.props.bounds.y === bounds.top);
       expect(particle).toHaveLength(index < 12 && index % 3 !== 0 ? 1 : 0);
@@ -245,7 +258,8 @@ describe('Skia Board integration', () => {
       const upgraded = { ...next, tiles: [...next.tiles] };
       upgraded.tiles[0] = { ...next.tiles[0]!, chargeTier };
       act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: upgraded })); });
-      expect(sprite().props.image.asset).toBe(chargeTier === 4 ? 105 : 106);
+      if (chargeTier === 4) expect(sprite().props.image.asset).toBe(105);
+      else expect(tile(0).findByType(Fire5Tile).props.idle.image.asset).toBe(114);
       expect(particle()).toHaveLength(1);
     }
     act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: next })); });
@@ -255,7 +269,7 @@ describe('Skia Board integration', () => {
   it('shares one continuous clock across particles, HUD updates and action phases', () => {
     mount();
     reactFrames();
-    expect(mockFrameClocks).toHaveLength(1);
+    expect(mockFrameClocks).toHaveLength(2);
     expect(mockFrameClocks[0].active).toBe(true);
     const phases = renderer.root.findAllByType(ChargedTileParticle).map(node => node.props.phase);
     expect(new Set(phases).size).toBe(1);
@@ -267,7 +281,88 @@ describe('Skia Board integration', () => {
     const after = renderer.root.findAllByType(ChargedTileParticle)[0].props.phase;
     expect(after).toBe(phases[0]);
     expect(after.value).toBeCloseTo(.1);
-    expect(mockFrameClocks).toHaveLength(1);
+    expect(mockFrameClocks).toHaveLength(2);
+  });
+
+  it('shares one Fire 5 timeline through HUD updates, swaps, falls and sword fragments', () => {
+    const next: typeof snapshot = { ...snapshot, tiles: snapshot.tiles.map(value => ({ ...value!, chargeTier: 0 as const })) };
+    next.tiles[0] = { kind: TileKind.Fire, chargeTier: 5, locked: false };
+    next.tiles[1] = { kind: TileKind.Fire, chargeTier: 5, locked: true };
+    mount({ snapshot: next }); reactFrames();
+    const clock = mockFrameClocks[1];
+    expect(clock.active).toBe(true);
+    const animated = () => renderer.root.findAllByType(Fire5Tile);
+    const elapsed = animated()[0].props.idle.elapsedMs;
+    expect(animated()).toHaveLength(2);
+    expect(animated()[1].props.idle.elapsedMs).toBe(elapsed);
+    clock.callback({ timeSincePreviousFrame: 500 });
+    expect(elapsed.value).toBe(500);
+    for (const visualEffect of [
+      null,
+      { id: 101, kind: 'swap', first: { x: 0, y: 0 }, second: { x: 1, y: 0 } },
+      { id: 102, kind: 'fall', falls: [{ index: 0, fromY: 7 }] },
+    ] as (BoardVisualEffect | null)[]) {
+      act(() => renderer.update(React.createElement(Board, { ...props, snapshot: { ...next, swordQi: 20 }, visualEffect })));
+      expect(animated()[0].props.idle.elapsedMs).toBe(elapsed);
+      expect(elapsed.value).toBe(500);
+    }
+    const motionSession = createBoardMotionSession('clear');
+    act(() => renderer.update(React.createElement(Board, { ...props, snapshot: next, motionSession,
+      visualEffect: { id: 103, kind: 'clear', cleared: [0, 1], changed: [], effects: [
+        { kind: 'slash', swordChargeTier: 4, source: 0, cells: [0, 1], damage: 0, qi: 0 },
+      ] } })));
+    const fragments = renderer.root.findByType(BoardEffects).findAllByType(Fire5Tile);
+    expect(fragments).toHaveLength(4);
+    expect(fragments.every(node => node.props.idle.elapsedMs === elapsed)).toBe(true);
+    motionSession.progress.value = .7; reactFrames();
+    expect(clock.active).toBe(true);
+    motionSession.progress.value = 1; reactFrames();
+    expect(clock.active).toBe(false);
+    clock.callback({ timeSincePreviousFrame: 100 });
+    expect(elapsed.value).toBe(500);
+  });
+
+  it('pauses Fire 5 on background, focus loss, Reduce Motion, disappearance and unmount', () => {
+    const next = { ...snapshot, tiles: [...snapshot.tiles] };
+    next.tiles[0] = { kind: TileKind.Fire, chargeTier: 5, locked: false };
+    mount({ snapshot: next }); reactFrames();
+    const clock = mockFrameClocks[1];
+    const elapsed = renderer.root.findByType(Fire5Tile).props.idle.elapsedMs;
+    expect(clock.active).toBe(true);
+    clock.callback({ timeSincePreviousFrame: 250 });
+    act(() => mockAppChanged('background')); expect(clock.active).toBe(false);
+    act(() => mockAppChanged('active')); expect(clock.active).toBe(true);
+    mockFocused = false;
+    act(() => renderer.update(React.createElement(Board, { ...props, snapshot: next })));
+    expect(clock.active).toBe(false);
+    mockFocused = true;
+    act(() => renderer.update(React.createElement(Board, { ...props, snapshot: next, reduceMotion: true })));
+    expect(clock.active).toBe(false);
+    expect(renderer.root.findByType(Fire5Tile).props.reduced).toBe(true);
+    expect(renderer.root.findByType(Fire5Tile).findByType('Atlas' as never).props.sprites.value[0]).toMatchObject(FIRE5_IDLE.frames[0].rect);
+    act(() => renderer.update(React.createElement(Board, { ...props, snapshot: next })));
+    expect(clock.active).toBe(true);
+    expect(elapsed.value).toBe(250);
+    const withoutFire = { ...next, tiles: [...next.tiles] };
+    withoutFire.tiles[0] = { kind: TileKind.Fire, chargeTier: 4, locked: false };
+    act(() => renderer.update(React.createElement(Board, { ...props, snapshot: withoutFire })));
+    reactFrames(); expect(clock.active).toBe(false);
+    act(() => renderer.unmount()); expect(clock.active).toBe(false);
+  });
+
+  it('uses the new static Fire 5 artwork until its atlas loads', () => {
+    const skia = jest.requireMock('@shopify/react-native-skia');
+    skia.useImage.mockImplementation((asset: number) => asset === ART.tileFire5Idle ? null : ({ asset, width: () => 960, height: () => 576 }));
+    try {
+      const next = { ...snapshot, tiles: [...snapshot.tiles] };
+      next.tiles[0] = { kind: TileKind.Fire, chargeTier: 5, locked: false };
+      mount({ snapshot: next }); reactFrames();
+      expect(renderer.root.findAllByType(Fire5Tile)).toHaveLength(0);
+      expect(tile(0).findByType('SkiaImage' as never).props.image.asset).toBe(106);
+      expect(mockFrameClocks[1].active).toBe(false);
+    } finally {
+      skia.useImage.mockImplementation((asset: number) => ({ asset, width: () => 960, height: () => 576 }));
+    }
   });
 
   it('pauses the clock on background, loss of focus, Reduce Motion and unmount', () => {

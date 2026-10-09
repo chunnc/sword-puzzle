@@ -1,0 +1,324 @@
+{
+  "version": 1,
+  "id": "tile-fire-5-idle-20261009",
+  "description": "Tile Lửa 5 lặp liên tục, giữ nền đỏ và viền vàng, xóa chroma xanh bên ngoài",
+  "kind": "fire",
+  "state": "ready",
+  "config": {
+    "video_model": "xai/grok-imagine-video/v1.5/lite/image-to-video",
+    "resolution": "480p",
+    "video_duration": 1,
+    "matte_model": "fal-ai/feynobg",
+    "matte_seed": 42,
+    "frame_count": 24,
+    "size": 256,
+    "columns": 6,
+    "padding": 2,
+    "playback_ms": 1000
+  },
+  "frames": [
+    {
+      "index": 0,
+      "timestamp": 0.0,
+      "state": "completed",
+      "output": "cutouts/0000.png",
+      "output_sha256": "b149435d0436d0b559b006ada7639e08a8ec8248ea1dcd4b52c9fb7051e8d7be",
+      "source_sha256": "c4ddfb9536da79124578b92f1b21c42c477f9d26f404c4ee60c216ebf745c7c1",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 1,
+      "timestamp": 0.041666666666666664,
+      "state": "completed",
+      "output": "cutouts/0001.png",
+      "output_sha256": "dffc695a1518aaea97232fd6aaf403fda43f7253558302dfd9ad9dac67e6e247",
+      "source_sha256": "1ffa4abd0ccf3d5a6fdb7b1759099e1dfe00ec20036584e02c0214ae7c3ab675",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 2,
+      "timestamp": 0.08333333333333333,
+      "state": "completed",
+      "output": "cutouts/0002.png",
+      "output_sha256": "9009950428fe09ff1d0fac2f147a2a2d36492541cd941fadc54d779063f8a356",
+      "source_sha256": "9f3f0c5cf9718f96189599d51e7408d1640f48b056f133fba2a2ec55c6782053",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 3,
+      "timestamp": 0.125,
+      "state": "completed",
+      "output": "cutouts/0003.png",
+      "output_sha256": "51c96935d73a5fd76172c07e5ac7b3c2a963570d274cf4275f6f644c48ecac7b",
+      "source_sha256": "fe8daeb3abd757a3ffde34a2d071f6920e9dcacf70263945ac6bdf82ed254c84",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 4,
+      "timestamp": 0.16666666666666666,
+      "state": "completed",
+      "output": "cutouts/0004.png",
+      "output_sha256": "573292d2f41f5e8eb2561a4ddf07f28c52314d18a7c9bcf7b8335399c0b74a45",
+      "source_sha256": "67e98e1206022a1e3e6a2f9cc1bf645460ff8d57b6c38962c3c79817908dbea3",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 5,
+      "timestamp": 0.20833333333333334,
+      "state": "completed",
+      "output": "cutouts/0005.png",
+      "output_sha256": "182e62bc72289fb45a10b49ed398970997bd74bad5634d7f4edcae73ec09de2c",
+      "source_sha256": "f070ac1681c6886323d24b2b7b21902bbb0d7e284cddab146d86b58ef1701d01",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 6,
+      "timestamp": 0.25,
+      "state": "completed",
+      "output": "cutouts/0006.png",
+      "output_sha256": "43ee4b2ce82cad88bca301334a6162ee287fc4239ce8efab846fde846da5df85",
+      "source_sha256": "16706ea041f4f0a924c179f4777cf50435e4644ca59ea7424c2b56bb474edba0",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 7,
+      "timestamp": 0.2916666666666667,
+      "state": "completed",
+      "output": "cutouts/0007.png",
+      "output_sha256": "7528fcb93f92202126d6f9a410d47cf99dd33b6d5a8214cb5cf673a4af88260c",
+      "source_sha256": "a0baa23da825655fd1d62981cb555d665dab7fc88c3842c979f8f1c6f35e0834",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 8,
+      "timestamp": 0.3333333333333333,
+      "state": "completed",
+      "output": "cutouts/0008.png",
+      "output_sha256": "db9eb95af5a66a08aea074d35137940299912dff66c67e6dcae0f7e25de09566",
+      "source_sha256": "2884eb38da8c4ce833146c17cde22589760562a1eb819003dbe4b2de0e1ee257",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 9,
+      "timestamp": 0.375,
+      "state": "completed",
+      "output": "cutouts/0009.png",
+      "output_sha256": "b05d09244cc46ee1bba0b70ee4cc61bcf9548a3e24d086a85d1cf5d1286ba32c",
+      "source_sha256": "d7a1e0dc423d012feb32866bffce655dad1c53a674b137b1a5ab59c331d8a564",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 10,
+      "timestamp": 0.4166666666666667,
+      "state": "completed",
+      "output": "cutouts/0010.png",
+      "output_sha256": "c1cfd0b31219a8ebae6aa8aa1012a85d3500f2958c1a93200778255bd543fd3d",
+      "source_sha256": "c633a27e0a95ea9476829ad5649d411b70758c987792212188e6bdae313460f8",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 11,
+      "timestamp": 0.4583333333333333,
+      "state": "completed",
+      "output": "cutouts/0011.png",
+      "output_sha256": "148b528ff34a5b8a5d186427783d4950417b5de38fe9fc9b69d1fc001db5b862",
+      "source_sha256": "c9bbee00597f0cc552d588d58b3c9c1cf357a098d74cb3fd66adf991c022b15e",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 12,
+      "timestamp": 0.5,
+      "state": "completed",
+      "output": "cutouts/0012.png",
+      "output_sha256": "0a21021bfc02f466ddca0d9214e732f89db7d8c2f51899f6b6c760f007782c0f",
+      "source_sha256": "f50eba66b4e74634761774375d6f56215382921e98360ad3a6babb5ace5c2dde",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 13,
+      "timestamp": 0.5416666666666666,
+      "state": "completed",
+      "output": "cutouts/0013.png",
+      "output_sha256": "607be2695debda947f88f453c8f7de2f77c5f26ce2a122e9ef20e5e7adcabad0",
+      "source_sha256": "a3e05f12923904a4a193a3764a4d65b89a48138cff49efa63d1c1d015984ccda",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 14,
+      "timestamp": 0.5833333333333334,
+      "state": "completed",
+      "output": "cutouts/0014.png",
+      "output_sha256": "42fb6b94d57d03fbe6396c443ff111971b6cb3ecf2531ca5c51e336a5b447433",
+      "source_sha256": "b88a3b0ad7e2f3e23e1aec933b9ec6603a1c71b35e058fa5e9dfdba89ed96ab2",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 15,
+      "timestamp": 0.625,
+      "state": "completed",
+      "output": "cutouts/0015.png",
+      "output_sha256": "7d34aaed357aa8c7067238ddf74f9398cf65f490485de62c0581c418251d9fec",
+      "source_sha256": "9392c4d0d0904c02322a7669a7601292762bc1edd1c063cc929b4f948af24702",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 16,
+      "timestamp": 0.6666666666666666,
+      "state": "completed",
+      "output": "cutouts/0016.png",
+      "output_sha256": "e8e9e51c887fe619553ce03dee9207b3f7768af2b935375c5fea02b19a7ac2fd",
+      "source_sha256": "f98e955b3ac4d67418b5d3682eae0f59d64f0d8f412cca48fc5b2e5025a6bb60",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 17,
+      "timestamp": 0.7083333333333334,
+      "state": "completed",
+      "output": "cutouts/0017.png",
+      "output_sha256": "bf78f132e43908b0da68b400e504980d1810f9f06d40842a9b4591943be828e3",
+      "source_sha256": "12c607ae5086b6eff64790b91b7b633d63072ad85a2d137fac202c9c3c50a674",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 18,
+      "timestamp": 0.75,
+      "state": "completed",
+      "output": "cutouts/0018.png",
+      "output_sha256": "67fdd1801667ad2cf867be94dc2b695ad268a422377e0277ac5526a014d46aa2",
+      "source_sha256": "6bd0fc9838a9836a8e9fd5c58e8d0e6ca273103a4e2ec0990dcbf07c54048cb6",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 19,
+      "timestamp": 0.7916666666666666,
+      "state": "completed",
+      "output": "cutouts/0019.png",
+      "output_sha256": "89d06804b200a210514f7b6f5154c19369f352a2515b2cb9c15a18032df38458",
+      "source_sha256": "9468d763daf95cce92f913136e28b97b768c46728b7b1a2d7070e20e75418b61",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 20,
+      "timestamp": 0.8333333333333334,
+      "state": "completed",
+      "output": "cutouts/0020.png",
+      "output_sha256": "7d4f4f4bb9452ef2561bcdc76e74a84d2bc67a0f77883f7c2b91c238e340e88d",
+      "source_sha256": "30af4cbdb357a0aedc6d0e978172a62ebe31be08068cfcac4fab2470779faf8f",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 21,
+      "timestamp": 0.875,
+      "state": "completed",
+      "output": "cutouts/0021.png",
+      "output_sha256": "87d0e656ed39cac3132fc15ff823f5969d02df968c3c17ea169bd48ab4660c6b",
+      "source_sha256": "395f0045498e018c200d7fdfb4c96791e5532f814a23c497e88f0c950c07380d",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 22,
+      "timestamp": 0.9166666666666666,
+      "state": "completed",
+      "output": "cutouts/0022.png",
+      "output_sha256": "e6e760fe9afd64051130869274da99f5815fb4735262569af3f2ba46f8285d2f",
+      "source_sha256": "ef309c7242234682bd927d639ce916fbba760c5008aadb2b8aee20058b2f1070",
+      "dimensions": [
+        544,
+        544
+      ]
+    },
+    {
+      "index": 23,
+      "timestamp": 0.9583333333333334,
+      "state": "completed",
+      "output": "cutouts/0023.png",
+      "output_sha256": "8b4459172edfbe5585a6ec672597d1cd34bc714c107d56fe83bd18fb699ed0a0",
+      "source_sha256": "4356b3009538fb39686560a01551cb417bfc47f33bb42b9910accb5579a13f71",
+      "dimensions": [
+        544,
+        544
+      ]
+    }
+  ],
+  "video": {
+    "state": "imported"
+  },
+  "processing": {
+    "method": "local-exterior-blue-chroma",
+    "thresholds": [
+      20,
+      100
+    ],
+    "source_url": "https://v3b.fal.media/files/b/0aadab61/yzb1aKTgqxf69IY2osGw6_TknT6EmT.mp4",
+    "source_video_sha256": "9f13d3855093513c61f97768956ceca47a7d3f80789a140cb855964306160686",
+    "paid_requests": 0
+  },
+  "latest_export": "exports/6c1649cef56d",
+  "updated_at": "2026-10-09T09:50:18.643745+00:00"
+}

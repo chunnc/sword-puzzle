@@ -1,0 +1,394 @@
+{
+  "structural_checks": "passed",
+  "visual_quality": "needs_cleanup",
+  "frame_count": 24,
+  "sheet_size": [
+    1560,
+    1040
+  ],
+  "frame_size": [
+    256,
+    256
+  ],
+  "loop": true,
+  "duration_ms": 1000,
+  "webp_durations_ms": [
+    42,
+    41,
+    42,
+    42,
+    41,
+    42,
+    42,
+    41,
+    42,
+    42,
+    41,
+    42,
+    42,
+    41,
+    42,
+    42,
+    41,
+    42,
+    42,
+    41,
+    42,
+    42,
+    41,
+    42
+  ],
+  "original_canvas_crop": [
+    0,
+    0,
+    544,
+    544
+  ],
+  "pivot": [
+    128,
+    128
+  ],
+  "feyn_requests": 24,
+  "paid_retries": 0,
+  "loop_seam_rgb_mae": 2.246,
+  "adjacent_rgb_mae_mean": 3.737,
+  "frames": [
+    {
+      "index": 0,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        242
+      ],
+      "central_region_alpha_range": [
+        69,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 477
+    },
+    {
+      "index": 1,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        123,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 481
+    },
+    {
+      "index": 2,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        105,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 475
+    },
+    {
+      "index": 3,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        67,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 477
+    },
+    {
+      "index": 4,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        68,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 470
+    },
+    {
+      "index": 5,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        127,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 445
+    },
+    {
+      "index": 6,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        143,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 419
+    },
+    {
+      "index": 7,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        125,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 406
+    },
+    {
+      "index": 8,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        157,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 401
+    },
+    {
+      "index": 9,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        133,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 402
+    },
+    {
+      "index": 10,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        130,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 379
+    },
+    {
+      "index": 11,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        203,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 387
+    },
+    {
+      "index": 12,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        232,
+        254
+      ],
+      "blue_fringe_pixels_alpha_over_32": 386
+    },
+    {
+      "index": 13,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        172,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 389
+    },
+    {
+      "index": 14,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        111,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 383
+    },
+    {
+      "index": 15,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        129,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 383
+    },
+    {
+      "index": 16,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        97,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 387
+    },
+    {
+      "index": 17,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        48,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 377
+    },
+    {
+      "index": 18,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        19,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 385
+    },
+    {
+      "index": 19,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        42,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 384
+    },
+    {
+      "index": 20,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        88,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 378
+    },
+    {
+      "index": 21,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        243
+      ],
+      "central_region_alpha_range": [
+        124,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 380
+    },
+    {
+      "index": 22,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        242
+      ],
+      "central_region_alpha_range": [
+        147,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 367
+    },
+    {
+      "index": 23,
+      "alpha_bounds_128": [
+        14,
+        14,
+        242,
+        242
+      ],
+      "central_region_alpha_range": [
+        148,
+        255
+      ],
+      "blue_fringe_pixels_alpha_over_32": 369
+    }
+  ],
+  "quality_limitation": "Feyn preserved complete tile geometry but made some red interior regions semitransparent and retained a thin blue edge fringe. Export is a draft, not production-ready. No local cleanup or paid retry performed."
+}

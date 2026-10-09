@@ -639,7 +639,7 @@ def retry_approved(job, target, approval, api=None, **options):
         run_request(job, record, MATTE_MODEL, payload, "image", api, threading.Event())
 
 
-def pack(job, playback_ms=None, crop=None, pivot=None):
+def pack(job, playback_ms=None, crop=None, pivot=None, loop=False):
     Image, _, features = pillow()
     if not features.check("webp"):
         raise PipelineError("Pillow needs animated WebP support.")
@@ -681,6 +681,9 @@ def pack(job, playback_ms=None, crop=None, pivot=None):
               (pivot[1] - crop[1]) * resized[1] / (crop[3] - crop[1]) + offset[1])
     signature = {"cutouts": [row["output_sha256"] for row in records], "crop": list(crop), "pivot": list(pivot),
                  "playback_ms": duration, "size": size, "padding": padding, "columns": columns}
+    # Preserve existing non-loop export hashes while versioning looping exports separately.
+    if loop:
+        signature["loop"] = True
     digest = hashlib.sha256(json.dumps(signature, sort_keys=True).encode()).hexdigest()[:12]
     out = job.file("exports/" + digest)
     out.mkdir(parents=True, exist_ok=True)
@@ -701,7 +704,7 @@ def pack(job, playback_ms=None, crop=None, pivot=None):
         paths.append(path)
     atlas.save(out / "sheet.png")
     prepared[0].save(out / "preview.webp", save_all=True, append_images=prepared[1:], lossless=True,
-                     duration=[frame["durationMs"] for frame in frame_meta], loop=1, background=(0, 0, 0, 0))
+                     duration=[frame["durationMs"] for frame in frame_meta], loop=0 if loop else 1, background=(0, 0, 0, 0))
     contact(paths, out / "contact-dark.png", background=(24, 36, 43), columns=columns)
     contact(paths, out / "contact-light.png", background=(235, 235, 235), columns=columns)
     atomic_json(out / "animation.json", {
@@ -709,7 +712,7 @@ def pack(job, playback_ms=None, crop=None, pivot=None):
         "frameSize": {"width": size, "height": size}, "sheetSize": {"width": atlas.width, "height": atlas.height},
         "columns": columns, "rows": rows, "padding": padding, "durationMs": duration, "fps": len(images) * 1000 / duration,
         "pivot": {"x": anchor[0], "y": anchor[1], "units": "frame-pixels"},
-        "loop": False, "blendMode": "srcOver", "alphaMode": "straight", "sourceCrop": list(crop), "frames": frame_meta,
+        "loop": loop, "blendMode": "srcOver", "alphaMode": "straight", "sourceCrop": list(crop), "frames": frame_meta,
     })
     job.data.update(state="ready", latest_export=str(out.relative_to(job.path)))
     job.save()
@@ -766,6 +769,7 @@ def main(argv=None):
             command.add_argument("--target", required=True)
             command.add_argument("--approval", required=True, help="Quote the actual human approval; never fabricate it")
         elif name == "pack":
+            command.add_argument("--loop", action="store_true", help="Loop metadata and animated preview indefinitely")
             command.add_argument("--playback-ms", type=int)
             command.add_argument("--crop", type=int, nargs=4, metavar=("LEFT", "TOP", "RIGHT", "BOTTOM"))
             command.add_argument("--pivot", type=float, nargs=2, metavar=("X", "Y"))
@@ -800,7 +804,7 @@ def main(argv=None):
                 elif args.command == "retry":
                     retry_approved(job, args.target, args.approval, **options)
                 elif args.command == "pack":
-                    pack(job, args.playback_ms, args.crop, args.pivot)
+                    pack(job, args.playback_ms, args.crop, args.pivot, args.loop)
         print(json.dumps(summary(job), ensure_ascii=False, indent=2))
         return 0
     except (PipelineError, OSError, ValueError) as exc:

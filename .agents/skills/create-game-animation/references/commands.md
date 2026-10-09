@@ -85,6 +85,8 @@ client's control. After a retry, inspect the samples and record their review aga
 ```sh
 python3 "$animation_tool" pack fire-burst-v1 --playback-ms 800
 python3 "$animation_tool" pack fire-burst-v1 --crop 20 10 460 470 --pivot 240 240
+# Continuous idle animation, using cached cutouts only:
+python3 "$animation_tool" pack tile-fire-5-idle-20261009 --playback-ms 1000 --loop
 ```
 
 `--crop` is left/top/right/bottom in original frame pixels; `--pivot` is a single
@@ -93,7 +95,9 @@ nonzero alpha bounds plus 2 source pixels, clipped to the source canvas; default
 pivot is the original canvas center. No fal calls occur during packing.
 
 Exports live under `exports/<configuration-hash>/`: `sheet.png`, `animation.json`,
-`preview.webp` (plays once), dark/light contact sheets and individual normalized PNGs.
+`preview.webp` (plays once by default), dark/light contact sheets and individual normalized PNGs.
+`pack --loop` sets metadata `loop: true` and makes the WebP loop indefinitely.
+Looping exports have a separate configuration hash; existing non-loop exports keep their hashes.
 Frame rectangles exclude padding. Metadata provides individual integer frame
 durations whose sum equals `durationMs`; average `fps` is informational.
 
