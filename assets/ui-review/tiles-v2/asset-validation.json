@@ -1,0 +1,138 @@
+{
+  "passed": true,
+  "assetCount": 12,
+  "assets": [
+    {
+      "tile": "tile-fire-base",
+      "runtimeSource": "assets/ui-source/runtime/tile-fire.png",
+      "runtimeWebp": "client/app-assets/ui/tile_fire.webp",
+      "approvedPngMatches": true,
+      "size": [
+        512,
+        512
+      ],
+      "alphaMatches": true
+    },
+    {
+      "tile": "tile-fire-4",
+      "runtimeSource": "assets/ui-source/runtime/tile-fire-4.png",
+      "runtimeWebp": "client/app-assets/ui/tile_fire_4.webp",
+      "approvedPngMatches": true,
+      "size": [
+        512,
+        512
+      ],
+      "alphaMatches": true
+    },
+    {
+      "tile": "tile-fire-5",
+      "runtimeSource": "assets/ui-source/runtime/tile-fire-5.png",
+      "runtimeWebp": "client/app-assets/ui/tile_fire_5.webp",
+      "approvedPngMatches": true,
+      "size": [
+        512,
+        512
+      ],
+      "alphaMatches": true
+    },
+    {
+      "tile": "tile-sword-base",
+      "runtimeSource": "assets/ui-source/runtime/tile-sword.png",
+      "runtimeWebp": "client/app-assets/ui/tile_sword.webp",
+      "approvedPngMatches": true,
+      "size": [
+        512,
+        512
+      ],
+      "alphaMatches": true
+    },
+    {
+      "tile": "tile-sword-4",
+      "runtimeSource": "assets/ui-source/runtime/tile-sword-4.png",
+      "runtimeWebp": "client/app-assets/ui/tile_sword_4.webp",
+      "approvedPngMatches": true,
+      "size": [
+        512,
+        512
+      ],
+      "alphaMatches": true
+    },
+    {
+      "tile": "tile-sword-5",
+      "runtimeSource": "assets/ui-source/runtime/tile-sword-5.png",
+      "runtimeWebp": "client/app-assets/ui/tile_sword_5.webp",
+      "approvedPngMatches": true,
+      "size": [
+        512,
+        512
+      ],
+      "alphaMatches": true
+    },
+    {
+      "tile": "tile-lightning-base",
+      "runtimeSource": "assets/ui-source/runtime/tile-lightning.png",
+      "runtimeWebp": "client/app-assets/ui/tile_lightning.webp",
+      "approvedPngMatches": true,
+      "size": [
+        512,
+        512
+      ],
+      "alphaMatches": true
+    },
+    {
+      "tile": "tile-lightning-4",
+      "runtimeSource": "assets/ui-source/runtime/tile-lightning-4.png",
+      "runtimeWebp": "client/app-assets/ui/tile_lightning_4.webp",
+      "approvedPngMatches": true,
+      "size": [
+        512,
+        512
+      ],
+      "alphaMatches": true
+    },
+    {
+      "tile": "tile-lightning-5",
+      "runtimeSource": "assets/ui-source/runtime/tile-lightning-5.png",
+      "runtimeWebp": "client/app-assets/ui/tile_lightning_5.webp",
+      "approvedPngMatches": true,
+      "size": [
+        512,
+        512
+      ],
+      "alphaMatches": true
+    },
+    {
+      "tile": "tile-spirit-orb-base",
+      "runtimeSource": "assets/ui-source/runtime/tile-spirit-orb.png",
+      "runtimeWebp": "client/app-assets/ui/tile_spirit_orb.webp",
+      "approvedPngMatches": true,
+      "size": [
+        512,
+        512
+      ],
+      "alphaMatches": true
+    },
+    {
+      "tile": "tile-spirit-orb-4",
+      "runtimeSource": "assets/ui-source/runtime/tile-spirit-orb-4.png",
+      "runtimeWebp": "client/app-assets/ui/tile_spirit_orb_4.webp",
+      "approvedPngMatches": true,
+      "size": [
+        512,
+        512
+      ],
+      "alphaMatches": true
+    },
+    {
+      "tile": "tile-spirit-orb-5",
+      "runtimeSource": "assets/ui-source/runtime/tile-spirit-orb-5.png",
+      "runtimeWebp": "client/app-assets/ui/tile_spirit_orb_5.webp",
+      "approvedPngMatches": true,
+      "size": [
+        512,
+        512
+      ],
+      "alphaMatches": true
+    }
+  ]
+}

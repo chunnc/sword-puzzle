@@ -9,7 +9,7 @@ import { runOnJS, runOnUI } from 'react-native-worklets';
 import {
   Easing, useAnimatedReaction, withSequence, withTiming,
 } from 'react-native-reanimated';
-import { ART } from '../assets';
+import { ART, tileArtwork } from '../assets';
 import { getContentVersion } from '../game/domain';
 import { TileKind, type BoardSnapshot, type CellPosition, type Tile } from '../game/types';
 import { colors } from '../theme';
@@ -35,13 +35,12 @@ interface Label {
   height: number;
 }
 
-function makeLabel(text: string, fontSize: number, color: string, shadow = false): Label {
-  // Paragraph uses the native font manager's fallback for CJK and star glyphs.
+function makeLabel(text: string, fontSize: number, color: string): Label {
+  // Paragraph uses the native font manager's fallback for the seal glyph.
   const paragraph = Skia.ParagraphBuilder.Make({
     maxLines: 1,
     textStyle: {
       fontSize, fontStyle: { weight: FontWeight.Black }, color: Skia.Color(color),
-      ...(shadow ? { shadows: [{ color: Skia.Color('#042f32'), offset: { x: 0, y: 1 }, blurRadius: 2 }] } : {}),
     },
   }).addText(text).build();
   paragraph.layout(1000);
@@ -52,10 +51,7 @@ function makeLabel(text: string, fontSize: number, color: string, shadow = false
 
 function useBoardLabels(cellWidth: number, targetCount: number) {
   return useMemo(() => ({
-    orb: makeLabel('氣', Math.max(16, cellWidth * .66) * .45, '#d6fff1', true),
     seal: makeLabel('封', Math.min(27, cellWidth * .65), '#eee0ff'),
-    charge4: makeLabel('✧4', 11, '#fff2c9'),
-    charge5: makeLabel('✦5', 11, '#fff2c9'),
     targets: Array.from({ length: targetCount }, (_, i) => makeLabel(String(i + 1), 13, '#fff8dd')),
   }), [cellWidth, targetCount]);
 }
@@ -66,11 +62,36 @@ type BoardLabels = ReturnType<typeof useBoardLabels>;
 // draws every sprite into its one shared Canvas.
 export function SpiritOrb({ size = 34 }: { size?: number }) {
   const image = useImage(ART.tileSpiritOrb);
-  const label = useMemo(() => makeLabel('氣', size * .45, '#d6fff1', true), [size]);
   return <Canvas style={{ width: size, height: size }}>
     <Image image={image} x={0} y={0} width={size} height={size} fit="contain" />
-    <Paragraph paragraph={label.paragraph} x={(size - label.width) / 2} y={(size - label.height) / 2} width={label.width} />
   </Canvas>;
+}
+
+function useBoardImages(): Record<TileKind, Record<Tile['chargeTier'], SkImage | null>> {
+  // Fixed hooks preload every tier, including before a tile is upgraded.
+  const sword = {
+    0: useImage(tileArtwork(TileKind.Sword)),
+    4: useImage(tileArtwork(TileKind.Sword, 4)),
+    5: useImage(tileArtwork(TileKind.Sword, 5)),
+  };
+  const fire = {
+    0: useImage(tileArtwork(TileKind.Fire)),
+    4: useImage(tileArtwork(TileKind.Fire, 4)),
+    5: useImage(tileArtwork(TileKind.Fire, 5)),
+  };
+  const lightning = {
+    0: useImage(tileArtwork(TileKind.Lightning)),
+    4: useImage(tileArtwork(TileKind.Lightning, 4)),
+    5: useImage(tileArtwork(TileKind.Lightning, 5)),
+  };
+  const spirit = {
+    0: useImage(tileArtwork(TileKind.SpiritOrb)),
+    4: useImage(tileArtwork(TileKind.SpiritOrb, 4)),
+    5: useImage(tileArtwork(TileKind.SpiritOrb, 5)),
+  };
+  const rock = useImage(ART.tileRock);
+  return { [TileKind.Sword]: sword, [TileKind.Fire]: fire, [TileKind.Lightning]: lightning,
+    [TileKind.SpiritOrb]: spirit, [TileKind.Rock]: { 0: rock, 4: rock, 5: rock } };
 }
 
 export function Board({ snapshot, selected, targets = [], preview = [], targetingHint, showTargetingHint = true, onCellPress, onSwipe, locked = false, visualEffect = null, reduceMotion = false, onMotionStarted, onMotionFinished, motionSession, gridRef, onGridLayout }: {
@@ -95,10 +116,9 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const content = getContentVersion(snapshot.contentVersion);
   const indices = useMemo(() => displayIndices(geometry), [geometry]);
   const [side, setSide] = useState(0);
-  const sword = useImage(ART.tileSword), fire = useImage(ART.tileFire);
-  const lightning = useImage(ART.tileLightning), orb = useImage(ART.tileSpiritOrb), rock = useImage(ART.tileRock);
+  const images = useBoardImages();
+  const imageForTile = (tile: Tile) => images[tile.kind][tile.chargeTier];
   const fxFireBurst = useImage(ART.fxFireBurst), fxLightning = useImage(ART.fxLightningAtlas);
-  const images = [sword, fire, lightning, orb, rock];
   const previousEffect = useRef<{ runId: string; effect: BoardVisualEffect | null; before: BoardVisualEffect | null } | null>(null);
   const id = visualEffect?.id ?? 0;
   const runId = snapshot.runId;
@@ -186,11 +206,11 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
         {side > geometry.width * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
           <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
             {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color="#0b4144" />)}
-            {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} image={images[snapshot.tiles[index]!.kind]} visual={visuals[index]} motion={frame.cells[index]} labels={labels} />)}
+            {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} visual={visuals[index]} motion={frame.cells[index]} labels={labels} />)}
             {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
               progress={motion.progress} elapsedMs={motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning}
               renderTile={index => <TileArtwork tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)}
-                image={images[snapshot.tiles[index]!.kind]} labels={labels} />} /> : null}
+                image={imageForTile(snapshot.tiles[index]!)} labels={labels} />} /> : null}
             {indices.map(index => {
               const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
               const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
@@ -241,17 +261,9 @@ function TileVisual({ tile, bounds, image, visual, motion, labels }: {
 function TileArtwork({ tile, bounds, image, labels }: {
   tile: Tile; bounds: ReturnType<typeof cellBounds>; image: SkImage | null; labels: BoardLabels;
 }) {
-  const charge = tile.chargeTier === 5 ? labels.charge5 : labels.charge4;
-  const chargeWidth = charge.width + 6, chargeHeight = charge.height + 2;
-  const chargeX = bounds.x + bounds.width - 1 - chargeWidth, chargeY = bounds.y + bounds.height - 1 - chargeHeight;
+  const inset = tile.kind === TileKind.Rock ? .06 : .03;
   return <Group>
-    <Image image={image} x={bounds.x + bounds.width * .06} y={bounds.y + bounds.height * .06} width={bounds.width * .88} height={bounds.height * .88} fit="contain" />
-    {tile.kind === TileKind.SpiritOrb ? <Paragraph paragraph={labels.orb.paragraph} x={bounds.x + (bounds.width - labels.orb.width) / 2} y={bounds.y + (bounds.height - labels.orb.height) / 2} width={labels.orb.width} /> : null}
-    {tile.chargeTier ? <Group>
-      <RoundedRect x={chargeX} y={chargeY} width={chargeWidth} height={chargeHeight} r={6} color={tile.chargeTier === 5 ? '#6a4c22' : '#163a40'} />
-      <RoundedRect x={chargeX + .5} y={chargeY + .5} width={chargeWidth - 1} height={chargeHeight - 1} r={5.5} style="stroke" strokeWidth={1} color={tile.chargeTier === 5 ? '#ffeba5' : '#e0cb80'} />
-      <Paragraph paragraph={charge.paragraph} x={chargeX + 3} y={chargeY + 1} width={charge.width} />
-    </Group> : null}
+    <Image image={image} x={bounds.x + bounds.width * inset} y={bounds.y + bounds.height * inset} width={bounds.width * (1 - 2 * inset)} height={bounds.height * (1 - 2 * inset)} fit="contain" />
     {tile.locked ? <Group>
       <RoundedRect {...bounds} r={5} color="rgba(9,35,49,.45)" />
       <RoundedRect x={bounds.x + 1} y={bounds.y + 1} width={bounds.width - 2} height={bounds.height - 2} r={4} style="stroke" strokeWidth={2} color="#ae97cd" />

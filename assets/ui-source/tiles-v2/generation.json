@@ -1,0 +1,415 @@
+{
+  "generator": "Built-in ImageGen",
+  "version": "tiles-v2",
+  "rules": {
+    "baseBorder": "none",
+    "tier4Border": "one plain gold border",
+    "tier5Border": "same single border as tier 4",
+    "size": [
+      512,
+      512
+    ],
+    "webpQuality": 90,
+    "integrated": true,
+    "boardImageInset": 0.03,
+    "rockImageInset": 0.06
+  },
+  "assets": [
+    {
+      "name": "tile-fire-base",
+      "element": "fire",
+      "tier": "base",
+      "generatedSource": "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-c852aa6f-e250-41d6-8e3a-401ec4bb7f9c.png",
+      "promptFile": "tile-fire-base.prompt.txt",
+      "references": [],
+      "png": "tile-fire-base.png",
+      "webp": "tile-fire-base.webp",
+      "export": {
+        "sourceCrop": [
+          93,
+          98,
+          1161,
+          1148
+        ],
+        "canvasSize": [
+          512,
+          512
+        ],
+        "spriteBox": [
+          31,
+          31,
+          481,
+          481
+        ],
+        "preservedGeneratedAlpha": true
+      },
+      "runtimeSource": "assets/ui-source/runtime/tile-fire.png",
+      "runtimeWebp": "client/app-assets/ui/tile_fire.webp"
+    },
+    {
+      "name": "tile-fire-4",
+      "element": "fire",
+      "tier": "4",
+      "generatedSource": "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-2fb1b926-4e1a-4b2c-8faa-7a4f25903804.png",
+      "promptFile": "tile-fire-4.prompt.txt",
+      "references": [
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-c852aa6f-e250-41d6-8e3a-401ec4bb7f9c.png"
+      ],
+      "png": "tile-fire-4.png",
+      "webp": "tile-fire-4.webp",
+      "export": {
+        "sourceCrop": [
+          90,
+          92,
+          1164,
+          1150
+        ],
+        "canvasSize": [
+          512,
+          512
+        ],
+        "spriteBox": [
+          31,
+          31,
+          481,
+          481
+        ],
+        "preservedGeneratedAlpha": true
+      },
+      "runtimeSource": "assets/ui-source/runtime/tile-fire-4.png",
+      "runtimeWebp": "client/app-assets/ui/tile_fire_4.webp"
+    },
+    {
+      "name": "tile-fire-5",
+      "element": "fire",
+      "tier": "5",
+      "generatedSource": "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-0e7d0c33-1c37-4a8d-98fa-50b499f45e09.png",
+      "promptFile": "tile-fire-5.prompt.txt",
+      "references": [
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-2fb1b926-4e1a-4b2c-8faa-7a4f25903804.png"
+      ],
+      "png": "tile-fire-5.png",
+      "webp": "tile-fire-5.webp",
+      "export": {
+        "sourceCrop": [
+          88,
+          91,
+          1166,
+          1151
+        ],
+        "canvasSize": [
+          512,
+          512
+        ],
+        "spriteBox": [
+          31,
+          31,
+          481,
+          481
+        ],
+        "preservedGeneratedAlpha": true
+      },
+      "runtimeSource": "assets/ui-source/runtime/tile-fire-5.png",
+      "runtimeWebp": "client/app-assets/ui/tile_fire_5.webp"
+    },
+    {
+      "name": "tile-sword-base",
+      "element": "sword",
+      "tier": "base",
+      "generatedSource": "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-a79c1a45-9e22-4536-b4f4-cfe56e45b574.png",
+      "promptFile": "tile-sword-base.prompt.txt",
+      "references": [
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-c852aa6f-e250-41d6-8e3a-401ec4bb7f9c.png"
+      ],
+      "png": "tile-sword-base.png",
+      "webp": "tile-sword-base.webp",
+      "export": {
+        "sourceCrop": [
+          91,
+          97,
+          1163,
+          1150
+        ],
+        "canvasSize": [
+          512,
+          512
+        ],
+        "spriteBox": [
+          31,
+          31,
+          481,
+          481
+        ],
+        "preservedGeneratedAlpha": true
+      },
+      "runtimeSource": "assets/ui-source/runtime/tile-sword.png",
+      "runtimeWebp": "client/app-assets/ui/tile_sword.webp"
+    },
+    {
+      "name": "tile-sword-4",
+      "element": "sword",
+      "tier": "4",
+      "generatedSource": "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-833c66ff-c3a6-4600-af7d-75fc2e642549.png",
+      "promptFile": "tile-sword-4.prompt.txt",
+      "references": [
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-2fb1b926-4e1a-4b2c-8faa-7a4f25903804.png",
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-a79c1a45-9e22-4536-b4f4-cfe56e45b574.png"
+      ],
+      "png": "tile-sword-4.png",
+      "webp": "tile-sword-4.webp",
+      "export": {
+        "sourceCrop": [
+          88,
+          91,
+          1166,
+          1151
+        ],
+        "canvasSize": [
+          512,
+          512
+        ],
+        "spriteBox": [
+          31,
+          31,
+          481,
+          481
+        ],
+        "preservedGeneratedAlpha": true
+      },
+      "runtimeSource": "assets/ui-source/runtime/tile-sword-4.png",
+      "runtimeWebp": "client/app-assets/ui/tile_sword_4.webp"
+    },
+    {
+      "name": "tile-sword-5",
+      "element": "sword",
+      "tier": "5",
+      "generatedSource": "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-8ea80d8b-839b-4164-9ad2-d631b1a616c2.png",
+      "promptFile": "tile-sword-5.prompt.txt",
+      "references": [
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-833c66ff-c3a6-4600-af7d-75fc2e642549.png"
+      ],
+      "png": "tile-sword-5.png",
+      "webp": "tile-sword-5.webp",
+      "export": {
+        "sourceCrop": [
+          86,
+          90,
+          1169,
+          1151
+        ],
+        "canvasSize": [
+          512,
+          512
+        ],
+        "spriteBox": [
+          31,
+          31,
+          481,
+          481
+        ],
+        "preservedGeneratedAlpha": true
+      },
+      "runtimeSource": "assets/ui-source/runtime/tile-sword-5.png",
+      "runtimeWebp": "client/app-assets/ui/tile_sword_5.webp"
+    },
+    {
+      "name": "tile-lightning-base",
+      "element": "lightning",
+      "tier": "base",
+      "generatedSource": "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-9debcf10-6a38-4c5f-bbb1-6cd875391df2.png",
+      "promptFile": "tile-lightning-base.prompt.txt",
+      "references": [
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-c852aa6f-e250-41d6-8e3a-401ec4bb7f9c.png"
+      ],
+      "png": "tile-lightning-base.png",
+      "webp": "tile-lightning-base.webp",
+      "export": {
+        "sourceCrop": [
+          92,
+          98,
+          1162,
+          1149
+        ],
+        "canvasSize": [
+          512,
+          512
+        ],
+        "spriteBox": [
+          31,
+          31,
+          481,
+          481
+        ],
+        "preservedGeneratedAlpha": true
+      },
+      "runtimeSource": "assets/ui-source/runtime/tile-lightning.png",
+      "runtimeWebp": "client/app-assets/ui/tile_lightning.webp"
+    },
+    {
+      "name": "tile-lightning-4",
+      "element": "lightning",
+      "tier": "4",
+      "generatedSource": "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-64000357-9627-4e5b-884d-dde9772e3290.png",
+      "promptFile": "tile-lightning-4.prompt.txt",
+      "references": [
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-5b0bb7ce-29fd-43ea-9b0c-5fc1bad33dfb.png"
+      ],
+      "png": "tile-lightning-4.png",
+      "webp": "tile-lightning-4.webp",
+      "export": {
+        "sourceCrop": [
+          86,
+          88,
+          1169,
+          1151
+        ],
+        "canvasSize": [
+          512,
+          512
+        ],
+        "spriteBox": [
+          31,
+          31,
+          481,
+          481
+        ],
+        "preservedGeneratedAlpha": true
+      },
+      "runtimeSource": "assets/ui-source/runtime/tile-lightning-4.png",
+      "runtimeWebp": "client/app-assets/ui/tile_lightning_4.webp"
+    },
+    {
+      "name": "tile-lightning-5",
+      "element": "lightning",
+      "tier": "5",
+      "generatedSource": "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-6b4ec8d8-73dc-47f9-b293-8e50648139be.png",
+      "promptFile": "tile-lightning-5.prompt.txt",
+      "references": [
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-5b0bb7ce-29fd-43ea-9b0c-5fc1bad33dfb.png"
+      ],
+      "png": "tile-lightning-5.png",
+      "webp": "tile-lightning-5.webp",
+      "export": {
+        "sourceCrop": [
+          88,
+          90,
+          1166,
+          1150
+        ],
+        "canvasSize": [
+          512,
+          512
+        ],
+        "spriteBox": [
+          31,
+          31,
+          481,
+          481
+        ],
+        "preservedGeneratedAlpha": true
+      },
+      "runtimeSource": "assets/ui-source/runtime/tile-lightning-5.png",
+      "runtimeWebp": "client/app-assets/ui/tile_lightning_5.webp"
+    },
+    {
+      "name": "tile-spirit-orb-base",
+      "element": "spirit-orb",
+      "tier": "base",
+      "generatedSource": "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-e6c18388-40fb-44dc-aa3e-383e41314914.png",
+      "promptFile": "tile-spirit-orb-base.prompt.txt",
+      "references": [
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-c852aa6f-e250-41d6-8e3a-401ec4bb7f9c.png"
+      ],
+      "png": "tile-spirit-orb-base.png",
+      "webp": "tile-spirit-orb-base.webp",
+      "export": {
+        "sourceCrop": [
+          90,
+          98,
+          1164,
+          1151
+        ],
+        "canvasSize": [
+          512,
+          512
+        ],
+        "spriteBox": [
+          31,
+          31,
+          481,
+          481
+        ],
+        "preservedGeneratedAlpha": true
+      },
+      "runtimeSource": "assets/ui-source/runtime/tile-spirit-orb.png",
+      "runtimeWebp": "client/app-assets/ui/tile_spirit_orb.webp"
+    },
+    {
+      "name": "tile-spirit-orb-4",
+      "element": "spirit-orb",
+      "tier": "4",
+      "generatedSource": "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-14a3b0ee-1cbb-4547-a07f-59a77c259711.png",
+      "promptFile": "tile-spirit-orb-4.prompt.txt",
+      "references": [
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-2fb1b926-4e1a-4b2c-8faa-7a4f25903804.png",
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-e6c18388-40fb-44dc-aa3e-383e41314914.png"
+      ],
+      "png": "tile-spirit-orb-4.png",
+      "webp": "tile-spirit-orb-4.webp",
+      "export": {
+        "sourceCrop": [
+          88,
+          91,
+          1166,
+          1150
+        ],
+        "canvasSize": [
+          512,
+          512
+        ],
+        "spriteBox": [
+          31,
+          31,
+          481,
+          481
+        ],
+        "preservedGeneratedAlpha": true
+      },
+      "runtimeSource": "assets/ui-source/runtime/tile-spirit-orb-4.png",
+      "runtimeWebp": "client/app-assets/ui/tile_spirit_orb_4.webp"
+    },
+    {
+      "name": "tile-spirit-orb-5",
+      "element": "spirit-orb",
+      "tier": "5",
+      "generatedSource": "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-7b3676e9-ff75-4627-939b-7ff020b968f7.png",
+      "promptFile": "tile-spirit-orb-5.prompt.txt",
+      "references": [
+        "/Users/trung/.codex/generated_images/01a11fa8-6dea-78e2-b018-a787416cc172/exec-14a3b0ee-1cbb-4547-a07f-59a77c259711.png"
+      ],
+      "png": "tile-spirit-orb-5.png",
+      "webp": "tile-spirit-orb-5.webp",
+      "export": {
+        "sourceCrop": [
+          86,
+          89,
+          1168,
+          1152
+        ],
+        "canvasSize": [
+          512,
+          512
+        ],
+        "spriteBox": [
+          31,
+          31,
+          481,
+          481
+        ],
+        "preservedGeneratedAlpha": true
+      },
+      "runtimeSource": "assets/ui-source/runtime/tile-spirit-orb-5.png",
+      "runtimeWebp": "client/app-assets/ui/tile_spirit_orb_5.webp"
+    }
+  ]
+}

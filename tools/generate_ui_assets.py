@@ -97,7 +97,7 @@ def cutout(name, target, max_size):
     return image
 
 
-def build_runtime_previews():
+def build_runtime_previews(filenames=None):
     groups = {
         "runtime-preview-gameplay-result.png": ("Gameplay result popup", [
             "gameplay-result-panel", "gameplay-result-continue", "gameplay-result-back", "gameplay-result-star"]),
@@ -127,14 +127,20 @@ def build_runtime_previews():
         "runtime-preview-character-icons.png": ("Character equipment icons", [
             "icon-sword-thanh-phong", "icon-sword-trong-nhac", "icon-sword-hoa-van", "icon-sword-loi-minh", "icon-sword-tu-linh", "icon-sword-lien-tinh", "icon-sword-pha-quan", "icon-sword-huyen-co", "icon-skill-nhat-kiem", "icon-skill-ngu-kiem", "icon-skill-hoa-lien", "icon-skill-dan-loi", "icon-skill-pha-chuong", "icon-skill-lien-kiem", "icon-skill-hoi-linh", "icon-skill-van-kiem", "icon-slot-locked", "icon-slot-empty"]),
         "runtime-preview-tiles.png": ("Gameplay tiles", [
-            "tile-sword", "tile-fire", "tile-lightning", "tile-spirit-orb", "tile-stone", "tile-herb", "tile-rock"]),
+            "tile-fire", "tile-fire-4", "tile-fire-5",
+            "tile-sword", "tile-sword-4", "tile-sword-5",
+            "tile-lightning", "tile-lightning-4", "tile-lightning-5",
+            "tile-spirit-orb", "tile-spirit-orb-4", "tile-spirit-orb-5",
+            "tile-stone", "tile-herb", "tile-rock"]),
         "runtime-preview-overlays.png": ("Tile overlays", [
             "overlay-seal", "overlay-slash", "overlay-omni"]),
     }
     cell_w, cell_h, margin, title_h = 250, 200, 20, 62
     font = ImageFont.load_default()
     for filename, (title, names) in groups.items():
-        columns = 4 if len(names) > 6 else 3
+        if filenames is not None and filename not in filenames:
+            continue
+        columns = 3 if filename == "runtime-preview-tiles.png" else 4 if len(names) > 6 else 3
         rows = (len(names) + columns - 1) // columns
         width = margin + columns * (cell_w + margin)
         height = title_h + margin + rows * (cell_h + margin)

@@ -1,0 +1,124 @@
+{
+  "scenario": "charged-sword-swap",
+  "before": {
+    "moves": 24,
+    "score": 0
+  },
+  "after": {
+    "moves": 23,
+    "score": 840
+  },
+  "phases": [
+    {
+      "kind": "swap",
+      "id": 1,
+      "effects": [],
+      "moves": 24
+    },
+    {
+      "kind": "clear",
+      "id": 2,
+      "effects": [
+        "skill"
+      ],
+      "moves": 23
+    },
+    {
+      "kind": "clear",
+      "id": 3,
+      "effects": [
+        "spirit"
+      ],
+      "moves": 23
+    },
+    {
+      "kind": "clear",
+      "id": 4,
+      "effects": [
+        "fire"
+      ],
+      "moves": 23
+    },
+    {
+      "kind": "clear",
+      "id": 5,
+      "effects": [
+        "fire"
+      ],
+      "moves": 23
+    },
+    {
+      "kind": "clear",
+      "id": 6,
+      "effects": [
+        "cross"
+      ],
+      "moves": 23
+    },
+    {
+      "kind": "clear",
+      "id": 7,
+      "effects": [
+        "slash"
+      ],
+      "moves": 23
+    },
+    {
+      "kind": "clear",
+      "id": 8,
+      "effects": [
+        "lightning"
+      ],
+      "moves": 23
+    },
+    {
+      "kind": "clear",
+      "id": 9,
+      "effects": [
+        "lightning"
+      ],
+      "moves": 23
+    },
+    {
+      "kind": "fall",
+      "id": 10,
+      "effects": [],
+      "moves": 23
+    },
+    {
+      "kind": "clear",
+      "id": 11,
+      "effects": [
+        "skill"
+      ],
+      "moves": 23
+    },
+    {
+      "kind": "fall",
+      "id": 12,
+      "effects": [],
+      "moves": 23
+    },
+    {
+      "kind": "clear",
+      "id": 13,
+      "effects": [
+        "skill"
+      ],
+      "moves": 23
+    },
+    {
+      "kind": "fall",
+      "id": 14,
+      "effects": [],
+      "moves": 23
+    },
+    {
+      "kind": "idle",
+      "id": 0,
+      "effects": [],
+      "moves": 23
+    }
+  ],
+  "passed": true
+}

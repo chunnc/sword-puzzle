@@ -1,0 +1,38 @@
+{
+  "device": "iPhone 16e / iOS 26.3",
+  "scale": 3,
+  "renderer": "Actual native GameScreen and Skia Board, in-memory local content fixture",
+  "persistentSaveModified": false,
+  "scenarios": [
+    {
+      "file": "native-320x568.png",
+      "viewport": [
+        320,
+        568
+      ]
+    },
+    {
+      "file": "native-390x844.png",
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "file": "selected-320x568.png",
+      "viewport": [
+        320,
+        568
+      ],
+      "state": "selected sword"
+    },
+    {
+      "file": "after-effects-320x568.png",
+      "viewport": [
+        320,
+        568
+      ],
+      "state": "settled after charged sword swap"
+    }
+  ]
+}

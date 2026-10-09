@@ -1,7 +1,8 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { StyleSheet, Text, View } from 'react-native';
-import { Board, type BoardVisualEffect } from '../Board';
+import { Board, SpiritOrb, type BoardVisualEffect } from '../Board';
+import { ART, tileArtwork } from '../../assets';
 import { BoardEffects } from '../BoardEffects';
 import { SpiritQiFlightOverlay } from '../SpiritQiFlightOverlay';
 import { buildSpiritFlightCues } from '../spiritParticles';
@@ -13,6 +14,22 @@ import { getLevel } from '../../game/levels';
 import { TileKind } from '../../game/types';
 import { Gesture } from 'react-native-gesture-handler';
 import { cancelAnimation, Easing, makeMutable, withTiming } from 'react-native-reanimated';
+
+// Jest Expo normally gives every image the same ID; distinct IDs make wrong
+// element/tier selection observable in the renderer and asset helper tests.
+jest.mock('../../../app-assets/ui/tile_sword.webp', () => 101);
+jest.mock('../../../app-assets/ui/tile_sword_4.webp', () => 102);
+jest.mock('../../../app-assets/ui/tile_sword_5.webp', () => 103);
+jest.mock('../../../app-assets/ui/tile_fire.webp', () => 104);
+jest.mock('../../../app-assets/ui/tile_fire_4.webp', () => 105);
+jest.mock('../../../app-assets/ui/tile_fire_5.webp', () => 106);
+jest.mock('../../../app-assets/ui/tile_lightning.webp', () => 107);
+jest.mock('../../../app-assets/ui/tile_lightning_4.webp', () => 108);
+jest.mock('../../../app-assets/ui/tile_lightning_5.webp', () => 109);
+jest.mock('../../../app-assets/ui/tile_spirit_orb.webp', () => 110);
+jest.mock('../../../app-assets/ui/tile_spirit_orb_4.webp', () => 111);
+jest.mock('../../../app-assets/ui/tile_spirit_orb_5.webp', () => 112);
+jest.mock('../../../app-assets/ui/tile_rock.webp', () => 113);
 
 jest.mock('react-native-gesture-handler', () => ({
   Gesture: {
@@ -120,6 +137,87 @@ describe('Skia Board integration', () => {
   beforeEach(() => { mockQueueUI = false; mockUIQueue.length = 0; mockReactions.length = 0; });
   afterEach(() => { act(() => { renderer?.unmount(); }); });
 
+  it.each([
+    [TileKind.Sword, 101, 102, 103],
+    [TileKind.Fire, 104, 105, 106],
+    [TileKind.Lightning, 107, 108, 109],
+    [TileKind.SpiritOrb, 110, 111, 112],
+    [TileKind.Rock, 113, 113, 113],
+  ])('selects base/4/5 artwork for tile kind %s', (kind, base, tier4, tier5) => {
+    expect(tileArtwork(kind)).toBe(base);
+    expect(tileArtwork(kind, 0)).toBe(base);
+    expect(tileArtwork(kind, 4)).toBe(tier4);
+    expect(tileArtwork(kind, 5)).toBe(tier5);
+  });
+
+  it.each([280, 350])('renders all twelve sprites with less padding at board width %s', side => {
+    const next = { ...snapshot, tiles: [...snapshot.tiles] };
+    const expected = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112];
+    [TileKind.Sword, TileKind.Fire, TileKind.Lightning, TileKind.SpiritOrb].forEach((kind, k) => {
+      ([0, 4, 5] as const).forEach((chargeTier, t) => {
+        next.tiles[k * 3 + t] = { kind, chargeTier, locked: false };
+      });
+    });
+    next.tiles[12] = { kind: TileKind.Rock, chargeTier: 0, locked: false };
+    mount({ snapshot: next });
+    const grid = renderer.root.findAllByType(View).find(node => typeof node.props.onLayout === 'function')!;
+    act(() => { grid.props.onLayout({ nativeEvent: { layout: { width: side, height: side } } }); });
+    const cells = buttons();
+    const sprites = renderer.root.findAll(node => node.type === 'SkiaImage' as never);
+    for (let index = 0; index < 13; index++) {
+      const cell = cells.find(node => {
+        const bounds = StyleSheet.flatten(node.props.style);
+        return bounds.left === index % 7 * side / 7 + 1
+          && bounds.top === (6 - Math.floor(index / 7)) * side / 7 + 1;
+      })!;
+      const bounds = StyleSheet.flatten(cell.props.style);
+      const sprite = sprites.find(node => node.props.x > bounds.left && node.props.x < bounds.left + bounds.width
+        && node.props.y > bounds.top && node.props.y < bounds.top + bounds.height)!;
+      expect(sprite.props.image.asset).toBe(index < 12 ? expected[index] : ART.tileRock);
+      expect(sprite.props.x).toBeCloseTo(bounds.left + bounds.width * (index < 12 ? .03 : .06));
+      expect(sprite.props.width).toBeCloseTo(bounds.width * (index < 12 ? .94 : .88));
+    }
+    const labels = renderer.root.findAll(node => node.type === 'Paragraph' as never).map(node => node.props.paragraph.text);
+    expect(labels).not.toContain('氣');
+    expect(labels.some(text => text.includes('✧') || text.includes('✦'))).toBe(false);
+    expect(labels).toContain('封');
+    expect(cells.find(node => node.props.accessibilityLabel.includes('cường hóa 4'))).toBeDefined();
+    expect(cells.find(node => node.props.accessibilityLabel.includes('cường hóa 5'))).toBeDefined();
+  });
+
+  it('changes the sprite when a tile upgrades without remounting the board', () => {
+    const next = { ...snapshot, tiles: [...snapshot.tiles] };
+    next.tiles[0] = { kind: TileKind.Fire, chargeTier: 0, locked: false };
+    mount({ snapshot: next });
+    const sprite = () => tile(0).findAll(node => node.type === 'SkiaImage' as never)[0];
+    expect(sprite().props.image.asset).toBe(104);
+    for (const chargeTier of [4, 5] as const) {
+      const upgraded = { ...next, tiles: [...next.tiles] };
+      upgraded.tiles[0] = { ...next.tiles[0]!, chargeTier };
+      act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: upgraded })); });
+      expect(sprite().props.image.asset).toBe(chargeTier === 4 ? 105 : 106);
+    }
+  });
+
+  it('uses the same charged artwork and padding for sword fragments', () => {
+    const next = { ...snapshot, tiles: [...snapshot.tiles] };
+    next.tiles[0] = { kind: TileKind.Sword, chargeTier: 4, locked: false };
+    next.tiles[1] = { kind: TileKind.Lightning, chargeTier: 5, locked: false };
+    mount({ snapshot: next, visualEffect: { id: 90, kind: 'clear', cleared: [0, 1], changed: [],
+      effects: [{ kind: 'slash', cells: [0, 1], source: 0, swordChargeTier: 4, damage: 1, qi: 0 }] } });
+    const fragments = renderer.root.findByType(BoardEffects).findAll(node => node.type === 'SkiaImage' as never);
+    expect(fragments.map(node => node.props.image.asset)).toEqual([102, 102, 109, 109]);
+    for (const sprite of fragments) expect(sprite.props.width).toBeCloseTo(48 * .94);
+  });
+
+  it('renders the standalone spirit icon without a character overlay', () => {
+    act(() => { renderer = create(React.createElement(SpiritOrb, { size: 34 })); });
+    const sprites = renderer.root.findAll(node => node.type === 'SkiaImage' as never);
+    expect(sprites).toHaveLength(1);
+    expect(sprites[0].props.image.asset).toBe(110);
+    expect(renderer.root.findAll(node => node.type === 'Paragraph' as never)).toHaveLength(0);
+  });
+
   it('renders one canvas and keeps 49 correctly positioned accessible buttons', () => {
     mount();
     expect(renderer.root.findAll(node => node.type === 'Canvas' as never)).toHaveLength(1);
@@ -205,8 +303,8 @@ describe('Skia Board integration', () => {
     const effects = renderer.root.findByType(BoardEffects);
     const fragments = effects.findAll(node => node.type === 'Group' as never && node.props.layer);
     expect(fragments).toHaveLength(tier === 5 ? 8 : 6);
-    expect(effects.findAll(node => node.type === 'Paragraph' as never && node.props.paragraph.text === '氣')).toHaveLength(2);
-    expect(effects.findAll(node => node.type === 'Paragraph' as never && node.props.paragraph.text === '✦5')).toHaveLength(2);
+    expect(effects.findAll(node => node.type === 'Paragraph' as never)).toHaveLength(0);
+    expect(effects.findAll(node => node.type === 'SkiaImage' as never && node.props.image.asset === ART.tileSpiritOrb5)).toHaveLength(2);
     expect(effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === '#0b4144')).toHaveLength(0);
     expect(effects.findAll(node => node.type === 'Path' as never)).toHaveLength(tier === 5 ? 6 : 3);
     const progress = effects.props.progress;

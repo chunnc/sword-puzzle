@@ -14,11 +14,20 @@ Các sprite trong `runtime/` không chứa chữ; app vẫn dựng nhãn và s�
 ảnh `runtime-preview-*.png` là contact sheet để duyệt bề mặt, icon, ô ghép và lớp
 phủ. Script giữ tên asset hiện có để không đổi tham chiếu trong client.
 
-## Linh Châu
+## Bộ tile bàn cờ V2
 
-`runtime/tile-spirit-orb.png` được tạo bằng công cụ ImageGen tích hợp. Bản dùng
-trong game là `client/app-assets/ui/tile_spirit_orb.webp`, 512×512, giữ alpha,
-WebP quality 90. Bàn cờ Skia dựng chữ `氣` riêng để rõ ở kích thước nhỏ.
+Game dùng [bộ 12 tile V2](tiles-v2/README.md) theo loại và cấp thường/4/5:
+hỏa nền đỏ, kiếm nền vàng, lôi nền tím, linh khí nền xanh lá. Ô thường không
+viền; ô 4/5 cùng một viền đơn, khác biểu tượng bên trong. PNG trong `runtime/`
+là nguồn xuất WebP; `runtime-preview-tiles.png` hiển thị đủ ba cấp mỗi hệ.
+Renderer dùng padding 3% mỗi cạnh, bỏ số cấp và chữ linh khí vẽ đè, giữ
+phong ấn/accessibility. Đá chắn giữ nguyên.
+
+## Linh Châu trước V2
+
+Trước V2, `runtime/tile-spirit-orb.png` là viên linh châu, được tạo bằng công cụ
+ImageGen tích hợp; bàn cờ Skia dựng thêm chữ `氣`. V2 đã thay hình này bằng
+khối linh khí xoáy và bỏ chữ đè. Prompt cũ bên dưới được giữ làm lịch sử.
 
 Prompt: Create one production-ready sprite for a xianxia match-three mobile game,
 square composition. A luminous spherical jade-green spirit orb with a mint-white

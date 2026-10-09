@@ -1,5 +1,5 @@
 import { ImageSourcePropType } from 'react-native';
-import { TileKind } from './game/types';
+import { TileKind, type Tile } from './game/types';
 import type { SkillId, SwordId } from './game/domain';
 import dialogPanelMetadata from '../app-assets/ui/dialog_panels.metadata.json';
 
@@ -101,12 +101,20 @@ export const ART = {
   stageDone: require('../app-assets/ui/stage_done.webp') as ImageSourcePropType,
   stageLocked: require('../app-assets/ui/stage_locked.webp') as ImageSourcePropType,
   tileFire: require('../app-assets/ui/tile_fire.webp') as number,
+  tileFire4: require('../app-assets/ui/tile_fire_4.webp') as number,
+  tileFire5: require('../app-assets/ui/tile_fire_5.webp') as number,
   tileHerb: require('../app-assets/ui/tile_herb.webp') as ImageSourcePropType,
   tileLightning: require('../app-assets/ui/tile_lightning.webp') as number,
+  tileLightning4: require('../app-assets/ui/tile_lightning_4.webp') as number,
+  tileLightning5: require('../app-assets/ui/tile_lightning_5.webp') as number,
   tileRock: require('../app-assets/ui/tile_rock.webp') as number,
   tileSpiritOrb: require('../app-assets/ui/tile_spirit_orb.webp') as number,
+  tileSpiritOrb4: require('../app-assets/ui/tile_spirit_orb_4.webp') as number,
+  tileSpiritOrb5: require('../app-assets/ui/tile_spirit_orb_5.webp') as number,
   tileStone: require('../app-assets/ui/tile_stone.webp') as ImageSourcePropType,
   tileSword: require('../app-assets/ui/tile_sword.webp') as number,
+  tileSword4: require('../app-assets/ui/tile_sword_4.webp') as number,
+  tileSword5: require('../app-assets/ui/tile_sword_5.webp') as number,
 } as const;
 
 export type Artwork = keyof typeof ART;
@@ -133,12 +141,12 @@ export const SKILL_ART = {
   'van-kiem': 'iconSkillVanKiem',
 } as const satisfies Record<SkillId, Artwork>;
 
-export function tileArtwork(kind: TileKind): ImageSourcePropType {
+export function tileArtwork(kind: TileKind, chargeTier: Tile['chargeTier'] = 0): number {
   switch (kind) {
-    case TileKind.Sword: return ART.tileSword;
-    case TileKind.Fire: return ART.tileFire;
-    case TileKind.Lightning: return ART.tileLightning;
-    case TileKind.SpiritOrb: return ART.tileSpiritOrb;
+    case TileKind.Sword: return chargeTier === 4 ? ART.tileSword4 : chargeTier === 5 ? ART.tileSword5 : ART.tileSword;
+    case TileKind.Fire: return chargeTier === 4 ? ART.tileFire4 : chargeTier === 5 ? ART.tileFire5 : ART.tileFire;
+    case TileKind.Lightning: return chargeTier === 4 ? ART.tileLightning4 : chargeTier === 5 ? ART.tileLightning5 : ART.tileLightning;
+    case TileKind.SpiritOrb: return chargeTier === 4 ? ART.tileSpiritOrb4 : chargeTier === 5 ? ART.tileSpiritOrb5 : ART.tileSpiritOrb;
     default: return ART.tileRock;
   }
 }

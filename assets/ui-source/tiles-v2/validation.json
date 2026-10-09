@@ -1,0 +1,237 @@
+{
+  "assetCount": 12,
+  "pngCount": 12,
+  "webpCount": 12,
+  "promptCount": 12,
+  "checksPassed": true,
+  "assets": [
+    {
+      "name": "tile-fire-base",
+      "size": [
+        512,
+        512
+      ],
+      "pngMode": "RGBA",
+      "webpMode": "RGBA",
+      "identicalAlpha": true,
+      "transparentOuterMargin": 30,
+      "visibleBounds": [
+        33,
+        33,
+        479,
+        479
+      ],
+      "pngBytes": 226121,
+      "webpBytes": 30936
+    },
+    {
+      "name": "tile-fire-4",
+      "size": [
+        512,
+        512
+      ],
+      "pngMode": "RGBA",
+      "webpMode": "RGBA",
+      "identicalAlpha": true,
+      "transparentOuterMargin": 30,
+      "visibleBounds": [
+        33,
+        33,
+        479,
+        479
+      ],
+      "pngBytes": 247205,
+      "webpBytes": 35958
+    },
+    {
+      "name": "tile-fire-5",
+      "size": [
+        512,
+        512
+      ],
+      "pngMode": "RGBA",
+      "webpMode": "RGBA",
+      "identicalAlpha": true,
+      "transparentOuterMargin": 30,
+      "visibleBounds": [
+        33,
+        33,
+        479,
+        479
+      ],
+      "pngBytes": 253296,
+      "webpBytes": 37084
+    },
+    {
+      "name": "tile-sword-base",
+      "size": [
+        512,
+        512
+      ],
+      "pngMode": "RGBA",
+      "webpMode": "RGBA",
+      "identicalAlpha": true,
+      "transparentOuterMargin": 30,
+      "visibleBounds": [
+        33,
+        33,
+        479,
+        479
+      ],
+      "pngBytes": 253144,
+      "webpBytes": 35114
+    },
+    {
+      "name": "tile-sword-4",
+      "size": [
+        512,
+        512
+      ],
+      "pngMode": "RGBA",
+      "webpMode": "RGBA",
+      "identicalAlpha": true,
+      "transparentOuterMargin": 30,
+      "visibleBounds": [
+        33,
+        33,
+        479,
+        479
+      ],
+      "pngBytes": 289769,
+      "webpBytes": 41720
+    },
+    {
+      "name": "tile-sword-5",
+      "size": [
+        512,
+        512
+      ],
+      "pngMode": "RGBA",
+      "webpMode": "RGBA",
+      "identicalAlpha": true,
+      "transparentOuterMargin": 30,
+      "visibleBounds": [
+        33,
+        33,
+        479,
+        479
+      ],
+      "pngBytes": 295030,
+      "webpBytes": 44224
+    },
+    {
+      "name": "tile-lightning-base",
+      "size": [
+        512,
+        512
+      ],
+      "pngMode": "RGBA",
+      "webpMode": "RGBA",
+      "identicalAlpha": true,
+      "transparentOuterMargin": 30,
+      "visibleBounds": [
+        33,
+        33,
+        479,
+        479
+      ],
+      "pngBytes": 236146,
+      "webpBytes": 24284
+    },
+    {
+      "name": "tile-lightning-4",
+      "size": [
+        512,
+        512
+      ],
+      "pngMode": "RGBA",
+      "webpMode": "RGBA",
+      "identicalAlpha": true,
+      "transparentOuterMargin": 30,
+      "visibleBounds": [
+        33,
+        33,
+        479,
+        479
+      ],
+      "pngBytes": 256369,
+      "webpBytes": 35040
+    },
+    {
+      "name": "tile-lightning-5",
+      "size": [
+        512,
+        512
+      ],
+      "pngMode": "RGBA",
+      "webpMode": "RGBA",
+      "identicalAlpha": true,
+      "transparentOuterMargin": 30,
+      "visibleBounds": [
+        33,
+        33,
+        479,
+        479
+      ],
+      "pngBytes": 254878,
+      "webpBytes": 34424
+    },
+    {
+      "name": "tile-spirit-orb-base",
+      "size": [
+        512,
+        512
+      ],
+      "pngMode": "RGBA",
+      "webpMode": "RGBA",
+      "identicalAlpha": true,
+      "transparentOuterMargin": 30,
+      "visibleBounds": [
+        33,
+        33,
+        479,
+        479
+      ],
+      "pngBytes": 276733,
+      "webpBytes": 33032
+    },
+    {
+      "name": "tile-spirit-orb-4",
+      "size": [
+        512,
+        512
+      ],
+      "pngMode": "RGBA",
+      "webpMode": "RGBA",
+      "identicalAlpha": true,
+      "transparentOuterMargin": 30,
+      "visibleBounds": [
+        33,
+        33,
+        479,
+        479
+      ],
+      "pngBytes": 299291,
+      "webpBytes": 36614
+    },
+    {
+      "name": "tile-spirit-orb-5",
+      "size": [
+        512,
+        512
+      ],
+      "pngMode": "RGBA",
+      "webpMode": "RGBA",
+      "identicalAlpha": true,
+      "transparentOuterMargin": 30,
+      "visibleBounds": [
+        33,
+        33,
+        479,
+        479
+      ],
+      "pngBytes": 304787,
+      "webpBytes": 40954
+    }
+  ]
+}
