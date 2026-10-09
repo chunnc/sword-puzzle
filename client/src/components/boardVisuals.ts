@@ -45,6 +45,8 @@ export type BoardVisualEffect = {
   id: number;
   kind: 'clear';
   cleared: number[];
+  /** Charged sources remain intact until their own activation finishes. */
+  retainedSources?: number[];
   changed: number[];
   effects: BoardAnimationEffect[];
 } | {
@@ -152,6 +154,7 @@ export function buildBoardEffectCues(
   const durationMs = boardClearDurationMs(effect.effects);
   const alreadyCleared = new Set(previous?.kind === 'clear' ? previous.cleared : []);
   const cleared = new Set(effect.cleared);
+  const retainedSources = new Set(effect.retainedSources);
   const claimedSwordTargets = new Set<number>();
   return events.map((event, eventIndex): BoardEffectCue => {
     const targetIndices = [...new Set(event.cells.filter(index => validCell(index, geometry)))];
@@ -173,7 +176,8 @@ export function buildBoardEffectCues(
         seed: effectSeed(runId, effect.id, eventIndex, event.kind),
         targets: points.filter(point => {
           const onStroke = point.y === source.y || cross && point.x === source.x;
-          if (!onStroke || !cleared.has(point.index) || alreadyCleared.has(point.index) || claimedSwordTargets.has(point.index)) return false;
+          if (!onStroke || !cleared.has(point.index) || alreadyCleared.has(point.index)
+            || retainedSources.has(point.index) || claimedSwordTargets.has(point.index)) return false;
           claimedSwordTargets.add(point.index);
           return true;
         }).map((point): SwordBoardEffectCue['targets'][number] => ({ ...point, impactAt: splitAtMs / durationMs,
@@ -232,6 +236,7 @@ export function buildCellVisuals(
   cues: BoardEffectCue[] = buildBoardEffectCues(effect, geometry, '', previous),
 ): CellVisual[] {
   const previouslyCleared = new Set(previous?.kind === 'clear' ? previous.cleared : []);
+  const retainedSources = new Set(effect?.kind === 'clear' ? effect.retainedSources : []);
   const impacts = new Map<number, number>();
   const clearStarts = new Map<number, number>();
   const splits = new Map<number, number>();
@@ -276,14 +281,15 @@ export function buildCellVisuals(
       }
     } else if (effect.kind === 'clear') {
       const cleared = effect.cleared.includes(index);
-      visual.hidden = cleared && previouslyCleared.has(index);
-      visual.clearing = cleared && !visual.hidden;
+      const retained = retainedSources.has(index);
+      visual.hidden = cleared && previouslyCleared.has(index) && !retained;
+      visual.clearing = cleared && !visual.hidden && !retained;
       visual.changed = !cleared && effect.changed.includes(index);
       const trace = effect.effects.find(item => item.cells.includes(index) || item.source === index);
       visual.flashing = !!trace && !trace.swordChargeTier;
       visual.flashAt = impacts.get(index) ?? null;
       visual.clearAt = cleared ? clearStarts.get(index) ?? 0 : 0;
-      visual.splitAt = cleared && !visual.hidden ? splits.get(index) ?? null : null;
+      visual.splitAt = visual.clearing ? splits.get(index) ?? null : null;
       if (visual.splitAt !== null) visual.flashing = false;
       visual.flashColor = trace?.kind === 'fire' ? '#ffb063'
         : trace?.kind === 'lightning' ? '#c7a5ff'

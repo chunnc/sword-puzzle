@@ -66,6 +66,33 @@ describe('Skia board coordinates and animation', () => {
     expect(buildCellVisuals(first, { id: 5, kind: 'fall', falls: [] })[0].hidden).toBe(false);
   });
 
+  it('keeps pending and active charged sources intact, then hides each completed source permanently', () => {
+    const match: BoardVisualEffect = { id: 24, kind: 'clear', cleared: [23, 24], retainedSources: [24, 25], changed: [],
+      effects: [{ kind: 'skill', cells: [23, 24], damage: 0, qi: 0 }] };
+    const sword: BoardVisualEffect = { id: 25, kind: 'clear', cleared: [22, 23, 24, 25, 26], retainedSources: [24, 25], changed: [],
+      effects: [{ kind: 'slash', swordChargeTier: 4, source: 24, cells: [22, 23, 24, 25, 26], damage: 0, qi: 0 }] };
+    const fire: BoardVisualEffect = { id: 26, kind: 'clear', cleared: [22, 23, 24, 25, 26, 31], retainedSources: [25], changed: [],
+      effects: [{ kind: 'fire', source: 25, cells: [24, 25, 31], damage: 0, qi: 0 }] };
+    const next: BoardVisualEffect = { id: 27, kind: 'clear', cleared: fire.cleared, retainedSources: [], changed: [],
+      effects: [{ kind: 'lightning', source: 31, cells: [25], damage: 0, qi: 0 }] };
+    const matched = buildCellVisuals(match, null), slashed = buildCellVisuals(sword, match), burned = buildCellVisuals(fire, sword);
+    for (const visuals of [matched, slashed]) {
+      for (const index of [24, 25]) {
+        expect(visuals[index]).toMatchObject({ hidden: false, clearing: false, splitAt: null });
+        for (const progress of [0, .5, .999, 1]) {
+          expect(cellMotion(visuals[index], 50, progress, 1)).toMatchObject({ opacity: 1, scale: 1 });
+        }
+      }
+    }
+    const cue = buildBoardEffectCues(sword, undefined, 'run', match)[0] as SwordBoardEffectCue;
+    expect(cue.targets.map(target => target.index)).toEqual([22, 26]);
+    expect(burned[24].hidden).toBe(true);
+    expect(burned[25].hidden).toBe(false);
+    expect(cellMotion(burned[25], 50, 1, 1).opacity).toBe(1);
+    expect(buildCellVisuals(next, fire)[25].hidden).toBe(true);
+    for (const visuals of [slashed, burned, buildCellVisuals(next, fire)]) expect(visuals[23].hidden).toBe(true);
+  });
+
   it('disables all motion and flashes under reduced motion', () => {
     const effect: BoardVisualEffect = { id: 6, kind: 'clear', cleared: [0], changed: [1], effects: [{ kind: 'spirit', cells: [0, 1], damage: 0, qi: 3 }] };
     for (const visual of buildCellVisuals(effect, effect, true)) {

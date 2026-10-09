@@ -80,9 +80,16 @@ export function createBoardPresenter(options: {
                 const { step } = phase;
                 if (!reduceMotion) {
                     const cleared = new Set<number>();
+                    const pendingSources = new Map<number, number>();
+                    // A skill can share a source with the activation it queues.
+                    // The source's final trace owns the end of its visible lifetime.
+                    step.effects.forEach((trace, index) => {
+                        if (trace.source !== undefined && step.before.tiles[trace.source]?.chargeTier
+                            && step.cleared.includes(trace.source)) pendingSources.set(trace.source, index);
+                    });
                     let visual = step.before;
                     options.setBoard(visual);
-                    for (const trace of step.effects) {
+                    for (const [index, trace] of step.effects.entries()) {
                         if (reduceMotion) break;
                         trace.cells.forEach(i => { if (step.cleared.includes(i)) cleared.add(i); });
                         if (trace.source !== undefined && step.cleared.includes(trace.source)) cleared.add(trace.source);
@@ -94,7 +101,9 @@ export function createBoardPresenter(options: {
                         };
                         const deferSpirit = trace.kind === 'spirit' && !!trace.spiritChargeTier;
                         if (!deferSpirit) { visual = nextVisual; options.setBoard(visual); }
-                        await motion({ id: options.nextId(), kind: 'clear', cleared: [...cleared], changed: step.changed, effects: [trace] });
+                        await motion({ id: options.nextId(), kind: 'clear', cleared: [...cleared],
+                            retainedSources: [...pendingSources.keys()], changed: step.changed, effects: [trace] });
+                        if (trace.source !== undefined && pendingSources.get(trace.source) === index) pendingSources.delete(trace.source);
                         if (deferSpirit) { visual = nextVisual; options.setBoard(visual); }
                     }
                     options.setBoard(step.after);

@@ -846,6 +846,43 @@ describe('Skia Board integration', () => {
     expect(layers()).toHaveLength(0);
     expect(withTiming).toHaveBeenLastCalledWith(1, { duration: 450 }, expect.any(Function));
   });
+
+  it.each([
+    [TileKind.Sword, 4, 'slash'], [TileKind.Sword, 5, 'cross'],
+    [TileKind.Fire, 4, 'fire'], [TileKind.Fire, 5, 'fire'],
+    [TileKind.Lightning, 4, 'lightning'], [TileKind.Lightning, 5, 'lightning'],
+    [TileKind.SpiritOrb, 4, 'spirit'], [TileKind.SpiritOrb, 5, 'spirit'],
+  ] as const)('renders %s/%s intact throughout its activation after an earlier clear, including HUD updates', (kind, tier, effectKind) => {
+    const next = { ...snapshot, tiles: [...snapshot.tiles] };
+    next.tiles[24] = { kind, chargeTier: tier, locked: false };
+    const first: BoardVisualEffect = { id: 100, kind: 'clear', cleared: [24], retainedSources: [24], changed: [],
+      effects: [{ kind: 'skill', cells: [24], qi: 0, damage: 0 }] };
+    mount({ snapshot: next, visualEffect: first });
+    expect(tile(24).props.layer).toBeUndefined();
+    const active: BoardVisualEffect = { id: 101, kind: 'clear', cleared: [24, 25], retainedSources: [24], changed: [],
+      effects: [{ kind: effectKind, source: 24, cells: kind === TileKind.SpiritOrb ? [] : [24, 25], qi: 0, damage: 0,
+        ...(kind === TileKind.Sword ? { swordChargeTier: tier } : {}),
+        ...(kind === TileKind.SpiritOrb ? { spiritChargeTier: tier } : {}),
+      }] };
+    const motionSession = createBoardMotionSession('clear');
+    act(() => renderer.update(React.createElement(Board, { ...props, snapshot: next, visualEffect: active, motionSession })));
+    for (const progress of [0, .5, .999, 1]) {
+      motionSession.progress.value = progress;
+      reactFrames();
+      const source = tile(24);
+      expect(source).toBeDefined();
+      expect(source.props.layer).toBeUndefined();
+      expect(source.findAllByType(ChargedTileParticle)).toHaveLength(1);
+      if (kind === TileKind.Fire && tier === 5) expect(source.findByType(Fire5Tile).props.idle.image.asset).toBe(114);
+      else expect(source.findByType('SkiaImage' as never).props.image.asset).toBe(tileArtwork(kind, tier));
+    }
+    act(() => renderer.update(React.createElement(Board, { ...props, snapshot: { ...next, swordQi: 20 },
+      visualEffect: { ...active }, motionSession })));
+    expect(tile(24).props.layer).toBeUndefined();
+    act(() => renderer.update(React.createElement(Board, { ...props, snapshot: next,
+      visualEffect: { ...active, id: 102, retainedSources: [], effects: [] } })));
+    expect(tile(24)).toBeUndefined();
+  });
 });
 
 describe('spirit orb flight rendering', () => {

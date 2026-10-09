@@ -2,13 +2,13 @@ import { createBoardPresenter } from '../boardPresenter';
 import { BoardActionCancelled, runBoardAction } from '../../game/boardAction';
 import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
-import type { BoardResolutionStep } from '../../game/types';
-import type { BoardVisualEffect } from '../boardVisuals';
+import { TileKind, type BoardResolutionStep } from '../../game/types';
+import { buildCellVisuals, cellMotion, type BoardVisualEffect } from '../boardVisuals';
 
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
-function fixture(reduceMotion = false) {
-    const board = new BoardEngine(getLevel(5)).snapshot();
-    const step: BoardResolutionStep = {
+function fixture(reduceMotion = false, resolutionStep?: BoardResolutionStep) {
+    const board = resolutionStep?.before ?? new BoardEngine(getLevel(5)).snapshot();
+    const step: BoardResolutionStep = resolutionStep ?? {
         before: board, after: { ...board, swordQi: 20 }, chain: 1, damage: 1,
         cleared: [0, 1], changed: [], falls: [{ index: 0, fromY: 7 }],
         effects: [{ kind: 'fire', source: 0, cells: [0], qi: 10, damage: 1 },
@@ -26,6 +26,116 @@ function fixture(reduceMotion = false) {
 }
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => jest.useRealTimers());
+
+function engineFixture() {
+    const board = new BoardEngine(getLevel(5)).snapshot();
+    board.tiles = Array.from({ length: 49 }, (_, i) => ({
+        kind: (i % 7 + 2 * Math.floor(i / 7)) % 4, chargeTier: 0, locked: false,
+    }));
+    board.level = { ...board.level, objectives: [{ id: 'main', type: 'Battle', target: 100000,
+        enemy: { id: 'test', name: 'Test', artKey: 'beast' } }] };
+    board.objectiveProgress = { main: 0 };
+    return board;
+}
+
+it.each([
+    [TileKind.Sword, 4], [TileKind.Sword, 5], [TileKind.Fire, 4], [TileKind.Fire, 5],
+    [TileKind.Lightning, 4], [TileKind.Lightning, 5], [TileKind.SpiritOrb, 4], [TileKind.SpiritOrb, 5],
+] as const)('retains matched %s/%s until its own completion with the engine rewards applied exactly once', async (kind, tier) => {
+    const board = engineFixture();
+    for (const index of [21, 22, 30]) board.tiles[index] = { kind, chargeTier: index === 21 ? tier : 0, locked: false };
+    board.tiles[23] = { kind: (kind + 1) % 4, chargeTier: 0, locked: false };
+    const engine = new BoardEngine(board.level, board);
+    expect(engine.beginSwap(2, 4, 2, 3)).not.toBeNull();
+    const step = engine.nextResolutionStep()!;
+    expect(step.effects).toHaveLength(2);
+    expect(step.effects[0]).toMatchObject({ kind: 'skill', cells: expect.arrayContaining([21]) });
+    expect(step.effects[1].source).toBe(21);
+    const f = fixture(false, step);
+    const phase = f.playback.presenter.present({ kind: 'step', step });
+    const match = f.effect();
+    expect(match).toMatchObject({ retainedSources: [21] });
+    expect(cellMotion(buildCellVisuals(match, null)[21], 50, 1, 1).opacity).toBe(1);
+    expect(f.setBoard.mock.calls.at(-1)![0].swordQi).toBe(step.before.swordQi + step.effects[0].qi);
+    f.begin(); f.finish(); await flush();
+    const activation = f.effect();
+    expect(activation).toMatchObject({ retainedSources: [21], effects: [step.effects[1]] });
+    expect(buildCellVisuals(activation, match)[21]).toMatchObject({ hidden: false, clearing: false, splitAt: null });
+    f.begin(); await jest.advanceTimersByTimeAsync(5000);
+    expect(f.effect()).toBe(activation);
+    expect(f.setBoard).not.toHaveBeenCalledWith(step.after);
+    f.finish(); await flush();
+    expect(f.effect().kind).toBe('fall');
+    expect(f.setBoard).toHaveBeenLastCalledWith(step.after);
+    expect(step.after.score - step.before.score).toBe(step.cleared.length * 10 * step.chain);
+    expect(step.after.swordQi).toBe(step.before.swordQi + step.effects.reduce((sum, trace) => sum + trace.qi, 0));
+    expect(step.after.objectiveProgress).toEqual(step.effects[1].objectiveProgressAfter);
+    const writes = f.setBoard.mock.calls.length;
+    f.playback.onMotionFinished(f.board.runId, activation.id); await flush();
+    expect(f.setBoard).toHaveBeenCalledTimes(writes);
+    f.begin(); f.finish(); await flush();
+    await jest.advanceTimersByTimeAsync(300); await phase.finished;
+    expect(f.effect()).toBeNull();
+    f.playback.dispose();
+});
+
+it('retains sword → fire → lightning sources in queue order without resurrecting completed sources or duplicating capped qi', async () => {
+    const board = engineFixture();
+    board.swordQi = 100;
+    board.tiles[21] = { kind: TileKind.Sword, chargeTier: 4, locked: false };
+    board.tiles[24] = { kind: TileKind.Fire, chargeTier: 5, locked: false };
+    board.tiles[31] = { kind: TileKind.Lightning, chargeTier: 5, locked: false };
+    const engine = new BoardEngine(board.level, board);
+    expect(engine.beginSkill('nhat-kiem', [{ x: 0, y: 3 }])).not.toBeNull();
+    const step = engine.nextResolutionStep()!;
+    expect(step.effects.map(trace => trace.kind)).toEqual(['slash', 'slash', 'fire', 'lightning']);
+    const f = fixture(false, step);
+    const phase = f.playback.presenter.present({ kind: 'step', step });
+    const retained = [[21, 24, 31], [21, 24, 31], [24, 31], [31]];
+    let previous: BoardVisualEffect | null = null, qi = step.before.swordQi;
+    for (let index = 0; index < step.effects.length; index++) {
+        const effect = f.effect(), trace = step.effects[index];
+        expect(effect).toMatchObject({ retainedSources: retained[index], effects: [trace] });
+        const visuals = buildCellVisuals(effect, previous);
+        for (const source of retained[index]) expect(cellMotion(visuals[source], 50, 1, 1).opacity).toBe(1);
+        if (index >= 2) expect(visuals[21].hidden).toBe(true);
+        if (index >= 3) expect(visuals[24].hidden).toBe(true);
+        qi += trace.qi;
+        expect(f.setBoard.mock.calls.at(-1)![0]).toMatchObject({ swordQi: qi, objectiveProgress: trace.objectiveProgressAfter });
+        f.begin(); f.finish(); await flush();
+        previous = effect;
+    }
+    expect(step.after.swordQi).toBe(100);
+    expect(qi).toBe(step.after.swordQi);
+    expect(step.after.score - step.before.score).toBe(step.cleared.length * 10);
+    expect(f.setBoard).toHaveBeenLastCalledWith(step.after);
+    expect(f.effect().kind).toBe('fall');
+    f.begin(); f.finish(); await flush();
+    await jest.advanceTimersByTimeAsync(300); await phase.finished;
+    f.playback.dispose();
+});
+
+it('holds a fire source shared by Hỏa Liên and its queued activation until the second explosion finishes', async () => {
+    const board = engineFixture();
+    board.swordQi = 100;
+    board.loadout.skills = ['hoa-lien'];
+    board.tiles[16] = { kind: TileKind.Fire, chargeTier: 4, locked: false };
+    const engine = new BoardEngine(board.level, board);
+    expect(engine.beginSkill('hoa-lien', [{ x: 3, y: 3 }])).not.toBeNull();
+    const step = engine.nextResolutionStep()!;
+    expect(step.effects.map(trace => [trace.kind, trace.source])).toEqual([['fire', 16], ['fire', 16]]);
+    const f = fixture(false, step);
+    const phase = f.playback.presenter.present({ kind: 'step', step });
+    const skill = f.effect();
+    f.begin(); f.finish(); await flush();
+    expect(f.effect()).toMatchObject({ retainedSources: [16] });
+    expect(cellMotion(buildCellVisuals(f.effect(), skill)[16], 50, 1, 1).opacity).toBe(1);
+    f.begin(); f.finish(); await flush();
+    expect(f.setBoard).toHaveBeenLastCalledWith(step.after);
+    f.begin(); f.finish(); await flush();
+    await jest.advanceTimersByTimeAsync(300); await phase.finished;
+    f.playback.dispose();
+});
 
 it('waits for real completions, ignores stale callbacks and rests 300ms after landing', async () => {
     const f = fixture();
