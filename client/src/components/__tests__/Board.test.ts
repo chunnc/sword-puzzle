@@ -3,6 +3,9 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { StyleSheet, Text, View } from 'react-native';
 import { Board, type BoardVisualEffect } from '../Board';
 import { BoardEffects } from '../BoardEffects';
+import { SpiritQiFlightOverlay } from '../SpiritQiFlightOverlay';
+import { buildSpiritFlightCues } from '../spiritParticles';
+import { createBoardMotionSession } from '../boardMotion';
 import { buildBoardEffectCues } from '../boardVisuals';
 import type { SkImage } from '@shopify/react-native-skia';
 import { BoardEngine } from '../../game/BoardEngine';
@@ -63,7 +66,7 @@ jest.mock('@shopify/react-native-skia', () => {
   };
   return {
     Canvas: host('Canvas'), Group: host('Group'), Image: host('SkiaImage'), Atlas: host('Atlas'),
-    RoundedRect: host('RoundedRect'), Paragraph: host('Paragraph'), Paint: host('Paint'),
+    RoundedRect: host('RoundedRect'), Paragraph: host('Paragraph'), Paint: host('Paint'), Circle: host('Circle'),
     Path: host('Path'), BlurMask: host('BlurMask'), LinearGradient: host('LinearGradient'),
     FontWeight: { Black: 900 },
     useImage: jest.fn((asset: number) => ({ asset, width: () => 960, height: () => 576 })),
@@ -475,6 +478,54 @@ describe('Skia Board integration', () => {
     expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(49);
     expect(layers()).toHaveLength(0);
     expect(withTiming).toHaveBeenLastCalledWith(1, { duration: 450 }, expect.any(Function));
+  });
+});
+
+describe('spirit orb flight rendering', () => {
+  let renderer: ReactTestRenderer;
+  const geometry = { width: 7, height: 7 };
+  const layout = { board: { x: 10, y: 90, width: 350, height: 350 }, target: { x: 185, y: 480 } };
+  const clear = (tier: 4 | 5): BoardVisualEffect => ({ id: 88, kind: 'clear', cleared: [24], changed: [],
+    effects: [{ kind: 'spirit', spiritChargeTier: tier, source: 24, cells: [], qi: 0, damage: 0 }] });
+  afterEach(() => { act(() => renderer?.unmount()); });
+
+  it.each([4, 5] as const)('renders %s particles outside any board clip and hides them at completion', tier => {
+    const progress = makeMutable(.18);
+    act(() => { renderer = create(React.createElement(SpiritQiFlightOverlay, {
+      cues: buildSpiritFlightCues(clear(tier), geometry, 'a'), geometry, layout, progress, durationMs: 1000,
+    })); });
+    const canvas = renderer.root.findAll(node => node.type === 'Canvas' as never)[0];
+    expect(canvas.props.pointerEvents).toBe('none');
+    expect(canvas.props.accessible).toBe(false);
+    expect(renderer.root.findAll(node => node.type === 'Group' as never && node.props.clip)).toHaveLength(0);
+    expect(renderer.root.findAll(node => node.type === 'Circle' as never)).toHaveLength((tier === 5 ? 28 : 16) * 3 + 2);
+    const sparks = renderer.root.findAll(node => node.type === 'Group' as never && node.props.transform);
+    expect(sparks.every(node => node.props.opacity.value > 0)).toBe(true);
+    expect(sparks.every(node => node.props.transform.value[1].translateY < 265)).toBe(true);
+    progress.value = .9;
+    expect(sparks.every(node => node.props.transform.value[0].translateX === 185
+      && node.props.transform.value[1].translateY === 480)).toBe(true);
+    progress.value = 1;
+    expect(sparks.every(node => node.props.opacity.value === 0)).toBe(true);
+  });
+
+  it('uses the external clock for a linear 1000ms phase without restarting on HUD/layout updates', () => {
+    const snapshot = new BoardEngine(getLevel(5)).snapshot();
+    const motionSession = createBoardMotionSession('clear');
+    const props = { snapshot, selected: null, onCellPress: jest.fn(), onSwipe: jest.fn(), visualEffect: clear(5), motionSession };
+    jest.mocked(withTiming).mockClear();
+    act(() => { renderer = create(React.createElement(Board, props)); });
+    expect(withTiming).toHaveBeenCalledWith(1, { duration: 1000, easing: Easing.linear }, expect.any(Function));
+    expect(motionSession.progress.value).toBe(1);
+    jest.mocked(withTiming).mockClear();
+    motionSession.progress.value = .4;
+    act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: { ...snapshot, swordQi: 99 } })); });
+    const grid = renderer.root.findAllByType(View).find(node => node.props.onLayout)!;
+    act(() => { grid.props.onLayout({ nativeEvent: { layout: { width: 210, height: 210 } } }); });
+    expect(withTiming).not.toHaveBeenCalled();
+    expect(motionSession.progress.value).toBe(.4);
+    act(() => renderer.unmount());
+    expect(motionSession.progress.value).toBe(1);
   });
 });
 

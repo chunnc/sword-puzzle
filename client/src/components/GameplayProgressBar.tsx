@@ -5,8 +5,9 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { colors } from '../theme';
 import { OutlinedText } from './OutlinedText';
 
-export function GameplayProgressBar({ value, max, tone, accessibilityLabel, animated = false, duration = 250 }: {
+export function GameplayProgressBar({ value, max, tone, accessibilityLabel, animated = false, duration = 250, viewRef, onLayout }: {
   value: number; max: number; tone: 'health' | 'qi'; accessibilityLabel: string; animated?: boolean; duration?: number;
+  viewRef?: React.Ref<View>; onLayout?: () => void;
 }) {
   const limit = Number.isFinite(max) && max > 0 ? max : 0;
   const current = Number.isFinite(value) ? Math.max(0, Math.min(value, limit)) : 0;
@@ -19,7 +20,7 @@ export function GameplayProgressBar({ value, max, tone, accessibilityLabel, anim
   const fillStyle = useAnimatedStyle(() => ({ width: progress.value * trackWidth }));
   const health = tone === 'health';
   return (
-    <View testID={`game-${tone}-bar`} accessible accessibilityRole="progressbar" accessibilityLabel={accessibilityLabel}
+    <View ref={viewRef} collapsable={false} onLayout={onLayout} testID={`game-${tone}-bar`} accessible accessibilityRole="progressbar" accessibilityLabel={accessibilityLabel}
       accessibilityValue={{ min: 0, max: limit, now: current }} style={[styles.track, { height: health ? 18 : 12 }]}>
       <View testID={`game-${tone}-track`} onLayout={event => setTrackWidth(event.nativeEvent.layout.width)} style={styles.inner}>
         <Animated.View testID={`game-${tone}-fill`} style={[styles.fill, fillStyle]}>

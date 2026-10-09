@@ -86,13 +86,16 @@ export function createBoardPresenter(options: {
                         if (reduceMotion) break;
                         trace.cells.forEach(i => { if (step.cleared.includes(i)) cleared.add(i); });
                         if (trace.source !== undefined && step.cleared.includes(trace.source)) cleared.add(trace.source);
-                        visual = { ...visual,
+                        const nextVisual = { ...visual,
                             swordQi: Math.min(options.qiCap, visual.swordQi + trace.qi),
                             objectiveProgress: trace.objectiveProgressAfter ?? visual.objectiveProgress,
-                            condensed: visual.condensed || trace.kind === 'spirit' && trace.source !== undefined && step.before.tiles[trace.source]?.chargeTier === 5,
+                            condensed: visual.condensed || trace.kind === 'spirit' && (trace.spiritChargeTier === 5
+                                || trace.source !== undefined && step.before.tiles[trace.source]?.chargeTier === 5),
                         };
-                        options.setBoard(visual);
+                        const deferSpirit = trace.kind === 'spirit' && !!trace.spiritChargeTier;
+                        if (!deferSpirit) { visual = nextVisual; options.setBoard(visual); }
                         await motion({ id: options.nextId(), kind: 'clear', cleared: [...cleared], changed: step.changed, effects: [trace] });
+                        if (deferSpirit) { visual = nextVisual; options.setBoard(visual); }
                     }
                     options.setBoard(step.after);
                     if (step.falls.length && !reduceMotion) {

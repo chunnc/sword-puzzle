@@ -4,6 +4,9 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useReducedMotion } from 'react-native-reanimated';
 import { Board, boardClearDurationMs, BOARD_CLEAR_MS, type BoardVisualEffect } from '../../src/components/Board';
 import { createBoardPresenter } from '../../src/components/boardPresenter';
+import { createBoardMotionSession } from '../../src/components/boardMotion';
+import { SpiritQiFlightOverlay } from '../../src/components/SpiritQiFlightOverlay';
+import { buildSpiritFlightCues, type SpiritFlightLayout } from '../../src/components/spiritParticles';
 import { BoardActionCancelled } from '../../src/game/boardAction';
 import { GameplayDock, GameplayHeader, GameplayInfo } from '../../src/components/GameplayChrome';
 import { GameplayResultPopup, type GameplayResult } from '../../src/components/GameplayResultPopup';
@@ -47,6 +50,39 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const resultRef = useRef<GameplayResult | null>(null), resultReady = useRef(false);
     const busyRef = useRef(false), alive = useRef(true), effectId = useRef(0);
     const reduceMotion = useReducedMotion();
+    const sceneRef = useRef<View>(null), gridRef = useRef<View>(null), qiBarRef = useRef<View>(null);
+    const measureId = useRef(0);
+    const [flightLayout, setFlightLayout] = useState<SpiritFlightLayout | null>(null);
+    const spiritCues = useMemo(() => board ? buildSpiritFlightCues(effect, board.level.board, board.runId) : [],
+        [board?.runId, board?.level.board, effect?.id]);
+    // Board owns playback/completion; the screen overlay reads that exact clock.
+    const spiritMotion = useMemo(() => !reduceMotion && spiritCues.length ? createBoardMotionSession('clear') : undefined,
+        [board?.runId, effect?.id, reduceMotion, spiritCues.length]);
+    const measureFlightLayout = useCallback(() => {
+        const root = sceneRef.current, grid = gridRef.current, bar = qiBarRef.current;
+        const requestId = ++measureId.current;
+        if (!root || !grid || !bar) return;
+        let measuredBoard: SpiritFlightLayout['board'] | undefined;
+        let measuredTarget: SpiritFlightLayout['target'] | undefined;
+        const valid = () => alive.current && requestId === measureId.current;
+        const fail = () => { if (valid()) setFlightLayout(null); };
+        const commit = () => {
+            if (!valid() || !measuredBoard || !measuredTarget) return;
+            const next = { board: measuredBoard, target: measuredTarget };
+            setFlightLayout(previous => previous && previous.board.x === next.board.x && previous.board.y === next.board.y
+                && previous.board.width === next.board.width && previous.board.height === next.board.height
+                && previous.target.x === next.target.x && previous.target.y === next.target.y ? previous : next);
+        };
+        grid.measureLayout(root, (x, y, width, height) => {
+            if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) { fail(); return; }
+            measuredBoard = { x, y, width, height }; commit();
+        }, fail);
+        bar.measureLayout(root, (x, y, width, height) => {
+            if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) { fail(); return; }
+            measuredTarget = { x: x + width / 2, y: y + height / 2 }; commit();
+        }, fail);
+    }, []);
+    useEffect(() => { measureFlightLayout(); }, [measureFlightLayout, viewport.width, viewport.height, height, compact, board?.condensed, targetSkill]);
     const activeAction = useRef<{ controller: AbortController; playback: ReturnType<typeof createBoardPresenter> } | null>(null);
     const onMotionStarted = useCallback((runId: string, id: number) => activeAction.current?.playback.onMotionStarted(runId, id), []);
     const onMotionFinished = useCallback((runId: string, id: number) => activeAction.current?.playback.onMotionFinished(runId, id), []);
@@ -253,19 +289,24 @@ function GameplaySession({ levelId }: { levelId: number }) {
     return (
       <ScreenFrame background={level.objectives.some(o => o.type === 'Boss') ? 'bgBoss' : 'bgGame'}>
         <View testID="game-content" style={styles.gameContent} onLayout={event => setViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
-          <View style={styles.scene} pointerEvents={overlayOpen ? 'none' : 'auto'} accessibilityElementsHidden={overlayOpen} importantForAccessibility={overlayOpen ? 'no-hide-descendants' : 'auto'}>
+          <View ref={sceneRef} collapsable={false} testID="game-scene" onLayout={measureFlightLayout} style={styles.scene} pointerEvents={overlayOpen ? 'none' : 'auto'} accessibilityElementsHidden={overlayOpen} importantForAccessibility={overlayOpen ? 'no-hide-descendants' : 'auto'}>
             <GameplayHeader levelId={levelId} busy={busy || Boolean(result) || locked} compact={compact} onBack={requestLeave} onHelp={() => { if (!busyRef.current && !resultRef.current) setHelp(true); }} />
             <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion}
-                duration={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects.map(item => item.kind)) : BOARD_CLEAR_MS} />
+                duration={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects) : BOARD_CLEAR_MS} />
             <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setHeight(event.nativeEvent.layout.height)}>
               <View style={{ width: boardWidth, height: boardHeight }}>
-                <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} showTargetingHint={false} locked={busy || overlayOpen || locked} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} onMotionStarted={onMotionStarted} onMotionFinished={onMotionFinished} />
+                <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} showTargetingHint={false} locked={busy || overlayOpen || locked} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} onMotionStarted={onMotionStarted} onMotionFinished={onMotionFinished}
+                  motionSession={spiritMotion} gridRef={gridRef} onGridLayout={measureFlightLayout} />
               </View>
             </View>
             <GameplayDock board={board} skillSlots={realmForExp(store.save.profile.totalExp).skillSlots} available={available} cost={id => engine.cost(id)} targetSkill={targetSkill} targetCount={required} canCast={targets.length === required} busy={busy || Boolean(result) || locked} compact={compact}
+              qiBarRef={qiBarRef} onQiBarLayout={measureFlightLayout}
               onSkill={id => { if (!busyRef.current && !resultRef.current) { setTargetSkill(id); setTargets([]); setSelected(null); } }}
               onCancel={() => { if (!busyRef.current && !resultRef.current) { setTargetSkill(null); setTargets([]); } }}
               onCast={() => { if (targetSkill) void perform(presenter => store.castSkill(targetSkill, targets, presenter)); }} />
+            {spiritMotion && flightLayout && store.foreground && !overlayOpen ? <SpiritQiFlightOverlay key={`${board.runId}:${effect!.id}`}
+              cues={spiritCues} geometry={level.board} layout={flightLayout} progress={spiritMotion.progress}
+              durationMs={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects) : BOARD_CLEAR_MS} /> : null}
           </View>
           {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} /> : null}
           <View pointerEvents="box-none" style={styles.noticeLayer}><Notice message={store.notice} onDismiss={() => store.setNotice('')} /></View>

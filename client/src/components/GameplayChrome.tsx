@@ -58,10 +58,11 @@ export function GameplayInfo({ level, board, compact, reduceMotion, duration }: 
   );
 }
 
-export function GameplayDock({ board, skillSlots, available, cost, targetSkill, targetCount, canCast, busy, compact, onSkill, onCancel, onCast }: {
+export function GameplayDock({ board, skillSlots, available, cost, targetSkill, targetCount, canCast, busy, compact, onSkill, onCancel, onCast, qiBarRef, onQiBarLayout }: {
   board: BoardSnapshot; skillSlots: number; available: SkillId[]; cost: (id: SkillId) => number;
   targetSkill: SkillId | null; targetCount: number; canCast: boolean; busy: boolean; compact: boolean;
   onSkill: (id: SkillId) => void; onCancel: () => void; onCast: () => void;
+  qiBarRef?: React.Ref<View>; onQiBarLayout?: () => void;
 }) {
   const content = getContentVersion(board.contentVersion);
   const sword = content.swords.find(item => item.id === board.loadout.sword)!;
@@ -69,7 +70,7 @@ export function GameplayDock({ board, skillSlots, available, cost, targetSkill, 
     <View testID="game-skill-controls" style={[styles.controls, compact && styles.compactControls]}>
       <View style={styles.energy}>
         <OutlinedText maxFontSizeMultiplier={1.2} style={styles.energyText}>Kiếm khí {board.swordQi}/{content.qiCap}{board.condensed ? ' · Ngưng khí −25%' : ''}</OutlinedText>
-        <GameplayProgressBar value={board.swordQi} max={content.qiCap} tone="qi" accessibilityLabel="Kiếm khí" />
+        <GameplayProgressBar value={board.swordQi} max={content.qiCap} tone="qi" accessibilityLabel="Kiếm khí" viewRef={qiBarRef} onLayout={onQiBarLayout} />
       </View>
       <View testID="game-cast-actions" style={styles.actions}>
         {targetSkill ? <View style={styles.castRow}>

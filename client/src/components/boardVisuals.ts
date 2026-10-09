@@ -6,6 +6,7 @@ export const BOARD_SWAP_MS = 320;
 export const BOARD_CLEAR_MS = 360;
 export const BOARD_FIRE_MS = 1200;
 export const BOARD_LIGHTNING_MS = 1600;
+export const BOARD_SPIRIT_MS = 1000;
 export const BOARD_FALL_MS = 450;
 export const BOARD_CHAIN_DELAY_MS = 300;
 export const BOARD_REJECT_MS = 390;
@@ -27,9 +28,10 @@ export function boardClearDurationMs(effectOrEffects: ClearTimingInput | readonl
   return effects.reduce((duration, effect) => {
     const kind = typeof effect === 'string' ? effect : effect.kind;
     const swordTier = typeof effect === 'string' ? undefined : effect.swordChargeTier;
+    const spiritMs = typeof effect !== 'string' && kind === 'spirit' && effect.spiritChargeTier ? BOARD_SPIRIT_MS : 0;
     const swordMs = (kind === 'slash' || kind === 'cross') && swordTier
       ? BOARD_SWORD_SWEEP_MS + (swordTier === 5 ? BOARD_SWORD_CROSS_DELAY_MS : 0) + BOARD_SWORD_AFTERIMAGE_MS + BOARD_SWORD_SHARDS_MS : 0;
-    return Math.max(duration, swordMs,
+    return Math.max(duration, swordMs, spiritMs,
       kind === 'fire' ? BOARD_FIRE_MS : kind === 'lightning' ? BOARD_LIGHTNING_MS : BOARD_CLEAR_MS);
   }, BOARD_CLEAR_MS);
 }

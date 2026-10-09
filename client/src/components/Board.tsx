@@ -19,7 +19,7 @@ import {
   boardClearDurationMs, displayIndices, buildBoardEffectCues, buildCellVisuals, cellBounds, pointToCell,
   type BoardVisualEffect, type CellVisual,
 } from './boardVisuals';
-import { createBoardMotionSession, createBoardMotionFrame, updateBoardMotionFrame, finishBoardMotionSession, type CellMotionValues } from './boardMotion';
+import { createBoardMotionSession, createBoardMotionFrame, updateBoardMotionFrame, finishBoardMotionSession, type BoardMotionSession, type CellMotionValues } from './boardMotion';
 import { BoardEffects } from './BoardEffects';
 
 export type { CellPosition } from '../game/types';
@@ -73,7 +73,7 @@ export function SpiritOrb({ size = 34 }: { size?: number }) {
   </Canvas>;
 }
 
-export function Board({ snapshot, selected, targets = [], preview = [], targetingHint, showTargetingHint = true, onCellPress, onSwipe, locked = false, visualEffect = null, reduceMotion = false, onMotionStarted, onMotionFinished }: {
+export function Board({ snapshot, selected, targets = [], preview = [], targetingHint, showTargetingHint = true, onCellPress, onSwipe, locked = false, visualEffect = null, reduceMotion = false, onMotionStarted, onMotionFinished, motionSession, gridRef, onGridLayout }: {
   snapshot: BoardSnapshot;
   selected: CellPosition | null;
   targets?: CellPosition[];
@@ -87,6 +87,9 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   reduceMotion?: boolean;
   onMotionStarted?: (runId: string, phaseId: number) => void;
   onMotionFinished?: (runId: string, phaseId: number) => void;
+  motionSession?: BoardMotionSession;
+  gridRef?: React.Ref<View>;
+  onGridLayout?: () => void;
 }) {
   const geometry = snapshot.level.board;
   const content = getContentVersion(snapshot.contentVersion);
@@ -109,11 +112,12 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
     : BOARD_CLEAR_MS;
   const hasLightning = effectCues.some(cue => cue.kind === 'lightning');
   const hasSword = effectCues.some(cue => cue.kind === 'slash' || cue.kind === 'cross');
+  const hasSpirit = visualEffect?.kind === 'clear' && visualEffect.effects.some(trace => trace.kind === 'spirit' && !!trace.spiritChargeTier);
   // An effect ID identifies an immutable phase within a run. HUD updates and
   // equivalent effect objects must not replace that phase's clocks or outputs.
   const visuals = useMemo(() => buildCellVisuals(visualEffect, before,
     reduceMotion, geometry, effectCues), [snapshot.runId, id, kind, reduceMotion, geometry, effectCues]);
-  const motion = useMemo(() => createBoardMotionSession(kind), [snapshot.runId, id, kind, reduceMotion]);
+  const motion = useMemo(() => motionSession ?? createBoardMotionSession(kind), [snapshot.runId, id, kind, reduceMotion, motionSession]);
   const frame = useMemo(() => createBoardMotionFrame(visuals, side / geometry.width), [visuals, side, geometry.width]);
   const frameRef = useRef(frame);
   useLayoutEffect(() => { frameRef.current = frame; }, [frame]);
@@ -152,7 +156,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
         progress.value = withTiming(1, { duration: kind === 'swap' ? BOARD_SWAP_MS : BOARD_FALL_MS }, completed);
       } else if (kind === 'clear') {
         if (hasLightning) elapsedMs.value = withTiming(clearDurationMs, { duration: clearDurationMs, easing: Easing.linear });
-        progress.value = withTiming(1, { duration: clearDurationMs, ...(hasSword ? { easing: Easing.linear } : {}) }, completed);
+        progress.value = withTiming(1, { duration: clearDurationMs, ...(hasSword || hasSpirit ? { easing: Easing.linear } : {}) }, completed);
         pulse.value = withSequence(
           withTiming(1.12, { duration: BOARD_PULSE_IN_MS }),
           withTiming(1, { duration: clearDurationMs - BOARD_PULSE_IN_MS }),
@@ -168,7 +172,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
       const completedFrame = frameRef.current;
       runOnUI(() => { finishBoardMotionSession(motion, completedFrame); })();
     };
-  }, [motion, clearDurationMs, hasLightning, hasSword, onMotionStarted, onMotionFinished]);
+  }, [motion, clearDurationMs, hasLightning, hasSword, hasSpirit, onMotionStarted, onMotionFinished]);
 
   const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onEnd(event => {
     const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side, geometry);
@@ -178,7 +182,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
 
   return <View style={styles.frame}>
     <GestureDetector gesture={gesture}>
-      <View collapsable={false} onLayout={event => setSide(event.nativeEvent.layout.width)} style={styles.grid}>
+      <View ref={gridRef} collapsable={false} onLayout={event => { setSide(event.nativeEvent.layout.width); onGridLayout?.(); }} style={styles.grid}>
         {side > geometry.width * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
           <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
             {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color="#0b4144" />)}

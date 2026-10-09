@@ -21,7 +21,9 @@ jest.mock('react-native-reanimated', () => ({
   default: { View: require('react-native').View }, useReducedMotion: () => mockReduceMotion,
   useSharedValue: (value: number) => require('react').useRef({ value }).current,
   useAnimatedStyle: (style: () => unknown) => style(), withTiming: (value: number) => value,
+  makeMutable: (value: unknown) => ({ value }),
 }));
+jest.mock('../SpiritQiFlightOverlay', () => ({ SpiritQiFlightOverlay: require('react-native').View }));
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: require('react-native').View }));
 jest.mock('../../services/ads', () => ({ hasRewardedAdUnit: () => false }));
 jest.mock('../../state/gameStore', () => ({ useGameStore: Object.assign((selector?: (state: typeof mockState) => unknown) => selector ? selector(mockState) : mockState, { getState: () => mockState }) }));
@@ -295,6 +297,31 @@ describe('gameplay presentation and exit behavior', () => {
       act(() => { renderer.update(React.createElement(GameScreen)); });
       expect(board().props.locked).toBe(false);
     } finally { mockState.foreground = true; }
+  });
+
+  it.each([4, 5] as const)('shares a tier %s orb clock and holds its qi for the full second even without layout', async tier => {
+    jest.useFakeTimers(); mockReduceMotion = false;
+    const animation = cascadeAnimation(1), step = animation.steps[0];
+    step.before = { ...step.before, swordQi: 12, condensed: false };
+    animation.swappedBoard = step.before;
+    step.after = { ...step.after, swordQi: 36, condensed: tier === 5 };
+    animation.finalBoard = step.after;
+    step.effects = [{ kind: 'spirit', spiritChargeTier: tier, source: 0, cells: [], qi: 24, damage: 0 }];
+    await startAnimation(animation);
+    await advance(BOARD_SWAP_MS);
+    const clock = board().props.motionSession;
+    expect(clock).toBeDefined();
+    expect(board().props.snapshot).toMatchObject({ swordQi: 12, condensed: false });
+    await advance(999);
+    expect(board().props.visualEffect.kind).toBe('clear');
+    expect(board().props.motionSession).toBe(clock);
+    expect(board().props.snapshot.swordQi).toBe(12);
+    await advance(1);
+    expect(board().props.snapshot).toMatchObject({ swordQi: 36, condensed: tier === 5 });
+    expect(board().props.visualEffect.kind).toBe('fall');
+    await advance(BOARD_FALL_MS + BOARD_CHAIN_DELAY_MS);
+    expect(board().props.visualEffect).toBeNull();
+    expect(board().props.locked).toBe(false);
   });
 
   async function winRun(stars: 0 | 1 | 2 | 3 = 3) {

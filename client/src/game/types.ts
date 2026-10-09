@@ -48,6 +48,8 @@ export interface BoardAnimationEffect {
     source?: number;
     /** Present only when a charged sword activates, not for slash-shaped skills. */
     swordChargeTier?: 4 | 5;
+    /** Retained from the consumed orb, even when an earlier trace cleared it. */
+    spiritChargeTier?: 4 | 5;
     row?: number;
     column?: number;
     damage: number;

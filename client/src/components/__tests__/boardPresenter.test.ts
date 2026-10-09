@@ -84,6 +84,55 @@ it.each([4, 5] as const)('waits for all tier %s fragments to finish before start
     f.playback.dispose();
 });
 
+it.each([4, 5] as const)('defers tier %s orb bonus/condensation until arrival, retaining earlier base qi', async tier => {
+    const f = fixture();
+    f.step.effects = [{ kind: 'skill', cells: [0], qi: 12, damage: 0 },
+        { kind: 'spirit', spiritChargeTier: tier, source: 0, cells: [], qi: 24, damage: 0 }];
+    f.step.after = { ...f.board, swordQi: 36, condensed: tier === 5 };
+    const phase = f.playback.presenter.present({ kind: 'step', step: f.step });
+    expect(f.setBoard.mock.calls.at(-1)![0].swordQi).toBe(12);
+    f.begin(); f.finish(); await flush();
+    expect(f.effect()).toMatchObject({ effects: [expect.objectContaining({ spiritChargeTier: tier })] });
+    f.begin(); await jest.advanceTimersByTimeAsync(5000);
+    expect(f.setBoard.mock.calls.at(-1)![0]).toMatchObject({ swordQi: 12, condensed: false });
+    const id = f.effect().id;
+    f.finish(); await flush();
+    expect(f.setBoard).toHaveBeenLastCalledWith(f.step.after);
+    expect(f.effect().kind).toBe('fall');
+    const writes = f.setBoard.mock.calls.length;
+    f.playback.onMotionFinished(f.board.runId, id); await flush();
+    expect(f.setBoard).toHaveBeenCalledTimes(writes);
+    f.begin(); f.finish(); await flush();
+    await jest.advanceTimersByTimeAsync(300); await phase.finished;
+    f.playback.dispose();
+});
+
+it.each(['abort', 'reduce', 'cap'] as const)('handles %s during an orb flight without duplicate qi or a hung phase', async mode => {
+    const f = fixture();
+    if (mode === 'cap') f.board.swordQi = 100;
+    f.step.effects = [{ kind: 'spirit', spiritChargeTier: 5, source: 0, cells: [], qi: mode === 'cap' ? 0 : 24, damage: 0 }];
+    f.step.after = { ...f.board, swordQi: mode === 'cap' ? 100 : 24, condensed: true };
+    f.step.falls = [];
+    const phase = f.playback.presenter.present({ kind: 'step', step: f.step });
+    f.begin(); await flush();
+    expect(f.setBoard).toHaveBeenLastCalledWith(f.board);
+    if (mode === 'abort') {
+        const id = f.effect().id;
+        f.controller.abort();
+        await expect(phase.finished).rejects.toBeInstanceOf(BoardActionCancelled);
+        f.playback.onMotionFinished(f.board.runId, id); await flush();
+        expect(f.setBoard).toHaveBeenLastCalledWith(f.board);
+    } else {
+        if (mode === 'reduce') f.playback.setReduceMotion(true);
+        else f.finish();
+        await phase.finished;
+        expect(f.setBoard).toHaveBeenLastCalledWith(f.step.after);
+        expect(f.effect()).toBeNull();
+    }
+    expect(jest.getTimerCount()).toBe(0);
+    f.playback.dispose();
+});
+
 it.each(['clear', 'fall', 'rest'] as const)('cancels during %s without hanging or applying late callbacks', async position => {
     const f = fixture();
     const phase = f.playback.presenter.present({ kind: 'step', step: f.step });

@@ -277,12 +277,12 @@ export class BoardEngine {
                     weaken(i);
                 }
             };
-            const record = (kind: BoardAnimationEffect['kind'], cells: number[], source?: number, bonus?: () => void, swordChargeTier?: 4 | 5) => {
+            const record = (kind: BoardAnimationEffect['kind'], cells: number[], source?: number, bonus?: () => void, swordChargeTier?: 4 | 5, spiritChargeTier?: 4 | 5) => {
                 const damageBefore = waveDamage, qiBefore = this.swordQi;
                 remove(cells);
                 bonus?.();
                 effects.push({ kind, cells: [...new Set(cells)], source, damage: waveDamage - damageBefore, qi: this.swordQi - qiBefore, objectiveProgressAfter: { ...this.objectiveProgress },
-                    ...(swordChargeTier ? { swordChargeTier } : {}) });
+                    ...(swordChargeTier ? { swordChargeTier } : {}), ...(spiritChargeTier ? { spiritChargeTier } : {}) });
             };
             if (mutation.length)
                 effects.push({ kind: 'skill', cells: mutation, damage: 0, qi: 0 });
@@ -331,7 +331,8 @@ export class BoardEngine {
                     this.swordQi = Math.min(this.content.qiCap, this.swordQi + baseQi(tile) * (tile.chargeTier === 5 ? 4 : 2));
                     if (tile.chargeTier === 5)
                         this.condensed = true;
-                } : undefined, tile.kind === TileKind.Sword ? (tile.chargeTier === 5 ? 5 : 4) : undefined);
+                } : undefined, tile.kind === TileKind.Sword ? (tile.chargeTier === 5 ? 5 : 4) : undefined,
+                    tile.kind === TileKind.SpiritOrb ? (tile.chargeTier === 5 ? 5 : 4) : undefined);
             }
             const falls = this.refill();
             yield { before, after: this.snapshot(), cleared: [...cleared], changed: [...changed], effects, falls, damage: waveDamage, chain };

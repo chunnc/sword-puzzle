@@ -85,6 +85,17 @@ describe('board rules v2', () => {
     });
     it('chains sword → fire → lightning in queue order, with unique clears', () => { const s = fixture(); s.tiles[21] = tile(0, 4); s.tiles[24] = tile(1, 4); s.tiles[31] = tile(2, 5); const b = new BoardEngine(getLevel(5), s); b.trySkill('nhat-kiem', [{ x: 0, y: 3 }]); const step = b.animation!.steps[0]; expect(step.effects.slice(1).filter(e => e.source === 21 || e.source === 24 || e.source === 31).map(e => e.kind)).toEqual(['slash', 'fire', 'lightning']); expect(new Set(step.cleared).size).toBe(step.cleared.length); });
     it('activated spirit grants Ngung Khi and never contributes damage', () => { const s = fixture(); s.tiles[21] = tile(3, 5); const b = new BoardEngine(getLevel(5), s); b.trySkill('nhat-kiem', [{ x: 0, y: 3 }]); expect(b.animation!.steps[0].effects.find(e => e.kind === 'spirit')!.damage).toBe(0); expect(b.snapshot().condensed).toBe(true); });
+    it.each([4, 5] as const)('retains consumed orb tier %s after an earlier trace removed the source', tier => {
+        const s = fixture(); s.tiles[21] = tile(TileKind.SpiritOrb, tier);
+        const b = new BoardEngine(s.level, s);
+        expect(b.trySkill('nhat-kiem', [{ x: 0, y: 3 }])).toBe(true);
+        const step = b.animation!.steps[0];
+        expect(step.effects[0].cells).toContain(21);
+        expect(step.effects[0].spiritChargeTier).toBeUndefined();
+        expect(step.effects.find(trace => trace.kind === 'spirit')).toMatchObject({ source: 21, cells: [], spiritChargeTier: tier, damage: 0 });
+        expect(step.after.condensed).toBe(tier === 5);
+        expect(matching(4, TileKind.SpiritOrb).animation!.steps[0].effects.every(trace => !trace.spiritChargeTier)).toBe(true);
+    });
     it('locked charges are unlocked rather than activated in that wave', () => { const s = fixture(); s.tiles[21] = { ...tile(1, 5), locked: true }; const b = new BoardEngine(getLevel(5), s); b.trySkill('nhat-kiem', [{ x: 0, y: 3 }]); expect(b.animation!.steps[0].effects.some(e => e.kind === 'fire')).toBe(false); });
     it('casts at most once until a successful paid swap and rejects invalid targets without spending', () => { const s = fixture(); s.loadout.skills = ['ngu-kiem', 'nhat-kiem']; s.condensed = true; const b = new BoardEngine(getLevel(5), s); const old = b.snapshot(); expect(b.trySkill('ngu-kiem', [{ x: 0, y: 0 }, { x: 3, y: 0 }])).toBe(false); expect(b.snapshot()).toEqual(old); expect(b.trySkill('nhat-kiem', [{ x: 0, y: 0 }])).toBe(true); expect(b.trySkill('nhat-kiem', [{ x: 0, y: 1 }])).toBe(false); const move = b.legalMoves()[0]; b.trySwap(...move); expect(b.snapshot().skillUsed).toBe(false); });
     it('allows a final free skill at zero moves and then loses or wins', () => { const s = fixture(); s.moves = 0; const b = new BoardEngine(getLevel(5), s); expect(b.lost).toBe(false); b.trySkill('nhat-kiem', [{ x: 0, y: 0 }]); expect(b.lost).toBe(true); expect(b.grantExtraMoves()).toBe(true); expect(b.grantExtraMoves()).toBe(false); });
