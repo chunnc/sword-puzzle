@@ -11,6 +11,9 @@ export const colors = {
   red: '#e35646',
   blue: '#49c8e5',
   veil: 'rgba(1, 18, 23, 0.62)',
+  boardFrame: '#33494C',
+  boardCell: '#53696B',
+  boardChargedCell: '#C4B580',
 };
 
 export const type = {

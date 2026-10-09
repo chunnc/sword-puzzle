@@ -1,5 +1,7 @@
 # Kiểm tra tile V2 trong game
 
+Màu nền lưới đã được cập nhật sau đợt kiểm tra này. Xem [bản kiểm tra nền xanh xám và nền kem vàng cho ô 4/5](../board-grid-colors/README.md) cùng [ảnh so sánh trước/sau](../board-grid-colors/comparison.png).
+
 Đã tích hợp 12 hình thường/4/5, giảm padding ảnh từ 6% xuống 3% mỗi cạnh, bỏ chữ linh khí và số cấp vẽ đè. Ô thường không viền; ô 4/5 cùng kiểu viền đơn. Đá chắn, vùng bấm, khoảng cách ô, luật chơi và dữ liệu lưu giữ nguyên.
 
 ## Ảnh native

@@ -3,6 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { StyleSheet, Text, View } from 'react-native';
 import { Board, SpiritOrb, type BoardVisualEffect } from '../Board';
 import { ART, tileArtwork } from '../../assets';
+import { colors } from '../../theme';
 import { BoardEffects } from '../BoardEffects';
 import { SpiritQiFlightOverlay } from '../SpiritQiFlightOverlay';
 import { buildSpiritFlightCues } from '../spiritParticles';
@@ -176,7 +177,16 @@ describe('Skia Board integration', () => {
       expect(sprite.props.image.asset).toBe(index < 12 ? expected[index] : ART.tileRock);
       expect(sprite.props.x).toBeCloseTo(bounds.left + bounds.width * (index < 12 ? .03 : .06));
       expect(sprite.props.width).toBeCloseTo(bounds.width * (index < 12 ? .94 : .88));
+      const backing = renderer.root.findAll(node => node.type === 'RoundedRect' as never
+        && node.props.color === colors.boardChargedCell && node.props.x === bounds.left && node.props.y === bounds.top);
+      expect(backing).toHaveLength(index < 12 && index % 3 !== 0 ? 1 : 0);
+      if (backing.length) expect(backing[0].props).toMatchObject({
+        x: bounds.left, y: bounds.top, width: bounds.width, height: bounds.height, r: 5,
+      });
     }
+    expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never
+      && node.props.color === colors.boardCell)).toHaveLength(49);
+    expect(StyleSheet.flatten(renderer.root.findAllByType(View)[0].props.style).backgroundColor).toBe(colors.boardFrame);
     const labels = renderer.root.findAll(node => node.type === 'Paragraph' as never).map(node => node.props.paragraph.text);
     expect(labels).not.toContain('氣');
     expect(labels.some(text => text.includes('✧') || text.includes('✦'))).toBe(false);
@@ -190,13 +200,66 @@ describe('Skia Board integration', () => {
     next.tiles[0] = { kind: TileKind.Fire, chargeTier: 0, locked: false };
     mount({ snapshot: next });
     const sprite = () => tile(0).findAll(node => node.type === 'SkiaImage' as never)[0];
+    const backing = () => tile(0).findAll(node => node.type === 'RoundedRect' as never
+      && node.props.color === colors.boardChargedCell);
     expect(sprite().props.image.asset).toBe(104);
+    expect(backing()).toHaveLength(0);
     for (const chargeTier of [4, 5] as const) {
       const upgraded = { ...next, tiles: [...next.tiles] };
       upgraded.tiles[0] = { ...next.tiles[0]!, chargeTier };
       act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: upgraded })); });
       expect(sprite().props.image.asset).toBe(chargeTier === 4 ? 105 : 106);
+      expect(backing()).toHaveLength(1);
     }
+    act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: next })); });
+    expect(backing()).toHaveLength(0);
+  });
+
+  it.each(['swap', 'fall'] as const)('moves charged backing with the tile during %s without coloring its stationary cell', kind => {
+    const next = { ...snapshot, tiles: [...snapshot.tiles] };
+    next.tiles[0] = { kind: TileKind.Fire, chargeTier: 4, locked: false };
+    const motionSession = createBoardMotionSession(kind);
+    const visualEffect: BoardVisualEffect = kind === 'swap'
+      ? { id: 91, kind, first: { x: 0, y: 0 }, second: { x: 1, y: 0 } }
+      : { id: 91, kind, falls: [{ index: 0, fromY: 3 }] };
+    mount({ snapshot: next, visualEffect, motionSession });
+    motionSession.progress.value = .5;
+    mockReactions.at(-1)!();
+    const moving = tile(0);
+    const backing = moving.findAll(node => node.type === 'RoundedRect' as never
+      && node.props.color === colors.boardChargedCell);
+    expect(backing).toHaveLength(1);
+    expect(moving.findAll(node => node.type === 'SkiaImage' as never)[0].props.image.asset).toBe(105);
+    expect(moving.props.transform.value).toEqual([
+      { translateX: kind === 'swap' ? 25 : 0 }, { translateY: kind === 'fall' ? -75 : 0 }, { scale: 1 },
+    ]);
+    const stationary = renderer.root.findAll(node => node.type === 'RoundedRect' as never
+      && node.props.color === colors.boardCell && node.props.x === 1 && node.props.y === 301);
+    expect(stationary).toHaveLength(1);
+  });
+
+  it('fades charged backing with a cleared tile and removes it in the following clear phase', () => {
+    const next = { ...snapshot, tiles: [...snapshot.tiles] };
+    next.tiles[0] = { kind: TileKind.Fire, chargeTier: 5, locked: true };
+    const motionSession = createBoardMotionSession('clear');
+    const visualEffect: BoardVisualEffect = { id: 92, kind: 'clear', cleared: [0], changed: [], effects: [] };
+    mount({ snapshot: next, visualEffect, motionSession, selected: { x: 0, y: 0 } });
+    motionSession.progress.value = .5;
+    mockReactions.at(-1)!();
+    expect(tile(0).props.layer.props.opacity.value).toBe(.5);
+    expect(tile(0).findAll(node => node.type === 'RoundedRect' as never
+      && node.props.color === colors.boardChargedCell)).toHaveLength(1);
+    expect(tile(0).findAll(node => node.type === 'Paragraph' as never)[0].props.paragraph.text).toBe('封');
+    expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never
+      && node.props.color === colors.goldBright && node.props.style === 'stroke')).toHaveLength(1);
+    motionSession.progress.value = 1;
+    mockReactions.at(-1)!();
+    expect(tile(0).props.layer.props.opacity.value).toBe(0);
+    act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: next,
+      visualEffect: { ...visualEffect, id: 93 } })); });
+    expect(tile(0)).toBeUndefined();
+    expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never
+      && node.props.color === colors.boardCell)).toHaveLength(49);
   });
 
   it('uses the same charged artwork and padding for sword fragments', () => {
@@ -208,6 +271,10 @@ describe('Skia Board integration', () => {
     const fragments = renderer.root.findByType(BoardEffects).findAll(node => node.type === 'SkiaImage' as never);
     expect(fragments.map(node => node.props.image.asset)).toEqual([102, 102, 109, 109]);
     for (const sprite of fragments) expect(sprite.props.width).toBeCloseTo(48 * .94);
+    const backings = renderer.root.findByType(BoardEffects).findAll(node => node.type === 'RoundedRect' as never
+      && node.props.color === colors.boardChargedCell);
+    expect(backings).toHaveLength(4);
+    for (const backing of backings) expect(backing.props).toMatchObject({ width: 48, height: 48, r: 5 });
   });
 
   it('renders the standalone spirit icon without a character overlay', () => {
@@ -305,7 +372,8 @@ describe('Skia Board integration', () => {
     expect(fragments).toHaveLength(tier === 5 ? 8 : 6);
     expect(effects.findAll(node => node.type === 'Paragraph' as never)).toHaveLength(0);
     expect(effects.findAll(node => node.type === 'SkiaImage' as never && node.props.image.asset === ART.tileSpiritOrb5)).toHaveLength(2);
-    expect(effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === '#0b4144')).toHaveLength(0);
+    expect(effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === colors.boardCell)).toHaveLength(0);
+    expect(effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === colors.boardChargedCell)).toHaveLength(2);
     expect(effects.findAll(node => node.type === 'Path' as never)).toHaveLength(tier === 5 ? 6 : 3);
     const progress = effects.props.progress;
     const afterimages = effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === '#ffffff');

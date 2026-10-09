@@ -205,7 +205,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
       <View ref={gridRef} collapsable={false} onLayout={event => { setSide(event.nativeEvent.layout.width); onGridLayout?.(); }} style={styles.grid}>
         {side > geometry.width * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
           <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
-            {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color="#0b4144" />)}
+            {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color={colors.boardCell} />)}
             {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} visual={visuals[index]} motion={frame.cells[index]} labels={labels} />)}
             {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
               progress={motion.progress} elapsedMs={motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning}
@@ -263,6 +263,9 @@ function TileArtwork({ tile, bounds, image, labels }: {
 }) {
   const inset = tile.kind === TileKind.Rock ? .06 : .03;
   return <Group>
+    {/* Keep the charged backing inside the moving/fading artwork and sword fragments. */}
+    {tile.kind !== TileKind.Rock && tile.chargeTier > 0
+      ? <RoundedRect {...bounds} r={5} color={colors.boardChargedCell} /> : null}
     <Image image={image} x={bounds.x + bounds.width * inset} y={bounds.y + bounds.height * inset} width={bounds.width * (1 - 2 * inset)} height={bounds.height * (1 - 2 * inset)} fit="contain" />
     {tile.locked ? <Group>
       <RoundedRect {...bounds} r={5} color="rgba(9,35,49,.45)" />
@@ -273,7 +276,7 @@ function TileArtwork({ tile, bounds, image, labels }: {
 }
 
 const styles = StyleSheet.create({
-  frame: { flex: 1, borderWidth: 2, borderColor: colors.gold, borderRadius: 10, padding: 3, backgroundColor: '#042f32', overflow: 'hidden' },
+  frame: { flex: 1, borderWidth: 2, borderColor: colors.gold, borderRadius: 10, padding: 3, backgroundColor: colors.boardFrame, overflow: 'hidden' },
   grid: { flex: 1 },
   touchCell: { position: 'absolute', borderRadius: 5 },
   hint: { position: 'absolute', top: 5, alignSelf: 'center', color: colors.inkDeep, backgroundColor: colors.goldBright, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, fontSize: 10, fontWeight: '800' },
