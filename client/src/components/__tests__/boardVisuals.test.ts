@@ -1,7 +1,7 @@
 import {
   DISPLAY_INDICES, BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FIRE_MS, BOARD_LIGHTNING_MS, BOARD_FIRE_CLEAR_AT, BOARD_LIGHTNING_CLEAR_AT,
   BOARD_FALL_MS, BOARD_CHAIN_DELAY_MS, BOARD_REJECT_MS, boardClearDurationMs,
-  buildBoardEffectCues, buildCellVisuals, cellBounds, cellImpactOpacity, cellMotion, effectSeed, pointToCell, type BoardVisualEffect,
+  buildBoardEffectCues, buildCellVisuals, cellBounds, cellImpactOpacity, cellMotion, effectSeed, pointToCell, type BoardVisualEffect, type SwordBoardEffectCue,
 } from '../boardVisuals';
 
 describe('Skia board coordinates and animation', () => {
@@ -146,5 +146,66 @@ describe('Skia board coordinates and animation', () => {
     expect(boardClearDurationMs('lightning')).toBe(BOARD_LIGHTNING_MS);
     expect(boardClearDurationMs('spirit')).toBe(BOARD_CLEAR_MS);
     expect(boardClearDurationMs(['fire', 'lightning', 'spirit'])).toBe(1600);
+  });
+
+  it.each([4, 5] as const)('gives tier %s its exact sweep and fragment budget without affecting skills', tier => {
+    const trace = { kind: tier === 5 ? 'cross' as const : 'slash' as const, swordChargeTier: tier,
+      source: 24, cells: [23, 24, 25, 17, 31], damage: 0, qi: 0 };
+    const effect: BoardVisualEffect = { id: 20, kind: 'clear', cleared: trace.cells, changed: [], effects: [trace] };
+    const duration = tier === 5 ? 1080 : 1020;
+    const split = tier === 5 ? 580 : 520;
+    expect(boardClearDurationMs(trace)).toBe(duration);
+    const cue = buildBoardEffectCues(effect)[0] as SwordBoardEffectCue;
+    expect(cue.splitAtMs).toBe(split);
+    expect(cue.endAtMs).toBe(duration);
+    expect(cue.strokes[0]).toEqual({ axis: 'horizontal', startX: 0, startY: 3.5, endX: 7, endY: 3.5, startAtMs: 0 });
+    expect(cue.strokes).toHaveLength(tier === 5 ? 2 : 1);
+    if (tier === 5) {
+      expect(cue.strokes[1]).toEqual({ axis: 'vertical', startX: 3.5, startY: 0, endX: 3.5, endY: 7, startAtMs: 60 });
+      expect(cue.targets.find(target => target.index === 17)?.axis).toBe('vertical');
+    }
+    expect(cue.targets.filter(target => target.index === 24)).toHaveLength(1);
+    expect(cue.targets.find(target => target.index === 24)?.axis).toBe('horizontal');
+    const visuals = buildCellVisuals(effect, null);
+    expect(cellMotion(visuals[24], 50, (split - .01) / duration, 1)).toEqual({ tx: 0, ty: 0, opacity: 1, scale: 1 });
+    expect(cellMotion(visuals[24], 50, split / duration, 1)).toEqual({ tx: 0, ty: 0, opacity: 0, scale: 1 });
+    expect(visuals[24].flashing).toBe(false);
+    const skill = { ...trace, swordChargeTier: undefined };
+    expect(boardClearDurationMs(skill)).toBe(360);
+    expect(buildBoardEffectCues({ ...effect, effects: [skill] })).toEqual([]);
+  });
+
+  it('only splits newly cleared active targets, skipping protected/unsealed cells and duplicates', () => {
+    const geometry = { width: 5, height: 3, activeCells: Array(15).fill(true) };
+    geometry.activeCells[5] = false;
+    const previous: BoardVisualEffect = { id: 21, kind: 'clear', cleared: [6, 7], changed: [], effects: [] };
+    const effect: BoardVisualEffect = { id: 22, kind: 'clear', cleared: [5, 6, 7, 8, 2, 12], changed: [9], effects: [
+      { kind: 'cross', swordChargeTier: 5, source: 7, cells: [5, 6, 7, 8, 8, 9, 2, 12, 99], damage: 0, qi: 0 },
+    ] };
+    const cue = buildBoardEffectCues(effect, geometry, 'test', previous)[0] as SwordBoardEffectCue;
+    expect(cue.targets.map(target => [target.index, target.axis])).toEqual([[8, 'horizontal'], [2, 'vertical'], [12, 'vertical']]);
+    expect(cue.strokes[0].endX).toBe(5);
+    expect(cue.strokes[1].endY).toBe(3);
+    const visuals = buildCellVisuals(effect, previous, false, geometry);
+    expect(visuals[7].hidden).toBe(true);
+    expect(visuals[7].splitAt).toBeNull();
+    expect(visuals[9].clearing).toBe(false);
+    expect(visuals[9].splitAt).toBeNull();
+    expect(visuals[8].splitAt).toBe(580 / 1080);
+  });
+
+  it('keeps sword timing in milliseconds in a longer mixed phase and hides originals afterwards', () => {
+    const effect: BoardVisualEffect = { id: 23, kind: 'clear', cleared: [23, 25], changed: [], effects: [
+      { kind: 'slash', swordChargeTier: 4, source: 24, cells: [23, 25], damage: 0, qi: 0 },
+      { kind: 'fire', source: 24, cells: [23, 25], damage: 0, qi: 0 },
+    ] };
+    const cue = buildBoardEffectCues(effect)[0] as SwordBoardEffectCue;
+    expect(cue.splitAtMs).toBe(520);
+    expect(cue.endAtMs).toBe(1020);
+    const visuals = buildCellVisuals(effect, null);
+    expect(cellMotion(visuals[23], 50, 519 / 1200, 1).opacity).toBe(1);
+    expect(cellMotion(visuals[23], 50, 520 / 1200, 1).opacity).toBe(0);
+    expect(cellMotion(visuals[23], 50, 800 / 1200, 1).opacity).toBe(0);
+    expect(buildCellVisuals(effect, null, true).every(visual => visual.splitAt === null)).toBe(true);
   });
 });

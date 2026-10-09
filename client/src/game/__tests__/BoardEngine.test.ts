@@ -70,6 +70,19 @@ describe('board rules v2', () => {
     it.each([0, 1, 2, 3])('match 5 type %i retains tier 5', (kind) => { const b = matching(5, kind); expect(b.animation!.steps[0].after.tiles.some(t => t!.kind === kind && t!.chargeTier === 5)).toBe(true); });
     it.each([[0, 4, 'slash'], [0, 5, 'cross'], [1, 4, 'fire'], [1, 5, 'fire'], [2, 4, 'lightning'], [2, 5, 'lightning'], [3, 4, 'spirit'], [3, 5, 'spirit']] as const)('matched charge %i/%i activates %s', (kind, tier, effect) => { const b = matching(3, kind, tier); expect(b.animation!.steps[0].effects.some(e => e.kind === effect)).toBe(true); expect(b.animation!.steps[0].after.tiles.some(t => t!.chargeTier > 0 && t!.kind === kind)).toBe(false); });
     it('fire tier 5 has thirteen distinct targets at board center', () => { const s = fixture(); s.tiles[24] = tile(1, 5); const b = new BoardEngine(getLevel(5), s); expect(b.trySkill('nhat-kiem', [{ x: 0, y: 3 }])).toBe(true); const fire = b.animation!.steps[0].effects.find(e => e.kind === 'fire')!; expect(fire.cells).toHaveLength(13); });
+    it.each([4, 5] as const)('marks only charged sword activation with tier %s, preserving its target geometry', tier => {
+        const s = fixture(); s.tiles[24] = tile(TileKind.Sword, tier);
+        const b = new BoardEngine(s.level, s);
+        expect(b.trySkill('nhat-kiem', [{ x: 0, y: 3 }])).toBe(true);
+        const traces = b.animation!.steps[0].effects;
+        expect(traces[0].kind).toBe('slash');
+        expect(traces[0].swordChargeTier).toBeUndefined();
+        const sword = traces.find(trace => trace.swordChargeTier === tier)!;
+        expect(sword).toMatchObject({ kind: tier === 5 ? 'cross' : 'slash', source: 24 });
+        const row = [21, 22, 23, 24, 25, 26, 27];
+        expect(sword.cells).toEqual(tier === 4 ? row : [...new Set([...row, 3, 10, 17, 24, 31, 38, 45])]);
+        expect(traces.filter(trace => trace.swordChargeTier)).toHaveLength(1);
+    });
     it('chains sword → fire → lightning in queue order, with unique clears', () => { const s = fixture(); s.tiles[21] = tile(0, 4); s.tiles[24] = tile(1, 4); s.tiles[31] = tile(2, 5); const b = new BoardEngine(getLevel(5), s); b.trySkill('nhat-kiem', [{ x: 0, y: 3 }]); const step = b.animation!.steps[0]; expect(step.effects.slice(1).filter(e => e.source === 21 || e.source === 24 || e.source === 31).map(e => e.kind)).toEqual(['slash', 'fire', 'lightning']); expect(new Set(step.cleared).size).toBe(step.cleared.length); });
     it('activated spirit grants Ngung Khi and never contributes damage', () => { const s = fixture(); s.tiles[21] = tile(3, 5); const b = new BoardEngine(getLevel(5), s); b.trySkill('nhat-kiem', [{ x: 0, y: 3 }]); expect(b.animation!.steps[0].effects.find(e => e.kind === 'spirit')!.damage).toBe(0); expect(b.snapshot().condensed).toBe(true); });
     it('locked charges are unlocked rather than activated in that wave', () => { const s = fixture(); s.tiles[21] = { ...tile(1, 5), locked: true }; const b = new BoardEngine(getLevel(5), s); b.trySkill('nhat-kiem', [{ x: 0, y: 3 }]); expect(b.animation!.steps[0].effects.some(e => e.kind === 'fire')).toBe(false); });

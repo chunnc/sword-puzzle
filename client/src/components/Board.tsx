@@ -102,12 +102,13 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const kind = reduceMotion ? undefined : visualEffect?.kind;
   const prior = previousEffect.current?.runId === snapshot.runId ? previousEffect.current : null;
   const before = prior?.effect?.id === id ? prior.before : prior?.effect ?? null;
-  const effectCues = useMemo(() => reduceMotion ? [] : buildBoardEffectCues(visualEffect, geometry, snapshot.runId),
+  const effectCues = useMemo(() => reduceMotion ? [] : buildBoardEffectCues(visualEffect, geometry, snapshot.runId, before),
     [snapshot.runId, id, kind, reduceMotion, geometry]);
   const clearDurationMs = visualEffect?.kind === 'clear'
-    ? boardClearDurationMs(visualEffect.effects.map(item => item.kind))
+    ? boardClearDurationMs(visualEffect.effects)
     : BOARD_CLEAR_MS;
   const hasLightning = effectCues.some(cue => cue.kind === 'lightning');
+  const hasSword = effectCues.some(cue => cue.kind === 'slash' || cue.kind === 'cross');
   // An effect ID identifies an immutable phase within a run. HUD updates and
   // equivalent effect objects must not replace that phase's clocks or outputs.
   const visuals = useMemo(() => buildCellVisuals(visualEffect, before,
@@ -151,7 +152,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
         progress.value = withTiming(1, { duration: kind === 'swap' ? BOARD_SWAP_MS : BOARD_FALL_MS }, completed);
       } else if (kind === 'clear') {
         if (hasLightning) elapsedMs.value = withTiming(clearDurationMs, { duration: clearDurationMs, easing: Easing.linear });
-        progress.value = withTiming(1, { duration: clearDurationMs }, completed);
+        progress.value = withTiming(1, { duration: clearDurationMs, ...(hasSword ? { easing: Easing.linear } : {}) }, completed);
         pulse.value = withSequence(
           withTiming(1.12, { duration: BOARD_PULSE_IN_MS }),
           withTiming(1, { duration: clearDurationMs - BOARD_PULSE_IN_MS }),
@@ -167,7 +168,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
       const completedFrame = frameRef.current;
       runOnUI(() => { finishBoardMotionSession(motion, completedFrame); })();
     };
-  }, [motion, clearDurationMs, hasLightning, onMotionStarted, onMotionFinished]);
+  }, [motion, clearDurationMs, hasLightning, hasSword, onMotionStarted, onMotionFinished]);
 
   const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onEnd(event => {
     const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side, geometry);
@@ -183,7 +184,9 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
             {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color="#0b4144" />)}
             {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} image={images[snapshot.tiles[index]!.kind]} visual={visuals[index]} motion={frame.cells[index]} labels={labels} />)}
             {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
-              progress={motion.progress} elapsedMs={motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning} /> : null}
+              progress={motion.progress} elapsedMs={motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning}
+              renderTile={index => <TileArtwork tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)}
+                image={images[snapshot.tiles[index]!.kind]} labels={labels} />} /> : null}
             {indices.map(index => {
               const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
               const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
@@ -223,13 +226,21 @@ function TileVisual({ tile, bounds, image, visual, motion, labels }: {
   motion: CellMotionValues | null;
   labels: BoardLabels;
 }) {
-  const charge = tile.chargeTier === 5 ? labels.charge5 : labels.charge4;
-  const chargeWidth = charge.width + 6, chargeHeight = charge.height + 2;
-  const chargeX = bounds.x + bounds.width - 1 - chargeWidth, chargeY = bounds.y + bounds.height - 1 - chargeHeight;
   if (visual.hidden) return null;
   // Paragraph paints its own colors, so fade the complete tile as a layer.
   // Allocate that layer only during clears, not during swaps/falls or idle.
   return <Group origin={{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }} transform={motion?.transform} layer={visual.clearing ? <Paint opacity={motion!.opacity} /> : undefined}>
+    <TileArtwork tile={tile} bounds={bounds} image={image} labels={labels} />
+  </Group>;
+}
+
+function TileArtwork({ tile, bounds, image, labels }: {
+  tile: Tile; bounds: ReturnType<typeof cellBounds>; image: SkImage | null; labels: BoardLabels;
+}) {
+  const charge = tile.chargeTier === 5 ? labels.charge5 : labels.charge4;
+  const chargeWidth = charge.width + 6, chargeHeight = charge.height + 2;
+  const chargeX = bounds.x + bounds.width - 1 - chargeWidth, chargeY = bounds.y + bounds.height - 1 - chargeHeight;
+  return <Group>
     <Image image={image} x={bounds.x + bounds.width * .06} y={bounds.y + bounds.height * .06} width={bounds.width * .88} height={bounds.height * .88} fit="contain" />
     {tile.kind === TileKind.SpiritOrb ? <Paragraph paragraph={labels.orb.paragraph} x={bounds.x + (bounds.width - labels.orb.width) / 2} y={bounds.y + (bounds.height - labels.orb.height) / 2} width={labels.orb.width} /> : null}
     {tile.chargeTier ? <Group>

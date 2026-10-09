@@ -1,5 +1,40 @@
 import type { Transforms3d } from '@shopify/react-native-skia';
-import type { BoardEffectCue } from './boardVisuals';
+import { BOARD_SWORD_SWEEP_MS, BOARD_SWORD_AFTERIMAGE_MS, BOARD_SWORD_SHARDS_MS, type BoardEffectCue, type SwordCutAxis } from './boardVisuals';
+
+export const SWORD_SLASH_LENGTH_CELLS = 7;
+export const SWORD_SLASH_THICKNESS_SCALE = 2.6;
+
+export function swordSweepFrame(elapsedMs: number, startAtMs: number, length: number, pitch: number) {
+  'worklet';
+  const age = elapsedMs - startAtMs;
+  const progress = Math.max(0, Math.min(1, age / BOARD_SWORD_SWEEP_MS));
+  const tail = pitch * SWORD_SLASH_LENGTH_CELLS;
+  return {
+    head: -pitch * .1 + (length + tail + pitch * .1) * progress,
+    opacity: age < 0 || age >= BOARD_SWORD_SWEEP_MS ? 0 : Math.min(1, (BOARD_SWORD_SWEEP_MS - age) / 24),
+  };
+}
+
+export function swordAfterimageOpacity(elapsedMs: number, startAtMs: number) {
+  'worklet';
+  const age = elapsedMs - startAtMs - BOARD_SWORD_SWEEP_MS;
+  return age < 0 || age >= BOARD_SWORD_AFTERIMAGE_MS ? 0 : .35 * (1 - age / BOARD_SWORD_AFTERIMAGE_MS);
+}
+
+export function swordShardFrame(elapsedMs: number, splitAtMs: number, axis: SwordCutAxis, half: 0 | 1, pitch: number) {
+  'worklet';
+  const age = elapsedMs - splitAtMs;
+  const progress = Math.max(0, Math.min(1, age / BOARD_SWORD_SHARDS_MS));
+  const direction = half === 0 ? -1 : 1;
+  // A quick separation followed by accelerating gravity; all distances scale with the board.
+  const separation = pitch * .18 * (1 - Math.pow(1 - progress, 3));
+  return {
+    tx: (axis === 'vertical' ? direction * separation : direction * pitch * .09 * progress) || 0,
+    ty: pitch * 1.6 * progress * progress + (axis === 'horizontal' ? direction * separation : 0),
+    rotation: direction * Math.PI / 12 * progress || 0,
+    opacity: age < 0 || age >= BOARD_SWORD_SHARDS_MS ? 0 : Math.min(1, (1 - progress) / .65),
+  };
+}
 
 export const LIGHTNING_FRAME_MS = 120;
 export const LIGHTNING_ATLAS_COLUMNS = 5;

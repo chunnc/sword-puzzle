@@ -55,3 +55,20 @@ it('keeps previously cleared cells hidden and uses no outputs for idle or reduce
     expect(createBoardMotionFrame(visuals, 50).animated).toHaveLength(0);
   }
 });
+
+it('switches whole tiles off at the split and keeps a cancelled sword phase hidden', () => {
+  const effect: BoardVisualEffect = { id: 3, kind: 'clear', cleared: [23, 25], changed: [], effects: [
+    { kind: 'cross', swordChargeTier: 5, source: 24, cells: [23, 25], damage: 0, qi: 0 },
+  ] };
+  const session = createBoardMotionSession('clear');
+  const frame = createBoardMotionFrame(buildCellVisuals(effect, null), 50);
+  updateBoardMotionFrame(frame, 579 / 1080, 1);
+  expect(frame.cells[23]!.opacity.value).toBe(1);
+  updateBoardMotionFrame(frame, 580 / 1080, 1);
+  expect(frame.cells[23]!.opacity.value).toBe(0);
+  expect(frame.cells[23]!.transform.value).toEqual([{ translateX: 0 }, { translateY: 0 }, { scale: 1 }]);
+  finishBoardMotionSession(session, frame);
+  updateBoardMotionFrame(frame, session.progress.value, session.pulse.value);
+  expect(frame.cells[23]!.opacity.value).toBe(0);
+  expect(session.progress.value).toBe(1);
+});

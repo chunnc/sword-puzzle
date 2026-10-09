@@ -1,13 +1,14 @@
 import React, { useMemo } from 'react';
 import {
-  Atlas, Group, Image, useColorBuffer, useRectBuffer, useRSXformBuffer,
+  Atlas, BlurMask, Group, Image, LinearGradient, Paint, Path, RoundedRect, Skia, useColorBuffer, useRectBuffer, useRSXformBuffer,
   type SkImage, type SkColor, type SkHostRect, type SkRSXform,
 } from '@shopify/react-native-skia';
 import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
-import { BOARD_FIRE_MS, type BoardEffectCue, type BoardGeometry } from './boardVisuals';
+import { BOARD_FIRE_MS, cellBounds, type BoardEffectCue, type BoardGeometry, type SwordBoardEffectCue, type SwordStroke } from './boardVisuals';
 import {
   buildLightningBranches, lightningPlaybackFrame, lightningSpriteTransform, type LightningBranch,
   LIGHTNING_ATLAS_COLUMNS, LIGHTNING_ATLAS_ROWS, LIGHTNING_ATLAS_WIDTH, LIGHTNING_ATLAS_HEIGHT,
+  swordSweepFrame, swordShardFrame, swordAfterimageOpacity, SWORD_SLASH_LENGTH_CELLS, SWORD_SLASH_THICKNESS_SCALE,
 } from './boardFx';
 
 const FIRE_ATLAS_COLUMNS = 5;
@@ -59,6 +60,7 @@ export function BoardEffects({
   durationMs,
   fireBurstImage,
   lightningImage,
+  renderTile,
 }: {
   cues: BoardEffectCue[];
   geometry: BoardGeometry;
@@ -68,6 +70,7 @@ export function BoardEffects({
   durationMs: number;
   fireBurstImage: SkImage | null;
   lightningImage: SkImage | null;
+  renderTile?: (index: number) => React.ReactNode;
 }) {
   const pitch = side / geometry.width;
   const burstCellWidth = (fireBurstImage?.width() ?? FIRE_ATLAS_WIDTH) / FIRE_ATLAS_COLUMNS;
@@ -76,6 +79,10 @@ export function BoardEffects({
   const burstDuration = FIRE_BURST_MS / durationMs;
   const fireCues = useMemo(() => cues.filter(cue => cue.kind === 'fire'), [cues]);
   const lightningBranches = useMemo(() => buildLightningBranches(cues), [cues]);
+  const swordCues = useMemo(() => cues.filter((cue): cue is SwordBoardEffectCue => cue.kind === 'slash' || cue.kind === 'cross'), [cues]);
+  // Sword phases use a linear progress clock, shared with the whole-tile visibility.
+  // Converting that same clock to ms prevents a frame with both the original and its fragments.
+  const swordElapsedMs = useDerivedValue(() => progress.value * durationMs);
 
   const burstRects = useRectBuffer(fireCues.length, (rect: SkHostRect, index) => {
     'worklet';
@@ -106,11 +113,84 @@ export function BoardEffects({
   });
 
   return <Group>
+    {swordCues.map((cue, cueIndex) => <Group key={`sword-${cueIndex}`}>
+      {renderTile ? cue.targets.map(target => <Group key={`fragments-${target.index}`}>
+        <SwordFragment cue={cue} target={target} half={0} geometry={geometry} side={side}
+          elapsedMs={swordElapsedMs} progress={progress}>{renderTile(target.index)}</SwordFragment>
+        <SwordFragment cue={cue} target={target} half={1} geometry={geometry} side={side}
+          elapsedMs={swordElapsedMs} progress={progress}>{renderTile(target.index)}</SwordFragment>
+      </Group>) : null}
+      {cue.strokes.map(stroke => <SwordSlash key={stroke.axis} stroke={stroke} pitch={pitch}
+        elapsedMs={swordElapsedMs} progress={progress} />)}
+    </Group>)}
     {fireCues.length ?
       <Atlas image={fireBurstImage} sprites={burstRects} transforms={burstTransforms} colors={burstColors} colorBlendMode="modulate" />
       : null}
     {lightningBranches.map(branch => <LightningSprite key={branch.key} branch={branch} image={lightningImage}
       pitch={pitch} elapsedMs={elapsedMs} progress={progress} durationMs={durationMs} />)}
+  </Group>;
+}
+
+function SwordSlash({ stroke, pitch, elapsedMs, progress }: {
+  stroke: SwordStroke; pitch: number; elapsedMs: SharedValue<number>; progress: SharedValue<number>;
+}) {
+  const length = Math.hypot(stroke.endX - stroke.startX, stroke.endY - stroke.startY) * pitch;
+  const tail = pitch * SWORD_SLASH_LENGTH_CELLS;
+  const thickness = pitch * SWORD_SLASH_THICKNESS_SCALE;
+  const path = useMemo(() => Skia.Path.Make().moveTo(-tail, 0)
+    .lineTo(-tail * .22, -thickness * .065).lineTo(0, 0)
+    .lineTo(-tail * .22, thickness * .065).close(), [thickness, tail]);
+  const core = useMemo(() => Skia.Path.Make().moveTo(-tail * .85, 0)
+    .lineTo(-tail * .16, -thickness * .018).lineTo(0, 0)
+    .lineTo(-tail * .16, thickness * .018).close(), [thickness, tail]);
+  const transform = useDerivedValue(() => {
+    const { head } = swordSweepFrame(elapsedMs.value, stroke.startAtMs, length, pitch);
+    return [{ translateX: head }];
+  });
+  const opacity = useDerivedValue(() => progress.value < 1
+    ? swordSweepFrame(elapsedMs.value, stroke.startAtMs, length, pitch).opacity : 0);
+  const afterimageOpacity = useDerivedValue(() => progress.value < 1
+    ? swordAfterimageOpacity(elapsedMs.value, stroke.startAtMs) : 0);
+  return <Group transform={[
+    { translateX: stroke.startX * pitch }, { translateY: stroke.startY * pitch },
+    { rotate: stroke.axis === 'vertical' ? Math.PI / 2 : 0 },
+  ]}>
+    <RoundedRect x={0} y={-pitch * .02} width={length} height={pitch * .04} r={pitch * .02}
+      color="#ffffff" opacity={afterimageOpacity} />
+    <Group transform={transform} opacity={opacity}>
+      <Path path={path} color="#ffc454" opacity={.6}><BlurMask blur={thickness * .07} style="normal" /></Path>
+      <Path path={path}><LinearGradient start={{ x: -tail, y: 0 }} end={{ x: 0, y: 0 }}
+        colors={['rgba(255,205,92,0)', '#ffd775', '#fff1bc']} positions={[0, .7, 1]} /></Path>
+      <Path path={core}><LinearGradient start={{ x: -tail * .85, y: 0 }} end={{ x: 0, y: 0 }}
+        colors={['rgba(255,255,255,0)', '#fff4d5', '#ffffff']} positions={[0, .5, 1]} /></Path>
+    </Group>
+  </Group>;
+}
+
+function SwordFragment({ cue, target, half, geometry, side, elapsedMs, progress, children }: {
+  cue: SwordBoardEffectCue;
+  target: SwordBoardEffectCue['targets'][number];
+  half: 0 | 1;
+  geometry: BoardGeometry;
+  side: number;
+  elapsedMs: SharedValue<number>;
+  progress: SharedValue<number>;
+  children: React.ReactNode;
+}) {
+  const bounds = cellBounds(target.index, side, geometry);
+  const pitch = side / geometry.width;
+  const clip = target.axis === 'horizontal'
+    ? { ...bounds, y: bounds.y + half * bounds.height / 2, height: bounds.height / 2 }
+    : { ...bounds, x: bounds.x + half * bounds.width / 2, width: bounds.width / 2 };
+  const transform = useDerivedValue(() => {
+    const frame = swordShardFrame(elapsedMs.value, cue.splitAtMs, target.axis, half, pitch);
+    return [{ translateX: frame.tx }, { translateY: frame.ty }, { rotate: frame.rotation }];
+  });
+  const opacity = useDerivedValue(() => progress.value < 1
+    ? swordShardFrame(elapsedMs.value, cue.splitAtMs, target.axis, half, pitch).opacity : 0);
+  return <Group origin={{ x: clip.x + clip.width / 2, y: clip.y + clip.height / 2 }} transform={transform}
+    layer={<Paint opacity={opacity} />}>
+    <Group clip={clip}>{children}</Group>
   </Group>;
 }
 

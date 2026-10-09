@@ -46,6 +46,8 @@ export interface BoardAnimationEffect {
     kind: BoardAnimationEffectKind;
     cells: number[];
     source?: number;
+    /** Present only when a charged sword activates, not for slash-shaped skills. */
+    swordChargeTier?: 4 | 5;
     row?: number;
     column?: number;
     damage: number;

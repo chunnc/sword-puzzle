@@ -65,6 +65,25 @@ it('waits for real completions, ignores stale callbacks and rests 300ms after la
     f.playback.dispose();
 });
 
+it.each([4, 5] as const)('waits for all tier %s fragments to finish before starting board gravity', async tier => {
+    const f = fixture();
+    f.step.effects = [{ kind: tier === 5 ? 'cross' : 'slash', swordChargeTier: tier,
+        source: 0, cells: [0, 1], qi: 0, damage: 0 }];
+    const phase = f.playback.presenter.present({ kind: 'step', step: f.step });
+    f.begin(); await flush();
+    expect(f.effect()).toMatchObject({ kind: 'clear', effects: [expect.objectContaining({ swordChargeTier: tier })] });
+    await jest.advanceTimersByTimeAsync(tier === 5 ? 1079 : 1019);
+    expect(f.effect().kind).toBe('clear');
+    expect(f.setBoard).not.toHaveBeenCalledWith(f.step.after);
+    f.finish(); await flush();
+    expect(f.setBoard).toHaveBeenLastCalledWith(f.step.after);
+    expect(f.effect().kind).toBe('fall');
+    f.begin(); f.finish(); await flush();
+    await jest.advanceTimersByTimeAsync(300);
+    await phase.finished;
+    f.playback.dispose();
+});
+
 it.each(['clear', 'fall', 'rest'] as const)('cancels during %s without hanging or applying late callbacks', async position => {
     const f = fixture();
     const phase = f.playback.presenter.present({ kind: 'step', step: f.step });

@@ -15,11 +15,23 @@ export const BOARD_FLASH_IN_MS = 105;
 export const BOARD_PULSE_IN_MS = 150;
 export const BOARD_FIRE_CLEAR_AT = .75;
 export const BOARD_LIGHTNING_CLEAR_AT = .8;
+export const BOARD_SWORD_SWEEP_MS = 220;
+export const BOARD_SWORD_CROSS_DELAY_MS = 60;
+export const BOARD_SWORD_AFTERIMAGE_MS = 300;
+export const BOARD_SWORD_SHARDS_MS = 500;
 
-export function boardClearDurationMs(kindOrKinds: BoardAnimationEffect['kind'] | readonly BoardAnimationEffect['kind'][]) {
-  const kinds = typeof kindOrKinds === 'string' ? [kindOrKinds] : kindOrKinds;
-  return kinds.reduce((duration, kind) => Math.max(duration,
-    kind === 'fire' ? BOARD_FIRE_MS : kind === 'lightning' ? BOARD_LIGHTNING_MS : BOARD_CLEAR_MS), BOARD_CLEAR_MS);
+type ClearTimingInput = BoardAnimationEffect['kind'] | BoardAnimationEffect;
+export function boardClearDurationMs(effectOrEffects: ClearTimingInput | readonly ClearTimingInput[]) {
+  const effects: readonly ClearTimingInput[] = Array.isArray(effectOrEffects)
+    ? effectOrEffects : [effectOrEffects as ClearTimingInput];
+  return effects.reduce((duration, effect) => {
+    const kind = typeof effect === 'string' ? effect : effect.kind;
+    const swordTier = typeof effect === 'string' ? undefined : effect.swordChargeTier;
+    const swordMs = (kind === 'slash' || kind === 'cross') && swordTier
+      ? BOARD_SWORD_SWEEP_MS + (swordTier === 5 ? BOARD_SWORD_CROSS_DELAY_MS : 0) + BOARD_SWORD_AFTERIMAGE_MS + BOARD_SWORD_SHARDS_MS : 0;
+    return Math.max(duration, swordMs,
+      kind === 'fire' ? BOARD_FIRE_MS : kind === 'lightning' ? BOARD_LIGHTNING_MS : BOARD_CLEAR_MS);
+  }, BOARD_CLEAR_MS);
 }
 
 export type BoardVisualEffect = {
@@ -46,8 +58,7 @@ export interface BoardEffectTarget {
   impactAt: number;
 }
 
-export interface BoardEffectCue {
-  kind: 'fire' | 'lightning';
+interface BoardEffectCueBase {
   sourceX: number;
   sourceY: number;
   sourceIndex: number;
@@ -56,6 +67,25 @@ export interface BoardEffectCue {
   seed: number;
   targets: BoardEffectTarget[];
 }
+
+export interface ElementalBoardEffectCue extends BoardEffectCueBase { kind: 'fire' | 'lightning' }
+export type SwordCutAxis = 'horizontal' | 'vertical';
+export interface SwordStroke {
+  axis: SwordCutAxis;
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  startAtMs: number;
+}
+export interface SwordBoardEffectCue extends BoardEffectCueBase {
+  kind: 'slash' | 'cross';
+  splitAtMs: number;
+  endAtMs: number;
+  strokes: SwordStroke[];
+  targets: (BoardEffectTarget & { axis: SwordCutAxis })[];
+}
+export type BoardEffectCue = ElementalBoardEffectCue | SwordBoardEffectCue;
 
 export interface CellVisual {
   dx: number;
@@ -68,6 +98,7 @@ export interface CellVisual {
   flashColor: string;
   clearAt: number;
   flashAt: number | null;
+  splitAt: number | null;
 }
 
 // The same bounds position both the artwork and its invisible touch target.
@@ -107,20 +138,46 @@ export function buildBoardEffectCues(
   effect: BoardVisualEffect | null,
   geometry: BoardGeometry = DEFAULT_GEOMETRY,
   runId = '',
+  previous: BoardVisualEffect | null = null,
 ): BoardEffectCue[] {
   if (!effect || effect.kind !== 'clear') return [];
   const events = effect.effects.filter((item): item is BoardAnimationEffect & {
-    kind: 'fire' | 'lightning'; source: number;
-  } => (item.kind === 'fire' || item.kind === 'lightning')
+    source: number;
+  } => (item.kind === 'fire' || item.kind === 'lightning'
+    || ((item.kind === 'slash' || item.kind === 'cross') && !!item.swordChargeTier))
     && item.source !== undefined && validCell(item.source, geometry)
     && item.cells.some(index => validCell(index, geometry)));
-  const durationMs = boardClearDurationMs(effect.effects.map(item => item.kind));
-  return events.map((event, eventIndex) => {
+  const durationMs = boardClearDurationMs(effect.effects);
+  const alreadyCleared = new Set(previous?.kind === 'clear' ? previous.cleared : []);
+  const cleared = new Set(effect.cleared);
+  const claimedSwordTargets = new Set<number>();
+  return events.map((event, eventIndex): BoardEffectCue => {
     const targetIndices = [...new Set(event.cells.filter(index => validCell(index, geometry)))];
     const points = targetIndices.map(index => ({ index, ...cellCenter(index, geometry) }));
-    // Fire and lightning events are emitted from a concrete charged/source cell.
+    // Effects retain their source even when an earlier trace has already removed it.
     const sourceIndex = event.source;
     const source = cellCenter(sourceIndex, geometry);
+    if (event.kind === 'slash' || event.kind === 'cross') {
+      const cross = event.swordChargeTier === 5;
+      const splitAtMs = BOARD_SWORD_SWEEP_MS + (cross ? BOARD_SWORD_CROSS_DELAY_MS : 0) + BOARD_SWORD_AFTERIMAGE_MS;
+      const strokes: SwordStroke[] = [{ axis: 'horizontal', startX: 0, startY: source.y,
+        endX: geometry.width, endY: source.y, startAtMs: 0 }];
+      if (cross) strokes.push({ axis: 'vertical', startX: source.x, startY: 0,
+        endX: source.x, endY: geometry.height, startAtMs: BOARD_SWORD_CROSS_DELAY_MS });
+      return {
+        kind: cross ? 'cross' : 'slash', sourceX: source.x, sourceY: source.y, sourceIndex,
+        startAt: 0, clearAt: splitAtMs / durationMs, splitAtMs,
+        endAtMs: splitAtMs + BOARD_SWORD_SHARDS_MS, strokes,
+        seed: effectSeed(runId, effect.id, eventIndex, event.kind),
+        targets: points.filter(point => {
+          const onStroke = point.y === source.y || cross && point.x === source.x;
+          if (!onStroke || !cleared.has(point.index) || alreadyCleared.has(point.index) || claimedSwordTargets.has(point.index)) return false;
+          claimedSwordTargets.add(point.index);
+          return true;
+        }).map((point): SwordBoardEffectCue['targets'][number] => ({ ...point, impactAt: splitAtMs / durationMs,
+          axis: point.y === source.y ? 'horizontal' : 'vertical' })),
+      };
+    }
     const startAt = events.length <= 1 ? 0 : eventIndex / (events.length - 1) * (80 / durationMs);
     let targets = points;
     if (event.kind === 'fire') {
@@ -129,7 +186,7 @@ export function buildBoardEffectCues(
     }
     const maxDistance = Math.max(1, ...targets.map(point => Math.hypot(point.x - source.x, point.y - source.y)));
     return {
-      kind: event.kind as BoardEffectCue['kind'],
+      kind: event.kind as ElementalBoardEffectCue['kind'],
       sourceX: source.x,
       sourceY: source.y,
       sourceIndex,
@@ -170,12 +227,20 @@ export function buildCellVisuals(
   previous: BoardVisualEffect | null,
   reduceMotion = false,
   geometry: BoardGeometry = DEFAULT_GEOMETRY,
-  cues: BoardEffectCue[] = buildBoardEffectCues(effect, geometry),
+  cues: BoardEffectCue[] = buildBoardEffectCues(effect, geometry, '', previous),
 ): CellVisual[] {
   const previouslyCleared = new Set(previous?.kind === 'clear' ? previous.cleared : []);
   const impacts = new Map<number, number>();
   const clearStarts = new Map<number, number>();
+  const splits = new Map<number, number>();
   for (const cue of cues) {
+    if (cue.kind === 'slash' || cue.kind === 'cross') {
+      for (const target of cue.targets) {
+        const current = splits.get(target.index);
+        if (current === undefined || cue.clearAt < current) splits.set(target.index, cue.clearAt);
+      }
+      continue;
+    }
     const sourceClear = clearStarts.get(cue.sourceIndex);
     if (sourceClear === undefined || cue.clearAt < sourceClear) clearStarts.set(cue.sourceIndex, cue.clearAt);
     for (const target of cue.targets) {
@@ -188,7 +253,7 @@ export function buildCellVisuals(
   return Array.from({ length: geometry.width * geometry.height }, (_, index) => {
     const visual: CellVisual = {
       dx: 0, dy: 0, falling: false, clearing: false, hidden: false,
-      changed: false, flashing: false, flashColor: '#ffeab0', clearAt: 0, flashAt: null,
+      changed: false, flashing: false, flashColor: '#ffeab0', clearAt: 0, flashAt: null, splitAt: null,
     };
     if (!effect || reduceMotion) return visual;
     if (effect.kind === 'swap' || effect.kind === 'reject') {
@@ -213,9 +278,11 @@ export function buildCellVisuals(
       visual.clearing = cleared && !visual.hidden;
       visual.changed = !cleared && effect.changed.includes(index);
       const trace = effect.effects.find(item => item.cells.includes(index) || item.source === index);
-      visual.flashing = !!trace;
+      visual.flashing = !!trace && !trace.swordChargeTier;
       visual.flashAt = impacts.get(index) ?? null;
       visual.clearAt = cleared ? clearStarts.get(index) ?? 0 : 0;
+      visual.splitAt = cleared && !visual.hidden ? splits.get(index) ?? null : null;
+      if (visual.splitAt !== null) visual.flashing = false;
       visual.flashColor = trace?.kind === 'fire' ? '#ffb063'
         : trace?.kind === 'lightning' ? '#c7a5ff'
         : trace?.kind === 'spirit' ? '#8efbd4' : '#ffeab0';
@@ -231,8 +298,8 @@ export function cellMotion(visual: CellVisual, pitch: number, progress: number, 
   return {
     tx: visual.dx * pitch * travel,
     ty: visual.dy * pitch * travel,
-    opacity: visual.hidden ? 0 : visual.clearing ? 1 - clearProgress : 1,
-    scale: visual.hidden ? .5 : visual.clearing ? 1 - .5 * clearProgress : visual.changed ? pulse : 1,
+    opacity: visual.hidden ? 0 : visual.splitAt !== null ? Number(progress < visual.splitAt) : visual.clearing ? 1 - clearProgress : 1,
+    scale: visual.hidden ? .5 : visual.splitAt !== null ? 1 : visual.clearing ? 1 - .5 * clearProgress : visual.changed ? pulse : 1,
   };
 }
 

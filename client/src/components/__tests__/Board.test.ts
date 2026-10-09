@@ -64,6 +64,7 @@ jest.mock('@shopify/react-native-skia', () => {
   return {
     Canvas: host('Canvas'), Group: host('Group'), Image: host('SkiaImage'), Atlas: host('Atlas'),
     RoundedRect: host('RoundedRect'), Paragraph: host('Paragraph'), Paint: host('Paint'),
+    Path: host('Path'), BlurMask: host('BlurMask'), LinearGradient: host('LinearGradient'),
     FontWeight: { Black: 900 },
     useImage: jest.fn((asset: number) => ({ asset, width: () => 960, height: () => 576 })),
     useRectBuffer: jest.fn((size: number, modifier: (value: never, index: number) => void) => buffer(size, () => ({
@@ -74,6 +75,10 @@ jest.mock('@shopify/react-native-skia', () => {
     }), modifier)),
     useColorBuffer: jest.fn((size: number, modifier: (value: never, index: number) => void) => buffer(size, () => new Float32Array(4), modifier)),
     Skia: {
+      Path: { Make: () => {
+        const path = { moveTo: () => path, lineTo: () => path, close: () => path };
+        return path;
+      } },
       Color: (color: string) => color,
       XYWHRect: (x: number, y: number, width: number, height: number) => ({ x, y, width, height }),
       ParagraphBuilder: {
@@ -184,6 +189,103 @@ describe('Skia Board integration', () => {
     ]);
   });
 
+  it.each([4, 5] as const)('plays tier %s on a linear clock and preserves complete artwork in exactly two fragments per target', tier => {
+    const effect: BoardVisualEffect = { id: 80 + tier, kind: 'clear', cleared: [23, 24, 25, 17], changed: [], effects: [
+      { kind: tier === 5 ? 'cross' : 'slash', swordChargeTier: tier, source: 24, cells: [23, 24, 25, 17], damage: 0, qi: 0 },
+    ] };
+    const orbSnapshot = { ...snapshot, tiles: [...snapshot.tiles] };
+    for (const index of [17, 24, 25]) orbSnapshot.tiles[index] = { kind: TileKind.Fire, chargeTier: 0, locked: false };
+    orbSnapshot.tiles[23] = { kind: TileKind.SpiritOrb, chargeTier: 5, locked: false };
+    mount({ snapshot: orbSnapshot, visualEffect: effect });
+    const duration = tier === 5 ? 1080 : 1020;
+    expect(withTiming).toHaveBeenCalledWith(1, { duration, easing: Easing.linear }, expect.any(Function));
+    const effects = renderer.root.findByType(BoardEffects);
+    const fragments = effects.findAll(node => node.type === 'Group' as never && node.props.layer);
+    expect(fragments).toHaveLength(tier === 5 ? 8 : 6);
+    expect(effects.findAll(node => node.type === 'Paragraph' as never && node.props.paragraph.text === '氣')).toHaveLength(2);
+    expect(effects.findAll(node => node.type === 'Paragraph' as never && node.props.paragraph.text === '✦5')).toHaveLength(2);
+    expect(effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === '#0b4144')).toHaveLength(0);
+    expect(effects.findAll(node => node.type === 'Path' as never)).toHaveLength(tier === 5 ? 6 : 3);
+    const progress = effects.props.progress;
+    const afterimages = effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === '#ffffff');
+    expect(afterimages).toHaveLength(tier === 5 ? 2 : 1);
+    for (const line of afterimages) expect(line.props).toMatchObject({ x: 0, y: -1, width: 350, height: 2 });
+    for (const time of [0, 219, 220, 370, 520, 579]) {
+      progress.value = time / duration;
+      mockReactions.at(-1)!();
+      expect(tile(23).props.layer.props.opacity.value).toBe(time < (tier === 5 ? 580 : 520) ? 1 : 0);
+      afterimages.forEach((line, index) => {
+        const age = time - 220 - index * 60;
+        expect(line.props.opacity.value).toBeCloseTo(age < 0 || age >= 300 ? 0 : .35 * (1 - age / 300));
+      });
+    }
+    progress.value = ((tier === 5 ? 580 : 520) - .1) / duration;
+    mockReactions.at(-1)!();
+    expect(tile(23).props.layer.props.opacity.value).toBe(1);
+    expect(fragments.map(node => node.props.layer.props.opacity.value)).toEqual(Array(fragments.length).fill(0));
+    // The completion guard hides fragments even if a delayed clock/reaction still references this phase.
+    progress.value = (tier === 5 ? 580 : 520) / duration;
+    mockReactions.at(-1)!();
+    expect(tile(23).props.layer.props.opacity.value).toBe(0);
+    expect(afterimages.map(line => line.props.opacity.value)).toEqual(Array(afterimages.length).fill(0));
+    expect(fragments.map(node => node.props.layer.props.opacity.value)).toEqual(Array(fragments.length).fill(1));
+    progress.value = 1;
+    expect(fragments.map(node => node.props.layer.props.opacity.value)).toEqual(Array(fragments.length).fill(0));
+    // Cleanup must hide the trail too, even if its local clock was still in the fade interval.
+    progress.value = 370 / duration;
+    expect(afterimages[0].props.opacity.value).toBeGreaterThan(0);
+    const retiredOpacities = afterimages.map(line => line.props.opacity);
+    act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: null })));
+    expect(retiredOpacities.map(opacity => opacity.value)).toEqual(Array(afterimages.length).fill(0));
+    expect(renderer.root.findAllByType(BoardEffects)).toHaveLength(0);
+  });
+
+  it('fits stationary white trails to the actual row and column lengths on rectangular boards', () => {
+    const geometry = { width: 5, height: 3, activeCells: Array(15).fill(true) };
+    const cells = [5, 6, 7, 8, 9, 2, 12];
+    mount({ snapshot: { ...snapshot, tiles: snapshot.tiles.slice(0, 15), level: { ...snapshot.level, board: geometry } },
+      visualEffect: { id: 88, kind: 'clear', cleared: cells, changed: [], effects: [
+        { kind: 'cross', swordChargeTier: 5, source: 7, cells, damage: 0, qi: 0 },
+      ] } });
+    const effects = renderer.root.findByType(BoardEffects);
+    const lines = effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === '#ffffff');
+    expect(lines.map(line => line.props.width)).toEqual([350, 210]);
+    for (const line of lines) expect(line.props.height).toBeCloseTo(2.8);
+    const transforms = effects.findAll(node => node.type === 'Group' as never && Array.isArray(node.props.transform))
+      .map(node => node.props.transform);
+    expect(transforms).toContainEqual([{ translateX: 0 }, { translateY: 105 }, { rotate: 0 }]);
+    expect(transforms).toContainEqual([{ translateX: 175 }, { translateY: 0 }, { rotate: Math.PI / 2 }]);
+  });
+
+  it('does not resurrect sword targets cleared by an earlier trace and retains the same clock across layout and HUD changes', () => {
+    const first: BoardVisualEffect = { id: 85, kind: 'clear', cleared: [23, 24], changed: [], effects: [] };
+    mount({ visualEffect: first });
+    const effect: BoardVisualEffect = { id: 86, kind: 'clear', cleared: [23, 24, 25], changed: [], effects: [
+      { kind: 'slash', swordChargeTier: 4, source: 24, cells: [23, 24, 25], damage: 0, qi: 0 },
+    ] };
+    act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: effect })));
+    const effects = renderer.root.findByType(BoardEffects);
+    const progress = effects.props.progress;
+    expect(effects.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(2);
+    const clips = () => effects.findAll(node => node.type === 'Group' as never && node.props.clip).map(node => node.props.clip);
+    expect(clips()).toEqual([{ x: 201, y: 151, width: 48, height: 24 }, { x: 201, y: 175, width: 48, height: 24 }]);
+    (withTiming as jest.Mock).mockClear();
+    act(() => renderer.update(React.createElement(Board, { ...props, snapshot: { ...snapshot, swordQi: 12 }, visualEffect: { ...effect } })));
+    const grid = renderer.root.findAllByType(View).find(node => typeof node.props.onLayout === 'function')!;
+    act(() => grid.props.onLayout({ nativeEvent: { layout: { width: 175, height: 175 } } }));
+    expect(renderer.root.findByType(BoardEffects).props.progress).toBe(progress);
+    expect(clips()).toEqual([{ x: 101, y: 76, width: 23, height: 11.5 }, { x: 101, y: 87.5, width: 23, height: 11.5 }]);
+    expect(withTiming).not.toHaveBeenCalled();
+    mockQueueUI = true;
+    act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: { ...effect, id: 87 } })));
+    const next = renderer.root.findByType(BoardEffects).props.progress;
+    expect(next).not.toBe(progress);
+    act(() => { mockUIQueue[0](); });
+    expect(progress.value).toBe(1);
+    expect(next.value).toBe(0);
+    expect(cancelAnimation).toHaveBeenCalledWith(progress);
+  });
+
   it('reports UI start and successful completion without treating cancellation as completion', () => {
     const onMotionStarted = jest.fn(), onMotionFinished = jest.fn();
     mount({ onMotionStarted, onMotionFinished,
@@ -277,10 +379,11 @@ describe('Skia Board integration', () => {
     expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(1);
   });
 
-  it.each(['fire', 'lightning'] as const)('skips the %s sprite emitter when reduced motion is enabled', kind => {
+  it.each(['fire', 'lightning', 'slash', 'cross'] as const)('skips the %s sprite emitter when reduced motion is enabled', kind => {
     mount({ reduceMotion: true, visualEffect: {
       id: 73, kind: 'clear', cleared: [0], changed: [],
-      effects: [{ kind, cells: [0], source: 1, damage: 1, qi: 0 }],
+      effects: [{ kind, cells: [0], source: 1, damage: 1, qi: 0,
+        ...(kind === 'slash' || kind === 'cross' ? { swordChargeTier: kind === 'slash' ? 4 as const : 5 as const } : {}) }],
     } });
     expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(0);
     expect(renderer.root.findAllByType(BoardEffects)).toHaveLength(0);

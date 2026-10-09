@@ -36,7 +36,7 @@ jest.mock('../Board', () => {
       const duration = effect.kind === 'swap' ? visuals.BOARD_SWAP_MS
         : effect.kind === 'fall' ? visuals.BOARD_FALL_MS
         : effect.kind === 'reject' ? visuals.BOARD_REJECT_MS
-        : visuals.boardClearDurationMs(effect.effects.map((trace: any) => trace.kind));
+        : visuals.boardClearDurationMs(effect.effects);
       const timer = setTimeout(() => props.onMotionFinished?.(props.snapshot.runId, effect.id), duration);
       return () => clearTimeout(timer);
     }, [effect?.id]);
