@@ -1,0 +1,319 @@
+{
+  "version": 1,
+  "id": "fire-round-ignition-i2v-20261008",
+  "description": "Vụ nổ lửa bắt đầu từ một điểm lửa tròn nhỏ, bung theo mọi hướng rồi biến mất hoàn toàn cuối video; nét vẽ tay theo VFX Hỏa của game.",
+  "kind": "fire",
+  "created_at": "2026-10-08T16:20:10.055700+00:00",
+  "state": "needs_attention",
+  "config": {
+    "video_model": "xai/grok-imagine-video/v1.5/lite/image-to-video",
+    "resolution": "480p",
+    "video_duration": 1,
+    "matte_model": "fal-ai/feynobg",
+    "matte_seed": 42,
+    "frame_count": 24,
+    "size": 256,
+    "columns": 6,
+    "padding": 2,
+    "playback_ms": 1000
+  },
+  "video": {
+    "signature": "c4bd66c8ac2ca2d8a8fab612320aae1a8b59eea19cfc7186f6029486c85bc61e",
+    "model": "xai/grok-imagine-video/v1.5/lite/image-to-video",
+    "state": "completed",
+    "submitted_at": "2026-10-08T16:21:03.481511+00:00",
+    "attempt": 1,
+    "request_id": "01a11c51-8059-72b1-812c-67fdd15d2192",
+    "status_url": "https://queue.fal.run/xai/grok-imagine-video/requests/01a11c51-8059-72b1-812c-67fdd15d2192/status",
+    "response_url": "https://queue.fal.run/xai/grok-imagine-video/requests/01a11c51-8059-72b1-812c-67fdd15d2192",
+    "output": "video/attempt-1.mp4",
+    "output_sha256": "2333024737577859656c7714f416e3e25fac2f776ef8ac7d1b516eff874420c5",
+    "completed_at": "2026-10-08T16:21:31.711227+00:00",
+    "probe": {
+      "duration": 1.041667,
+      "fps": 24.0,
+      "width": 544,
+      "height": 544
+    }
+  },
+  "frames": [
+    {
+      "index": 0,
+      "timestamp": 0.0,
+      "raw": "frames/0000.png",
+      "raw_sha256": "426c48b4dddf5bbca1e73c2b5e8be0fe513b2591f09bb5cdf5a31a956005a60b",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 1,
+      "timestamp": 0.041666666666666664,
+      "raw": "frames/0001.png",
+      "raw_sha256": "e1ced2d6c0828d183ee2778f238dc50fe6f39d88659c1431236cb1699783a5fc",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 2,
+      "timestamp": 0.08333333333333333,
+      "raw": "frames/0002.png",
+      "raw_sha256": "135b9799f83838b630d340fc99e1f0791b171c423120dcc0326cbf9c6d44e77e",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 3,
+      "timestamp": 0.125,
+      "raw": "frames/0003.png",
+      "raw_sha256": "e662c8ea4e19914c0bcc6a1f5cc04b12e6c5d0a482d71be3935e4c4cc16e9913",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 4,
+      "timestamp": 0.16666666666666666,
+      "raw": "frames/0004.png",
+      "raw_sha256": "21db62db605e5973b1c85ed93c83610f49cc6e8e31dcc2ba4dfe97c8a9d5af63",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 5,
+      "timestamp": 0.20833333333333334,
+      "raw": "frames/0005.png",
+      "raw_sha256": "edbdd344f3f9d7c574f5fda70102d94fa3de5649f30c17a1eea0fbae7475b622",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 6,
+      "timestamp": 0.25,
+      "raw": "frames/0006.png",
+      "raw_sha256": "a1e8bdc489830c4dabe3c9ef7b792b831a15314a46b2b64fc8be2bd8077cf2c3",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 7,
+      "timestamp": 0.2916666666666667,
+      "raw": "frames/0007.png",
+      "raw_sha256": "cd0543d54c6cdcdc6c18fa40000d7103b5f3eb39af44f322a4928b92abc3997c",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 8,
+      "timestamp": 0.3333333333333333,
+      "raw": "frames/0008.png",
+      "raw_sha256": "ae62c2193fc92a7cedc2491660856ef677b9f5d427b50f8a2d8b002d8ec9008c",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 9,
+      "timestamp": 0.375,
+      "raw": "frames/0009.png",
+      "raw_sha256": "2646d7f2adb22a2a952d70b1199dd2a22f7b720c027d125efa158725db3c14e8",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 10,
+      "timestamp": 0.4166666666666667,
+      "raw": "frames/0010.png",
+      "raw_sha256": "803e7323ff5ec065d4814d37e0d4e501de028b6a0b4c19fdceeac72556356df8",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 11,
+      "timestamp": 0.4583333333333333,
+      "raw": "frames/0011.png",
+      "raw_sha256": "3f1ffdbe63e93d7b9a9abcbf4cff47985e772072828bc31f78a537fb17d21772",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 12,
+      "timestamp": 0.5,
+      "raw": "frames/0012.png",
+      "raw_sha256": "a9fc9e960b2a54adff4015edd016db86f98b84721bdfa45cb5a29bdb536e9ffa",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 13,
+      "timestamp": 0.5416666666666666,
+      "raw": "frames/0013.png",
+      "raw_sha256": "8b13004a069b640c694b939bbfee4932a46f923a3ace611c2e46e66f807cbf9e",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 14,
+      "timestamp": 0.5833333333333334,
+      "raw": "frames/0014.png",
+      "raw_sha256": "3356193265cdc93f83e57170a901c8d1f9d12bc6ae9558bb1be3d77166da7896",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 15,
+      "timestamp": 0.625,
+      "raw": "frames/0015.png",
+      "raw_sha256": "1e0f1b1829854af14215cccddce2a4eee12ed0d05d43b1d1cba1030c2d54bacc",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 16,
+      "timestamp": 0.6666666666666666,
+      "raw": "frames/0016.png",
+      "raw_sha256": "8aa2d90fc182c23107f9a826a8eb9543adf17cd2dc719cb8edd1e7bf9d0f207a",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 17,
+      "timestamp": 0.7083333333333334,
+      "raw": "frames/0017.png",
+      "raw_sha256": "e5d55051923707d17d0ae6af92cf602476a4f016b53682e10ff523f54b516293",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 18,
+      "timestamp": 0.75,
+      "raw": "frames/0018.png",
+      "raw_sha256": "fc0c825fbbf3be9fe0893089e48afcc686197f7f821a1f13e90f01c8c814685a",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 19,
+      "timestamp": 0.7916666666666666,
+      "raw": "frames/0019.png",
+      "raw_sha256": "3f45662e8172926623593301fd20a716290ea5552f7a80e5437e6d3d988e63ea",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 20,
+      "timestamp": 0.8333333333333334,
+      "raw": "frames/0020.png",
+      "raw_sha256": "028bb752d33c90015f91bcefe305cddf0a1c837a58c63291a93a2b8cdfc92b57",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 21,
+      "timestamp": 0.875,
+      "raw": "frames/0021.png",
+      "raw_sha256": "2a628d1ea6901b4d937b1359dca3e1a3b1da555660023561aac8d0a99023eaa6",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 22,
+      "timestamp": 0.9166666666666666,
+      "raw": "frames/0022.png",
+      "raw_sha256": "cff9b295079e36aac57a6f8e929528dc7745e579a8ba67d2edff8328531f4979",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    },
+    {
+      "index": 23,
+      "timestamp": 0.9583333333333334,
+      "raw": "frames/0023.png",
+      "raw_sha256": "356eea874fc401a4c616a29be78b714338b90dbc470809a3c9707c52382ffe36",
+      "dimensions": [
+        544,
+        544
+      ],
+      "state": "new"
+    }
+  ],
+  "sample_review": null,
+  "updated_at": "2026-10-08T16:22:12.472249+00:00",
+  "selection": {
+    "video_sha256": "2333024737577859656c7714f416e3e25fac2f776ef8ac7d1b516eff874420c5",
+    "start": 0.0,
+    "end": 1.0,
+    "count": 24
+  },
+  "source_review": {
+    "passed": false,
+    "at": "2026-10-08T16:22:12.472186+00:00",
+    "video_sha256": "2333024737577859656c7714f416e3e25fac2f776ef8ac7d1b516eff874420c5",
+    "note": "Explosion expands into an oversized regular scalloped ring with clipped edges; visible flame fragments remain in the final frame instead of a completely empty ending. Painterly detail is simplified relative to the source. Stop before Feyn; no regeneration or retry authorized."
+  }
+}

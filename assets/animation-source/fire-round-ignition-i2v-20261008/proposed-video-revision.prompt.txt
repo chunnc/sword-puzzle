@@ -1,0 +1,9 @@
+Animate the input round ignition into ONE compact hand-painted fire explosion that is already completely gone before the video ends. Duration exactly 1 second.
+
+Preserve the source's rich painted shading, warm orange-red volume, golden-ivory inner streaks and fine luminous detail. Form irregular overlapping flame masses with varied sizes and spacing, not a perfectly circular ring, flower, rosette, repeated petals or flat cartoon outlines.
+
+Frame zero: preserve the original tiny round fire point at the exact center. 0.00-0.08s: ignition brightens. 0.08-0.25s: a sudden outward burst rapidly grows to ONE peak, at most half the full canvas width and height. 0.25-0.50s: expansion STOPS; the core breaks apart, irregular lobes collapse, thin and fade IN PLACE. 0.50-0.75s: the last small remnants and glow shrink away and extinguish where they are; none travels to the edges. The input ignition is consumed and also disappears. 0.75-1.00s: hold an entirely EMPTY solid green frame. No fire or particles remain anywhere at the end. No restart or loop.
+
+The entire effect, including glow, remains within the middle 70% of the image; leave at least 15% empty green margin on every side throughout. Do not keep expanding after the peak. Do not push a ring or any fragment toward or beyond a frame edge. Fixed center, camera and framing, no zoom or cropping.
+
+Use the same flat saturated green background throughout, especially the final quarter-second. No background gradients or lighting changes. No camera motion, shake, cuts, text, watermark, floor, characters, game board, smoke, added debris or extra objects. Keep source painterly style throughout; no photorealism or 3D scene.

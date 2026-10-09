@@ -1,0 +1,369 @@
+{
+  "version": 1,
+  "id": "fire-round-ignition-attempt-2-20261008",
+  "description": "Tiếp tục xử lý video attempt-2.mp4 do người dùng tạo từ đốm lửa tròn nhỏ: nổ rồi biến mất.",
+  "kind": "fire",
+  "created_at": "2026-10-08T16:31:08.872738+00:00",
+  "state": "needs_attention",
+  "config": {
+    "video_model": "xai/grok-imagine-video/v1.5/lite/image-to-video",
+    "resolution": "480p",
+    "video_duration": 1,
+    "matte_model": "fal-ai/feynobg",
+    "matte_seed": 42,
+    "frame_count": 24,
+    "size": 256,
+    "columns": 6,
+    "padding": 2,
+    "playback_ms": 1000
+  },
+  "video": {
+    "state": "imported",
+    "output": "video/imported.mp4",
+    "output_sha256": "880b8aea34d2a3fd9b23c0b63461b6143cee4ba16c2882e4452849764aa75bb9",
+    "previous_generation": {},
+    "probe": {
+      "duration": 1.041667,
+      "fps": 24.0,
+      "width": 640,
+      "height": 640
+    }
+  },
+  "frames": [
+    {
+      "index": 0,
+      "timestamp": 0.0,
+      "raw": "frames/0000.png",
+      "raw_sha256": "310a2ee0fb7b724fa34e05b314a87cef75c4aa93244e489922ff2db3ad1f7601",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 1,
+      "timestamp": 0.041666666666666664,
+      "raw": "frames/0001.png",
+      "raw_sha256": "9acdfb3a17435f6a81557a42ecc8baa01b5b8c247515678378319fdc6d82f090",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 2,
+      "timestamp": 0.08333333333333333,
+      "raw": "frames/0002.png",
+      "raw_sha256": "c3ebc81edf676caf3361235501f579bed9cdc3b39acb41a70ecf9abca54080ed",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 3,
+      "timestamp": 0.125,
+      "raw": "frames/0003.png",
+      "raw_sha256": "b01680ca2598846534f690dda40eb4e7938eade4710fb68b26a51bc1e47e1f59",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 4,
+      "timestamp": 0.16666666666666666,
+      "raw": "frames/0004.png",
+      "raw_sha256": "40cb226c3d0347f17b394dadeed4afc7dd4e585277a5ceb49949c84cd8f2b27f",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 5,
+      "timestamp": 0.20833333333333334,
+      "raw": "frames/0005.png",
+      "raw_sha256": "14bd32480c7de54a3327d2f6ae8271f473854a721ae08bb04337b1e1c7d2d9ad",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 6,
+      "timestamp": 0.25,
+      "raw": "frames/0006.png",
+      "raw_sha256": "14a4dd3f60a44e40c06c1b7e34d6cc4a5fed62659c101ceef513172171e75f73",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-08T16:31:55.175141+00:00",
+      "attempt": 1,
+      "request_id": "01a11c5b-6f51-78e1-aeb8-2b26a6722194",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11c5b-6f51-78e1-aeb8-2b26a6722194/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11c5b-6f51-78e1-aeb8-2b26a6722194",
+      "output": "cutouts/0006-attempt-1.png",
+      "output_sha256": "2ede473b5d7cbf3bd097b69b2a2b22841d7de0c9f00c6ef8a0a4ae9a176bd2ea",
+      "completed_at": "2026-10-08T16:32:00.263963+00:00"
+    },
+    {
+      "index": 7,
+      "timestamp": 0.2916666666666667,
+      "raw": "frames/0007.png",
+      "raw_sha256": "1d6b801acb054e49ad9698d33ccbeb7f74cb6996b22ca2a37d0610ba03cc7a6f",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 8,
+      "timestamp": 0.3333333333333333,
+      "raw": "frames/0008.png",
+      "raw_sha256": "59a96cdcc60d5a02fa882c771c17dee5f72c5d12f6fb4cb93342b8ed31cb2f63",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 9,
+      "timestamp": 0.375,
+      "raw": "frames/0009.png",
+      "raw_sha256": "9cf867b73d448d894cd9fffe703cc8711f0827516e6f0e919a3fccce3c54f3c0",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 10,
+      "timestamp": 0.4166666666666667,
+      "raw": "frames/0010.png",
+      "raw_sha256": "5555c255126deaaffaf957808b0912627ae01dc7af58ec2da22239dcf700edb4",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 11,
+      "timestamp": 0.4583333333333333,
+      "raw": "frames/0011.png",
+      "raw_sha256": "5a73403db02056c18883cc9c911693a1bb8b6ed47325e3ebe2f00e8f4f890a6e",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 12,
+      "timestamp": 0.5,
+      "raw": "frames/0012.png",
+      "raw_sha256": "a4f6218acdcc135a800ac2ed83c17576bed3a5cbd9bb1ba62724b1d177162208",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-08T16:31:55.176572+00:00",
+      "attempt": 1,
+      "request_id": "01a11c5b-7032-7902-b79a-30c3330e0704",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11c5b-7032-7902-b79a-30c3330e0704/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11c5b-7032-7902-b79a-30c3330e0704",
+      "output": "cutouts/0012-attempt-1.png",
+      "output_sha256": "9e0f94266dedad4998022494b3d6ccd74cc62ad3b2b49d8865f4c8f66cc7852b",
+      "completed_at": "2026-10-08T16:32:03.682841+00:00"
+    },
+    {
+      "index": 13,
+      "timestamp": 0.5416666666666666,
+      "raw": "frames/0013.png",
+      "raw_sha256": "8603ab75c2e21ccb445786a892b12c8ca907a0ba4322b41294ade6edd360df5f",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 14,
+      "timestamp": 0.5833333333333334,
+      "raw": "frames/0014.png",
+      "raw_sha256": "e673bb297fd31e8f5f8166c5a604249c9228c5cb3d9edf33e1fe8fbd552a0e0c",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 15,
+      "timestamp": 0.625,
+      "raw": "frames/0015.png",
+      "raw_sha256": "21b4f602952bed45d8bd1c389d75afc6122ac62710ff3646b784d4e4dd831527",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 16,
+      "timestamp": 0.6666666666666666,
+      "raw": "frames/0016.png",
+      "raw_sha256": "c43131f00576c110be3da79a18020864304087f247c6fc3c790d1c7ab38c0768",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 17,
+      "timestamp": 0.7083333333333334,
+      "raw": "frames/0017.png",
+      "raw_sha256": "4b475c0366acc313c369984d155808b4dc33f2696ea82e66f92db926da2bdc9b",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 18,
+      "timestamp": 0.75,
+      "raw": "frames/0018.png",
+      "raw_sha256": "835baa29456d875ca5d6be2566d7d335c97ea0e7db5b6dc7026f91591703dc7a",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "completed",
+      "submitted_at": "2026-10-08T16:31:55.177535+00:00",
+      "attempt": 1,
+      "request_id": "01a11c5b-7140-7822-b1fe-11eda687d2a5",
+      "status_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11c5b-7140-7822-b1fe-11eda687d2a5/status",
+      "response_url": "https://queue.fal.run/fal-ai/feynobg/requests/01a11c5b-7140-7822-b1fe-11eda687d2a5",
+      "output": "cutouts/0018-attempt-1.png",
+      "output_sha256": "ade62ca5c6eb0f61010170e42923ac71dc634feef4aa8bf063d41c78d453b7d1",
+      "completed_at": "2026-10-08T16:32:04.029652+00:00"
+    },
+    {
+      "index": 19,
+      "timestamp": 0.7916666666666666,
+      "raw": "frames/0019.png",
+      "raw_sha256": "8d0b2b0ee82c47d64c5d12dcf40463c1cdf174eb0b41b696073db22aed763593",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 20,
+      "timestamp": 0.8333333333333334,
+      "raw": "frames/0020.png",
+      "raw_sha256": "a4cb4b25fca2821f0005a3d9afd4f928bf5fe7326a3ff6da35808647a5db3a26",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 21,
+      "timestamp": 0.875,
+      "raw": "frames/0021.png",
+      "raw_sha256": "fbe6a9b346571f7cb13a232e5d69021fcbb8b0a843a4720be0c7cd24c2bcd93f",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 22,
+      "timestamp": 0.9166666666666666,
+      "raw": "frames/0022.png",
+      "raw_sha256": "92af33b7e74ca2f1f60d6805e97a3e3aaab8abb2412733598d72bf900a5dde27",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    },
+    {
+      "index": 23,
+      "timestamp": 0.9583333333333334,
+      "raw": "frames/0023.png",
+      "raw_sha256": "5f68caed7d514204cc83194bb9609aa84a2bab80c1bc9949c337cb22643a91c5",
+      "dimensions": [
+        640,
+        640
+      ],
+      "state": "new"
+    }
+  ],
+  "sample_review": {
+    "passed": false,
+    "note": "Inspected sample-review.png and full-size raw/cutout frames. Feyn removes the exterior green but retains visible chroma-green contamination in internal holes and translucent flame regions, especially sample frame 18; source lacks a fully extinguished ending. Samples are not usable as clean transparent VFX. Stop before the 21 remaining requests; preserve the three cutouts and original request IDs. No paid retry submitted.",
+    "at": "2026-10-08T16:32:35.678382+00:00",
+    "signature": [
+      "2ede473b5d7cbf3bd097b69b2a2b22841d7de0c9f00c6ef8a0a4ae9a176bd2ea",
+      "9e0f94266dedad4998022494b3d6ccd74cc62ad3b2b49d8865f4c8f66cc7852b",
+      "ade62ca5c6eb0f61010170e42923ac71dc634feef4aa8bf063d41c78d453b7d1"
+    ]
+  },
+  "updated_at": "2026-10-08T16:32:35.678460+00:00",
+  "selection": {
+    "video_sha256": "880b8aea34d2a3fd9b23c0b63461b6143cee4ba16c2882e4452849764aa75bb9",
+    "start": 0.0,
+    "end": 1.0,
+    "count": 24
+  },
+  "matte_signature": {
+    "model": "fal-ai/feynobg",
+    "seed": 42,
+    "inputs": [
+      "310a2ee0fb7b724fa34e05b314a87cef75c4aa93244e489922ff2db3ad1f7601",
+      "9acdfb3a17435f6a81557a42ecc8baa01b5b8c247515678378319fdc6d82f090",
+      "c3ebc81edf676caf3361235501f579bed9cdc3b39acb41a70ecf9abca54080ed",
+      "b01680ca2598846534f690dda40eb4e7938eade4710fb68b26a51bc1e47e1f59",
+      "40cb226c3d0347f17b394dadeed4afc7dd4e585277a5ceb49949c84cd8f2b27f",
+      "14bd32480c7de54a3327d2f6ae8271f473854a721ae08bb04337b1e1c7d2d9ad",
+      "14a4dd3f60a44e40c06c1b7e34d6cc4a5fed62659c101ceef513172171e75f73",
+      "1d6b801acb054e49ad9698d33ccbeb7f74cb6996b22ca2a37d0610ba03cc7a6f",
+      "59a96cdcc60d5a02fa882c771c17dee5f72c5d12f6fb4cb93342b8ed31cb2f63",
+      "9cf867b73d448d894cd9fffe703cc8711f0827516e6f0e919a3fccce3c54f3c0",
+      "5555c255126deaaffaf957808b0912627ae01dc7af58ec2da22239dcf700edb4",
+      "5a73403db02056c18883cc9c911693a1bb8b6ed47325e3ebe2f00e8f4f890a6e",
+      "a4f6218acdcc135a800ac2ed83c17576bed3a5cbd9bb1ba62724b1d177162208",
+      "8603ab75c2e21ccb445786a892b12c8ca907a0ba4322b41294ade6edd360df5f",
+      "e673bb297fd31e8f5f8166c5a604249c9228c5cb3d9edf33e1fe8fbd552a0e0c",
+      "21b4f602952bed45d8bd1c389d75afc6122ac62710ff3646b784d4e4dd831527",
+      "c43131f00576c110be3da79a18020864304087f247c6fc3c790d1c7ab38c0768",
+      "4b475c0366acc313c369984d155808b4dc33f2696ea82e66f92db926da2bdc9b",
+      "835baa29456d875ca5d6be2566d7d335c97ea0e7db5b6dc7026f91591703dc7a",
+      "8d0b2b0ee82c47d64c5d12dcf40463c1cdf174eb0b41b696073db22aed763593",
+      "a4cb4b25fca2821f0005a3d9afd4f928bf5fe7326a3ff6da35808647a5db3a26",
+      "fbe6a9b346571f7cb13a232e5d69021fcbb8b0a843a4720be0c7cd24c2bcd93f",
+      "92af33b7e74ca2f1f60d6805e97a3e3aaab8abb2412733598d72bf900a5dde27",
+      "5f68caed7d514204cc83194bb9609aa84a2bab80c1bc9949c337cb22643a91c5"
+    ]
+  }
+}
