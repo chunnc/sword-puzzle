@@ -2,11 +2,14 @@ import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { StyleSheet, Text, View } from 'react-native';
 import { Board, type BoardVisualEffect } from '../Board';
+import { BoardEffects } from '../BoardEffects';
+import { buildBoardEffectCues } from '../boardVisuals';
+import type { SkImage } from '@shopify/react-native-skia';
 import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
 import { TileKind } from '../../game/types';
 import { Gesture } from 'react-native-gesture-handler';
-import { cancelAnimation, withTiming } from 'react-native-reanimated';
+import { cancelAnimation, makeMutable, withTiming } from 'react-native-reanimated';
 
 jest.mock('react-native-gesture-handler', () => ({
   Gesture: {
@@ -156,8 +159,8 @@ describe('Skia Board integration', () => {
     const effect: BoardVisualEffect = { id: 1, kind: 'clear', cleared: [0], changed: [1], effects: [{ kind: 'fire', cells: [0], source: 0, damage: 0, qi: 0 }] };
     mount({ visualEffect: effect });
     expect((withTiming as jest.Mock).mock.calls).toEqual([
-      [1, { duration: 800 }], [1.12, { duration: 150 }], [1, { duration: 650 }],
-      [.85, { duration: 105 }], [0, { duration: 695 }],
+      [1, { duration: 1200 }], [1.12, { duration: 150 }], [1, { duration: 1050 }],
+      [.85, { duration: 105 }], [0, { duration: 1095 }],
     ]);
     (withTiming as jest.Mock).mockClear();
     act(() => { renderer.update(React.createElement(Board, { ...props, snapshot: { ...snapshot, swordQi: 12 }, visualEffect: effect })); });
@@ -178,21 +181,32 @@ describe('Skia Board integration', () => {
     ]);
   });
 
+  it('uses a 1200ms clear timeline for combined fire and lightning', () => {
+    mount({ visualEffect: {
+      id: 12, kind: 'clear', cleared: [0, 1], changed: [],
+      effects: [
+        { kind: 'fire', cells: [0], source: 0, damage: 1, qi: 0 },
+        { kind: 'lightning', cells: [1], source: 0, damage: 1, qi: 0 },
+      ],
+    } });
+    expect(withTiming).toHaveBeenCalledWith(1, { duration: 1200 });
+    expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(2);
+  });
+
   it('does not start animation when reduced motion is enabled', () => {
     mount({ reduceMotion: true, visualEffect: { id: 3, kind: 'fall', falls: [{ index: 0, fromY: 7 }] } });
     expect(withTiming).not.toHaveBeenCalled();
   });
 
-  it('draws fire flipbook and particles from one phase atlas batch', () => {
+  it('draws the fire flipbook as one atlas without the old particle layer', () => {
     mount({ visualEffect: {
       id: 70, kind: 'clear', cleared: [0, 1], changed: [],
       effects: [{ kind: 'fire', cells: [0, 1], source: 0, damage: 2, qi: 0 }],
     } });
     const atlases = renderer.root.findAll(node => node.type === 'Atlas' as never);
-    expect(atlases).toHaveLength(2);
+    expect(atlases).toHaveLength(1);
     expect(atlases[0].props.sprites.value).toHaveLength(1);
-    expect(atlases[1].props.sprites).toHaveLength(16);
-    expect(atlases[1].props.transforms.value).toHaveLength(16);
+    expect(atlases[0].props.transforms.value).toHaveLength(1);
   });
 
   it('draws chained lightning sprite segments and impacts only for the active cue', () => {
@@ -219,13 +233,13 @@ describe('Skia Board integration', () => {
       visualEffect: { ...effect, effects: effect.effects.map(item => ({ ...item })) },
     })));
     expect(withTiming).not.toHaveBeenCalled();
-    expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(2);
+    expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(1);
   });
 
-  it('skips the sprite emitter when reduced motion is enabled', () => {
+  it.each(['fire', 'lightning'] as const)('skips the %s sprite emitter when reduced motion is enabled', kind => {
     mount({ reduceMotion: true, visualEffect: {
       id: 73, kind: 'clear', cleared: [0], changed: [],
-      effects: [{ kind: 'lightning', cells: [0], source: 1, damage: 1, qi: 0 }],
+      effects: [{ kind, cells: [0], source: 1, damage: 1, qi: 0 }],
     } });
     expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(0);
     expect(withTiming).not.toHaveBeenCalled();
@@ -316,5 +330,73 @@ describe('Skia Board integration', () => {
     expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(49);
     expect(layers()).toHaveLength(0);
     expect(withTiming).toHaveBeenLastCalledWith(1, { duration: 450 });
+  });
+});
+
+describe('fire-test-2 flipbook rendering', () => {
+  let renderer: ReactTestRenderer;
+  const geometry = { width: 7, height: 7 };
+  const fireBurstImage = { width: () => 960, height: () => 576 } as SkImage;
+  const cue = buildBoardEffectCues({
+    id: 80, kind: 'clear', cleared: [24], changed: [],
+    effects: [{ kind: 'fire', source: 24, cells: [24], damage: 1, qi: 0 }],
+  }, geometry)[0];
+
+  function draw(timeMs: number, durationMs = 1200, cues = [cue], image: SkImage | null = fireBurstImage) {
+    act(() => {
+      renderer = create(React.createElement(BoardEffects, {
+        cues, geometry, side: 350, progress: makeMutable(timeMs / durationMs), durationMs,
+        fireBurstImage: image, lightningImage: null,
+      }));
+    });
+    return renderer.root.findAll(node => node.type === 'Atlas' as never)[0].props;
+  }
+
+  afterEach(() => { act(() => renderer?.unmount()); });
+
+  it.each([
+    [0, 0, 0], [108, 192, 0], [180, 384, 0], [252, 576, 0],
+    [324, 768, 0], [396, 0, 192], [468, 192, 192], [540, 384, 192],
+    [612, 576, 192], [684, 768, 192], [756, 0, 384], [828, 192, 384],
+  ])('selects the correct 192px frame at %sms', (timeMs, x, y) => {
+    const atlas = draw(timeMs);
+    expect(atlas.sprites.value[0]).toMatchObject({ x, y, width: 192, height: 192 });
+    // Each frame spans a 4.5x4.5-cell box, centered on the triggering tile.
+    expect(atlas.transforms.value[0].values).toEqual([225 / 192, 0, 62.5, 62.5]);
+    expect(Array.from(atlas.colors.value[0])).toEqual([1, 1, 1, 1]);
+  });
+
+  it('stays fully opaque throughout playback and hides outside the active interval', () => {
+    for (const [timeMs, expectedAlpha] of [[-1, 0], [0, 1], [600, 1], [828, 1], [863, 1], [864, 0], [1200, 0]]) {
+      const atlas = draw(timeMs);
+      expect(atlas.colors.value[0][3]).toBe(expectedAlpha);
+      // Even after playback, never sample the three unused cells in the last row.
+      expect(atlas.sprites.value[0].x).toBeLessThanOrEqual(768);
+      if (atlas.sprites.value[0].y === 384) expect(atlas.sprites.value[0].x).toBeLessThanOrEqual(192);
+      act(() => renderer.unmount());
+    }
+  });
+
+  it('starts and ends each chained explosion at its own cue time', () => {
+    const cues = [cue, { ...cue, sourceX: 4.5, startAt: .1 }];
+    const early = draw(60, 1200, cues);
+    expect(early.colors.value.map((color: Float32Array) => color[3])).toEqual([1, 0]);
+    act(() => renderer.unmount());
+    const started = draw(120, 1200, cues);
+    expect(started.colors.value.map((color: Float32Array) => color[3])).toEqual([1, 1]);
+    expect(started.transforms.value[1].values).toEqual([225 / 192, 0, 112.5, 62.5]);
+    act(() => renderer.unmount());
+    const ending = draw(900, 1200, cues);
+    expect(ending.colors.value[0][3]).toBe(0);
+    expect(ending.colors.value[1][3]).toBe(1);
+    act(() => renderer.unmount());
+    const ended = draw(990, 1200, cues);
+    expect(ended.colors.value.map((color: Float32Array) => color[3])).toEqual([0, 0]);
+  });
+
+  it('keeps the correct frame geometry while the image is loading', () => {
+    const atlas = draw(396, 1200, [cue], null);
+    expect(atlas.image).toBeNull();
+    expect(atlas.sprites.value[0]).toMatchObject({ x: 0, y: 192, width: 192, height: 192 });
   });
 });

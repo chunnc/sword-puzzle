@@ -92,7 +92,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const [side, setSide] = useState(0);
   const sword = useImage(ART.tileSword), fire = useImage(ART.tileFire);
   const lightning = useImage(ART.tileLightning), orb = useImage(ART.tileSpiritOrb), rock = useImage(ART.tileRock);
-  const fxFireBurst = useImage(ART.fxFireBurst), fxFireParticles = useImage(ART.fxFireParticles), fxLightning = useImage(ART.fxLightningAtlas);
+  const fxFireBurst = useImage(ART.fxFireBurst), fxLightning = useImage(ART.fxLightningAtlas);
   const images = [sword, fire, lightning, orb, rock];
   const previousEffect = useRef<{ runId: string; effect: BoardVisualEffect | null; before: BoardVisualEffect | null } | null>(null);
   const id = visualEffect?.id ?? 0;
@@ -172,7 +172,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
             {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color="#0b4144" />)}
             {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} image={images[snapshot.tiles[index]!.kind]} visual={visuals[index]} motion={frame.cells[index]} labels={labels} />)}
             {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
-              progress={motion.progress} fireBurstImage={fxFireBurst} fireParticleImage={fxFireParticles} lightningImage={fxLightning} /> : null}
+              progress={motion.progress} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning} /> : null}
             {indices.map(index => {
               const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
               const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;

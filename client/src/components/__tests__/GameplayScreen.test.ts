@@ -420,6 +420,27 @@ describe('gameplay presentation and exit behavior', () => {
     expect(board().props.visualEffect.kind).toBe('fall');
   });
 
+  it('finishes the 1200ms fire and 1000ms lightning traces before falling', async () => {
+    jest.useFakeTimers(); mockReduceMotion = false;
+    const animation = cascadeAnimation(1);
+    animation.steps[0].effects = [
+      { kind: 'fire', cells: [0], source: 24, damage: 1, qi: 0 },
+      { kind: 'lightning', cells: [1], source: 24, damage: 1, qi: 0 },
+    ];
+    await startAnimation(animation);
+    await advance(BOARD_SWAP_MS);
+    await advance(1199);
+    expect(board().props.visualEffect.kind).toBe('clear');
+    expect(board().props.visualEffect.effects[0].kind).toBe('fire');
+    await advance(1);
+    expect(board().props.visualEffect.kind).toBe('clear');
+    expect(board().props.visualEffect.effects[0].kind).toBe('lightning');
+    await advance(999);
+    expect(board().props.visualEffect.kind).toBe('clear');
+    await advance(1);
+    expect(board().props.visualEffect.kind).toBe('fall');
+  });
+
   it.each(['won', 'lost'] as const)('waits for the final settle before opening the %s result', async outcome => {
     jest.useFakeTimers(); mockReduceMotion = false;
     const animation = cascadeAnimation(1);

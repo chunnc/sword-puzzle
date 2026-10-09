@@ -4,7 +4,7 @@ export interface BoardGeometry { width: number; height: number; activeCells?: bo
 const DEFAULT_GEOMETRY: BoardGeometry = { width: 7, height: 7 };
 export const BOARD_SWAP_MS = 320;
 export const BOARD_CLEAR_MS = 360;
-export const BOARD_FIRE_MS = 800;
+export const BOARD_FIRE_MS = 1200;
 export const BOARD_LIGHTNING_MS = 1000;
 export const BOARD_FALL_MS = 450;
 export const BOARD_CHAIN_DELAY_MS = 300;

@@ -4,8 +4,15 @@ import {
   type SkImage, type SkColor, type SkHostRect, type SkRSXform,
 } from '@shopify/react-native-skia';
 import type { SharedValue } from 'react-native-reanimated';
-import type { BoardEffectCue, BoardGeometry } from './boardVisuals';
-import { createFireParticleSpecs, buildLightningSpriteSpecs, lightningBoltFrame, particleAlpha } from './boardFx';
+import { BOARD_FIRE_MS, type BoardEffectCue, type BoardGeometry } from './boardVisuals';
+import { buildLightningSpriteSpecs, lightningBoltFrame, particleAlpha } from './boardFx';
+
+const FIRE_ATLAS_COLUMNS = 5;
+const FIRE_ATLAS_ROWS = 3;
+const FIRE_FRAME_COUNT = 12;
+const FIRE_ATLAS_WIDTH = 960;
+const FIRE_ATLAS_HEIGHT = 576;
+const FIRE_BURST_MS = BOARD_FIRE_MS * .72;
 
 const ATLAS_COLUMNS = 4;
 const ATLAS_ROWS = 2;
@@ -63,31 +70,28 @@ export function BoardEffects({
   geometry,
   side,
   progress,
+  durationMs,
   fireBurstImage,
-  fireParticleImage,
   lightningImage,
 }: {
   cues: BoardEffectCue[];
   geometry: BoardGeometry;
   side: number;
   progress: SharedValue<number>;
+  durationMs: number;
   fireBurstImage: SkImage | null;
-  fireParticleImage: SkImage | null;
   lightningImage: SkImage | null;
 }) {
   const pitch = side / geometry.width;
-  const burstCellWidth = (fireBurstImage?.width() ?? FALLBACK_ATLAS_WIDTH) / ATLAS_COLUMNS;
-  const burstCellHeight = (fireBurstImage?.height() ?? FALLBACK_ATLAS_HEIGHT) / ATLAS_ROWS;
-  const fireCellWidth = (fireParticleImage?.width() ?? FALLBACK_ATLAS_WIDTH) / ATLAS_COLUMNS;
-  const fireCellHeight = (fireParticleImage?.height() ?? FALLBACK_ATLAS_HEIGHT) / ATLAS_ROWS;
+  const burstCellWidth = (fireBurstImage?.width() ?? FIRE_ATLAS_WIDTH) / FIRE_ATLAS_COLUMNS;
+  const burstCellHeight = (fireBurstImage?.height() ?? FIRE_ATLAS_HEIGHT) / FIRE_ATLAS_ROWS;
+  // Keep the fire playback budget consistent across standalone and mixed phases.
+  const burstDuration = FIRE_BURST_MS / durationMs;
   const lightningCellWidth = (lightningImage?.width() ?? FALLBACK_ATLAS_WIDTH) / ATLAS_COLUMNS;
   const lightningCellHeight = (lightningImage?.height() ?? FALLBACK_ATLAS_HEIGHT) / ATLAS_ROWS;
 
   const fireCues = useMemo(() => cues.filter(cue => cue.kind === 'fire'), [cues]);
-  const fireParticles = useMemo(() => fireCues.flatMap(cue =>
-    createFireParticleSpecs(cue).map(particle => ({ cue, particle }))), [fireCues]);
   const lightningSprites = useMemo(() => buildLightningSpriteSpecs(cues), [cues]);
-  const fireSpriteRects = useMemo(() => fireParticles.map(({ particle }) => cellRect(fireParticleImage, particle.spriteIndex)), [fireParticleImage, fireParticles]);
   const lightningSpriteRects = useMemo(() => lightningSprites.map(sprite => cellRect(lightningImage, sprite.spriteIndex)), [lightningImage, lightningSprites]);
 
   const burstRects = useRectBuffer(fireCues.length, (rect: SkHostRect, index) => {
@@ -97,9 +101,9 @@ export function BoardEffects({
       rect.setXYWH(0, 0, 0, 0);
       return;
     }
-    const local = clamp01((progress.value - cue.startAt) / .72);
-    const frame = Math.min(7, Math.floor(local * 8));
-    rect.setXYWH(frame % 4 * burstCellWidth, Math.floor(frame / 4) * burstCellHeight, burstCellWidth, burstCellHeight);
+    const local = clamp01((progress.value - cue.startAt) / burstDuration);
+    const frame = Math.min(FIRE_FRAME_COUNT - 1, Math.floor(local * FIRE_FRAME_COUNT));
+    rect.setXYWH(frame % FIRE_ATLAS_COLUMNS * burstCellWidth, Math.floor(frame / FIRE_ATLAS_COLUMNS) * burstCellHeight, burstCellWidth, burstCellHeight);
   });
   const burstTransforms = useRSXformBuffer(fireCues.length, (output: SkRSXform, index) => {
     'worklet';
@@ -108,44 +112,14 @@ export function BoardEffects({
       output.set(0, 0, 0, 0);
       return;
     }
-    const local = clamp01((progress.value - cue.startAt) / .72);
-    const grow = clamp01(local / .48);
-    const shrink = local < .68 ? 1 : 1 - .32 * clamp01((local - .68) / .32);
-    const cellsWide = (.35 + 1.55 * (1 - (1 - grow) * (1 - grow))) * shrink;
-    const seedAngle = ((cue.seed % 997) / 997 - .5) * .12;
-    const scale = pitch * cellsWide / burstCellWidth;
-    setCenteredTransform(output, cue.sourceX * pitch, cue.sourceY * pitch, seedAngle, scale, burstCellWidth, burstCellHeight);
+    const scale = pitch * 4.5 / burstCellWidth;
+    setCenteredTransform(output, cue.sourceX * pitch, cue.sourceY * pitch, 0, scale, burstCellWidth, burstCellHeight);
   });
   const burstColors = useColorBuffer(fireCues.length, (color, index) => {
     'worklet';
     const cue = fireCues[index];
-    const local = cue ? clamp01((progress.value - cue.startAt) / .72) : 1;
-    setWhiteAlpha(color, local < .76 ? 1 : 1 - (local - .76) / .24);
-  });
-
-  const fireParticleTransforms = useRSXformBuffer(fireParticles.length, (output, index) => {
-    'worklet';
-    const item = fireParticles[index];
-    if (!item) {
-      output.set(0, 0, 0, 0);
-      return;
-    }
-    const age = progress.value - item.particle.startAt;
-    const t = clamp01(age / item.particle.lifetime);
-    const distance = item.particle.speed * t;
-    const x = item.cue.sourceX + Math.cos(item.particle.angle) * distance;
-    const y = item.cue.sourceY + Math.sin(item.particle.angle) * distance - .2 * t + .16 * t * t;
-    const scale = pitch * item.particle.size * (1 - .48 * t) / fireCellWidth;
-    setCenteredTransform(
-      output, x * pitch, y * pitch, item.particle.angle + item.particle.spin * t,
-      scale, fireCellWidth, fireCellHeight,
-    );
-  });
-  const fireParticleColors = useColorBuffer(fireParticles.length, (color, index) => {
-    'worklet';
-    const item = fireParticles[index];
-    const alpha = item ? particleAlpha(progress.value - item.particle.startAt, item.particle.lifetime) : 0;
-    setWhiteAlpha(color, alpha);
+    const active = cue && progress.value >= cue.startAt && progress.value < cue.startAt + burstDuration;
+    setWhiteAlpha(color, active ? 1 : 0);
   });
 
   const lightningTransforms = useRSXformBuffer(lightningSprites.length, (output, index) => {
@@ -183,10 +157,9 @@ export function BoardEffects({
   });
 
   return <Group>
-    {fireCues.length ? <>
+    {fireCues.length ?
       <Atlas image={fireBurstImage} sprites={burstRects} transforms={burstTransforms} colors={burstColors} colorBlendMode="modulate" />
-      <Atlas image={fireParticleImage} sprites={fireSpriteRects} transforms={fireParticleTransforms} colors={fireParticleColors} colorBlendMode="modulate" />
-    </> : null}
+      : null}
     {lightningSprites.length ? <Atlas image={lightningImage} sprites={lightningSpriteRects} transforms={lightningTransforms} colors={lightningColors} colorBlendMode="modulate" /> : null}
   </Group>;
 }

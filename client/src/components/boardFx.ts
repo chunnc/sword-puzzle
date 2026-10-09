@@ -1,19 +1,7 @@
 import type { BoardEffectCue } from './boardVisuals';
 
-export const FIRE_EMBER_COUNT = 12;
-export const FIRE_GLINT_COUNT = 4;
 export const LIGHTNING_SPARK_CAP = 16;
 export const LIGHTNING_BOLT_CAP = 96;
-
-export interface FireParticleSpec {
-  spriteIndex: number;
-  angle: number;
-  speed: number;
-  size: number;
-  startAt: number;
-  lifetime: number;
-  spin: number;
-}
 
 interface LightningSpriteBase {
   spriteIndex: number;
@@ -49,26 +37,6 @@ function randomSource(seed: number) {
     state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
     return state / 0x100000000;
   };
-}
-
-export function createFireParticleSpecs(cue: BoardEffectCue): FireParticleSpec[] {
-  const random = randomSource(cue.seed);
-  const count = FIRE_EMBER_COUNT + FIRE_GLINT_COUNT;
-  return Array.from({ length: count }, (_, index) => {
-    const glint = index >= FIRE_EMBER_COUNT;
-    const ringAngle = glint
-      ? ((index - FIRE_EMBER_COUNT) / FIRE_GLINT_COUNT + .125) * Math.PI * 2
-      : index / FIRE_EMBER_COUNT * Math.PI * 2;
-    return {
-      spriteIndex: glint ? 4 + Math.floor(random() * 4) : Math.floor(random() * 4),
-      angle: ringAngle + (random() - .5) * .62,
-      speed: glint ? .42 + random() * .6 : .58 + random() * .9,
-      size: glint ? .2 + random() * .12 : .23 + random() * .16,
-      startAt: cue.startAt + (glint ? .13 : .15) + random() * .075,
-      lifetime: .36 + random() * .14,
-      spin: (random() - .5) * 3.8,
-    };
-  });
 }
 
 export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpriteSpec[] {
