@@ -7,7 +7,7 @@ import {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, runOnUI } from 'react-native-worklets';
 import {
-  useAnimatedReaction, withSequence, withTiming,
+  Easing, useAnimatedReaction, withSequence, withTiming,
 } from 'react-native-reanimated';
 import { ART } from '../assets';
 import { getContentVersion } from '../game/domain';
@@ -107,6 +107,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const clearDurationMs = visualEffect?.kind === 'clear'
     ? boardClearDurationMs(visualEffect.effects.map(item => item.kind))
     : BOARD_CLEAR_MS;
+  const hasLightning = effectCues.some(cue => cue.kind === 'lightning');
   // An effect ID identifies an immutable phase within a run. HUD updates and
   // equivalent effect objects must not replace that phase's clocks or outputs.
   const visuals = useMemo(() => buildCellVisuals(visualEffect, before,
@@ -128,11 +129,12 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
 
   useLayoutEffect(() => {
     previousEffect.current = { runId: snapshot.runId, effect: visualEffect, before };
-    const { progress, pulse, flash } = motion;
+    const { progress, elapsedMs, pulse, flash } = motion;
     runOnUI(() => {
       // Also support React's effect setup/cleanup replay in development. These
       // values belong only to this phase, never to a retired or future phase.
       progress.value = 0;
+      elapsedMs.value = 0;
       pulse.value = 1;
       flash.value = 0;
       if (!kind) return;
@@ -148,6 +150,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
       } else if (kind === 'swap' || kind === 'fall') {
         progress.value = withTiming(1, { duration: kind === 'swap' ? BOARD_SWAP_MS : BOARD_FALL_MS }, completed);
       } else if (kind === 'clear') {
+        if (hasLightning) elapsedMs.value = withTiming(clearDurationMs, { duration: clearDurationMs, easing: Easing.linear });
         progress.value = withTiming(1, { duration: clearDurationMs }, completed);
         pulse.value = withSequence(
           withTiming(1.12, { duration: BOARD_PULSE_IN_MS }),
@@ -164,7 +167,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
       const completedFrame = frameRef.current;
       runOnUI(() => { finishBoardMotionSession(motion, completedFrame); })();
     };
-  }, [motion, clearDurationMs, onMotionStarted, onMotionFinished]);
+  }, [motion, clearDurationMs, hasLightning, onMotionStarted, onMotionFinished]);
 
   const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onEnd(event => {
     const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side, geometry);
@@ -180,7 +183,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
             {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color="#0b4144" />)}
             {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} image={images[snapshot.tiles[index]!.kind]} visual={visuals[index]} motion={frame.cells[index]} labels={labels} />)}
             {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
-              progress={motion.progress} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning} /> : null}
+              progress={motion.progress} elapsedMs={motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning} /> : null}
             {indices.map(index => {
               const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
               const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;

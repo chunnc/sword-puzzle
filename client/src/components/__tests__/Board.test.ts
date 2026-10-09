@@ -9,7 +9,7 @@ import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
 import { TileKind } from '../../game/types';
 import { Gesture } from 'react-native-gesture-handler';
-import { cancelAnimation, makeMutable, withTiming } from 'react-native-reanimated';
+import { cancelAnimation, Easing, makeMutable, withTiming } from 'react-native-reanimated';
 
 jest.mock('react-native-gesture-handler', () => ({
   Gesture: {
@@ -34,6 +34,8 @@ jest.mock('react-native-worklets', () => ({
 }));
 
 jest.mock('react-native-reanimated', () => ({
+  Easing: { linear: (value: number) => value },
+  useDerivedValue: (updater: () => unknown) => ({ get value() { return updater(); } }),
   makeMutable: (value: unknown) => ({ value }),
   useAnimatedReaction: (prepare: () => unknown, react: (value: unknown) => void, dependencies: unknown[]) => {
     require('react').useEffect(() => {
@@ -63,7 +65,7 @@ jest.mock('@shopify/react-native-skia', () => {
     Canvas: host('Canvas'), Group: host('Group'), Image: host('SkiaImage'), Atlas: host('Atlas'),
     RoundedRect: host('RoundedRect'), Paragraph: host('Paragraph'), Paint: host('Paint'),
     FontWeight: { Black: 900 },
-    useImage: jest.fn((asset: number) => ({ asset, width: () => 1024, height: () => 512 })),
+    useImage: jest.fn((asset: number) => ({ asset, width: () => 960, height: () => 576 })),
     useRectBuffer: jest.fn((size: number, modifier: (value: never, index: number) => void) => buffer(size, () => ({
       setXYWH(x: number, y: number, width: number, height: number) { Object.assign(this, { x, y, width, height }); },
     }), modifier)),
@@ -170,14 +172,15 @@ describe('Skia Board integration', () => {
     expect(cancelAnimation).toHaveBeenCalled();
   });
 
-  it('uses a 1000ms clear timeline for lightning', () => {
+  it('uses a linear elapsed clock and a 1600ms clear timeline for lightning', () => {
     mount({ visualEffect: {
       id: 11, kind: 'clear', cleared: [0, 1], changed: [],
       effects: [{ kind: 'lightning', cells: [1], source: 0, damage: 0, qi: 0 }],
     } });
     expect((withTiming as jest.Mock).mock.calls.map(call => call.slice(0, 2))).toEqual([
-      [1, { duration: 1000 }], [1.12, { duration: 150 }], [1, { duration: 850 }],
-      [.85, { duration: 105 }], [0, { duration: 895 }],
+      [1600, { duration: 1600, easing: Easing.linear }],
+      [1, { duration: 1600 }], [1.12, { duration: 150 }], [1, { duration: 1450 }],
+      [.85, { duration: 105 }], [0, { duration: 1495 }],
     ]);
   });
 
@@ -197,7 +200,7 @@ describe('Skia Board integration', () => {
     expect(onMotionFinished).not.toHaveBeenCalled();
   });
 
-  it('uses a 1200ms clear timeline for combined fire and lightning', () => {
+  it('uses a 1600ms clear timeline for combined fire and lightning', () => {
     mount({ visualEffect: {
       id: 12, kind: 'clear', cleared: [0, 1], changed: [],
       effects: [
@@ -205,8 +208,10 @@ describe('Skia Board integration', () => {
         { kind: 'lightning', cells: [1], source: 0, damage: 1, qi: 0 },
       ],
     } });
-    expect(withTiming).toHaveBeenCalledWith(1, { duration: 1200 }, expect.any(Function));
-    expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(2);
+    expect(withTiming).toHaveBeenCalledWith(1, { duration: 1600 }, expect.any(Function));
+    const effects = renderer.root.findByType(BoardEffects);
+    expect(effects.findAll(node => node.type === 'Atlas' as never)).toHaveLength(1);
+    expect(effects.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(1);
   });
 
   it('does not start animation when reduced motion is enabled', () => {
@@ -225,15 +230,35 @@ describe('Skia Board integration', () => {
     expect(atlases[0].props.transforms.value).toHaveLength(1);
   });
 
-  it('draws chained lightning sprite segments and impacts only for the active cue', () => {
+  it('draws one clipped lightning sprite per target without old segments or particles', () => {
     mount({ visualEffect: {
       id: 71, kind: 'clear', cleared: [0, 1, 8], changed: [],
       effects: [{ kind: 'lightning', cells: [1, 8], source: 0, damage: 3, qi: 0 }],
     } });
-    const atlases = renderer.root.findAll(node => node.type === 'Atlas' as never);
-    expect(atlases).toHaveLength(1);
-    expect(atlases[0].props.sprites.length).toBeGreaterThan(2);
-    expect(atlases[0].props.transforms.value).toHaveLength(atlases[0].props.sprites.length);
+    const effects = renderer.root.findByType(BoardEffects);
+    expect(effects.findAll(node => node.type === 'Atlas' as never)).toHaveLength(0);
+    expect(effects.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(2);
+    expect(effects.findAll(node => node.type === 'Group' as never && node.props.clip)).toHaveLength(2);
+  });
+
+  it('retains the lightning clock during HUD updates and cancels it on a new phase', () => {
+    const effect: BoardVisualEffect = { id: 74, kind: 'clear', cleared: [0, 1], changed: [],
+      effects: [{ kind: 'lightning', source: 0, cells: [1], damage: 1, qi: 0 }] };
+    mount({ visualEffect: effect });
+    const clock = renderer.root.findByType(BoardEffects).props.elapsedMs;
+    (withTiming as jest.Mock).mockClear();
+    act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: { ...effect },
+      snapshot: { ...snapshot, swordQi: snapshot.swordQi + 1 } })));
+    expect(renderer.root.findByType(BoardEffects).props.elapsedMs).toBe(clock);
+    expect(withTiming).not.toHaveBeenCalled();
+    mockQueueUI = true;
+    act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: { ...effect, id: 75 } })));
+    const nextClock = renderer.root.findByType(BoardEffects).props.elapsedMs;
+    expect(nextClock).not.toBe(clock);
+    expect(nextClock.value).toBe(0);
+    act(() => { mockUIQueue[0](); });
+    expect(cancelAnimation).toHaveBeenCalledWith(clock);
+    expect(nextClock.value).toBe(0);
   });
 
   it('keeps the same effect phase and atlas cues through HUD-only updates', () => {
@@ -258,6 +283,7 @@ describe('Skia Board integration', () => {
       effects: [{ kind, cells: [0], source: 1, damage: 1, qi: 0 }],
     } });
     expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(0);
+    expect(renderer.root.findAllByType(BoardEffects)).toHaveLength(0);
     expect(withTiming).not.toHaveBeenCalled();
   });
 
@@ -349,6 +375,66 @@ describe('Skia Board integration', () => {
   });
 });
 
+describe('lightning-test-2 flipbook rendering', () => {
+  let renderer: ReactTestRenderer;
+  const geometry = { width: 7, height: 7 };
+  const image = { width: () => 960, height: () => 576 } as SkImage;
+  const cue = buildBoardEffectCues({ id: 100, kind: 'clear', cleared: [17, 25], changed: [],
+    effects: [{ kind: 'lightning', source: 24, cells: [17, 25], damage: 1, qi: 0 }] }, geometry)[0];
+  const clock = makeMutable(0);
+  const progress = makeMutable(0);
+
+  function mount(cues = [cue], lightningImage: SkImage | null = image) {
+    act(() => { renderer = create(React.createElement(BoardEffects, {
+      cues, geometry, side: 350, elapsedMs: clock, progress, durationMs: 1600,
+      fireBurstImage: null, lightningImage,
+    })); });
+  }
+  const images = () => renderer.root.findAll(node => node.type === 'SkiaImage' as never);
+  const sprites = () => renderer.root.findAll(node => node.type === 'Group' as never && node.props.opacity);
+  beforeEach(() => { clock.value = 0; progress.value = .5; });
+  afterEach(() => { act(() => renderer?.unmount()); });
+
+  it('clips the first row and animates all targets in sync using elapsed time', () => {
+    mount();
+    const clips = renderer.root.findAll(node => node.type === 'Group' as never && node.props.clip);
+    expect(clips.map(node => node.props.clip)).toEqual([
+      { x: 0, y: 0, width: 192, height: 192 }, { x: 0, y: 0, width: 192, height: 192 },
+    ]);
+    const expected = [0, 1, 2, 3, 2, 1, 2, 3, 2, 1, 2, 3, 2, 1];
+    expected.forEach((frame, tick) => {
+      clock.value = tick * 120;
+      for (const sprite of images()) {
+        expect(sprite.props.x.value).toBeCloseTo(-frame * 192);
+        expect(sprite.props).toMatchObject({ y: 0, width: 960, height: 576, fit: 'fill' });
+      }
+      expect(sprites().map(node => node.props.opacity.value)).toEqual([1, 1]);
+    });
+    clock.value = 1599;
+    expect(sprites().map(node => node.props.opacity.value)).toEqual([1, 1]);
+    clock.value = 1600;
+    expect(sprites().map(node => node.props.opacity.value)).toEqual([0, 0]);
+  });
+
+  it('hides delayed cues before their start and hides retired phases', () => {
+    mount([{ ...cue, startAt: .05 }]);
+    expect(sprites().map(node => node.props.opacity.value)).toEqual([0, 0]);
+    clock.value = 80;
+    expect(sprites().map(node => node.props.opacity.value)).toEqual([1, 1]);
+    clock.value = 200;
+    expect(images()[0].props.x.value).toBe(-192);
+    progress.value = 1;
+    expect(sprites().map(node => node.props.opacity.value)).toEqual([0, 0]);
+  });
+
+  it('keeps the correct frame layout while the image loads', () => {
+    mount([cue], null);
+    expect(images()[0].props.image).toBeNull();
+    expect(renderer.root.findAll(node => node.type === 'Group' as never && node.props.clip)[0].props.clip)
+      .toEqual({ x: 0, y: 0, width: 192, height: 192 });
+  });
+});
+
 describe('fire-test-2 flipbook rendering', () => {
   let renderer: ReactTestRenderer;
   const geometry = { width: 7, height: 7 };
@@ -361,7 +447,7 @@ describe('fire-test-2 flipbook rendering', () => {
   function draw(timeMs: number, durationMs = 1200, cues = [cue], image: SkImage | null = fireBurstImage) {
     act(() => {
       renderer = create(React.createElement(BoardEffects, {
-        cues, geometry, side: 350, progress: makeMutable(timeMs / durationMs), durationMs,
+        cues, geometry, side: 350, progress: makeMutable(timeMs / durationMs), elapsedMs: makeMutable(timeMs), durationMs,
         fireBurstImage: image, lightningImage: null,
       }));
     });

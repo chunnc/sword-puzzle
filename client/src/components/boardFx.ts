@@ -1,162 +1,53 @@
+import type { Transforms3d } from '@shopify/react-native-skia';
 import type { BoardEffectCue } from './boardVisuals';
 
-export const LIGHTNING_SPARK_CAP = 16;
-export const LIGHTNING_BOLT_CAP = 96;
+export const LIGHTNING_FRAME_MS = 120;
+export const LIGHTNING_ATLAS_COLUMNS = 5;
+export const LIGHTNING_ATLAS_ROWS = 3;
+export const LIGHTNING_ATLAS_WIDTH = 960;
+export const LIGHTNING_ATLAS_HEIGHT = 576;
+// The impact core is at (96, 160) in a 192px frame, above its transparent footer.
+const LIGHTNING_IMPACT_HEIGHT_RATIO = 160 / 192;
 
-interface LightningSpriteBase {
-  spriteIndex: number;
-  targetIndex: number;
-  x: number;
-  y: number;
-  angle: number;
-  size: number;
+export interface LightningBranch {
+  key: string;
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
   startAt: number;
-  lifetime: number;
-  driftX: number;
-  driftY: number;
-  spin: number;
 }
 
-export type LightningSpriteSpec = LightningSpriteBase & (
-  | {
-      kind: 'bolt';
-      impactAt: number;
-      holdUntil: number;
-      jitterPhase: number;
-      jitterX: number;
-      jitterY: number;
-      jitterAngle: number;
-      flickerPhase: number;
-    }
-  | { kind: 'impact' | 'spark' }
-);
-
-function randomSource(seed: number) {
-  let state = seed >>> 0 || 1;
-  return () => {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    return state / 0x100000000;
-  };
+export function buildLightningBranches(cues: BoardEffectCue[]): LightningBranch[] {
+  // One complete source-to-target sprite per branch; coincident endpoints are omitted.
+  return cues.flatMap((cue, cueIndex) => cue.kind !== 'lightning' ? [] : cue.targets
+    .filter(target => target.x !== cue.sourceX || target.y !== cue.sourceY)
+    .map(target => ({
+      key: `${cueIndex}:${target.index}`,
+      sourceX: cue.sourceX, sourceY: cue.sourceY,
+      targetX: target.x, targetY: target.y,
+      startAt: cue.startAt,
+    })));
 }
 
-export function buildLightningSpriteSpecs(cues: BoardEffectCue[]): LightningSpriteSpec[] {
-  const sprites: LightningSpriteSpec[] = [];
-  let sparks = 0;
-  let bolts = 0;
-  for (const cue of cues) {
-    if (cue.kind !== 'lightning') continue;
-    const random = randomSource(cue.seed);
-    for (let targetIndex = 0; targetIndex < cue.targets.length; targetIndex++) {
-      const target = cue.targets[targetIndex];
-      // Every target gets its own branch from the same charged source cell.
-      const fromX = cue.sourceX, fromY = cue.sourceY;
-      const dx = target.x - fromX, dy = target.y - fromY;
-      const distance = Math.hypot(dx, dy);
-      const segmentCount = distance < .05 ? 0 : Math.min(14, Math.max(2, Math.ceil(distance / .58)));
-      const normalX = distance > .05 ? -dy / distance : 0;
-      const normalY = distance > .05 ? dx / distance : 0;
-      const flickerPhase = random() * Math.PI * 2;
-      for (let segment = 0; segment < segmentCount; segment++) {
-        const t = (segment + .5) / segmentCount;
-        const bend = (random() - .5) * .3;
-        const along = (random() - .5) * .06;
-        const spriteIndex = Math.floor(random() * 4);
-        const angleJitter = (random() - .5) * .22;
-        const size = .82 + random() * .14;
-        const growProgress = segment / Math.max(1, segmentCount - 1);
-        if (bolts < LIGHTNING_BOLT_CAP) {
-          sprites.push({
-            spriteIndex,
-            targetIndex,
-            x: fromX + dx * (t + along) + normalX * bend,
-            y: fromY + dy * (t + along) + normalY * bend,
-            angle: Math.atan2(dy, dx) + Math.PI / 4 + angleJitter,
-            size,
-            startAt: cue.startAt + (target.impactAt - cue.startAt) * growProgress,
-            lifetime: .12,
-            impactAt: target.impactAt,
-            holdUntil: cue.clearAt,
-            jitterPhase: random() * Math.PI * 2,
-            jitterX: (random() - .5) * .08,
-            jitterY: (random() - .5) * .08,
-            jitterAngle: (random() - .5) * .12,
-            flickerPhase,
-            kind: 'bolt',
-            driftX: 0,
-            driftY: 0,
-            spin: 0,
-          });
-          bolts++;
-        }
-      }
-      sprites.push({
-        spriteIndex: 4 + Math.floor(random() * 4),
-        targetIndex,
-        x: target.x,
-        y: target.y,
-        angle: random() * Math.PI * 2,
-        size: .84 + random() * .24,
-        startAt: target.impactAt,
-        lifetime: .17,
-        kind: 'impact',
-        driftX: 0,
-        driftY: 0,
-        spin: 0,
-      });
-      for (let spark = 0; spark < 2 && sparks < LIGHTNING_SPARK_CAP; spark++, sparks++) {
-        const angle = random() * Math.PI * 2;
-        const speed = .35 + random() * .55;
-        sprites.push({
-          spriteIndex: 4 + Math.floor(random() * 4),
-          targetIndex,
-          x: target.x,
-          y: target.y,
-          angle: angle + Math.PI / 4,
-          size: .22 + random() * .13,
-          startAt: target.impactAt + .015 + random() * .045,
-          lifetime: .14 + random() * .05,
-          kind: 'spark',
-          driftX: Math.cos(angle) * speed,
-          driftY: Math.sin(angle) * speed,
-          spin: (random() - .5) * 4,
-        });
-      }
-    }
-  }
-  return sprites;
+export function lightningSpriteTransform(branch: LightningBranch, pitch: number, frameWidth: number, frameHeight: number): Transforms3d {
+  const dx = branch.targetX - branch.sourceX, dy = branch.targetY - branch.sourceY;
+  // Map the top center to the source and the impact core to the target.
+  const impactHeight = frameHeight * LIGHTNING_IMPACT_HEIGHT_RATIO;
+  return [
+    { translateX: branch.sourceX * pitch }, { translateY: branch.sourceY * pitch },
+    { rotate: Math.atan2(dy, dx) - Math.PI / 2 },
+    { scaleX: pitch * 2 / frameWidth }, { scaleY: Math.hypot(dx, dy) * pitch / impactHeight },
+    { translateX: -frameWidth / 2 },
+  ];
 }
 
-export interface LightningBoltFrame {
-  offsetX: number;
-  offsetY: number;
-  rotation: number;
-  alpha: number;
-}
-
-function clamp01(value: number) {
+export function lightningPlaybackFrame(elapsedMs: number, startAtMs: number, durationMs: number) {
   'worklet';
-  return Math.max(0, Math.min(1, value));
-}
-
-export function lightningBoltFrame(sprite: Extract<LightningSpriteSpec, { kind: 'bolt' }>, progress: number): LightningBoltFrame {
-  'worklet';
-  if (progress < sprite.startAt) return { offsetX: 0, offsetY: 0, rotation: 0, alpha: 0 };
-  const joltAge = Math.max(0, progress - sprite.impactAt);
-  const jolt = clamp01(joltAge / .02);
-  const wave = Math.sin(joltAge * Math.PI * 2 * 12 + sprite.jitterPhase) * jolt;
-  const flicker = .62 + .38 * (.5 + .5 * Math.sin(joltAge * Math.PI * 2 * 14 + sprite.flickerPhase));
-  const fade = 1 - clamp01((progress - sprite.holdUntil) / sprite.lifetime);
-  return {
-    offsetX: sprite.jitterX * wave,
-    offsetY: sprite.jitterY * wave,
-    rotation: sprite.jitterAngle * wave,
-    alpha: flicker * fade,
-  };
-}
-
-export function particleAlpha(age: number, lifetime: number) {
-  'worklet';
-  if (age < 0 || age >= lifetime) return 0;
-  const normalized = age / lifetime;
-  return normalized < .18 ? normalized / .18 : 1 - (normalized - .18) / .82;
+  const age = elapsedMs - startAtMs;
+  if (age < 0 || elapsedMs >= durationMs) return { spriteIndex: 0, opacity: 0 };
+  const tick = Math.floor(age / LIGHTNING_FRAME_MS);
+  // 1,2,3,4 once, then 3,2,3,4 repeatedly (zero-based sprite indices).
+  const spriteIndex = tick < 4 ? tick : [2, 1, 2, 3][(tick - 4) % 4];
+  return { spriteIndex, opacity: 1 };
 }

@@ -1,11 +1,14 @@
 import React, { useMemo } from 'react';
 import {
-  Atlas, Group, Skia, useColorBuffer, useRectBuffer, useRSXformBuffer,
+  Atlas, Group, Image, useColorBuffer, useRectBuffer, useRSXformBuffer,
   type SkImage, type SkColor, type SkHostRect, type SkRSXform,
 } from '@shopify/react-native-skia';
-import type { SharedValue } from 'react-native-reanimated';
+import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
 import { BOARD_FIRE_MS, type BoardEffectCue, type BoardGeometry } from './boardVisuals';
-import { buildLightningSpriteSpecs, lightningBoltFrame, particleAlpha } from './boardFx';
+import {
+  buildLightningBranches, lightningPlaybackFrame, lightningSpriteTransform, type LightningBranch,
+  LIGHTNING_ATLAS_COLUMNS, LIGHTNING_ATLAS_ROWS, LIGHTNING_ATLAS_WIDTH, LIGHTNING_ATLAS_HEIGHT,
+} from './boardFx';
 
 const FIRE_ATLAS_COLUMNS = 5;
 const FIRE_ATLAS_ROWS = 3;
@@ -13,24 +16,6 @@ const FIRE_FRAME_COUNT = 12;
 const FIRE_ATLAS_WIDTH = 960;
 const FIRE_ATLAS_HEIGHT = 576;
 const FIRE_BURST_MS = BOARD_FIRE_MS * .72;
-
-const ATLAS_COLUMNS = 4;
-const ATLAS_ROWS = 2;
-const FALLBACK_ATLAS_WIDTH = 1024;
-const FALLBACK_ATLAS_HEIGHT = 512;
-
-function cellRect(image: SkImage | null, spriteIndex: number) {
-  const width = image?.width() ?? FALLBACK_ATLAS_WIDTH;
-  const height = image?.height() ?? FALLBACK_ATLAS_HEIGHT;
-  const cellWidth = width / ATLAS_COLUMNS, cellHeight = height / ATLAS_ROWS;
-  const inset = Math.min(4, cellWidth * .01, cellHeight * .01);
-  return Skia.XYWHRect(
-    spriteIndex % ATLAS_COLUMNS * cellWidth + inset,
-    Math.floor(spriteIndex / ATLAS_COLUMNS) * cellHeight + inset,
-    cellWidth - inset * 2,
-    cellHeight - inset * 2,
-  );
-}
 
 function setWhiteAlpha(color: SkColor, alpha: number) {
   'worklet';
@@ -70,6 +55,7 @@ export function BoardEffects({
   geometry,
   side,
   progress,
+  elapsedMs,
   durationMs,
   fireBurstImage,
   lightningImage,
@@ -78,6 +64,7 @@ export function BoardEffects({
   geometry: BoardGeometry;
   side: number;
   progress: SharedValue<number>;
+  elapsedMs: SharedValue<number>;
   durationMs: number;
   fireBurstImage: SkImage | null;
   lightningImage: SkImage | null;
@@ -87,12 +74,8 @@ export function BoardEffects({
   const burstCellHeight = (fireBurstImage?.height() ?? FIRE_ATLAS_HEIGHT) / FIRE_ATLAS_ROWS;
   // Keep the fire playback budget consistent across standalone and mixed phases.
   const burstDuration = FIRE_BURST_MS / durationMs;
-  const lightningCellWidth = (lightningImage?.width() ?? FALLBACK_ATLAS_WIDTH) / ATLAS_COLUMNS;
-  const lightningCellHeight = (lightningImage?.height() ?? FALLBACK_ATLAS_HEIGHT) / ATLAS_ROWS;
-
   const fireCues = useMemo(() => cues.filter(cue => cue.kind === 'fire'), [cues]);
-  const lightningSprites = useMemo(() => buildLightningSpriteSpecs(cues), [cues]);
-  const lightningSpriteRects = useMemo(() => lightningSprites.map(sprite => cellRect(lightningImage, sprite.spriteIndex)), [lightningImage, lightningSprites]);
+  const lightningBranches = useMemo(() => buildLightningBranches(cues), [cues]);
 
   const burstRects = useRectBuffer(fireCues.length, (rect: SkHostRect, index) => {
     'worklet';
@@ -122,44 +105,37 @@ export function BoardEffects({
     setWhiteAlpha(color, active ? 1 : 0);
   });
 
-  const lightningTransforms = useRSXformBuffer(lightningSprites.length, (output, index) => {
-    'worklet';
-    const sprite = lightningSprites[index];
-    if (!sprite) {
-      output.set(0, 0, 0, 0);
-      return;
-    }
-    const age = progress.value - sprite.startAt;
-    const t = clamp01(age / sprite.lifetime);
-    const boltFrame = sprite.kind === 'bolt' ? lightningBoltFrame(sprite, progress.value) : null;
-    const drift = sprite.kind === 'spark' ? t : 0;
-    const size = sprite.kind === 'spark' ? sprite.size * (1 - .68 * t)
-      : sprite.kind === 'impact' ? sprite.size * (.72 + .32 * Math.sin(Math.PI * t))
-        : sprite.size;
-    const scale = pitch * size / lightningCellWidth;
-    setCenteredTransform(
-      output,
-      (sprite.x + sprite.driftX * drift + (boltFrame?.offsetX ?? 0)) * pitch,
-      (sprite.y + sprite.driftY * drift + (boltFrame?.offsetY ?? 0)) * pitch,
-      sprite.angle + sprite.spin * t + (boltFrame?.rotation ?? 0),
-      scale,
-      lightningCellWidth,
-      lightningCellHeight,
-    );
-  });
-  const lightningColors = useColorBuffer(lightningSprites.length, (color, index) => {
-    'worklet';
-    const sprite = lightningSprites[index];
-    const alpha = !sprite ? 0 : sprite.kind === 'bolt'
-      ? lightningBoltFrame(sprite, progress.value).alpha
-      : particleAlpha(progress.value - sprite.startAt, sprite.lifetime);
-    setWhiteAlpha(color, alpha);
-  });
-
   return <Group>
     {fireCues.length ?
       <Atlas image={fireBurstImage} sprites={burstRects} transforms={burstTransforms} colors={burstColors} colorBlendMode="modulate" />
       : null}
-    {lightningSprites.length ? <Atlas image={lightningImage} sprites={lightningSpriteRects} transforms={lightningTransforms} colors={lightningColors} colorBlendMode="modulate" /> : null}
+    {lightningBranches.map(branch => <LightningSprite key={branch.key} branch={branch} image={lightningImage}
+      pitch={pitch} elapsedMs={elapsedMs} progress={progress} durationMs={durationMs} />)}
+  </Group>;
+}
+
+function LightningSprite({ branch, image, pitch, elapsedMs, progress, durationMs }: {
+  branch: LightningBranch;
+  image: SkImage | null;
+  pitch: number;
+  elapsedMs: SharedValue<number>;
+  progress: SharedValue<number>;
+  durationMs: number;
+}) {
+  const imageWidth = image?.width() ?? LIGHTNING_ATLAS_WIDTH;
+  const imageHeight = image?.height() ?? LIGHTNING_ATLAS_HEIGHT;
+  const frameWidth = imageWidth / LIGHTNING_ATLAS_COLUMNS;
+  const frameHeight = imageHeight / LIGHTNING_ATLAS_ROWS;
+  const startAtMs = branch.startAt * durationMs;
+  const transform = useMemo(() => lightningSpriteTransform(branch, pitch, frameWidth, frameHeight),
+    [branch, pitch, frameWidth, frameHeight]);
+  const x = useDerivedValue(() => -lightningPlaybackFrame(elapsedMs.value, startAtMs, durationMs).spriteIndex * frameWidth);
+  // Phase completion/cleanup also hides sprites if it wins the clock's last frame.
+  const opacity = useDerivedValue(() => progress.value < 1
+    ? lightningPlaybackFrame(elapsedMs.value, startAtMs, durationMs).opacity : 0);
+  return <Group transform={transform} opacity={opacity}>
+    <Group clip={{ x: 0, y: 0, width: frameWidth, height: frameHeight }}>
+      <Image image={image} x={x} y={0} width={imageWidth} height={imageHeight} fit="fill" />
+    </Group>
   </Group>;
 }

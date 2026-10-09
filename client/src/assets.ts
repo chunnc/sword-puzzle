@@ -17,7 +17,7 @@ export const ART = {
   gameplayCast: require('../app-assets/ui/gameplay_cast.webp') as ImageSourcePropType,
   gameplayDock: require('../app-assets/ui/gameplay_dock.webp') as ImageSourcePropType,
   fxFireBurst: require('../app-assets/ui/fx/fire-test-2.png') as number,
-  fxLightningAtlas: require('../app-assets/ui/fx/lightning_atlas.webp') as number,
+  fxLightningAtlas: require('../app-assets/ui/fx/lightning-test-2.png') as number,
   shopCard: require('../app-assets/ui/shop_card.webp') as ImageSourcePropType,
   shopDialog: require('../app-assets/ui/shop_dialog.webp') as ImageSourcePropType,
   shopButton: require('../app-assets/ui/shop_button.webp') as ImageSourcePropType,

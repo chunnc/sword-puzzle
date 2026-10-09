@@ -1,5 +1,6 @@
 import { createBoardMotionSession, createBoardMotionFrame, updateBoardMotionFrame, finishBoardMotionSession } from '../boardMotion';
 import { buildCellVisuals, type BoardVisualEffect } from '../boardVisuals';
+import { cancelAnimation } from 'react-native-reanimated';
 
 jest.mock('react-native-reanimated', () => ({
   makeMutable: (value: unknown) => ({ value }), cancelAnimation: jest.fn(),
@@ -23,6 +24,7 @@ it.each(['fall', 'swap', 'clear', 'reject'] as const)('finishes %s without modif
   const old = createBoardMotionSession(kind);
   const oldFrame = createBoardMotionFrame(buildCellVisuals(effect, null), 50);
   old.progress.value = .5;
+  old.elapsedMs.value = 720;
   old.pulse.value = 1.12;
   old.flash.value = .85;
   const next = createBoardMotionSession('fall');
@@ -32,9 +34,12 @@ it.each(['fall', 'swap', 'clear', 'reject'] as const)('finishes %s without modif
   updateBoardMotionFrame(oldFrame, old.progress.value, old.pulse.value);
   expect(oldFrame.cells[7]!.transform.value).toEqual(final);
   expect(old.progress.value).toBe(kind === 'reject' ? 0 : 1);
+  expect(cancelAnimation).toHaveBeenCalledWith(old.elapsedMs);
+  expect(old.elapsedMs.value).toBe(0);
   expect(old.pulse.value).toBe(1);
   expect(old.flash.value).toBe(0);
   expect(next.progress.value).toBe(0);
+  expect(next.elapsedMs.value).toBe(0);
   expect(nextFrame.cells[48]!.transform.value[1].translateY).toBe(-50);
   if (kind === 'clear') expect(oldFrame.cells[7]!.opacity.value).toBe(0);
 });

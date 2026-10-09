@@ -10,6 +10,7 @@ export interface CellMotionValues {
 export interface BoardMotionSession {
   kind: BoardVisualEffect['kind'] | undefined;
   progress: SharedValue<number>;
+  elapsedMs: SharedValue<number>;
   pulse: SharedValue<number>;
   flash: SharedValue<number>;
 }
@@ -20,7 +21,7 @@ export interface BoardMotionFrame {
 }
 
 export function createBoardMotionSession(kind: BoardMotionSession['kind']): BoardMotionSession {
-  return { kind, progress: makeMutable(0), pulse: makeMutable(1), flash: makeMutable(0) };
+  return { kind, progress: makeMutable(0), elapsedMs: makeMutable(0), pulse: makeMutable(1), flash: makeMutable(0) };
 }
 
 function tileTransform(frame: ReturnType<typeof cellMotion>): TileTransform {
@@ -63,9 +64,11 @@ export function updateBoardMotionFrame(frame: BoardMotionFrame, progress: number
 export function finishBoardMotionSession(session: BoardMotionSession, frame: BoardMotionFrame) {
   'worklet';
   cancelAnimation(session.progress);
+  cancelAnimation(session.elapsedMs);
   cancelAnimation(session.pulse);
   cancelAnimation(session.flash);
   session.progress.value = session.kind === 'reject' ? 0 : 1;
+  session.elapsedMs.value = 0;
   session.pulse.value = 1;
   session.flash.value = 0;
   updateBoardMotionFrame(frame, session.progress.value, 1);
