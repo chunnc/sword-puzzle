@@ -1,4 +1,4 @@
-import { BOARD_SPIRIT_MS, cellCenter, effectSeed, type BoardGeometry, type BoardVisualEffect } from './boardVisuals';
+import { BOARD_SPIRIT_MS, boardSourceEffectDelayMs, cellCenter, effectSeed, type BoardGeometry, type BoardVisualEffect } from './boardVisuals';
 
 interface Point { x: number; y: number }
 export interface SpiritFlightLayout {
@@ -10,6 +10,7 @@ export interface SpiritFlightCue {
   sourceX: number;
   sourceY: number;
   chargeTier: 4 | 5;
+  startAtMs: number;
   seed: number;
 }
 export interface SpiritParticle {
@@ -18,6 +19,7 @@ export interface SpiritParticle {
   control: Point;
   target: Point;
   delayMs: number;
+  startAtMs: number;
   radius: number;
   phase: number;
   color: string;
@@ -33,6 +35,8 @@ export function buildSpiritFlightCues(effect: BoardVisualEffect | null, geometry
       || geometry.activeCells && !geometry.activeCells[source]) return [];
     const point = cellCenter(source, geometry);
     return [{ key: `${runId}:${effect.id}:${index}`, sourceX: point.x, sourceY: point.y,
+      startAtMs: effect.sourceActivation?.source === source && effect.sourceActivation.kind === 'spirit'
+        ? boardSourceEffectDelayMs(effect.sourceActivation) : 0,
       chargeTier: trace.spiritChargeTier, seed: effectSeed(runId, effect.id, source, `spirit:${index}`) }];
   });
 }
@@ -45,7 +49,7 @@ export function buildSpiritParticles(cue: SpiritFlightCue, layout: SpiritFlightL
   return Array.from({ length: cue.chargeTier === 5 ? 28 : 16 }, (_, index) => {
     const lifted = { x: source.x + (random() - .5) * pitch * 1.1, y: source.y - pitch * (.3 + random() * .45) };
     return {
-      source, lifted, target: layout.target,
+      source, lifted, target: layout.target, startAtMs: cue.startAtMs,
       control: { x: lifted.x + (layout.target.x - lifted.x) * .2 + (random() - .5) * pitch * 1.5,
         y: lifted.y + (layout.target.y - lifted.y) * .15 - pitch * (.3 + random() * .6) },
       delayMs: random() * 100,
@@ -57,8 +61,9 @@ export function buildSpiritParticles(cue: SpiritFlightCue, layout: SpiritFlightL
   });
 }
 
-export function spiritParticleFrame(particle: SpiritParticle, elapsedMs: number) {
+export function spiritParticleFrame(particle: SpiritParticle, phaseElapsedMs: number) {
   'worklet';
+  const elapsedMs = phaseElapsedMs - particle.startAtMs;
   const lift = Math.max(0, Math.min(1, elapsedMs / 180));
   const liftEase = 1 - Math.pow(1 - lift, 3);
   const travel = Math.max(0, Math.min(1, (elapsedMs - 180 - particle.delayMs) / (720 - particle.delayMs)));

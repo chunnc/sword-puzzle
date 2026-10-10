@@ -20,19 +20,35 @@ export const BOARD_SWORD_SWEEP_MS = 220;
 export const BOARD_SWORD_CROSS_DELAY_MS = 60;
 export const BOARD_SWORD_AFTERIMAGE_MS = 300;
 export const BOARD_SWORD_SHARDS_MS = 500;
+export const BOARD_FIRE_CHARGE_MS = 220;
+export const BOARD_SPIRIT_ZOOM_MS = 120;
+export const BOARD_SPIRIT_SHRINK_MS = 180;
+export const BOARD_SPIRIT_EMIT_AT_MS = 200;
+
+export interface BoardSourceActivation {
+  source: number;
+  kind: 'fire' | 'lightning' | 'spirit';
+}
+
+export function boardSourceEffectDelayMs(activation?: BoardSourceActivation) {
+  return activation?.kind === 'fire' ? BOARD_FIRE_CHARGE_MS
+    : activation?.kind === 'spirit' ? BOARD_SPIRIT_EMIT_AT_MS : 0;
+}
 
 type ClearTimingInput = BoardAnimationEffect['kind'] | BoardAnimationEffect;
-export function boardClearDurationMs(effectOrEffects: ClearTimingInput | readonly ClearTimingInput[]) {
+export function boardClearDurationMs(effectOrEffects: ClearTimingInput | readonly ClearTimingInput[], sourceActivation?: BoardSourceActivation) {
   const effects: readonly ClearTimingInput[] = Array.isArray(effectOrEffects)
     ? effectOrEffects : [effectOrEffects as ClearTimingInput];
   return effects.reduce((duration, effect) => {
     const kind = typeof effect === 'string' ? effect : effect.kind;
+    const delayMs = typeof effect !== 'string' && sourceActivation && sourceActivation.source === effect.source && sourceActivation.kind === kind
+      ? boardSourceEffectDelayMs(sourceActivation) : 0;
     const swordTier = typeof effect === 'string' ? undefined : effect.swordChargeTier;
     const spiritMs = typeof effect !== 'string' && kind === 'spirit' && effect.spiritChargeTier ? BOARD_SPIRIT_MS : 0;
     const swordMs = (kind === 'slash' || kind === 'cross') && swordTier
       ? BOARD_SWORD_SWEEP_MS + (swordTier === 5 ? BOARD_SWORD_CROSS_DELAY_MS : 0) + BOARD_SWORD_AFTERIMAGE_MS + BOARD_SWORD_SHARDS_MS : 0;
-    return Math.max(duration, swordMs, spiritMs,
-      kind === 'fire' ? BOARD_FIRE_MS : kind === 'lightning' ? BOARD_LIGHTNING_MS : BOARD_CLEAR_MS);
+    return Math.max(duration, swordMs, spiritMs ? spiritMs + delayMs : 0,
+      kind === 'fire' ? BOARD_FIRE_MS + delayMs : kind === 'lightning' ? BOARD_LIGHTNING_MS : BOARD_CLEAR_MS);
   }, BOARD_CLEAR_MS);
 }
 
@@ -45,8 +61,9 @@ export type BoardVisualEffect = {
   id: number;
   kind: 'clear';
   cleared: number[];
-  /** Charged sources remain intact until their own activation finishes. */
+  /** Pending sources stay visible; the active source follows its own timeline. */
   retainedSources?: number[];
+  sourceActivation?: BoardSourceActivation;
   changed: number[];
   effects: BoardAnimationEffect[];
 } | {
@@ -103,6 +120,7 @@ export interface CellVisual {
   clearAt: number;
   flashAt: number | null;
   splitAt: number | null;
+  sourceAnimation: { kind: BoardSourceActivation['kind']; durationMs: number } | null;
 }
 
 // The same bounds position both the artwork and its invisible touch target.
@@ -151,7 +169,7 @@ export function buildBoardEffectCues(
     || ((item.kind === 'slash' || item.kind === 'cross') && !!item.swordChargeTier))
     && item.source !== undefined && validCell(item.source, geometry)
     && item.cells.some(index => validCell(index, geometry)));
-  const durationMs = boardClearDurationMs(effect.effects);
+  const durationMs = boardClearDurationMs(effect.effects, effect.sourceActivation);
   const alreadyCleared = new Set(previous?.kind === 'clear' ? previous.cleared : []);
   const cleared = new Set(effect.cleared);
   const retainedSources = new Set(effect.retainedSources);
@@ -184,7 +202,11 @@ export function buildBoardEffectCues(
           axis: point.y === source.y ? 'horizontal' : 'vertical' })),
       };
     }
-    const startAt = events.length <= 1 ? 0 : eventIndex / (events.length - 1) * (80 / durationMs);
+    const sourceDelayMs = effect.sourceActivation?.source === sourceIndex && effect.sourceActivation.kind === event.kind
+      ? boardSourceEffectDelayMs(effect.sourceActivation) : 0;
+    const startAt = sourceDelayMs / durationMs + (events.length <= 1 ? 0 : eventIndex / (events.length - 1) * (80 / durationMs));
+    // A charged fire adds its windup before the existing explosion/clear budget.
+    const windowScale = sourceDelayMs ? BOARD_FIRE_MS / durationMs : 1;
     let targets = points;
     if (event.kind === 'fire') {
       targets = [...points].sort((a, b) => Math.hypot(a.x - source.x, a.y - source.y)
@@ -197,12 +219,12 @@ export function buildBoardEffectCues(
       sourceY: source.y,
       sourceIndex,
       startAt,
-      clearAt: startAt + (event.kind === 'fire' ? BOARD_FIRE_CLEAR_AT : BOARD_LIGHTNING_CLEAR_AT),
+      clearAt: startAt + (event.kind === 'fire' ? BOARD_FIRE_CLEAR_AT : BOARD_LIGHTNING_CLEAR_AT) * windowScale,
       seed: effectSeed(runId, effect.id, eventIndex, event.kind),
       targets: targets.map(point => ({
         ...point,
         impactAt: event.kind === 'fire'
-          ? startAt + .16 + .28 * Math.hypot(point.x - source.x, point.y - source.y) / maxDistance
+          ? startAt + (.16 + .28 * Math.hypot(point.x - source.x, point.y - source.y) / maxDistance) * windowScale
           : startAt + .08,
       })),
     };
@@ -261,6 +283,7 @@ export function buildCellVisuals(
     const visual: CellVisual = {
       dx: 0, dy: 0, falling: false, clearing: false, hidden: false,
       changed: false, flashing: false, flashColor: '#ffeab0', clearAt: 0, flashAt: null, splitAt: null,
+      sourceAnimation: null,
     };
     if (!effect || reduceMotion) return visual;
     if (effect.kind === 'swap' || effect.kind === 'reject') {
@@ -294,6 +317,11 @@ export function buildCellVisuals(
       visual.flashColor = trace?.kind === 'fire' ? '#ffb063'
         : trace?.kind === 'lightning' ? '#c7a5ff'
         : trace?.kind === 'spirit' ? '#8efbd4' : '#ffeab0';
+      if (!visual.hidden && cleared && effect.sourceActivation?.source === index) {
+        visual.sourceAnimation = { kind: effect.sourceActivation.kind,
+          durationMs: boardClearDurationMs(effect.effects, effect.sourceActivation) };
+        visual.flashing = false;
+      }
     }
     return visual;
   });
@@ -301,6 +329,37 @@ export function buildCellVisuals(
 
 export function cellMotion(visual: CellVisual, pitch: number, progress: number, pulse: number) {
   'worklet';
+  if (!visual.hidden && visual.sourceAnimation) {
+    const { kind, durationMs } = visual.sourceAnimation;
+    const localProgress = Math.max(0, Math.min(1, progress));
+    const elapsedMs = localProgress * durationMs;
+    if (kind === 'fire') {
+      const charge = Math.min(1, elapsedMs / BOARD_FIRE_CHARGE_MS);
+      // Compare the exact same normalized boundary as the explosion cue.
+      // Converting back to ms can round 220ms down and leave the tile on for a frame.
+      const active = localProgress < BOARD_FIRE_CHARGE_MS / durationMs;
+      const shake = active ? pitch * .04 * Math.min(1, elapsedMs / 60) : 0;
+      return {
+        tx: shake * Math.sin(elapsedMs * .09) || 0, ty: shake * .5 * Math.sin(elapsedMs * .13) || 0,
+        scale: 1 + .25 * (1 - Math.pow(1 - charge, 3)), opacity: active ? 1 : 0,
+        rotation: active ? .035 * Math.sin(elapsedMs * .08) : 0,
+      };
+    }
+    if (kind === 'spirit') {
+      const zoom = Math.min(1, elapsedMs / BOARD_SPIRIT_ZOOM_MS);
+      const shrink = Math.max(0, Math.min(1, (elapsedMs - BOARD_SPIRIT_ZOOM_MS) / BOARD_SPIRIT_SHRINK_MS));
+      return { tx: 0, ty: 0, rotation: 0,
+        scale: elapsedMs <= BOARD_SPIRIT_ZOOM_MS ? 1 + .1 * (1 - Math.pow(1 - zoom, 3)) : 1.1 * (1 - shrink * shrink),
+        opacity: localProgress < (BOARD_SPIRIT_ZOOM_MS + BOARD_SPIRIT_SHRINK_MS) / durationMs ? 1 : 0 };
+    }
+    const envelope = Math.max(0, Math.min(1, elapsedMs / 80, (durationMs - elapsedMs) / 80));
+    return {
+      tx: pitch * .025 * envelope * Math.sin(elapsedMs * .075) || 0,
+      ty: pitch * .015 * envelope * Math.sin(elapsedMs * .105) || 0,
+      rotation: .025 * envelope * Math.sin(elapsedMs * .06) || 0, scale: 1,
+      opacity: elapsedMs < durationMs ? 1 : 0,
+    };
+  }
   const travel = visual.falling ? 1 - progress : progress;
   const clearProgress = Math.max(0, Math.min(1, (progress - visual.clearAt) / Math.max(.0001, 1 - visual.clearAt)));
   return {

@@ -1,5 +1,5 @@
 import { createBoardMotionSession, createBoardMotionFrame, updateBoardMotionFrame, finishBoardMotionSession } from '../boardMotion';
-import { buildCellVisuals, type BoardVisualEffect } from '../boardVisuals';
+import { boardClearDurationMs, buildCellVisuals, type BoardVisualEffect } from '../boardVisuals';
 import { cancelAnimation } from 'react-native-reanimated';
 
 jest.mock('react-native-reanimated', () => ({
@@ -71,4 +71,28 @@ it('switches whole tiles off at the split and keeps a cancelled sword phase hidd
   updateBoardMotionFrame(frame, session.progress.value, session.pulse.value);
   expect(frame.cells[23]!.opacity.value).toBe(0);
   expect(session.progress.value).toBe(1);
+});
+
+it.each(['fire', 'spirit', 'lightning'] as const)('allocates %s source outputs without flashes, then hides and resets them on cleanup', kind => {
+  const previous: BoardVisualEffect = { id: 4, kind: 'clear', cleared: [24], retainedSources: [24], changed: [], effects: [] };
+  const effect: BoardVisualEffect = { id: 5, kind: 'clear', cleared: [24], retainedSources: [24], changed: [],
+    sourceActivation: { source: 24, kind },
+    effects: [{ kind, source: 24, cells: [], qi: 0, damage: 0, ...(kind === 'spirit' ? { spiritChargeTier: 5 } : {}) }] };
+  const session = createBoardMotionSession('clear');
+  const frame = createBoardMotionFrame(buildCellVisuals(effect, previous), 50);
+  expect(frame.animated).toHaveLength(1);
+  expect(frame.cells[24]!.opacity.value).toBe(1);
+  const duration = boardClearDurationMs(effect.effects, effect.sourceActivation);
+  const disappearsAtMs = kind === 'fire' ? 220 : kind === 'spirit' ? 300 : duration;
+  updateBoardMotionFrame(frame, (disappearsAtMs - 1) / duration, 1);
+  expect(frame.cells[24]!.opacity.value).toBe(1);
+  updateBoardMotionFrame(frame, disappearsAtMs / duration, 1);
+  expect(frame.cells[24]!.opacity.value).toBe(0);
+  finishBoardMotionSession(session, frame);
+  updateBoardMotionFrame(frame, session.progress.value, 1);
+  expect(frame.cells[24]!.opacity.value).toBe(0);
+  expect(frame.cells[24]!.transform.value[0]).toEqual({ translateX: 0 });
+  expect(frame.cells[24]!.transform.value[1]).toEqual({ translateY: 0 });
+  expect(frame.cells[24]!.transform.value[3]).toEqual({ rotate: 0 });
+  expect(createBoardMotionFrame(buildCellVisuals(effect, previous, true), 50).animated).toHaveLength(0);
 });

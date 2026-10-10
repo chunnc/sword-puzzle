@@ -292,7 +292,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
           <View ref={sceneRef} collapsable={false} testID="game-scene" onLayout={measureFlightLayout} style={styles.scene} pointerEvents={overlayOpen ? 'none' : 'auto'} accessibilityElementsHidden={overlayOpen} importantForAccessibility={overlayOpen ? 'no-hide-descendants' : 'auto'}>
             <GameplayHeader levelId={levelId} busy={busy || Boolean(result) || locked} compact={compact} onBack={requestLeave} onHelp={() => { if (!busyRef.current && !resultRef.current) setHelp(true); }} />
             <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion}
-                duration={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects) : BOARD_CLEAR_MS} />
+                duration={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects, effect.sourceActivation) : BOARD_CLEAR_MS} />
             <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setHeight(event.nativeEvent.layout.height)}>
               <View style={{ width: boardWidth, height: boardHeight }}>
                 <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} showTargetingHint={false} locked={busy || overlayOpen || locked} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} onMotionStarted={onMotionStarted} onMotionFinished={onMotionFinished}
@@ -306,7 +306,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
               onCast={() => { if (targetSkill) void perform(presenter => store.castSkill(targetSkill, targets, presenter)); }} />
             {spiritMotion && flightLayout && store.foreground && !overlayOpen ? <SpiritQiFlightOverlay key={`${board.runId}:${effect!.id}`}
               cues={spiritCues} geometry={level.board} layout={flightLayout} progress={spiritMotion.progress}
-              durationMs={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects) : BOARD_CLEAR_MS} /> : null}
+              durationMs={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects, effect.sourceActivation) : BOARD_CLEAR_MS} /> : null}
           </View>
           {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} /> : null}
           <View pointerEvents="box-none" style={styles.noticeLayer}><Notice message={store.notice} onDismiss={() => store.setNotice('')} /></View>

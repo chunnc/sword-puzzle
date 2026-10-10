@@ -93,6 +93,55 @@ describe('Skia board coordinates and animation', () => {
     for (const visuals of [slashed, burned, buildCellVisuals(next, fire)]) expect(visuals[23].hidden).toBe(true);
   });
 
+  it('zooms and shakes a charged fire before hiding it on the exact explosion frame, with targets clearing afterwards', () => {
+    const effect: BoardVisualEffect = { id: 28, kind: 'clear', cleared: [24, 25], retainedSources: [24], changed: [],
+      sourceActivation: { source: 24, kind: 'fire' },
+      effects: [{ kind: 'fire', source: 24, cells: [24, 25], qi: 0, damage: 0 }] };
+    const duration = boardClearDurationMs(effect.effects, effect.sourceActivation);
+    expect(duration).toBe(1420);
+    const cue = buildBoardEffectCues(effect)[0], visuals = buildCellVisuals(effect, null);
+    expect(cue.startAt * duration).toBeCloseTo(220);
+    expect(cue.clearAt * duration).toBeCloseTo(1120);
+    const enlarged = cellMotion(visuals[24], 50, 110 / duration, 1);
+    expect(enlarged.scale).toBeGreaterThan(1.2);
+    expect(Math.abs(enlarged.tx)).toBeGreaterThan(0);
+    expect(enlarged.opacity).toBe(1);
+    expect(cellMotion(visuals[24], 50, 219 / duration, 1).opacity).toBe(1);
+    expect(cellMotion(visuals[24], 50, 220 / duration, 1).opacity).toBe(0);
+    expect(cellMotion(visuals[25], 50, 1119 / duration, 1).opacity).toBe(1);
+    expect(cellMotion(visuals[25], 50, 1, 1).opacity).toBe(0);
+    expect(boardClearDurationMs(effect.effects)).toBe(1200);
+  });
+
+  it('zooms an orb lightly before shrinking to zero and shakes lightning only during its discharge', () => {
+    for (const kind of ['spirit', 'lightning'] as const) {
+      const effect: BoardVisualEffect = { id: 29, kind: 'clear', cleared: [24], retainedSources: [24], changed: [],
+        sourceActivation: { source: 24, kind },
+        effects: [{ kind, source: 24, cells: [], qi: 0, damage: 0, ...(kind === 'spirit' ? { spiritChargeTier: 5 } : {}) }] };
+      const duration = boardClearDurationMs(effect.effects, effect.sourceActivation);
+      const visual = buildCellVisuals(effect, null)[24];
+      expect(cellMotion(visual, 50, 0, 1)).toMatchObject({ opacity: 1, scale: 1, tx: 0, ty: 0 });
+      if (kind === 'spirit') {
+        expect(duration).toBe(1200);
+        expect(cellMotion(visual, 50, 120 / duration, 1).scale).toBeCloseTo(1.1);
+        const converting = cellMotion(visual, 50, 220 / duration, 1);
+        expect(converting.scale).toBeGreaterThan(0);
+        expect(converting.scale).toBeLessThan(1);
+        expect(converting.opacity).toBe(1);
+        expect(cellMotion(visual, 50, 300 / duration, 1)).toMatchObject({ scale: 0, opacity: 0 });
+      } else {
+        expect(duration).toBe(1600);
+        const shaking = cellMotion(visual, 50, 600 / duration, 1);
+        expect(Math.abs(shaking.tx)).toBeGreaterThan(0);
+        expect(Math.abs(shaking.tx)).toBeLessThanOrEqual(1.25);
+        expect(shaking.scale).toBe(1);
+        expect(shaking.opacity).toBe(1);
+      }
+      expect(cellMotion(visual, 50, 1, 1)).toMatchObject({ opacity: 0, tx: 0, ty: 0 });
+      expect(buildCellVisuals(effect, null, true)[24].sourceAnimation).toBeNull();
+    }
+  });
+
   it('disables all motion and flashes under reduced motion', () => {
     const effect: BoardVisualEffect = { id: 6, kind: 'clear', cleared: [0], changed: [1], effects: [{ kind: 'spirit', cells: [0, 1], damage: 0, qi: 3 }] };
     for (const visual of buildCellVisuals(effect, effect, true)) {

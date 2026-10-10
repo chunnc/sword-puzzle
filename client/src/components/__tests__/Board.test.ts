@@ -12,7 +12,7 @@ import { BoardEffects } from '../BoardEffects';
 import { SpiritQiFlightOverlay } from '../SpiritQiFlightOverlay';
 import { buildSpiritFlightCues } from '../spiritParticles';
 import { createBoardMotionSession } from '../boardMotion';
-import { buildBoardEffectCues } from '../boardVisuals';
+import { boardClearDurationMs, buildBoardEffectCues } from '../boardVisuals';
 import type { SkImage } from '@shopify/react-native-skia';
 import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
@@ -852,7 +852,7 @@ describe('Skia Board integration', () => {
     [TileKind.Fire, 4, 'fire'], [TileKind.Fire, 5, 'fire'],
     [TileKind.Lightning, 4, 'lightning'], [TileKind.Lightning, 5, 'lightning'],
     [TileKind.SpiritOrb, 4, 'spirit'], [TileKind.SpiritOrb, 5, 'spirit'],
-  ] as const)('renders %s/%s intact throughout its activation after an earlier clear, including HUD updates', (kind, tier, effectKind) => {
+  ] as const)('renders the %s/%s source timeline after an earlier clear and preserves it through HUD updates', (kind, tier, effectKind) => {
     const next = { ...snapshot, tiles: [...snapshot.tiles] };
     next.tiles[24] = { kind, chargeTier: tier, locked: false };
     const first: BoardVisualEffect = { id: 100, kind: 'clear', cleared: [24], retainedSources: [24], changed: [],
@@ -860,27 +860,41 @@ describe('Skia Board integration', () => {
     mount({ snapshot: next, visualEffect: first });
     expect(tile(24).props.layer).toBeUndefined();
     const active: BoardVisualEffect = { id: 101, kind: 'clear', cleared: [24, 25], retainedSources: [24], changed: [],
+      sourceActivation: effectKind === 'slash' || effectKind === 'cross' ? undefined : { source: 24, kind: effectKind },
       effects: [{ kind: effectKind, source: 24, cells: kind === TileKind.SpiritOrb ? [] : [24, 25], qi: 0, damage: 0,
         ...(kind === TileKind.Sword ? { swordChargeTier: tier } : {}),
         ...(kind === TileKind.SpiritOrb ? { spiritChargeTier: tier } : {}),
       }] };
     const motionSession = createBoardMotionSession('clear');
     act(() => renderer.update(React.createElement(Board, { ...props, snapshot: next, visualEffect: active, motionSession })));
-    for (const progress of [0, .5, .999, 1]) {
-      motionSession.progress.value = progress;
+    const duration = boardClearDurationMs(active.effects, active.sourceActivation);
+    if (active.sourceActivation) expect(withTiming).toHaveBeenCalledWith(1, { duration, easing: Easing.linear }, expect.any(Function));
+    for (const elapsedMs of [0, 60, 120, 199, 200, 219, 220, 299, 300, 600, duration - 1, duration]) {
+      motionSession.progress.value = elapsedMs / duration;
       reactFrames();
       const source = tile(24);
       expect(source).toBeDefined();
-      expect(source.props.layer).toBeUndefined();
+      if (kind === TileKind.Sword) expect(source.props.layer).toBeUndefined();
+      else {
+        const visibleUntil = kind === TileKind.Fire ? 220 : kind === TileKind.SpiritOrb ? 300 : duration;
+        expect(source.props.layer.props.opacity.value).toBe(elapsedMs < visibleUntil ? 1 : 0);
+        if (kind === TileKind.SpiritOrb && elapsedMs === 120) expect(source.props.transform.value[2].scale).toBeCloseTo(1.1);
+        if (kind === TileKind.Lightning && elapsedMs === 600) {
+          expect(Math.abs(source.props.transform.value[0].translateX)).toBeGreaterThan(0);
+          expect(source.props.transform.value[2].scale).toBe(1);
+          expect(renderer.root.findByType(BoardEffects).props.elapsedMs.value).toBeCloseTo(600);
+        }
+      }
       expect(source.findAllByType(ChargedTileParticle)).toHaveLength(1);
       if (kind === TileKind.Fire && tier === 5) expect(source.findByType(Fire5Tile).props.idle.image.asset).toBe(114);
       else expect(source.findByType('SkiaImage' as never).props.image.asset).toBe(tileArtwork(kind, tier));
     }
     act(() => renderer.update(React.createElement(Board, { ...props, snapshot: { ...next, swordQi: 20 },
       visualEffect: { ...active }, motionSession })));
-    expect(tile(24).props.layer).toBeUndefined();
+    if (kind === TileKind.Sword) expect(tile(24).props.layer).toBeUndefined();
+    else expect(tile(24).props.layer.props.opacity.value).toBe(0);
     act(() => renderer.update(React.createElement(Board, { ...props, snapshot: next,
-      visualEffect: { ...active, id: 102, retainedSources: [], effects: [] } })));
+      visualEffect: { ...active, id: 102, retainedSources: [], sourceActivation: undefined, effects: [] } })));
     expect(tile(24)).toBeUndefined();
   });
 });
@@ -911,6 +925,29 @@ describe('spirit orb flight rendering', () => {
       && node.props.transform.value[1].translateY === 480)).toBe(true);
     progress.value = 1;
     expect(sparks.every(node => node.props.opacity.value === 0)).toBe(true);
+  });
+
+  it.each([4, 5] as const)('delays tier %s particles until the orb shrinks and keeps the full flight/arrival interval', tier => {
+    const effect = { ...clear(tier), sourceActivation: { kind: 'spirit' as const, source: 24 } };
+    const progress = makeMutable(0);
+    act(() => { renderer = create(React.createElement(SpiritQiFlightOverlay, {
+      cues: buildSpiritFlightCues(effect, geometry, 'a'), geometry, layout, progress, durationMs: 1200,
+    })); });
+    const sparks = renderer.root.findAll(node => node.type === 'Group' as never && node.props.transform);
+    const arrival = renderer.root.findAll(node => node.type === 'Group' as never && node.props.opacity && !node.props.transform)[0];
+    progress.value = 199 / 1200;
+    expect(sparks.every(node => node.props.opacity.value === 0)).toBe(true);
+    progress.value = 220 / 1200;
+    expect(sparks.every(node => node.props.opacity.value > 0)).toBe(true);
+    progress.value = 1010 / 1200;
+    expect(sparks.every(node => node.props.opacity.value > 0)).toBe(true);
+    progress.value = 1100 / 1200;
+    expect(sparks.every(node => node.props.opacity.value === 0)).toBe(true);
+    expect(sparks.every(node => node.props.transform.value[0].translateX === layout.target.x)).toBe(true);
+    progress.value = 1150 / 1200;
+    expect(arrival.props.opacity.value).toBeCloseTo(.85);
+    progress.value = 1;
+    expect(arrival.props.opacity.value).toBe(0);
   });
 
   it('uses the external clock for a linear 1000ms phase without restarting on HUD/layout updates', () => {
@@ -1033,6 +1070,20 @@ describe('fire-test-2 flipbook rendering', () => {
       // Even after playback, never sample the three unused cells in the last row.
       expect(atlas.sprites.value[0].x).toBeLessThanOrEqual(768);
       if (atlas.sprites.value[0].y === 384) expect(atlas.sprites.value[0].x).toBeLessThanOrEqual(192);
+      act(() => renderer.unmount());
+    }
+  });
+
+  it('starts the charged explosion at 220ms and retains the complete flipbook after the source disappears', () => {
+    const effect: BoardVisualEffect = { id: 103, kind: 'clear', cleared: [24, 25], retainedSources: [24],
+      sourceActivation: { source: 24, kind: 'fire' }, changed: [],
+      effects: [{ kind: 'fire', source: 24, cells: [24, 25], qi: 0, damage: 0 }] };
+    const chargedCue = buildBoardEffectCues(effect, geometry)[0];
+    for (const [elapsedMs, alpha] of [[219, 0], [220, 1], [328, 1], [1083, 1], [1084, 0], [1420, 0]]) {
+      const atlas = draw(elapsedMs, 1420, [chargedCue]);
+      expect(atlas.colors.value[0][3]).toBe(alpha);
+      if (elapsedMs === 220) expect(atlas.sprites.value[0]).toMatchObject({ x: 0, y: 0 });
+      if (elapsedMs === 328) expect(atlas.sprites.value[0]).toMatchObject({ x: 192, y: 0 });
       act(() => renderer.unmount());
     }
   });

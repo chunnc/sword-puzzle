@@ -7,11 +7,12 @@ import { Board, BOARD_CLEAR_MS, BOARD_FIRE_MS, BOARD_LIGHTNING_MS, BOARD_FALL_MS
 import { GameplayDock, GameplayInfo } from '../GameplayChrome';
 import { GameplayProgressBar } from '../GameplayProgressBar';
 import { GameplayResultPopup } from '../GameplayResultPopup';
+import { BOARD_FIRE_CHARGE_MS, BOARD_SPIRIT_EMIT_AT_MS, BOARD_SPIRIT_MS } from '../boardVisuals';
 import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
 import { emptySave } from '../../game/save';
 import type { BoardActionResult } from '../../state/gameStore';
-import { GoalKind, type BoardActionAnimation, type BoardResolutionStep } from '../../game/types';
+import { GoalKind, TileKind, type BoardActionAnimation, type BoardResolutionStep } from '../../game/types';
 
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
@@ -38,7 +39,7 @@ jest.mock('../Board', () => {
       const duration = effect.kind === 'swap' ? visuals.BOARD_SWAP_MS
         : effect.kind === 'fall' ? visuals.BOARD_FALL_MS
         : effect.kind === 'reject' ? visuals.BOARD_REJECT_MS
-        : visuals.boardClearDurationMs(effect.effects);
+        : visuals.boardClearDurationMs(effect.effects, effect.sourceActivation);
       const timer = setTimeout(() => props.onMotionFinished?.(props.snapshot.runId, effect.id), duration);
       return () => clearTimeout(timer);
     }, [effect?.id]);
@@ -299,10 +300,11 @@ describe('gameplay presentation and exit behavior', () => {
     } finally { mockState.foreground = true; }
   });
 
-  it.each([4, 5] as const)('shares a tier %s orb clock and holds its qi for the full second even without layout', async tier => {
+  it.each([4, 5] as const)('shares a tier %s orb clock and holds its qi through shrinking and the delayed flight without layout', async tier => {
     jest.useFakeTimers(); mockReduceMotion = false;
     const animation = cascadeAnimation(1), step = animation.steps[0];
-    step.before = { ...step.before, swordQi: 12, condensed: false };
+    step.before = { ...step.before, swordQi: 12, condensed: false, tiles: [...step.before.tiles] };
+    step.before.tiles[0] = { kind: TileKind.SpiritOrb, chargeTier: tier, locked: false };
     animation.swappedBoard = step.before;
     step.after = { ...step.after, swordQi: 36, condensed: tier === 5 };
     animation.finalBoard = step.after;
@@ -311,8 +313,11 @@ describe('gameplay presentation and exit behavior', () => {
     await advance(BOARD_SWAP_MS);
     const clock = board().props.motionSession;
     expect(clock).toBeDefined();
+    expect(board().props.visualEffect.sourceActivation).toEqual({ source: 0, kind: 'spirit' });
     expect(board().props.snapshot).toMatchObject({ swordQi: 12, condensed: false });
-    await advance(999);
+    await advance(300);
+    expect(board().props.snapshot.swordQi).toBe(12);
+    await advance(BOARD_SPIRIT_EMIT_AT_MS + BOARD_SPIRIT_MS - 301);
     expect(board().props.visualEffect.kind).toBe('clear');
     expect(board().props.motionSession).toBe(clock);
     expect(board().props.snapshot.swordQi).toBe(12);
@@ -321,6 +326,26 @@ describe('gameplay presentation and exit behavior', () => {
     expect(board().props.visualEffect.kind).toBe('fall');
     await advance(BOARD_FALL_MS + BOARD_CHAIN_DELAY_MS);
     expect(board().props.visualEffect).toBeNull();
+    expect(board().props.locked).toBe(false);
+  });
+
+  it.each([4, 5] as const)('keeps tier %s fire playback locked after the source disappears until its complete explosion finishes', async tier => {
+    jest.useFakeTimers(); mockReduceMotion = false;
+    const animation = cascadeAnimation(1), step = animation.steps[0];
+    step.before = { ...step.before, tiles: [...step.before.tiles] };
+    step.before.tiles[0] = { kind: TileKind.Fire, chargeTier: tier, locked: false };
+    animation.swappedBoard = step.before;
+    step.effects = [{ kind: 'fire', source: 0, cells: [0], qi: 0, damage: 1 }];
+    await startAnimation(animation);
+    await advance(BOARD_SWAP_MS + BOARD_FIRE_CHARGE_MS);
+    expect(board().props.visualEffect.sourceActivation).toEqual({ source: 0, kind: 'fire' });
+    expect(board().props.locked).toBe(true);
+    await advance(BOARD_FIRE_MS - 1);
+    expect(board().props.visualEffect.kind).toBe('clear');
+    await advance(1);
+    expect(board().props.visualEffect.kind).toBe('fall');
+    await advance(BOARD_FALL_MS + BOARD_CHAIN_DELAY_MS);
+    expect(board().props.snapshot).toEqual(animation.finalBoard);
     expect(board().props.locked).toBe(false);
   });
 

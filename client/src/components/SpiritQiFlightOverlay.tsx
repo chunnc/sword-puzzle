@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { BlurMask, Canvas, Circle, Group, Path, Skia } from '@shopify/react-native-skia';
 import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
-import { BOARD_SPIRIT_MS, type BoardGeometry } from './boardVisuals';
+import type { BoardGeometry } from './boardVisuals';
 import { buildSpiritParticles, spiritArrivalOpacity, spiritParticleFrame,
   type SpiritFlightCue, type SpiritFlightLayout, type SpiritParticle } from './spiritParticles';
 
@@ -14,8 +14,10 @@ export function SpiritQiFlightOverlay({ cues, geometry, layout, progress, durati
   durationMs: number;
 }) {
   const particles = useMemo(() => cues.flatMap(cue => buildSpiritParticles(cue, layout, geometry)), [cues, layout, geometry]);
+  const flightStarts = useMemo(() => cues.map(cue => cue.startAtMs), [cues]);
   const elapsedMs = useDerivedValue(() => progress.value * durationMs);
-  const arrival = useDerivedValue(() => progress.value >= 1 ? 0 : spiritArrivalOpacity(elapsedMs.value));
+  const arrival = useDerivedValue(() => progress.value >= 1 ? 0 : flightStarts.reduce((opacity, startAtMs) =>
+    Math.max(opacity, spiritArrivalOpacity(elapsedMs.value - startAtMs)), 0));
   const glowRadius = layout.board.width / geometry.width * (cues.some(cue => cue.chargeTier === 5) ? .45 : .32);
   return <Canvas testID="spirit-qi-flight" pointerEvents="none" accessible={false} accessibilityElementsHidden
     importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
@@ -35,7 +37,7 @@ function Spark({ particle, elapsedMs, progress }: { particle: SpiritParticle; el
   const frame = useDerivedValue(() => spiritParticleFrame(particle, elapsedMs.value));
   const transform = useDerivedValue(() => [{ translateX: frame.value.x }, { translateY: frame.value.y },
     { rotate: frame.value.rotation }, { scale: frame.value.scale }]);
-  const opacity = useDerivedValue(() => progress.value >= 1 || elapsedMs.value >= BOARD_SPIRIT_MS ? 0 : frame.value.opacity);
+  const opacity = useDerivedValue(() => progress.value >= 1 ? 0 : frame.value.opacity);
   const star = useMemo(() => {
     const r = particle.radius;
     return Skia.Path.Make().moveTo(0, -r * 3).lineTo(r * .35, -r * .35)

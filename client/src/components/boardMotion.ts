@@ -1,7 +1,7 @@
 import { cancelAnimation, makeMutable, type SharedValue } from 'react-native-reanimated';
 import { cellImpactOpacity, cellMotion, type BoardVisualEffect, type CellVisual } from './boardVisuals';
 
-type TileTransform = [{ translateX: number }, { translateY: number }, { scale: number }];
+type TileTransform = [{ translateX: number }, { translateY: number }, { scale: number }, ...{ rotate: number }[]];
 export interface CellMotionValues {
   transform: SharedValue<TileTransform>;
   opacity: SharedValue<number>;
@@ -26,7 +26,9 @@ export function createBoardMotionSession(kind: BoardMotionSession['kind']): Boar
 
 function tileTransform(frame: ReturnType<typeof cellMotion>): TileTransform {
   'worklet';
-  return [{ translateX: frame.tx || 0 }, { translateY: frame.ty || 0 }, { scale: frame.scale }];
+  const transform: TileTransform = [{ translateX: frame.tx || 0 }, { translateY: frame.ty || 0 }, { scale: frame.scale }];
+  if (frame.rotation !== undefined) transform.push({ rotate: frame.rotation });
+  return transform;
 }
 
 // Initialize outputs on the JS thread before Skia can draw the new phase.
@@ -34,7 +36,7 @@ function tileTransform(frame: ReturnType<typeof cellMotion>): TileTransform {
 export function createBoardMotionFrame(visuals: CellVisual[], pitch: number): BoardMotionFrame {
   const animated: BoardMotionFrame['animated'] = [];
   const cells = visuals.map(visual => {
-    if (visual.hidden || !(visual.dx || visual.dy || visual.clearing || visual.changed || visual.flashing)) return null;
+    if (visual.hidden || !(visual.dx || visual.dy || visual.clearing || visual.changed || visual.flashing || visual.sourceAnimation)) return null;
     const frame = cellMotion(visual, pitch, 0, 1);
     const values = {
       transform: makeMutable(tileTransform(frame)),
@@ -52,7 +54,7 @@ export function updateBoardMotionFrame(frame: BoardMotionFrame, progress: number
   for (const cell of frame.animated) {
     const next = cellMotion(cell.visual, frame.pitch, progress, pulse);
     cell.values.transform.value = tileTransform(next);
-    if (cell.visual.clearing) cell.values.opacity.value = next.opacity;
+    if (cell.visual.clearing || cell.visual.sourceAnimation) cell.values.opacity.value = next.opacity;
     if (cell.visual.flashing && cell.visual.flashAt !== null) {
       cell.values.flashOpacity.value = cellImpactOpacity(cell.visual, progress);
     }

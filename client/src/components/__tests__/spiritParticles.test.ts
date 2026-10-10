@@ -1,5 +1,5 @@
 import { buildSpiritFlightCues, buildSpiritParticles, spiritArrivalOpacity, spiritParticleFrame, type SpiritFlightLayout } from '../spiritParticles';
-import { boardClearDurationMs, type BoardVisualEffect } from '../boardVisuals';
+import { boardClearDurationMs, buildCellVisuals, cellMotion, type BoardVisualEffect } from '../boardVisuals';
 
 const geometry = { width: 7, height: 7, activeCells: Array(49).fill(true) };
 const effect = (tier: 4 | 5, source = 24): BoardVisualEffect => ({ id: 7, kind: 'clear', cleared: [source], changed: [],
@@ -13,6 +13,25 @@ it.each([4, 5] as const)('animates tier %s even with empty cells and zero qi at 
   const clear = effect(tier) as Extract<BoardVisualEffect, { kind: 'clear' }>;
   expect(boardClearDurationMs(clear.effects)).toBe(1000);
   expect(buildSpiritParticles(cues[0], layout, geometry)).toHaveLength(tier === 5 ? 28 : 16);
+});
+
+it.each([4, 5] as const)('emits tier %s particles before the source disappears and reserves the full delayed flight', tier => {
+  const clear = effect(tier) as Extract<BoardVisualEffect, { kind: 'clear' }>;
+  clear.retainedSources = [24];
+  clear.sourceActivation = { kind: 'spirit', source: 24 };
+  const cue = buildSpiritFlightCues(clear, geometry, 'run-a')[0];
+  expect(cue.startAtMs).toBe(200);
+  const duration = boardClearDurationMs(clear.effects, clear.sourceActivation);
+  expect(duration).toBe(1200);
+  const source = buildCellVisuals(clear, null)[24];
+  for (const particle of buildSpiritParticles(cue, layout, geometry)) {
+    expect(spiritParticleFrame(particle, 199).opacity).toBe(0);
+    expect(spiritParticleFrame(particle, 220).opacity).toBeGreaterThan(0);
+    expect(cellMotion(source, 50, 220 / duration, 1).opacity).toBe(1);
+    expect(cellMotion(source, 50, 300 / duration, 1).opacity).toBe(0);
+    expect(spiritParticleFrame(particle, 1010).opacity).toBeGreaterThan(0);
+    expect(spiritParticleFrame(particle, 1100)).toMatchObject({ x: layout.target.x, y: layout.target.y, opacity: 0 });
+  }
 });
 
 it('does not emit for creation, ordinary clears, invalid sources or inactive cells', () => {

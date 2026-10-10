@@ -132,8 +132,9 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const effectCues = useMemo(() => reduceMotion ? [] : buildBoardEffectCues(visualEffect, geometry, snapshot.runId, before),
     [snapshot.runId, id, kind, reduceMotion, geometry]);
   const clearDurationMs = visualEffect?.kind === 'clear'
-    ? boardClearDurationMs(visualEffect.effects)
+    ? boardClearDurationMs(visualEffect.effects, visualEffect.sourceActivation)
     : BOARD_CLEAR_MS;
+  const hasSourceAnimation = visualEffect?.kind === 'clear' && !!visualEffect.sourceActivation;
   const hasLightning = effectCues.some(cue => cue.kind === 'lightning');
   const hasSword = effectCues.some(cue => cue.kind === 'slash' || cue.kind === 'cross');
   const hasSpirit = visualEffect?.kind === 'clear' && visualEffect.effects.some(trace => trace.kind === 'spirit' && !!trace.spiritChargeTier);
@@ -142,6 +143,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const visuals = useMemo(() => buildCellVisuals(visualEffect, before,
     reduceMotion, geometry, effectCues), [snapshot.runId, id, kind, reduceMotion, geometry, effectCues]);
   const motion = useMemo(() => motionSession ?? createBoardMotionSession(kind), [snapshot.runId, id, kind, reduceMotion, motionSession]);
+  const effectElapsedMs = useDerivedValue(() => motion.progress.value * clearDurationMs);
   const frame = useMemo(() => createBoardMotionFrame(visuals, side / geometry.width), [visuals, side, geometry.width]);
   const frameRef = useRef(frame);
   useLayoutEffect(() => { frameRef.current = frame; }, [frame]);
@@ -163,7 +165,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   );
   const labels = useBoardLabels(Math.max(0, side / geometry.width - 2), targets.length);
   const drawOrder = useMemo(() => [...indices].sort((a, b) => {
-    const moving = (index: number) => Number(visuals[index].falling || !!visuals[index].dx || !!visuals[index].dy);
+    const moving = (index: number) => Number(visuals[index].falling || !!visuals[index].dx || !!visuals[index].dy || !!visuals[index].sourceAnimation);
     return moving(a) - moving(b);
   }), [visuals, indices]);
 
@@ -191,7 +193,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
         progress.value = withTiming(1, { duration: kind === 'swap' ? BOARD_SWAP_MS : BOARD_FALL_MS }, completed);
       } else if (kind === 'clear') {
         if (hasLightning) elapsedMs.value = withTiming(clearDurationMs, { duration: clearDurationMs, easing: Easing.linear });
-        progress.value = withTiming(1, { duration: clearDurationMs, ...(hasSword || hasSpirit ? { easing: Easing.linear } : {}) }, completed);
+        progress.value = withTiming(1, { duration: clearDurationMs, ...(hasSword || hasSpirit || hasSourceAnimation ? { easing: Easing.linear } : {}) }, completed);
         pulse.value = withSequence(
           withTiming(1.12, { duration: BOARD_PULSE_IN_MS }),
           withTiming(1, { duration: clearDurationMs - BOARD_PULSE_IN_MS }),
@@ -207,7 +209,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
       const completedFrame = frameRef.current;
       runOnUI(() => { finishBoardMotionSession(motion, completedFrame); })();
     };
-  }, [motion, clearDurationMs, hasLightning, hasSword, hasSpirit, onMotionStarted, onMotionFinished]);
+  }, [motion, clearDurationMs, hasLightning, hasSword, hasSpirit, hasSourceAnimation, onMotionStarted, onMotionFinished]);
 
   const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onEnd(event => {
     const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side, geometry);
@@ -223,7 +225,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
             {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color={colors.boardCell} />)}
             {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} visual={visuals[index]} motion={frame.cells[index]} labels={labels} particlePhase={particlePhase} fireIdle={fireIdle} reduceMotion={reduceMotion} />)}
             {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
-              progress={motion.progress} elapsedMs={motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning}
+              progress={motion.progress} elapsedMs={hasSourceAnimation ? effectElapsedMs : motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning}
               renderTile={index => <TileArtwork tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)}
                 image={imageForTile(snapshot.tiles[index]!)} labels={labels} particlePhase={particlePhase} fireIdle={fireIdle} reduceMotion={reduceMotion} />} /> : null}
             {indices.map(index => {
@@ -270,8 +272,8 @@ function TileVisual({ tile, bounds, image, visual, motion, labels, particlePhase
 }) {
   if (visual.hidden) return null;
   // Paragraph paints its own colors, so fade the complete tile as a layer.
-  // Allocate that layer only during clears, not during swaps/falls or idle.
-  return <Group origin={{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }} transform={motion?.transform} layer={visual.clearing ? <Paint opacity={motion!.opacity} /> : undefined}>
+  // Source animations also fade/hide the artwork and its orbiting particles together.
+  return <Group origin={{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }} transform={motion?.transform} layer={visual.clearing || visual.sourceAnimation ? <Paint opacity={motion!.opacity} /> : undefined}>
     <TileArtwork tile={tile} bounds={bounds} image={image} labels={labels} particlePhase={particlePhase} fireIdle={fireIdle} reduceMotion={reduceMotion} />
   </Group>;
 }

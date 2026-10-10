@@ -3,7 +3,7 @@ import { BoardActionCancelled, runBoardAction } from '../../game/boardAction';
 import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
 import { TileKind, type BoardResolutionStep } from '../../game/types';
-import { buildCellVisuals, cellMotion, type BoardVisualEffect } from '../boardVisuals';
+import { boardClearDurationMs, buildCellVisuals, cellMotion, type BoardVisualEffect } from '../boardVisuals';
 
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 function fixture(reduceMotion = false, resolutionStep?: BoardResolutionStep) {
@@ -41,7 +41,7 @@ function engineFixture() {
 it.each([
     [TileKind.Sword, 4], [TileKind.Sword, 5], [TileKind.Fire, 4], [TileKind.Fire, 5],
     [TileKind.Lightning, 4], [TileKind.Lightning, 5], [TileKind.SpiritOrb, 4], [TileKind.SpiritOrb, 5],
-] as const)('retains matched %s/%s until its own completion with the engine rewards applied exactly once', async (kind, tier) => {
+] as const)('plays matched %s/%s with its source lifecycle and engine rewards applied exactly once', async (kind, tier) => {
     const board = engineFixture();
     for (const index of [21, 22, 30]) board.tiles[index] = { kind, chargeTier: index === 21 ? tier : 0, locked: false };
     board.tiles[23] = { kind: (kind + 1) % 4, chargeTier: 0, locked: false };
@@ -61,6 +61,7 @@ it.each([
     const activation = f.effect();
     expect(activation).toMatchObject({ retainedSources: [21], effects: [step.effects[1]] });
     expect(buildCellVisuals(activation, match)[21]).toMatchObject({ hidden: false, clearing: false, splitAt: null });
+    if (kind !== TileKind.Sword) expect(activation).toMatchObject({ sourceActivation: { source: 21, kind: step.effects[1].kind } });
     f.begin(); await jest.advanceTimersByTimeAsync(5000);
     expect(f.effect()).toBe(activation);
     expect(f.setBoard).not.toHaveBeenCalledWith(step.after);
@@ -97,7 +98,11 @@ it('retains sword → fire → lightning sources in queue order without resurrec
         const effect = f.effect(), trace = step.effects[index];
         expect(effect).toMatchObject({ retainedSources: retained[index], effects: [trace] });
         const visuals = buildCellVisuals(effect, previous);
-        for (const source of retained[index]) expect(cellMotion(visuals[source], 50, 1, 1).opacity).toBe(1);
+        for (const source of retained[index]) {
+            expect(cellMotion(visuals[source], 50, 0, 1).opacity).toBe(1);
+            const active = effect.kind === 'clear' && effect.sourceActivation?.source === source;
+            expect(cellMotion(visuals[source], 50, 1, 1).opacity).toBe(active ? 0 : 1);
+        }
         if (index >= 2) expect(visuals[21].hidden).toBe(true);
         if (index >= 3) expect(visuals[24].hidden).toBe(true);
         qi += trace.qi;
@@ -115,7 +120,7 @@ it('retains sword → fire → lightning sources in queue order without resurrec
     f.playback.dispose();
 });
 
-it('holds a fire source shared by Hỏa Liên and its queued activation until the second explosion finishes', async () => {
+it('starts a shared Hỏa Liên source windup only in its queued activation and waits for the explosion after hiding it', async () => {
     const board = engineFixture();
     board.swordQi = 100;
     board.loadout.skills = ['hoa-lien'];
@@ -127,9 +132,15 @@ it('holds a fire source shared by Hỏa Liên and its queued activation until th
     const f = fixture(false, step);
     const phase = f.playback.presenter.present({ kind: 'step', step });
     const skill = f.effect();
+    expect(skill).toMatchObject({ sourceActivation: undefined });
     f.begin(); f.finish(); await flush();
-    expect(f.effect()).toMatchObject({ retainedSources: [16] });
-    expect(cellMotion(buildCellVisuals(f.effect(), skill)[16], 50, 1, 1).opacity).toBe(1);
+    const effect = f.effect() as Extract<BoardVisualEffect, { kind: 'clear' }>;
+    expect(effect).toMatchObject({ retainedSources: [16], sourceActivation: { kind: 'fire', source: 16 } });
+    const visual = buildCellVisuals(effect, skill)[16], duration = boardClearDurationMs(effect.effects, effect.sourceActivation);
+    expect(cellMotion(visual, 50, 219 / duration, 1).opacity).toBe(1);
+    expect(cellMotion(visual, 50, 220 / duration, 1).opacity).toBe(0);
+    f.begin(); await flush();
+    expect(f.setBoard).not.toHaveBeenCalledWith(step.after);
     f.begin(); f.finish(); await flush();
     expect(f.setBoard).toHaveBeenLastCalledWith(step.after);
     f.begin(); f.finish(); await flush();
@@ -196,6 +207,7 @@ it.each([4, 5] as const)('waits for all tier %s fragments to finish before start
 
 it.each([4, 5] as const)('defers tier %s orb bonus/condensation until arrival, retaining earlier base qi', async tier => {
     const f = fixture();
+    f.board.tiles[0] = { kind: TileKind.SpiritOrb, chargeTier: tier, locked: false };
     f.step.effects = [{ kind: 'skill', cells: [0], qi: 12, damage: 0 },
         { kind: 'spirit', spiritChargeTier: tier, source: 0, cells: [], qi: 24, damage: 0 }];
     f.step.after = { ...f.board, swordQi: 36, condensed: tier === 5 };
@@ -219,6 +231,7 @@ it.each([4, 5] as const)('defers tier %s orb bonus/condensation until arrival, r
 
 it.each(['abort', 'reduce', 'cap'] as const)('handles %s during an orb flight without duplicate qi or a hung phase', async mode => {
     const f = fixture();
+    f.board.tiles[0] = { kind: TileKind.SpiritOrb, chargeTier: 5, locked: false };
     if (mode === 'cap') f.board.swordQi = 100;
     f.step.effects = [{ kind: 'spirit', spiritChargeTier: 5, source: 0, cells: [], qi: mode === 'cap' ? 0 : 24, damage: 0 }];
     f.step.after = { ...f.board, swordQi: mode === 'cap' ? 100 : 24, condensed: true };

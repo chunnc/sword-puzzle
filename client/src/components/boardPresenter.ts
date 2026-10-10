@@ -82,7 +82,7 @@ export function createBoardPresenter(options: {
                     const cleared = new Set<number>();
                     const pendingSources = new Map<number, number>();
                     // A skill can share a source with the activation it queues.
-                    // The source's final trace owns the end of its visible lifetime.
+                    // The source's final trace owns its activation timeline.
                     step.effects.forEach((trace, index) => {
                         if (trace.source !== undefined && step.before.tiles[trace.source]?.chargeTier
                             && step.cleared.includes(trace.source)) pendingSources.set(trace.source, index);
@@ -101,8 +101,11 @@ export function createBoardPresenter(options: {
                         };
                         const deferSpirit = trace.kind === 'spirit' && !!trace.spiritChargeTier;
                         if (!deferSpirit) { visual = nextVisual; options.setBoard(visual); }
+                        const sourceActivation = trace.source !== undefined && pendingSources.get(trace.source) === index
+                            && (trace.kind === 'fire' || trace.kind === 'lightning' || trace.kind === 'spirit')
+                            ? { source: trace.source, kind: trace.kind } : undefined;
                         await motion({ id: options.nextId(), kind: 'clear', cleared: [...cleared],
-                            retainedSources: [...pendingSources.keys()], changed: step.changed, effects: [trace] });
+                            retainedSources: [...pendingSources.keys()], sourceActivation, changed: step.changed, effects: [trace] });
                         if (trace.source !== undefined && pendingSources.get(trace.source) === index) pendingSources.delete(trace.source);
                         if (deferSpirit) { visual = nextVisual; options.setBoard(visual); }
                     }
