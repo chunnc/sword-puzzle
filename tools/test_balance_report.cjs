@@ -7,6 +7,17 @@ const {spawnSync}=require('node:child_process');
 const {JSDOM}=require(require.resolve('jsdom',{paths:[path.resolve(__dirname,'../client')]}));
 const {simulateRetries,evaluateChecks,parseOptions,catalog,targets,seedFor}=require('./simulate_maps.cjs');
 const {renderBalanceReport,renderReportFile}=require('./render_balance_report.cjs');
+const {resolveSnapshot}=require('./sync_content_cache.cjs');
+const config=require('../content/game-config.json');
+const rawMaps=require('../content/game-maps.json');
+
+async function seedCache(directory,project='demo-cache') {
+  return resolveSnapshot({project,cacheDir:directory,readers:{
+    readConfig:async()=>({contentVersion:config.version,minClientVersion:'1.4.0'}),
+    readContent:async()=>config,
+    readMaps:async()=>rawMaps
+  }});
+}
 
 test('retry aggregation stops at the first win and accounts for each support boundary and censored sequence',()=>{
   let sequence=0,attempt=0;
@@ -75,13 +86,15 @@ test('check assessment retains small-sample tolerance, strict star coverage and 
 });
 
 test('CLI rejects malformed sample counts and selections before simulations start',()=>{
-  for(const args of [['--seeds','0'],['--seeds','NaN'],['--retry-seeds','-1'],['--maps','41'],['--maps',''],['--bots','expert'],['--powers',''],['--suite','typo'],['--output'],['--unknown']]) {
+  for(const args of [['--seeds','0'],['--seeds','NaN'],['--retry-seeds','-1'],['--maps','41'],['--maps',''],['--bots','expert'],['--powers',''],['--suite','typo'],['--output'],['--project'],['--unknown']]) {
     assert.throws(()=>parseOptions(args));
   }
-  const options=parseOptions(['--maps','1,3,1','--retry-seeds','100','--powers','minimum,expected,strong','--check']);
+  const options=parseOptions(['--maps','1,3,1','--retry-seeds','100','--powers','minimum,expected,strong','--check','--offline','--project','demo']);
   assert.deepEqual(options.ids,[1,3]);
   assert.equal(options.check,true);
   assert.equal(options.retryCount,100);
+  assert.equal(options.offline,true);
+  assert.equal(options.project,'demo');
 });
 
 function fixture() {
@@ -91,6 +104,8 @@ function fixture() {
   return {contentVersion:4,suite:'validation',seeds:1000,targets,reports,
     retries:[simulateRetries(catalog[0],2,()=>({won:true,stars:3}))],checks:evaluateChecks(reports,1000,true),
     run:{id:'test-run',startedAt:'2026-10-10T08:00:00Z',durationSeconds:1.25,command:'node tools/simulate_maps.cjs',maps:[1,3],status:'completed'},
+    source:{kind:'cache',project:'sword-puzzle',version:4,syncedAt:'2026-10-10T07:00:00Z',checkedAt:'2026-10-10T08:00:00Z',
+      cacheFile:'.balance-reports/content-cache/sword-puzzle/v4.json',hashes:{config:'test-config-hash',maps:{1:'test-map-hash'},snapshot:'test-snapshot-hash'}},
     maps:[catalog[0],catalog[2]],configHash:'test-config-hash'};
 }
 
@@ -100,6 +115,9 @@ test('overview keeps one row per map while changing profile values, retaining re
   t.after(()=>dom.window.close());
   assert.deepEqual(JSON.parse(document.getElementById('report-data').textContent),report);
   assert.equal(document.querySelectorAll('script[src],link[rel="stylesheet"]').length,0);
+  assert.match(document.body.textContent,/sword-puzzle/);
+  assert.match(document.body.textContent,/Cache local/);
+  assert.match(document.body.textContent,/test-snapshot-hash/);
   const map=document.getElementById('filter-map'),bot=document.getElementById('filter-bot'),power=document.getElementById('filter-power');
   const rows=()=>document.querySelectorAll('#overview-table tbody tr');
   const row=id=>document.querySelector(`[data-overview][data-map="${id}"]`);
@@ -190,18 +208,24 @@ test('HTML safely embeds run text and raw JSON and explains missing retry/error 
   assert.match(document.body.textContent,/Không đạt|Lần chạy bị gián đoạn/);
 });
 
-test('CLI exports HTML and JSON even when a check fails, preserving default HTML history',t=>{
+test('CLI exports HTML and JSON even when a check fails, preserving default HTML history',async t=>{
   const directory=fs.mkdtempSync(path.join(os.tmpdir(),'balance-report-test-'));
   t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
+  await seedCache(directory);
   const jsonPath=path.join(directory,'result.json');
-  const args=[path.join(__dirname,'simulate_maps.cjs'),'--maps','1','--bots','normal','--seeds','1','--retry-seeds','2','--check','--output',jsonPath];
+  const args=[path.join(__dirname,'simulate_maps.cjs'),'--maps','1','--bots','normal','--seeds','1','--retry-seeds','2','--check','--offline','--project','demo-cache','--output',jsonPath];
   for(let i=0;i<2;i++) {
-    const child=spawnSync(process.execPath,args,{encoding:'utf8'});
+    const child=spawnSync(process.execPath,args,{encoding:'utf8',env:{...process.env,BALANCE_CACHE_DIR:directory}});
     assert.equal(child.status,1,child.stderr);
     assert.match(child.stdout,/HTML report:/);
+    assert.match(child.stdout,/local cache/);
     assert.match(child.stderr,/ngoài khoảng kiểm tra/);
     const report=JSON.parse(fs.readFileSync(jsonPath,'utf8'));
     assert.equal(report.checks.status,'failed');
+    assert.equal(report.source.kind,'cache');
+    assert.equal(report.source.project,'demo-cache');
+    assert.equal(report.source.version,config.version);
+    assert.match(report.source.hashes.snapshot,/^[0-9a-f]{64}$/);
     assert.equal(report.retries[0].samples,2);
     assert.equal(report.reports[0].samples,1);
   }

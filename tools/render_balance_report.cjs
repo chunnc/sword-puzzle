@@ -20,6 +20,9 @@ function band(rate,range,tolerance=0) {
 
 function renderBalanceReport(report) {
   const run=report.run??{},checks=report.checks??{status:'not-run',tolerance:0,results:[],failures:[]};
+  const source=report.source??null;
+  const sourceLabels={server:['Server (vừa đồng bộ)','good'],cache:['Cache local','neutral'],authoring:['Dữ liệu authoring','quiet']};
+  const [sourceLabel,sourceKind]=source?[...(sourceLabels[source.kind]??[source.kind??'—','neutral'])]:[null,null];
   const maps=new Map((report.maps??[]).map(m=>[m.id,m]));
   const profiles=report.reports??[],retries=report.retries??[];
   const mapIds=[...new Set([...maps.keys(),...profiles.map(r=>r.id),...retries.map(r=>r.id),...(run.maps??[])])].sort((a,b)=>a-b);
@@ -36,6 +39,7 @@ function renderBalanceReport(report) {
   const mapLabel=id=>`Map ${id} · ${maps.get(id)?.name??`Màn ${id}`}`;
   const options=(entries,label=null,selected=null)=>`${label?`<option value="">${label}</option>`:''}${entries.map(([value,name])=>`<option value="${escape(value)}"${value===selected?' selected':''}>${escape(name)}</option>`).join('')}`;
   const time=run.startedAt?new Date(run.startedAt).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'—';
+  const formatTime=value=>value?new Date(value).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'}):'—';
   const serialize=JSON.stringify(report).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
   const comparisonRow=r=>{
     const gate=gateFor(r),standard=r.bot==='normal'&&r.power==='expected',target=standard?report.targets[r.difficulty]:null;
@@ -119,7 +123,7 @@ section{margin-top:32px}.panel{background:var(--surface);border:1px solid var(--
 @media(max-width:720px){main{padding:22px 14px 36px}.header-top,.section-heading{align-items:start;flex-direction:column;gap:8px}.filters{position:static}.filters label{flex:1 1 calc(50% - 6px);min-width:0}.filters label:first-child{flex-basis:100%}.filters select{min-width:0;width:100%}.filters .filter-count{flex:1;width:auto;margin:auto 0;text-align:right}.detail-body{grid-template-columns:1fr;gap:20px}.summary-strip{gap:16px 24px}th,td{padding:10px}.retry-body{padding:14px}}@media print{.filters,button{display:none}body{background:#fff}main{padding:0}.table-wrap{overflow:visible}.profile-detail{break-inside:avoid}.command{white-space:pre-wrap}}
 </style></head><body><main>
 <header><div class="header-top"><span class="eyebrow">SWORD PUZZLE / BALANCE RUN / v${escape(report.contentVersion)}</span><button type="button" id="download-json">Tải dữ liệu JSON</button></div>
-<h1>Tổng quan độ khó map</h1><div class="run-meta"><span><strong>${escape(time)}</strong> · UTC+7</span><span>Thời lượng <strong>${number(run.durationSeconds,1)} giây</strong></span><span>Seed suite <strong>${escape(report.suite)}</strong></span><span><strong>${number(report.seeds)}</strong> seed / profile</span></div>
+<h1>Tổng quan độ khó map</h1><div class="run-meta"><span><strong>${escape(time)}</strong> · UTC+7</span><span>Thời lượng <strong>${number(run.durationSeconds,1)} giây</strong></span><span>Seed suite <strong>${escape(report.suite)}</strong></span><span><strong>${number(report.seeds)}</strong> seed / profile</span>${source?`<span>Nguồn <strong>${escape(sourceLabel)}</strong> ${badge('v'+source.version,sourceKind)}</span><span>Project <strong>${escape(source.project)}</strong></span><span>Đồng bộ <strong>${escape(formatTime(source.syncedAt))}</strong></span><span>Kiểm tra version <strong>${escape(formatTime(source.checkedAt))}</strong></span>`:''}</div>
 <div class="summary-strip"><div><span>Map đã chọn</span><strong>${number(mapIds.length)}</strong></div><div><span>Lượt chơi đầu</span><strong>${number(firstSamples)}</strong></div><div><span>Chuỗi retry</span><strong>${number(retrySamples)}</strong></div><div><span>Lần chơi trong các chuỗi</span><strong>${number(retryAttempts)}</strong></div><div><span>Kết quả kiểm tra</span>${badge(statusText,statusKind)}</div></div>
 <div class="command">${escape(run.command??'')}</div></header>
 ${run.error?`<div class="error-panel"><strong>Lần chạy bị gián đoạn</strong><p>${escape(run.error)}</p><p class="muted">Các bảng dưới đây chứa những profile đã hoàn tất trước khi lỗi xảy ra.</p></div>`:''}
@@ -137,7 +141,7 @@ ${!retries.length?'<p class="notice"><strong>Chưa chạy retry.</strong> Thêm 
 </section>
 <section><div class="section-heading"><h2>Chi tiết từng map</h2><p>Mở map để so sánh tất cả bot, sức mạnh và retry.</p></div>${mapDetails}</section>
 <section><div class="section-heading"><h2>Khoảng mục tiêu độ khó</h2></div><div class="panel target-table"><table><thead><tr><th>Độ khó</th><th>Thắng</th><th>3 sao</th></tr></thead><tbody>${Object.entries(report.targets).map(([name,t])=>`<tr><th scope="row">${escape(difficultyNames[name]??name)}</th><td>${percent(t.win[0])}–${percent(t.win[1])}</td><td>${percent(t.three[0])}–${percent(t.three[1])}</td></tr>`).join('')}</tbody></table></div></section>
-<footer><p>Report tự chứa, xem được offline. Bot dùng engine thật với kiếm thanh-phong và kỹ năng nhat-kiem. Thống kê mô phỏng dùng để đối chiếu cân bằng map.</p><p>Run ${escape(run.id??'—')} · Config hash <code>${escape(report.configHash??'—')}</code></p></footer>
+<footer><p>Report tự chứa, xem được offline. Bot dùng engine thật với kiếm thanh-phong và kỹ năng nhat-kiem. Thống kê mô phỏng dùng để đối chiếu cân bằng map.</p>${source?`<p>Nguồn dữ liệu: ${escape(sourceLabel)} · project <code>${escape(source.project)}</code> · content v${escape(source.version)} · snapshot <code>${escape(source.hashes?.snapshot??'—')}</code>${source.cacheFile?` · cache <code>${escape(source.cacheFile)}</code>`:''}</p>`:''}<p>Run ${escape(run.id??'—')} · Config hash <code>${escape(report.configHash??'—')}</code></p></footer>
 </main><script id="report-data" type="application/json">${serialize}</script>
 <script>
 const mapFilter=document.getElementById('filter-map'),botFilter=document.getElementById('filter-bot'),powerFilter=document.getElementById('filter-power');

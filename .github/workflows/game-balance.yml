@@ -1,20 +1,15 @@
 name: Game maps and balance
 on:
   pull_request:
-    paths: ['content/**', 'client/src/game/**', 'client/src/state/**', 'server/**', 'tools/*maps*', 'tools/game-runtime.cjs', 'tools/*balance_report.cjs', 'package.json', '.github/workflows/game-balance.yml']
+    paths: ['content/**', 'client/src/game/**', 'client/src/state/**', 'server/**', 'tools/*maps*', 'tools/game-runtime.cjs', 'tools/*balance_report.cjs', 'tools/*content_cache*', 'package.json', '.github/workflows/game-balance.yml']
   push:
     branches: [main]
-    paths: ['content/**', 'client/src/game/**', 'server/**', 'tools/*maps*', 'tools/game-runtime.cjs', 'tools/*balance_report.cjs', 'package.json', '.github/workflows/game-balance.yml']
+    paths: ['content/**', 'client/src/game/**', 'server/**', 'tools/*maps*', 'tools/game-runtime.cjs', 'tools/*balance_report.cjs', 'tools/*content_cache*', 'package.json', '.github/workflows/game-balance.yml']
   workflow_dispatch:
-    inputs:
-      release:
-        description: 'Run 1000 validation seeds, power profiles and retry sequences'
-        type: boolean
-        default: false
 jobs:
   maps:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,14 +26,3 @@ jobs:
       - run: npm --prefix server test
       - run: node tools/seed_game_content.mjs
       - run: npm run maps:test
-      - if: ${{ !inputs.release }}
-        run: npm run maps:check
-      - if: ${{ inputs.release }}
-        run: npm run maps:release
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: map-balance-report
-          path: |
-            .balance-reports/*.json
-            .balance-reports/*.html

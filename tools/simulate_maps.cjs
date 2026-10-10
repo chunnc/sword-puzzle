@@ -3,9 +3,9 @@ const path = require('node:path');
 const { BoardEngine, installContent, validateMap, mapToLevel, mapStars, tileId, assistForFailures } = require('./game-runtime.cjs');
 const {createHash}=require('node:crypto');
 const { renderBalanceReport } = require('./render_balance_report.cjs');
-const config = require('../content/game-config.json');
-const content = installContent(config);
-const catalog = require('../content/game-maps.json').map(m => validateMap(m, content));
+const { resolveSnapshot, defaultProject } = require('./sync_content_cache.cjs');
+let content = installContent(require('../content/game-config.json'));
+let catalog = require('../content/game-maps.json').map(m => validateMap(m, content));
 function rng(seed) { let state = seed >>> 0 || 1; return () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return (state >>> 0) / 4294967296; }; }
 function seedFor(index, suite = 'validation') { return ((index+1)*2654435761 + (suite === 'training' ? 104729 : 13007)) >>> 0 || 1; }
 function matched(snapshot, move) {
@@ -155,8 +155,8 @@ function evaluateChecks(reports, count, enabled) {
 }
 
 function parseOptions(args) {
-  const values={}, flags=new Set(['--check']);
-  const options=new Set(['--seeds','--suite','--bots','--powers','--maps','--retry-seeds','--output','--html-output']);
+  const values={}, flags=new Set(['--check','--offline']);
+  const options=new Set(['--seeds','--suite','--bots','--powers','--maps','--retry-seeds','--output','--html-output','--project']);
   for(let i=0;i<args.length;i++) {
     const key=args[i];
     if(flags.has(key)){values[key]=true;continue;}
@@ -174,20 +174,25 @@ function parseOptions(args) {
   };
   const suite=values['--suite']??'validation';
   if(!['training','validation'].includes(suite))throw new Error('--suite must be training or validation');
-  return {count,retryCount,suite,check:values['--check']===true,
+  return {count,retryCount,suite,check:values['--check']===true,offline:values['--offline']===true,project:values['--project']??defaultProject(),
     ids:list('--maps','1,2,3,4,5,6,7,8,9,10',s=>/^\d+$/.test(s)&&Number(s)>=1&&Number(s)<=catalog.length).map(Number),
     bots:list('--bots','basic,normal,strategic',s=>['basic','normal','strategic'].includes(s)),
     powers:list('--powers','expected',s=>['minimum','expected','strong'].includes(s)),
     output:values['--output']??null,htmlOutput:values['--html-output']??null};
 }
 
-function main(args) {
+async function main(args) {
   const options=parseOptions(args),startedAt=new Date(),reports=[],retries=[];
   const runId=startedAt.toISOString().replace(/[:.]/g,'-')+`-${process.pid}`;
   const directory=path.resolve(__dirname,'../.balance-reports');
   const jsonPath=path.resolve(options.output??path.join(directory,`maps-${runId}.json`));
   const htmlPath=path.resolve(options.htmlOutput??path.join(path.dirname(jsonPath),`maps-${runId}.html`));
   if(jsonPath===htmlPath)throw new Error('--output and --html-output must point to different files');
+  const snapshot=await resolveSnapshot({project:options.project,offline:options.offline});
+  content=installContent(snapshot.config);
+  catalog=snapshot.maps.map(m=>validateMap(m,content));
+  for(const id of options.ids)if(id<1||id>content.levelCount)throw new Error(`Map ${id} is not in published content v${content.version} (${content.levelCount} maps)`);
+  console.log(`Content v${content.version} · ${snapshot.source==='server'?'synced from server':'local cache'} · ${snapshot.project}${snapshot.cacheFile?` · ${path.relative(process.cwd(),snapshot.cacheFile)}`:''}`);
   let error=null;
   try {
     for(const id of options.ids)for(const bot of options.bots)for(const power of options.powers) {
@@ -201,7 +206,9 @@ function main(args) {
     }
   } catch(cause) { error=cause.message; }
   const finishedAt=new Date(),checks=evaluateChecks(reports,options.count,options.check);
-  const report={contentVersion:content.version,configHash:createHash('sha256').update(JSON.stringify(config)).digest('hex'),
+  const report={contentVersion:content.version,configHash:snapshot.hashes.config,
+    source:{kind:snapshot.source,project:snapshot.project,version:snapshot.version,syncedAt:snapshot.syncedAt,checkedAt:snapshot.checkedAt,
+      cacheFile:snapshot.cacheFile?path.relative(process.cwd(),snapshot.cacheFile):null,hashes:snapshot.hashes},
     suite:options.suite,seeds:options.count,targets,reports,retries,checks,
     run:{id:runId,startedAt:startedAt.toISOString(),finishedAt:finishedAt.toISOString(),durationSeconds:(finishedAt-startedAt)/1000,
       command:['node','tools/simulate_maps.cjs',...args].map(s=>/^[\w./,=-]+$/.test(s)?s:JSON.stringify(s)).join(' '),
@@ -220,6 +227,6 @@ function main(args) {
 }
 
 if(require.main===module) {
-  try { main(process.argv.slice(2)); } catch(error) { console.error(error.message);process.exitCode=1; }
+  main(process.argv.slice(2)).catch(error=>{ console.error(error.message);process.exitCode=1; });
 }
 module.exports={play,summarize,seedFor,targets,catalog,simulateRetries,evaluateChecks,parseOptions,main};

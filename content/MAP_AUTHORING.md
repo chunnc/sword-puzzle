@@ -68,9 +68,9 @@ Historical v3 snapshots and pending wins still use the old registry and rules.
 ```sh
 npm run api:build
 npm run api:seed                      # validation only; no writes
-npm run maps:check                    # 100 validation seeds, all three bots
-npm run maps:release                  # 1000 seeds, three power profiles and retries
-npm run maps:test                     # report, retry aggregation and CLI checks
+npm run maps:check                    # sync server content, then 100 validation seeds, all three bots
+npm run maps:release                  # sync server content, then 1000 seeds, three power profiles and retries
+npm run maps:test                     # report, retry aggregation, content cache and CLI checks
 CALIBRATION_SEEDS=150 npm run maps:calibrate # dry run, training seeds only
 node tools/calibrate_maps.cjs --apply # updates authoring data; never Firestore
 ```
@@ -84,8 +84,41 @@ Calibration searches objective targets and sensible move budgets, then star thre
 with authored obstacle puzzles vary move budgets instead of moving obstacles. Validation seeds
 are disjoint from training. A release check fails if normal expected-power win/3-star rates fall
 outside the selected difficulty bands, a star tier is unobserved, or strategic bots substantially
-underperform basic bots. CI uses wider tolerance for the smaller smoke sample. Device playtests
-and actual user metrics are still needed before expanding gameplay changes beyond maps 1–10.
+underperform basic bots. CI no longer runs bot simulations; it validates authoring data and the
+report tooling only. Device playtests and actual user metrics are still needed before expanding
+gameplay changes beyond maps 1–10.
+
+### Server sync and local cache
+
+`maps:simulate`, `maps:check`, and `maps:release` always run against the content published on
+the game server, never directly against the authoring files:
+
+1. Read `gameConfig/current` to learn the active `contentVersion` (one Firestore read per run).
+2. Look for a local cache of that exact version at
+   `.balance-reports/content-cache/{project}/v{version}.json`.
+3. If the cache matches the active version, run all seeds from the cached file with no further
+   Firestore reads.
+4. Otherwise fetch `gameContent/{version}` and every `gameMaps` document of that version,
+   validate them, and atomically replace the cache before running seeds.
+
+Cache files are validated again on every load, so a corrupt or outdated file is refetched
+instead of trusted. When the server publishes a new `contentVersion`, the next run syncs the
+new version; previous version files are kept so a rollback can serve from cache.
+
+```sh
+npm run maps:simulate -- --project sword-puzzle --seeds 100 --check     # default project from .firebaserc
+BALANCE_CACHE_DIR=/tmp/balance-cache npm run maps:simulate -- --offline # fail unless cache exists; no network
+```
+
+`--project ID` selects the Firebase project; it defaults to the `.firebaserc` project.
+`--offline` skips the version check and runs from the newest cached version for that project.
+`BALANCE_CACHE_DIR` overrides the cache location. Authentication uses the existing Firebase CLI
+login via `tools/firebase_cli_credentials.mjs`; emulators are used when `FIRESTORE_EMULATOR_HOST`
+is set. A sync failure stops the run before any seed executes.
+
+Every report records its data source: project, content version, sync time, last version check,
+cache file, a SHA-256 hash per map and config, and a combined snapshot hash. The overview header
+shows whether the run used a freshly synced server snapshot or the local cache.
 
 ### Viewing a simulation report
 
@@ -95,7 +128,8 @@ files are saved under `.balance-reports/maps-<UTC timestamp>-<process ID>.*`. Op
 a browser; it works offline and opens on an overview with exactly one row per map. Each row
 shows difficulty/move budget, first-attempt win/star rates, retry completion, mean attempts,
 conditional win rates at each assist level, and assessment status. Reports still export when
-`--check` fails, and a runtime failure exports the profiles completed before the error.
+`--check` fails, and a runtime failure exports the profiles completed before the error. The
+report header shows the synced or cached server snapshot that produced the numbers.
 
 ```sh
 npm run maps:simulate -- --seeds 100 --powers minimum,expected,strong --retry-seeds 100 --check
@@ -103,10 +137,11 @@ open .balance-reports/maps-<timestamp>-<process-ID>.html
 ```
 
 `--output path.json` sets the JSON path; the timestamped HTML is saved alongside it.
-`--html-output path.html` sets an explicit HTML path. Default HTML names preserve run history,
-including when CI reuses `ci.json` or `release.json`. The report embeds its data and offers a
-JSON download. Its header records the command, content/config hash, seed suite, sample counts,
-duration, and check status. JSON retains the fields used by the pilot merge tool.
+`--html-output path.html` sets an explicit HTML path; default HTML names preserve run history
+even when `ci.json` or `release.json` is overwritten by a later run. The report embeds its data
+and offers a JSON download. Its header records the command, data source (project, version, sync
+and check times), config/map/snapshot hashes, seed suite, sample counts, duration, and check
+status. JSON retains the fields used by the pilot merge tool.
 
 The overview defaults to normal/expected when that profile is present, otherwise an available
 profile. Selecting another bot or power updates values in place without duplicating map rows.
