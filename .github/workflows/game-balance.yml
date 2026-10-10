@@ -1,10 +1,10 @@
 name: Game maps and balance
 on:
   pull_request:
-    paths: ['content/**', 'client/src/game/**', 'client/src/state/**', 'server/**', 'tools/*maps*', 'tools/game-runtime.cjs', '.github/workflows/game-balance.yml']
+    paths: ['content/**', 'client/src/game/**', 'client/src/state/**', 'server/**', 'tools/*maps*', 'tools/game-runtime.cjs', 'tools/*balance_report.cjs', 'package.json', '.github/workflows/game-balance.yml']
   push:
     branches: [main]
-    paths: ['content/**', 'client/src/game/**', 'server/**', 'tools/*maps*', 'tools/game-runtime.cjs']
+    paths: ['content/**', 'client/src/game/**', 'server/**', 'tools/*maps*', 'tools/game-runtime.cjs', 'tools/*balance_report.cjs', 'package.json', '.github/workflows/game-balance.yml']
   workflow_dispatch:
     inputs:
       release:
@@ -30,6 +30,7 @@ jobs:
       - run: npm --prefix client test -- --silent
       - run: npm --prefix server test
       - run: node tools/seed_game_content.mjs
+      - run: npm run maps:test
       - if: ${{ !inputs.release }}
         run: npm run maps:check
       - if: ${{ inputs.release }}
@@ -38,4 +39,6 @@ jobs:
         if: always()
         with:
           name: map-balance-report
-          path: .balance-reports/*.json
+          path: |
+            .balance-reports/*.json
+            .balance-reports/*.html

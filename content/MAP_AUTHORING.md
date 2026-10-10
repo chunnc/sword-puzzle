@@ -70,6 +70,7 @@ npm run api:build
 npm run api:seed                      # validation only; no writes
 npm run maps:check                    # 100 validation seeds, all three bots
 npm run maps:release                  # 1000 seeds, three power profiles and retries
+npm run maps:test                     # report, retry aggregation and CLI checks
 CALIBRATION_SEEDS=150 npm run maps:calibrate # dry run, training seeds only
 node tools/calibrate_maps.cjs --apply # updates authoring data; never Firestore
 ```
@@ -85,6 +86,40 @@ are disjoint from training. A release check fails if normal expected-power win/3
 outside the selected difficulty bands, a star tier is unobserved, or strategic bots substantially
 underperform basic bots. CI uses wider tolerance for the smaller smoke sample. Device playtests
 and actual user metrics are still needed before expanding gameplay changes beyond maps 1–10.
+
+### Viewing a simulation report
+
+Every `maps:simulate`, `maps:check`, and `maps:release` invocation automatically writes a
+self-contained HTML report and a JSON data file. The terminal prints both paths. By default,
+files are saved under `.balance-reports/maps-<UTC timestamp>-<process ID>.*`. Open the HTML in
+a browser; it works offline and includes map/bot/power filters, difficulty target bands,
+star rates, move histograms, and cascade/reshuffle metrics. Reports still export when
+`--check` fails, and a runtime failure exports the profiles completed before the error.
+
+```sh
+npm run maps:simulate -- --seeds 100 --powers minimum,expected,strong --retry-seeds 100 --check
+open .balance-reports/maps-<timestamp>-<process-ID>.html
+```
+
+`--output path.json` sets the JSON path; the timestamped HTML is saved alongside it.
+`--html-output path.html` sets an explicit HTML path. Default HTML names preserve run history,
+including when CI reuses `ci.json` or `release.json`. The report embeds its data and offers a
+JSON download. Its header records the command, content/config hash, seed suite, sample counts,
+duration, and check status. JSON retains the fields used by the pilot merge tool.
+
+Retry simulation is enabled with `--retry-seeds N`. Each map runs N independent sequences
+using normal/expected, a new deterministic seed for each attempt, and the map's retry assist
+policy. A sequence stops on its first win or after 30 attempts. The report includes:
+
+- Completed and unfinished sequences; mean attempts among completed sequences (null if none).
+- Per-assist-level attempts, wins, losses, win rates, and star rates; unused levels show no rate.
+- Per-attempt reach counts, wins, conditional win rate, and cumulative completion rate.
+- A flag identifying maps without effective spawn pressure, where retry assist has no effect.
+
+Assist-level rates are conditional on attempts that reach that level; 0% includes first attempts.
+They do not measure causal uplift versus an unassisted run on the same seeds. Assistance reduces
+spawn pressure, not the move budget or star thresholds. Cascade metrics count both skill and
+swap resolutions; failed-objective progress is reported separately from all-attempt progress.
 
 ## Publishing
 

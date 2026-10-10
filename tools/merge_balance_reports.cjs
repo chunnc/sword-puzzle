@@ -38,7 +38,7 @@ for(let id=1;id<=10;id++){
  lines.push(`| ${id} | ${n.difficulty} | ${maps[id-1].moves} | ${percent(n.winRate)} | ${percent(n.starRates[1])} | ${percent(n.starRates[2])} | ${percent(n.starRates[3])} | ${percent(b.winRate)} | ${percent(s.winRate)} | ${percent(strong.winRate)} |`);
 }
 lines.push('','Retry means are calculated among completed sequences; unfinished sequences are censored after 30 attempts.','', '| Map | Average attempts to win | Unfinished / 100 |','|---|---:|---:|');
-for(const r of result.retries)lines.push(`| ${r.id} | ${r.averageAttempts.toFixed(2)} | ${r.unfinished} |`);
+for(const r of result.retries)lines.push(`| ${r.id} | ${r.averageAttempts===null?'—':r.averageAttempts.toFixed(2)} | ${r.unfinished} |`);
 lines.push('','This is simulation evidence, not a human playtest. Basic bots intentionally select weaker moves; normal bots optimize visible objectives. Stronger profiles use higher realm EXP with the same default sword/skill, so collection/obstacle rates can remain identical.','',
  'Full move histograms, cascade/reshuffle metrics, seed suite, per-map hashes and target bands are in [pilot-v4.json](pilot-v4.json). Re-run `npm run maps:release` after changing gameplay or authoring data. Maps 11–40 retain legacy generation rules and are covered by compatibility tests.','');
 fs.writeFileSync(path.join(directory,'pilot-v4.md'),lines.join('\n'));
