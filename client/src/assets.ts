@@ -108,14 +108,17 @@ export const ART = {
   tileLightning: require('../app-assets/ui/tile_lightning.webp') as number,
   tileLightning4: require('../app-assets/ui/tile_lightning_4.webp') as number,
   tileLightning5: require('../app-assets/ui/tile_lightning_5.webp') as number,
+  tileLightning5Idle: require('../app-assets/ui/tile_lightning_5_idle.png') as number,
   tileRock: require('../app-assets/ui/tile_rock.webp') as number,
   tileSpiritOrb: require('../app-assets/ui/tile_spirit_orb.webp') as number,
   tileSpiritOrb4: require('../app-assets/ui/tile_spirit_orb_4.webp') as number,
   tileSpiritOrb5: require('../app-assets/ui/tile_spirit_orb_5.webp') as number,
+  tileSpiritOrb5Idle: require('../app-assets/ui/tile_spirit_orb_5_idle.png') as number,
   tileStone: require('../app-assets/ui/tile_stone.webp') as ImageSourcePropType,
   tileSword: require('../app-assets/ui/tile_sword.webp') as number,
   tileSword4: require('../app-assets/ui/tile_sword_4.webp') as number,
   tileSword5: require('../app-assets/ui/tile_sword_5.webp') as number,
+  tileSword5Idle: require('../app-assets/ui/tile_sword_5_idle.png') as number,
 } as const;
 
 export type Artwork = keyof typeof ART;

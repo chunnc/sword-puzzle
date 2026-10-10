@@ -1,0 +1,275 @@
+{
+  "version": 1,
+  "id": "tile-sword-5-idle-20261010",
+  "image": "tile_sword_5_idle.png",
+  "frameCount": 24,
+  "frameSize": {
+    "width": 256,
+    "height": 256
+  },
+  "sheetSize": {
+    "width": 1560,
+    "height": 1040
+  },
+  "columns": 6,
+  "rows": 4,
+  "padding": 2,
+  "durationMs": 1000,
+  "fps": 24.0,
+  "pivot": {
+    "x": 128.0,
+    "y": 128.0,
+    "units": "frame-pixels"
+  },
+  "loop": true,
+  "blendMode": "srcOver",
+  "alphaMode": "straight",
+  "sourceCrop": [
+    28,
+    28,
+    452,
+    452
+  ],
+  "frames": [
+    {
+      "index": 0,
+      "rect": {
+        "x": 2,
+        "y": 2,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 1,
+      "rect": {
+        "x": 262,
+        "y": 2,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 41
+    },
+    {
+      "index": 2,
+      "rect": {
+        "x": 522,
+        "y": 2,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 3,
+      "rect": {
+        "x": 782,
+        "y": 2,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 4,
+      "rect": {
+        "x": 1042,
+        "y": 2,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 41
+    },
+    {
+      "index": 5,
+      "rect": {
+        "x": 1302,
+        "y": 2,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 6,
+      "rect": {
+        "x": 2,
+        "y": 262,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 7,
+      "rect": {
+        "x": 262,
+        "y": 262,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 41
+    },
+    {
+      "index": 8,
+      "rect": {
+        "x": 522,
+        "y": 262,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 9,
+      "rect": {
+        "x": 782,
+        "y": 262,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 10,
+      "rect": {
+        "x": 1042,
+        "y": 262,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 41
+    },
+    {
+      "index": 11,
+      "rect": {
+        "x": 1302,
+        "y": 262,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 12,
+      "rect": {
+        "x": 2,
+        "y": 522,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 13,
+      "rect": {
+        "x": 262,
+        "y": 522,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 41
+    },
+    {
+      "index": 14,
+      "rect": {
+        "x": 522,
+        "y": 522,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 15,
+      "rect": {
+        "x": 782,
+        "y": 522,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 16,
+      "rect": {
+        "x": 1042,
+        "y": 522,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 41
+    },
+    {
+      "index": 17,
+      "rect": {
+        "x": 1302,
+        "y": 522,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 18,
+      "rect": {
+        "x": 2,
+        "y": 782,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 19,
+      "rect": {
+        "x": 262,
+        "y": 782,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 41
+    },
+    {
+      "index": 20,
+      "rect": {
+        "x": 522,
+        "y": 782,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 21,
+      "rect": {
+        "x": 782,
+        "y": 782,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    },
+    {
+      "index": 22,
+      "rect": {
+        "x": 1042,
+        "y": 782,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 41
+    },
+    {
+      "index": 23,
+      "rect": {
+        "x": 1302,
+        "y": 782,
+        "width": 256,
+        "height": 256
+      },
+      "durationMs": 42
+    }
+  ]
+}

@@ -6,8 +6,9 @@ import { ART, tileArtwork } from '../../assets';
 import { colors } from '../../theme';
 import { ChargedTileParticle } from '../ChargedTileParticle';
 import { chargedParticleStyle } from '../chargedTileParticles';
-import { Fire5Tile } from '../Fire5Tile';
+import { Fire5Tile, IdleAtlasTile } from '../Fire5Tile';
 import { FIRE5_IDLE, fire5FrameAt } from '../fire5Animation';
+import { TIER5_IDLE_ANIMATIONS } from '../idleTileAnimation';
 import { BoardEffects } from '../BoardEffects';
 import { SpiritQiFlightOverlay } from '../SpiritQiFlightOverlay';
 import { buildSpiritFlightCues } from '../spiritParticles';
@@ -32,9 +33,12 @@ jest.mock('../../../app-assets/ui/tile_fire_5_idle.png', () => 114);
 jest.mock('../../../app-assets/ui/tile_lightning.webp', () => 107);
 jest.mock('../../../app-assets/ui/tile_lightning_4.webp', () => 108);
 jest.mock('../../../app-assets/ui/tile_lightning_5.webp', () => 109);
+jest.mock('../../../app-assets/ui/tile_lightning_5_idle.png', () => 115);
 jest.mock('../../../app-assets/ui/tile_spirit_orb.webp', () => 110);
 jest.mock('../../../app-assets/ui/tile_spirit_orb_4.webp', () => 111);
 jest.mock('../../../app-assets/ui/tile_spirit_orb_5.webp', () => 112);
+jest.mock('../../../app-assets/ui/tile_spirit_orb_5_idle.png', () => 116);
+jest.mock('../../../app-assets/ui/tile_sword_5_idle.png', () => 117);
 jest.mock('../../../app-assets/ui/tile_rock.webp', () => 113);
 
 jest.mock('expo-router', () => ({ useIsFocused: () => mockFocused }));
@@ -211,14 +215,22 @@ describe('Skia Board integration', () => {
           && bounds.top === (6 - Math.floor(index / 7)) * side / 7 + 1;
       })!;
       const bounds = StyleSheet.flatten(cell.props.style);
-      if (index === 5) {
-        const animated = renderer.root.findAllByType(Fire5Tile).find(node =>
-          node.props.bounds.x > bounds.left && node.props.bounds.x < bounds.left + bounds.width
-          && node.props.bounds.y > bounds.top && node.props.bounds.y < bounds.top + bounds.height)!;
-        expect(animated.props.idle.image.asset).toBe(114);
+      if (index < 12 && index % 3 === 2) {
+        const idleAssets = [ART.tileSword5Idle, ART.tileFire5Idle, ART.tileLightning5Idle, ART.tileSpiritOrb5Idle];
+        const idleAnimations = [TIER5_IDLE_ANIMATIONS[TileKind.Sword]!, FIRE5_IDLE,
+          TIER5_IDLE_ANIMATIONS[TileKind.Lightning]!, TIER5_IDLE_ANIMATIONS[TileKind.SpiritOrb]!];
+        const animated = index === 5
+          ? renderer.root.findAllByType(Fire5Tile).find(node =>
+            node.props.bounds.x > bounds.left && node.props.bounds.x < bounds.left + bounds.width
+            && node.props.bounds.y > bounds.top && node.props.bounds.y < bounds.top + bounds.height)!
+          : renderer.root.findAllByType(IdleAtlasTile).find(node =>
+            node.props.bounds.x > bounds.left && node.props.bounds.x < bounds.left + bounds.width
+            && node.props.bounds.y > bounds.top && node.props.bounds.y < bounds.top + bounds.height)!;
+        const image = index === 5 ? animated.props.idle.image : animated.props.image;
+        expect(image.asset).toBe(idleAssets[Math.floor(index / 3)]);
         expect(animated.props.bounds.x).toBeCloseTo(bounds.left + bounds.width * .03);
         expect(animated.props.bounds.width).toBeCloseTo(bounds.width * .94);
-        expect(animated.findByType('Atlas' as never).props.sprites.value[0]).toMatchObject(FIRE5_IDLE.frames[0].rect);
+        expect(animated.findByType('Atlas' as never).props.sprites.value[0]).toMatchObject(idleAnimations[Math.floor(index / 3)].frames[0].rect);
       } else {
         const sprite = sprites.find(node => node.props.x > bounds.left && node.props.x < bounds.left + bounds.width
           && node.props.y > bounds.top && node.props.y < bounds.top + bounds.height)!;
@@ -323,7 +335,7 @@ describe('Skia Board integration', () => {
   });
 
   it('pauses Fire 5 on background, focus loss, Reduce Motion, disappearance and unmount', () => {
-    const next = { ...snapshot, tiles: [...snapshot.tiles] };
+    const next: typeof snapshot = { ...snapshot, tiles: snapshot.tiles.map(value => ({ ...value!, chargeTier: 0 as const })) };
     next.tiles[0] = { kind: TileKind.Fire, chargeTier: 5, locked: false };
     mount({ snapshot: next }); reactFrames();
     const clock = mockFrameClocks[1];
@@ -354,11 +366,31 @@ describe('Skia Board integration', () => {
     const skia = jest.requireMock('@shopify/react-native-skia');
     skia.useImage.mockImplementation((asset: number) => asset === ART.tileFire5Idle ? null : ({ asset, width: () => 960, height: () => 576 }));
     try {
-      const next = { ...snapshot, tiles: [...snapshot.tiles] };
+      const next: typeof snapshot = { ...snapshot, tiles: snapshot.tiles.map(value => ({ ...value!, chargeTier: 0 as const })) };
       next.tiles[0] = { kind: TileKind.Fire, chargeTier: 5, locked: false };
       mount({ snapshot: next }); reactFrames();
       expect(renderer.root.findAllByType(Fire5Tile)).toHaveLength(0);
       expect(tile(0).findByType('SkiaImage' as never).props.image.asset).toBe(106);
+      expect(mockFrameClocks[1].active).toBe(false);
+    } finally {
+      skia.useImage.mockImplementation((asset: number) => ({ asset, width: () => 960, height: () => 576 }));
+    }
+  });
+
+  it.each([
+    [TileKind.Lightning, ART.tileLightning5Idle, ART.tileLightning5],
+    [TileKind.Sword, ART.tileSword5Idle, ART.tileSword5],
+    [TileKind.SpiritOrb, ART.tileSpiritOrb5Idle, ART.tileSpiritOrb5],
+  ])('uses static artwork for %s until its idle atlas loads', (kind, idleAsset, staticAsset) => {
+    const skia = jest.requireMock('@shopify/react-native-skia');
+    skia.useImage.mockImplementation((asset: number) => asset === idleAsset ? null : ({ asset, width: () => 960, height: () => 576 }));
+    try {
+      const next: typeof snapshot = { ...snapshot, tiles: snapshot.tiles.map(value => ({ ...value!, chargeTier: 0 as const })) };
+      next.tiles[0] = { kind, chargeTier: 5, locked: false };
+      mount({ snapshot: next }); reactFrames();
+      expect(renderer.root.findAllByType(IdleAtlasTile)).toHaveLength(0);
+      expect(renderer.root.findAllByType(Fire5Tile)).toHaveLength(0);
+      expect(tile(0).findByType('SkiaImage' as never).props.image.asset).toBe(staticAsset);
       expect(mockFrameClocks[1].active).toBe(false);
     } finally {
       skia.useImage.mockImplementation((asset: number) => ({ asset, width: () => 960, height: () => 576 }));
@@ -468,9 +500,14 @@ describe('Skia Board integration', () => {
     next.tiles[1] = { kind: TileKind.Lightning, chargeTier: 5, locked: false };
     mount({ snapshot: next, visualEffect: { id: 90, kind: 'clear', cleared: [0, 1], changed: [],
       effects: [{ kind: 'slash', cells: [0, 1], source: 0, swordChargeTier: 4, damage: 1, qi: 0 }] } });
-    const fragments = renderer.root.findByType(BoardEffects).findAll(node => node.type === 'SkiaImage' as never);
-    expect(fragments.map(node => node.props.image.asset)).toEqual([102, 102, 109, 109]);
+    const boardEffects = renderer.root.findByType(BoardEffects);
+    const fragments = boardEffects.findAll(node => node.type === 'SkiaImage' as never);
+    expect(fragments.map(node => node.props.image.asset)).toEqual([102, 102]);
     for (const sprite of fragments) expect(sprite.props.width).toBeCloseTo(48 * .94);
+    const lightningAtlases = boardEffects.findAllByType(IdleAtlasTile);
+    expect(lightningAtlases).toHaveLength(2);
+    expect(lightningAtlases.every(node => node.props.image.asset === ART.tileLightning5Idle)).toBe(true);
+    expect(lightningAtlases.every(node => node.props.bounds.width === 48 * .94)).toBe(true);
     const particles = renderer.root.findByType(BoardEffects).findAllByType(ChargedTileParticle);
     expect(particles).toHaveLength(4);
     for (const particle of particles) expect(particle.props.bounds).toMatchObject({ width: 48, height: 48 });
@@ -489,7 +526,8 @@ describe('Skia Board integration', () => {
   it('renders one canvas and keeps 49 correctly positioned accessible buttons', () => {
     mount();
     expect(renderer.root.findAll(node => node.type === 'Canvas' as never)).toHaveLength(1);
-    expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(49);
+    expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(48);
+    expect(renderer.root.findAllByType(IdleAtlasTile)).toHaveLength(1);
     const cells = buttons();
     expect(cells).toHaveLength(49);
     expect(cells[0].props.accessibilityLabel).toContain('cường hóa 5, phong ấn, hàng 7, cột 1');
@@ -572,7 +610,7 @@ describe('Skia Board integration', () => {
     const fragments = effects.findAll(node => node.type === 'Group' as never && node.props.layer);
     expect(fragments).toHaveLength(tier === 5 ? 8 : 6);
     expect(effects.findAll(node => node.type === 'Paragraph' as never)).toHaveLength(0);
-    expect(effects.findAll(node => node.type === 'SkiaImage' as never && node.props.image.asset === ART.tileSpiritOrb5)).toHaveLength(2);
+    expect(effects.findAllByType(IdleAtlasTile)).toHaveLength(2);
     expect(effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === colors.boardCell)).toHaveLength(0);
     expect(effects.findAllByType(ChargedTileParticle)).toHaveLength(2);
     expect(effects.findAll(node => node.type === 'Path' as never)).toHaveLength(tier === 5 ? 6 : 3);
@@ -697,9 +735,10 @@ describe('Skia Board integration', () => {
       effects: [{ kind: 'fire', cells: [0, 1], source: 0, damage: 2, qi: 0 }],
     } });
     const atlases = renderer.root.findAll(node => node.type === 'Atlas' as never);
-    expect(atlases).toHaveLength(1);
-    expect(atlases[0].props.sprites.value).toHaveLength(1);
-    expect(atlases[0].props.transforms.value).toHaveLength(1);
+    expect(atlases).toHaveLength(2);
+    const fireAtlas = atlases.find(node => node.props.image.asset === ART.fxFireBurst)!;
+    expect(fireAtlas.props.sprites.value).toHaveLength(1);
+    expect(fireAtlas.props.transforms.value).toHaveLength(1);
   });
 
   it('draws one clipped lightning sprite per target without old segments or particles', () => {
@@ -746,11 +785,12 @@ describe('Skia Board integration', () => {
       visualEffect: { ...effect, effects: effect.effects.map(item => ({ ...item })) },
     })));
     expect(withTiming).not.toHaveBeenCalled();
-    expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(1);
+    expect(renderer.root.findAll(node => node.type === 'Atlas' as never)).toHaveLength(2);
   });
 
   it.each(['fire', 'lightning', 'slash', 'cross'] as const)('skips the %s sprite emitter when reduced motion is enabled', kind => {
-    mount({ reduceMotion: true, visualEffect: {
+    const noTier5 = { ...snapshot, tiles: snapshot.tiles.map(value => ({ ...value!, chargeTier: 0 as const })) };
+    mount({ snapshot: noTier5, reduceMotion: true, visualEffect: {
       id: 73, kind: 'clear', cleared: [0], changed: [],
       effects: [{ kind, cells: [0], source: 1, damage: 1, qi: 0,
         ...(kind === 'slash' || kind === 'cross' ? { swordChargeTier: kind === 'slash' ? 4 as const : 5 as const } : {}) }],
@@ -836,13 +876,13 @@ describe('Skia Board integration', () => {
     const layers = () => renderer.root.findAll(node => node.type === 'Group' as never && node.props.layer);
     expect(layers()).toHaveLength(1);
     expect(layers()[0].props.layer.props.opacity).toEqual({ value: 0 });
-    expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(49);
+    expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(48);
     const second: BoardVisualEffect = { id: 5, kind: 'clear', cleared: [42, 43], changed: [], effects: [{ kind: 'fire', cells: [43], source: 42, damage: 1, qi: 1 }] };
     act(() => { renderer.update(React.createElement(Board, { ...props, visualEffect: second })); });
     expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(48);
     expect(layers()).toHaveLength(1);
     act(() => { renderer.update(React.createElement(Board, { ...props, visualEffect: { id: 6, kind: 'fall', falls: [{ index: 42, fromY: 7 }] } })); });
-    expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(49);
+    expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(48);
     expect(layers()).toHaveLength(0);
     expect(withTiming).toHaveBeenLastCalledWith(1, { duration: 450 }, expect.any(Function));
   });
@@ -886,8 +926,12 @@ describe('Skia Board integration', () => {
         }
       }
       expect(source.findAllByType(ChargedTileParticle)).toHaveLength(1);
-      if (kind === TileKind.Fire && tier === 5) expect(source.findByType(Fire5Tile).props.idle.image.asset).toBe(114);
-      else expect(source.findByType('SkiaImage' as never).props.image.asset).toBe(tileArtwork(kind, tier));
+      if (tier === 5 && kind === TileKind.Fire) expect(source.findByType(Fire5Tile).props.idle.image.asset).toBe(114);
+      else if (tier === 5) {
+        const idleAsset = kind === TileKind.Lightning ? ART.tileLightning5Idle
+          : kind === TileKind.Sword ? ART.tileSword5Idle : ART.tileSpiritOrb5Idle;
+        expect(source.findByType(IdleAtlasTile).props.image.asset).toBe(idleAsset);
+      } else expect(source.findByType('SkiaImage' as never).props.image.asset).toBe(tileArtwork(kind, tier));
     }
     act(() => renderer.update(React.createElement(Board, { ...props, snapshot: { ...next, swordQi: 20 },
       visualEffect: { ...active }, motionSession })));

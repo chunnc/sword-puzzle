@@ -23,7 +23,8 @@ import { createBoardMotionSession, createBoardMotionFrame, updateBoardMotionFram
 import { BoardEffects } from './BoardEffects';
 import { ChargedTileParticle, useChargedParticleClock } from './ChargedTileParticle';
 import { chargedParticleStyle } from './chargedTileParticles';
-import { Fire5Tile, useFire5Clock, type Fire5IdleState } from './Fire5Tile';
+import { Fire5Tile, IdleAtlasTile, useIdleTileClock } from './Fire5Tile';
+import { TIER5_IDLE_ANIMATIONS, type IdleSpriteAnimationMetadata } from './idleTileAnimation';
 
 export type { CellPosition } from '../game/types';
 export {
@@ -60,6 +61,8 @@ function useBoardLabels(cellWidth: number, targetCount: number) {
 }
 
 type BoardLabels = ReturnType<typeof useBoardLabels>;
+type IdleTileAnimation = { image: SkImage | null; animation: IdleSpriteAnimationMetadata; elapsedMs: SharedValue<number> };
+type IdleTileAnimations = Partial<Record<number, IdleTileAnimation>>;
 
 // Retain this exported helper for callers outside the board; the board itself
 // draws every sprite into its one shared Canvas.
@@ -123,7 +126,13 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const imageForTile = (tile: Tile) => images[semanticTileKind(tile.kind, content) as TileKind][tile.chargeTier];
   const visualTile = (tile: Tile): Tile => ({ ...tile, kind: semanticTileKind(tile.kind, content) as TileKind });
   const fxFireBurst = useImage(ART.fxFireBurst), fxLightning = useImage(ART.fxLightningAtlas);
-  const fireIdleImage = useImage(ART.tileFire5Idle);
+  const idleSheetImages: Record<TileKind, SkImage | null> = {
+    [TileKind.Fire]: useImage(ART.tileFire5Idle),
+    [TileKind.Lightning]: useImage(ART.tileLightning5Idle),
+    [TileKind.Sword]: useImage(ART.tileSword5Idle),
+    [TileKind.SpiritOrb]: useImage(ART.tileSpiritOrb5Idle),
+    [TileKind.Rock]: null,
+  };
   const previousEffect = useRef<{ runId: string; effect: BoardVisualEffect | null; before: BoardVisualEffect | null } | null>(null);
   const id = visualEffect?.id ?? 0;
   const runId = snapshot.runId;
@@ -153,12 +162,20 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const particlesVisible = useDerivedValue(() => side > geometry.width * 2 && particleCells.some(index =>
     visuals[index].splitAt !== null ? motion.progress.value < 1 : (frame.cells[index]?.opacity.value ?? 1) > 0));
   const particlePhase = useChargedParticleClock(particlesVisible, reduceMotion);
-  const fireCells = particleCells.filter(index => snapshot.tiles[index]!.kind === tileId('fire', content)
-    && snapshot.tiles[index]!.chargeTier === 5);
-  const fireVisible = useDerivedValue(() => !!fireIdleImage && side > geometry.width * 2 && fireCells.some(index =>
+  const idleCells = particleCells.filter(index => {
+    const tile = snapshot.tiles[index]!;
+    const kind = semanticTileKind(tile.kind, content) as TileKind;
+    return tile.chargeTier === 5 && !!idleSheetImages[kind] && !!TIER5_IDLE_ANIMATIONS[kind];
+  });
+  const idleVisible = useDerivedValue(() => side > geometry.width * 2 && idleCells.some(index =>
     visuals[index].splitAt !== null ? motion.progress.value < 1 : (frame.cells[index]?.opacity.value ?? 1) > 0));
-  const fireElapsedMs = useFire5Clock(fireVisible, reduceMotion);
-  const fireIdle: Fire5IdleState = { image: fireIdleImage, elapsedMs: fireElapsedMs };
+  const idleElapsedMs = useIdleTileClock(idleVisible, reduceMotion);
+  const idleAnimations: IdleTileAnimations = {
+    [TileKind.Fire]: { image: idleSheetImages[TileKind.Fire], animation: TIER5_IDLE_ANIMATIONS[TileKind.Fire]!, elapsedMs: idleElapsedMs },
+    [TileKind.Lightning]: { image: idleSheetImages[TileKind.Lightning], animation: TIER5_IDLE_ANIMATIONS[TileKind.Lightning]!, elapsedMs: idleElapsedMs },
+    [TileKind.Sword]: { image: idleSheetImages[TileKind.Sword], animation: TIER5_IDLE_ANIMATIONS[TileKind.Sword]!, elapsedMs: idleElapsedMs },
+    [TileKind.SpiritOrb]: { image: idleSheetImages[TileKind.SpiritOrb], animation: TIER5_IDLE_ANIMATIONS[TileKind.SpiritOrb]!, elapsedMs: idleElapsedMs },
+  };
   useAnimatedReaction(
     () => ({ progress: motion.progress.value, pulse: motion.pulse.value }),
     value => { updateBoardMotionFrame(frame, value.progress, value.pulse); },
@@ -224,11 +241,11 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
         {side > geometry.width * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
           <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
             {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color={colors.boardCell} />)}
-            {drawOrder.map(index => <TileVisual key={index} tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} visual={visuals[index]} motion={frame.cells[index]} labels={labels} particlePhase={particlePhase} fireIdle={fireIdle} reduceMotion={reduceMotion} />)}
+            {drawOrder.map(index => <TileVisual key={index} tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} visual={visuals[index]} motion={frame.cells[index]} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />)}
             {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
               progress={motion.progress} elapsedMs={hasSourceAnimation ? effectElapsedMs : motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning}
               renderTile={index => <TileArtwork tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)}
-                image={imageForTile(snapshot.tiles[index]!)} labels={labels} particlePhase={particlePhase} fireIdle={fireIdle} reduceMotion={reduceMotion} />} /> : null}
+                image={imageForTile(snapshot.tiles[index]!)} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />} /> : null}
             {indices.map(index => {
               const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
               const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
@@ -260,7 +277,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   </View>;
 }
 
-function TileVisual({ tile, bounds, image, visual, motion, labels, particlePhase, fireIdle, reduceMotion }: {
+function TileVisual({ tile, bounds, image, visual, motion, labels, particlePhase, idleAnimations, reduceMotion }: {
   tile: Tile;
   bounds: ReturnType<typeof cellBounds>;
   image: SkImage | null;
@@ -268,28 +285,31 @@ function TileVisual({ tile, bounds, image, visual, motion, labels, particlePhase
   motion: CellMotionValues | null;
   labels: BoardLabels;
   particlePhase: SharedValue<number>;
-  fireIdle: Fire5IdleState;
+  idleAnimations: IdleTileAnimations;
   reduceMotion: boolean;
 }) {
   if (visual.hidden) return null;
   // Paragraph paints its own colors, so fade the complete tile as a layer.
   // Source animations also fade/hide the artwork and its orbiting particles together.
   return <Group origin={{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }} transform={motion?.transform} layer={visual.clearing || visual.sourceAnimation ? <Paint opacity={motion!.opacity} /> : undefined}>
-    <TileArtwork tile={tile} bounds={bounds} image={image} labels={labels} particlePhase={particlePhase} fireIdle={fireIdle} reduceMotion={reduceMotion} />
+    <TileArtwork tile={tile} bounds={bounds} image={image} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />
   </Group>;
 }
 
-function TileArtwork({ tile, bounds, image, labels, particlePhase, fireIdle, reduceMotion }: {
+function TileArtwork({ tile, bounds, image, labels, particlePhase, idleAnimations, reduceMotion }: {
   tile: Tile; bounds: ReturnType<typeof cellBounds>; image: SkImage | null; labels: BoardLabels;
-  particlePhase: SharedValue<number>; fireIdle: Fire5IdleState; reduceMotion: boolean;
+  particlePhase: SharedValue<number>; idleAnimations: IdleTileAnimations; reduceMotion: boolean;
 }) {
   const inset = tile.kind === TileKind.Rock ? .06 : .03;
   const particle = tile.chargeTier > 0 ? chargedParticleStyle(tile.kind) : null;
   const artworkBounds = { x: bounds.x + bounds.width * inset, y: bounds.y + bounds.height * inset,
     width: bounds.width * (1 - 2 * inset), height: bounds.height * (1 - 2 * inset) };
+  const idle = tile.chargeTier === 5 ? idleAnimations[tile.kind] : undefined;
   return <Group>
-    {tile.kind === TileKind.Fire && tile.chargeTier === 5 && fireIdle.image
-      ? <Fire5Tile idle={fireIdle} bounds={artworkBounds} reduced={reduceMotion} />
+    {idle?.image
+      ? tile.kind === TileKind.Fire
+        ? <Fire5Tile idle={{ image: idle.image, elapsedMs: idle.elapsedMs }} bounds={artworkBounds} reduced={reduceMotion} />
+        : <IdleAtlasTile image={idle.image} animation={idle.animation} elapsedMs={idle.elapsedMs} bounds={artworkBounds} reduced={reduceMotion} />
       : <Image image={image} {...artworkBounds} fit="contain" />}
     {particle ? <ChargedTileParticle bounds={bounds} color={particle.color} elementPhase={particle.phase}
       phase={particlePhase} reduced={reduceMotion} /> : null}
