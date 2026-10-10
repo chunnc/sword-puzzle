@@ -9,7 +9,7 @@ import CharacterScreen from '../../../app/character';
 import AccountScreen from '../../../app/account';
 import InventoryScreen from '../../../app/inventory';
 import MapScreen from '../../../app/map';
-import { REALMS, SKILLS, SWORDS } from '../../game/domain';
+import { installContent, mapSummary, REALMS, SKILLS, SWORDS, type MapSummary } from '../../game/domain';
 import { ART, SKILL_ART, SWORD_ART } from '../../assets';
 import { emptySave } from '../../game/save';
 import type { SaveData, WinSummary } from '../../game/types';
@@ -44,6 +44,7 @@ const mockRouter = { replace: jest.fn(), push: jest.fn(), back: jest.fn(), canGo
 let mockParams: Record<string, string> = {};
 const mockState = {
   save: emptySave(), notice: '', session: null, online: false,
+  chapterId: '', chapterMaps: [] as MapSummary[], chapterLoading: false, chapterError: '', selectChapter: jest.fn(),
   startLevel: jest.fn(), register: jest.fn(), login: jest.fn(), setNotice: jest.fn(),
 };
 
@@ -68,22 +69,37 @@ describe('scene navigation', () => {
     jest.clearAllMocks();
     mockParams = {};
     mockState.save = emptySave();
+    installContent(require('../../../../content/game-content.json'));
+    mockState.chapterId='';mockState.chapterMaps=[];mockState.selectChapter.mockResolvedValue(undefined);
     mockRouter.canGoBack.mockReturnValue(true);
     mockState.startLevel.mockResolvedValue(true);
   });
-  afterEach(() => { act(() => { renderer?.unmount(); }); });
+  afterEach(() => { act(() => { renderer?.unmount(); }); installContent(require('../../../../content/game-content.json')); });
 
-  it.each([true, false])('requests a fresh run from the map and navigates only after success=%s', async (success) => {
+  it.each([true, false])('requests a resumable run from the map and navigates only after success=%s', async (success) => {
     let finish!: (result: boolean) => void;
     mockState.startLevel.mockImplementation(() => new Promise<boolean>(resolve => { finish = resolve; }));
     mount(React.createElement(MapScreen));
     act(() => { button('Màn 1, màn hiện tại').props.onPress(); });
-    expect(mockState.startLevel).toHaveBeenCalledWith(1, true);
+    expect(mockState.startLevel).toHaveBeenCalledWith(1);
     expect(mockRouter.push).not.toHaveBeenCalled();
 
     await act(async () => { finish(success); });
     if (success) expect(mockRouter.push).toHaveBeenCalledWith('/game/1');
     else expect(mockRouter.push).not.toHaveBeenCalled();
+  });
+
+  it('renders only the active chapter and waits for an explicit chapter selection', () => {
+    installContent(require('../../../../content/game-config.json'));
+    mockState.chapterId='chapter-1';
+    mockState.chapterMaps=require('../../../../content/game-maps.json').map(mapSummary);
+    mockState.save.profile.levels=Array.from({length:10},(_,i)=>({levelId:i+1,stars:1}));
+    mount(React.createElement(MapScreen));
+    const labels=renderer.root.findAll(node=>typeof node.props.onPress==='function').map(node=>node.props.accessibilityLabel);
+    expect(labels.some(label=>String(label).startsWith('Màn 1,'))).toBe(true);
+    expect(labels.some(label=>String(label).startsWith('Màn 11,'))).toBe(false);
+    act(()=>{button('Huyền Kiếm Bí Cảnh').props.onPress();});
+    expect(mockState.selectChapter).toHaveBeenCalledWith('chapter-2');
   });
 
   it('does not replace the selected scene and opens the shop from the bottom bar', () => {

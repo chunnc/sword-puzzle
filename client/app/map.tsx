@@ -7,6 +7,7 @@ import { BottomNav, TopHud } from '../src/components/Chrome';
 import { ArtPanel, ScreenFrame } from '../src/components/Art';
 import { Notice } from '../src/components/Notice';
 import { LEVEL_COUNT, getLevel } from '../src/game/levels';
+import { CONTENT } from '../src/game/domain';
 import { navigateTab, type BottomNavId } from '../src/components/Navigation';
 import { getHighestUnlocked, getLevelStars, getLevelCompleted, useGameStore } from '../src/state/gameStore';
 import { colors, type } from '../src/theme';
@@ -15,23 +16,40 @@ import { colors, type } from '../src/theme';
 
 export default function MapScreen() {
   const router = useRouter();
-  const levelIds = Array.from({ length: LEVEL_COUNT }, (_, index) => index + 1);
+  const chapterId = useGameStore(state => state.chapterId);
+  const maps = useGameStore(state => state.chapterMaps);
+  const loading = useGameStore(state => state.chapterLoading);
+  const chapterError = useGameStore(state => state.chapterError);
+  const selectChapter = useGameStore(state => state.selectChapter);
+  const chapters = CONTENT.chapters ?? [];
+  const chapter = chapters.find(ch => ch.id === chapterId);
+  const levelIds = CONTENT.layoutCodes ? maps.filter(map => map.contentVersion === CONTENT.version && map.chapterId === chapterId).map(map => map.id) : Array.from({ length: LEVEL_COUNT }, (_, index) => index + 1);
   const save = useGameStore((state) => state.save);
   const notice = useGameStore((state) => state.notice);
   const setNotice = useGameStore((state) => state.setNotice);
   const startLevel = useGameStore((state) => state.startLevel);
   const unlocked = getHighestUnlocked(save);
-  const totalStars = save.profile.levels.reduce((sum, level) => sum + level.stars, 0);
+  const totalStars = save.profile.levels.filter(level => !chapter || level.levelId >= chapter.firstLevelId && level.levelId <= chapter.lastLevelId).reduce((sum, level) => sum + level.stars, 0);
 
   const openLevel = async (levelId: number) => {
-    if (await startLevel(levelId, true)) router.push(`/game/${levelId}` as never);
+    if (await startLevel(levelId)) router.push(`/game/${levelId}` as never);
   };
   const nav = (id: BottomNavId) => navigateTab(router, id);
 
   return (
     <ScreenFrame background="bgMap">
       <TopHud onAccount={() => router.push('/account')} />
+      {chapters.length ? <View style={styles.chapterTabs}>
+        {chapters.map(ch => <Pressable key={ch.id} accessibilityRole="button" accessibilityLabel={ch.name}
+          accessibilityState={{ selected: ch.id === chapterId, disabled: loading || ch.firstLevelId > unlocked }}
+          disabled={loading || ch.firstLevelId > unlocked} onPress={() => void selectChapter(ch.id).catch(() => undefined)}
+          style={[styles.chapterTab, ch.id === chapterId && styles.chapterTabActive, ch.firstLevelId > unlocked && { opacity: .4 }]}>
+          <Text style={styles.chapterTabText}>Chương {ch.order}</Text>
+        </Pressable>)}
+      </View> : null}
       <View style={styles.mapArea}>
+        {loading ? <Text accessibilityLiveRegion="polite" style={styles.status}>Đang tải chương…</Text> : null}
+        {chapterError ? <Pressable accessibilityRole="button" onPress={() => void selectChapter(chapterId).catch(() => undefined)}><Text style={styles.status}>{chapterError} · Thử lại</Text></Pressable> : null}
         <FlatList
           data={levelIds}
           inverted
@@ -44,6 +62,8 @@ export default function MapScreen() {
             const locked = levelId > unlocked;
             const completed = getLevelCompleted(save, levelId);
             const current = !locked && !completed;
+            const difficulty = maps?.find(map => map.id === levelId)?.difficulty;
+            const difficultyName = difficulty ? { easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[difficulty] : '';
             const art: Artwork = completed ? 'stageDone' : locked ? 'stageLocked' : 'stageCurrent';
 
             return (
@@ -65,7 +85,7 @@ export default function MapScreen() {
                 </View>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Màn ${levelId}${completed ? `, đã hoàn thành, ${stars} sao` : current ? ', màn hiện tại' : ', đã khóa'}`}
+                  accessibilityLabel={`Màn ${levelId}${difficultyName ? `, ${difficultyName}` : ''}${completed ? `, đã hoàn thành, ${stars} sao` : current ? ', màn hiện tại' : ', đã khóa'}`}
                   accessibilityState={{ disabled: locked }}
                   disabled={locked}
                   onPress={() => void openLevel(levelId)}
@@ -79,14 +99,15 @@ export default function MapScreen() {
                   <Text style={[styles.stageNumber, locked && styles.lockedStageNumber]}>{levelId}</Text>
                   {completed && stars === 0 ? <Text style={{ color: '#fff2c9', position: 'absolute', bottom: 7, fontSize: 11 }}>✓ VƯỢT ẢI</Text> : null}
                 </Pressable>
+                {difficultyName ? <Text style={styles.difficulty}>{difficultyName}</Text> : null}
               </View>
             );
           }}
         />
         <ArtPanel art="chapterCard" style={styles.chapter}>
-          <Text style={styles.chapterEyebrow}>TIÊN LỘ · {LEVEL_COUNT} MÀN</Text>
-          <Text style={styles.chapterName}>{getLevel(unlocked).chapter.toUpperCase()}</Text>
-          <Text style={styles.chapterStars}>{totalStars}/{LEVEL_COUNT * 3} ★</Text>
+          <Text style={styles.chapterEyebrow}>TIÊN LỘ · {chapter ? chapter.lastLevelId-chapter.firstLevelId+1 : LEVEL_COUNT} MÀN</Text>
+          <Text style={styles.chapterName}>{(chapter?.name ?? (CONTENT.layoutCodes ? 'Tiên Lộ' : getLevel(unlocked).chapter)).toUpperCase()}</Text>
+          <Text style={styles.chapterStars}>{totalStars}/{(chapter ? chapter.lastLevelId-chapter.firstLevelId+1 : LEVEL_COUNT) * 3} ★</Text>
         </ArtPanel>
       </View>
       <BottomNav active="map" onSelect={nav} />
@@ -96,9 +117,15 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
+  chapterTabs: { flexDirection: 'row', justifyContent: 'center', padding: 8, gap: 6 },
+  chapterTab: { padding: 8, borderWidth: 1, borderColor: '#98702e', borderRadius: 8, backgroundColor: '#163c38' },
+  chapterTabActive: { backgroundColor: '#72512d' },
+  chapterTabText: { color: '#fff2c9', fontSize: 12, fontWeight: '700' },
+  status: { color: '#fff2c9', padding: 16, textAlign: 'center' },
+  difficulty: { color: '#fff2c9', fontSize: 11, fontWeight: '700' },
   mapArea: { flex: 1, minHeight: 0, position: 'relative' },
   levelListContent: { flexGrow: 1, alignItems: 'center', paddingTop: 12, paddingBottom: 174 },
-  levelItem: { width: 100, height: 112, alignItems: 'center', marginVertical: 6 },
+  levelItem: { width: 100, height: 128, alignItems: 'center', marginVertical: 6 },
   starArc: { width: 84, height: 28, position: 'relative' },
   starIcon: { position: 'absolute', width: 24, height: 24 },
   starLeft: { left: 0, bottom: 0, transform: [{ rotate: '-16deg' }] },

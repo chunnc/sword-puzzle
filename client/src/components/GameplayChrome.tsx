@@ -2,22 +2,22 @@ import React from 'react';
 import { Image } from 'expo-image';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ART, SKILL_ART, SWORD_ART, tileArtwork } from '../assets';
-import { getContentVersion, type SkillId } from '../game/domain';
+import { semanticTileKind, getContentVersion, type SkillId, type Difficulty } from '../game/domain';
 import { GoalKind, TileKind, type BoardSnapshot, type LevelDefinition } from '../game/types';
 import { colors } from '../theme';
 import { ArtPanel } from './Art';
 import { GameplayProgressBar } from './GameplayProgressBar';
 import { OutlinedText } from './OutlinedText';
 
-export function GameplayHeader({ levelId, busy, compact, onBack, onHelp }: {
-  levelId: number; busy: boolean; compact: boolean; onBack: () => void; onHelp: () => void;
+export function GameplayHeader({ levelId, difficulty, busy, compact, onBack, onHelp }: {
+  levelId: number; difficulty?: Difficulty; busy: boolean; compact: boolean; onBack: () => void; onHelp: () => void;
 }) {
   return (
     <View style={[styles.header, compact && styles.compactHeader]}>
       <Pressable accessibilityRole="button" accessibilityLabel="Rời màn chơi" accessibilityState={{ disabled: busy }} disabled={busy} onPress={onBack} style={({ pressed }) => [styles.back, pressed && styles.pressed, busy && styles.dim]}>
         <Image source={ART.gameplayBack} contentFit="contain" accessible={false} style={styles.backArt} />
       </Pressable>
-      <View style={styles.stageTitle}><OutlinedText accessibilityRole="header" numberOfLines={1} maxFontSizeMultiplier={1.2} style={[styles.stageText, compact && styles.compactStageText]}>Màn {levelId}</OutlinedText></View>
+      <View style={styles.stageTitle}><OutlinedText accessibilityRole="header" numberOfLines={1} maxFontSizeMultiplier={1.2} style={[styles.stageText, compact && styles.compactStageText]}>Màn {levelId}{difficulty ? ` · ${{ easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[difficulty]}` : ''}</OutlinedText></View>
       <Pressable accessibilityRole="button" accessibilityLabel="Luật các ô" accessibilityState={{ disabled: busy }} disabled={busy} onPress={onHelp} style={({ pressed }) => [styles.help, pressed && styles.pressed]}>
         <OutlinedText maxFontSizeMultiplier={1.2} style={styles.helpText}>Luật ô</OutlinedText>
       </Pressable>
@@ -37,7 +37,7 @@ export function GameplayInfo({ level, board, compact, reduceMotion, duration }: 
             {level.objectives.map(objective => {
               const battle = objective.type === 'Battle' || objective.type === 'Boss';
               const name = battle ? objective.enemy.name : objective.type === 'Collect' ? `Thu ${content.tiles.find(t => t.id === objective.tileKind)?.name ?? 'linh vật'}` : objective.type === 'BreakRocks' ? 'Phá đá' : 'Phá phong ấn';
-              const icon = battle ? ART[objective.enemy.artKey as keyof typeof ART] ?? ART.beast : objective.type === 'Collect' ? tileArtwork(objective.tileKind) : objective.type === 'BreakRocks' ? tileArtwork(TileKind.Rock) : ART.overlaySeal;
+              const icon = battle ? ART[objective.enemy.artKey as keyof typeof ART] ?? ART.beast : objective.type === 'Collect' ? tileArtwork(semanticTileKind(objective.tileKind, content)) : objective.type === 'BreakRocks' ? tileArtwork(TileKind.Rock) : ART.overlaySeal;
               const progress = board.objectiveProgress[objective.id] ?? 0;
               return <View key={objective.id} testID={`objective-${objective.id}`} style={[styles.goalRow, { minHeight: compact ? 48 : 58 }]}>
                 {battle ? <View testID="game-enemy-avatar" style={[styles.avatar, compact && styles.compactAvatar]}><Image source={icon} contentFit="cover" style={[styles.avatarArt, compact && styles.compactAvatarArt]} accessible={false} /></View> : <Image source={icon} contentFit="contain" style={styles.goalIcon} accessible={false} />}

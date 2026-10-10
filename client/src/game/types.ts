@@ -1,5 +1,6 @@
-import type { Loadout, PlayerProfile, PlayerOperation, SkillId, Stars, LevelResult, LevelDefinition, ObjectiveProgress } from './domain';
+import type { Loadout, PlayerProfile, PlayerOperation, SkillId, Stars, LevelResult, LevelDefinition, ObjectiveProgress, RunReport } from './domain';
 export type { Loadout, SkillId, Stars, PlayerProfile, LevelDefinition, ObjectiveProgress } from './domain';
+// Historical v3 IDs and renderer semantics. Gameplay IDs resolve through the versioned registry.
 export enum TileKind {
     Sword = 0,
     Fire = 1,
@@ -15,7 +16,7 @@ export enum GoalKind {
     Boss = 'Boss'
 }
 export interface Tile {
-    kind: TileKind;
+    kind: number;
     chargeTier: 0 | 4 | 5;
     locked: boolean;
 }
@@ -24,6 +25,8 @@ export interface CellPosition {
     y: number;
 }
 export interface BoardSnapshot {
+    directorPressure?: number;
+    reshuffles?: number;
     contentVersion: number;
     level: LevelDefinition;
     runId: string;
@@ -57,6 +60,7 @@ export interface BoardAnimationEffect {
     objectiveProgressAfter?: ObjectiveProgress;
 }
 export interface BoardAnimationFall {
+    spawned?: boolean;
     index: number;
     fromY: number;
 }
@@ -109,6 +113,8 @@ export interface WinSummary {
     realmAfter: number;
 }
 export interface SaveData {
+    pendingStart?: { runId: string; levelId: number; contentVersion: number; previousRunId: string | null };
+    pendingFinish?: { runId: string; levelId: number; contentVersion: number; report: RunReport };
     schemaVersion: 3;
     ownerId: string | null;
     profile: PlayerProfile;

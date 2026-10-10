@@ -20,3 +20,5 @@ client/UserSettings/
 .DS_Store
 /.env
 __pycache__/
+
+/.balance-reports/

@@ -1,10 +1,11 @@
-const {test}=require('node:test');
+const {test,before}=require('node:test');
 const {randomBytes,randomUUID}=require('node:crypto');
 const assert=require('node:assert/strict');
 const base=process.env.API_BASE_URL;
 if(base && !/^http:\/\/(127\.0\.0\.1|localhost):\d+\//.test(base))throw new Error('Integration tests only run against local emulators.');
 if(base){ process.env.FIRESTORE_EMULATOR_HOST ||= '127.0.0.1:8080'; process.env.FIREBASE_AUTH_EMULATOR_HOST ||= '127.0.0.1:9099'; }
 const seed=require('../../../content/game-content.json');
+before(async()=>{if(base){const {initializeApp,getApps}=require('firebase-admin/app');if(!getApps().length)initializeApp({projectId:'demo-kiem-khai'});const {getFirestore}=require('firebase-admin/firestore');const db=getFirestore();await db.recursiveDelete(db.collection('authThrottle'));await db.collection('gameContent').doc('3').set(seed);await db.collection('gameConfig').doc('current').set({contentVersion:3},{merge:true});}});
 const win=(id,levelId,stars)=>({id,kind:'win',levelId,stars,objectiveProgress:Object.fromEntries(seed.levels[levelId-1].objectives.map(o=>[o.id,o.target]))});
 async function request(path,method='GET',body,token){
  const response=await fetch(base+path,{method,headers:{'content-type':'application/json',...(token?{authorization:`Bearer ${token}`}:{})},body:body===undefined?undefined:JSON.stringify(body)});
@@ -58,16 +59,16 @@ test('switching a guest requires confirmation and never merges its wallet',{skip
  assert.equal((await request('/v2/profile','GET',undefined,g.idToken)).status,401);
 });
 test('multiple objectives are required and pinned content survives a catalog switch',{skip:!base},async()=>{
- const {getFirestore}=require('firebase-admin/firestore'),db=getFirestore();const v4=structuredClone(seed);v4.version=4;v4.levels[0].objectives=[{id:'collect',type:'Collect',tileKind:0,target:18},{id:'boss',type:'Boss',target:360,enemy:{id:'test-boss',name:'Boss',artKey:'beast'}}];
- await db.collection('gameContent').doc('4').set(v4);
+ const {getFirestore}=require('firebase-admin/firestore'),db=getFirestore();const v4=structuredClone(seed);v4.version=9004;v4.levels[0].objectives=[{id:'collect',type:'Collect',tileKind:0,target:18},{id:'boss',type:'Boss',target:360,enemy:{id:'test-boss',name:'Boss',artKey:'beast'}}];
+ await db.collection('gameContent').doc('9004').set(v4);
  const g=await guest(),token=g.idToken;const purchase={id:'version_buy001',kind:'purchase',category:'skill',itemId:'ngu-kiem'};
  await sync(token,[win('version_win001',1,3),win('version_win002',2,3),win('version_win003',3,3),purchase]);
- await db.collection('gameConfig').doc('current').set({contentVersion:4},{merge:true});
+ await db.collection('gameConfig').doc('current').set({contentVersion:9004},{merge:true});
  try {
-  const c=await request('/v2/content/3');assert.equal(c.data.version,3);assert.equal((await request('/v2/bootstrap')).data.contentVersion,4);
-  const missing=await sync(token,[{id:'multi_missing01',kind:'win',levelId:1,stars:3,objectiveProgress:{collect:18}}],4);assert.equal(missing.data.rejected[0].reason,'INCOMPLETE_OBJECTIVES');
-  const alive=await sync(token,[{id:'multi_liveboss1',kind:'win',levelId:1,stars:3,objectiveProgress:{collect:18,boss:359}}],4);assert.equal(alive.data.rejected[0].reason,'INCOMPLETE_OBJECTIVES');
-  const complete=await sync(token,[{id:'multi_complete1',kind:'win',levelId:1,stars:3,objectiveProgress:{collect:18,boss:360}}],4);assert.deepEqual(complete.data.acknowledged,['multi_complete1']);
+  const c=await request('/v2/content/3');assert.equal(c.data.version,3);assert.equal((await request('/v2/bootstrap')).data.contentVersion,9004);
+  const missing=await sync(token,[{id:'multi_missing01',kind:'win',levelId:1,stars:3,objectiveProgress:{collect:18}}],9004);assert.equal(missing.data.rejected[0].reason,'INCOMPLETE_OBJECTIVES');
+  const alive=await sync(token,[{id:'multi_liveboss1',kind:'win',levelId:1,stars:3,objectiveProgress:{collect:18,boss:359}}],9004);assert.equal(alive.data.rejected[0].reason,'INCOMPLETE_OBJECTIVES');
+  const complete=await sync(token,[{id:'multi_complete1',kind:'win',levelId:1,stars:3,objectiveProgress:{collect:18,boss:360}}],9004);assert.deepEqual(complete.data.acknowledged,['multi_complete1']);
   assert.deepEqual((await sync(token,[win('pinned_old_run1',1,0)],3)).data.acknowledged,['pinned_old_run1']);
   assert.deepEqual((await sync(token,[purchase],3)).data.acknowledged,[purchase.id]);
   const stale=await sync(token,[{id:'stale_purchase1',kind:'purchase',category:'sword',itemId:'trong-nhac'}],3);assert.equal(stale.data.rejected[0].reason,'CONTENT_MISMATCH');

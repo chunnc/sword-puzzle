@@ -10,7 +10,7 @@ import {
   Easing, useAnimatedReaction, useDerivedValue, withSequence, withTiming, type SharedValue,
 } from 'react-native-reanimated';
 import { ART, tileArtwork } from '../assets';
-import { getContentVersion } from '../game/domain';
+import { semanticTileKind, tileId, getContentVersion } from '../game/domain';
 import { TileKind, type BoardSnapshot, type CellPosition, type Tile } from '../game/types';
 import { colors } from '../theme';
 import {
@@ -120,7 +120,8 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const indices = useMemo(() => displayIndices(geometry), [geometry]);
   const [side, setSide] = useState(0);
   const images = useBoardImages();
-  const imageForTile = (tile: Tile) => images[tile.kind][tile.chargeTier];
+  const imageForTile = (tile: Tile) => images[semanticTileKind(tile.kind, content) as TileKind][tile.chargeTier];
+  const visualTile = (tile: Tile): Tile => ({ ...tile, kind: semanticTileKind(tile.kind, content) as TileKind });
   const fxFireBurst = useImage(ART.fxFireBurst), fxLightning = useImage(ART.fxLightningAtlas);
   const fireIdleImage = useImage(ART.tileFire5Idle);
   const previousEffect = useRef<{ runId: string; effect: BoardVisualEffect | null; before: BoardVisualEffect | null } | null>(null);
@@ -148,11 +149,11 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const frameRef = useRef(frame);
   useLayoutEffect(() => { frameRef.current = frame; }, [frame]);
   const particleCells = indices.filter(index => snapshot.tiles[index]!.chargeTier > 0
-    && snapshot.tiles[index]!.kind !== TileKind.Rock && !visuals[index].hidden);
+    && snapshot.tiles[index]!.kind !== tileId('rock', content) && !visuals[index].hidden);
   const particlesVisible = useDerivedValue(() => side > geometry.width * 2 && particleCells.some(index =>
     visuals[index].splitAt !== null ? motion.progress.value < 1 : (frame.cells[index]?.opacity.value ?? 1) > 0));
   const particlePhase = useChargedParticleClock(particlesVisible, reduceMotion);
-  const fireCells = particleCells.filter(index => snapshot.tiles[index]!.kind === TileKind.Fire
+  const fireCells = particleCells.filter(index => snapshot.tiles[index]!.kind === tileId('fire', content)
     && snapshot.tiles[index]!.chargeTier === 5);
   const fireVisible = useDerivedValue(() => !!fireIdleImage && side > geometry.width * 2 && fireCells.some(index =>
     visuals[index].splitAt !== null ? motion.progress.value < 1 : (frame.cells[index]?.opacity.value ?? 1) > 0));
@@ -223,10 +224,10 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
         {side > geometry.width * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
           <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
             {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color={colors.boardCell} />)}
-            {drawOrder.map(index => <TileVisual key={index} tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} visual={visuals[index]} motion={frame.cells[index]} labels={labels} particlePhase={particlePhase} fireIdle={fireIdle} reduceMotion={reduceMotion} />)}
+            {drawOrder.map(index => <TileVisual key={index} tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} visual={visuals[index]} motion={frame.cells[index]} labels={labels} particlePhase={particlePhase} fireIdle={fireIdle} reduceMotion={reduceMotion} />)}
             {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
               progress={motion.progress} elapsedMs={hasSourceAnimation ? effectElapsedMs : motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning}
-              renderTile={index => <TileArtwork tile={snapshot.tiles[index]!} bounds={cellBounds(index, side, geometry)}
+              renderTile={index => <TileArtwork tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)}
                 image={imageForTile(snapshot.tiles[index]!)} labels={labels} particlePhase={particlePhase} fireIdle={fireIdle} reduceMotion={reduceMotion} />} /> : null}
             {indices.map(index => {
               const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
@@ -250,7 +251,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
         {side > geometry.width * 2 ? indices.map(index => {
           const tile = snapshot.tiles[index]!, x = index % geometry.width, y = Math.floor(index / geometry.width);
           const bounds = cellBounds(index, side, geometry);
-          const name = tile.kind === TileKind.Rock ? 'Đá chắn' : content.tiles[tile.kind].name;
+          const name = content.tiles.find(def => def.id === tile.kind)?.name ?? 'Đá chắn';
           return <Pressable key={index} accessibilityRole="button" accessibilityLabel={`${name}${tile.chargeTier ? `, cường hóa ${tile.chargeTier}` : ''}${tile.locked ? ', phong ấn' : ''}, hàng ${y + 1}, cột ${x + 1}`} accessibilityState={{ disabled: locked }} disabled={locked} onPress={() => onCellPress(x, y)} style={[styles.touchCell, { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }]} />;
         }) : null}
       </View>

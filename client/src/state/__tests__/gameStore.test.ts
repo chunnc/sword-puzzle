@@ -25,7 +25,8 @@ jest.mock('../../services/api', () => ({
   loginAccount: jest.fn(),
   registerAccount: jest.fn(),
   createAdIntent: jest.fn(),
-  checkAdIntent: jest.fn()
+  checkAdIntent: jest.fn(),
+  fetchChapterMaps: jest.fn(), startRun: jest.fn(), finishRun: jest.fn()
 }));
 const guest: SessionData = {
   uid: 'player',
@@ -528,4 +529,86 @@ it('deduplicates simultaneous manual retries of a rejected identity', async () =
   expect(api.checkHealth).toHaveBeenCalledTimes(1);
   expect(api.deviceSession).toHaveBeenCalledTimes(1);
   expect(store.getState()).toMatchObject({ authRequired: false, initialized: true, online: true });
+});
+
+function modernReady() {
+  const content = domain.installContent(require('../../../../content/game-config.json'));
+  ready();
+  const maps = require('../../../../content/game-maps.json');
+  (api.fetchChapterMaps as jest.Mock).mockImplementation(async (_session, chapterId, version) => ({
+    session: guest, value: { chapterId, contentVersion: version, maps: maps.filter((m: any) => m.chapterId === chapterId).map(domain.mapSummary) }
+  }));
+  (api.startRun as jest.Mock).mockImplementation(async (_session, input) => ({ session: guest, value: { run: {
+    runId: input.runId, map: maps[input.levelId-1], seed: 123456, assistReduction: .1, attempt: 1,
+    loadout: domain.emptyProfile().loadout, totalExp: 0
+  } } }));
+  return content;
+}
+it('loads only the requested chapter and uses the same cached catalog after an account switch', async () => {
+  modernReady();
+  await store.getState().selectChapter('chapter-1');
+  expect(store.getState().chapterMaps.map(m => m.id)).toEqual([1,2,3,4,5,6,7,8,9,10]);
+  await store.getState().selectChapter('chapter-2');
+  expect(api.fetchChapterMaps).toHaveBeenCalledTimes(1); // locked chapter
+  await store.getState().selectChapter('chapter-1');
+  expect(api.fetchChapterMaps).toHaveBeenCalledTimes(1);
+  const profile = domain.emptyProfile(); profile.levels = Array.from({length:10},(_,i)=>({levelId:i+1,stars:1}));
+  store.setState({save:{...store.getState().save,profile}});
+  await store.getState().selectChapter('chapter-2');
+  expect(store.getState().chapterMaps[0].id).toBe(11);
+  expect(api.fetchChapterMaps).toHaveBeenCalledTimes(2);
+});
+it('persists a start request before sending and reuses its ID after an uncertain timeout', async () => {
+  modernReady();
+  const actual = (api.startRun as jest.Mock).getMockImplementation()!;
+  (api.startRun as jest.Mock).mockImplementationOnce(async () => { throw new api.GameApiError('TIMEOUT'); });
+  expect(await store.getState().startLevel(1)).toBe(false);
+  const pending = store.getState().save.pendingStart!;
+  expect(pending.runId).toBeTruthy();
+  expect((await saveTools.loadSave(guest.uid)).pendingStart?.runId).toBe(pending.runId);
+  store.setState({online:true,connectionFailed:false});
+  (api.startRun as jest.Mock).mockImplementation(actual);
+  expect(await store.getState().startLevel(1)).toBe(true);
+  expect((api.startRun as jest.Mock).mock.calls[1][1].runId).toBe(pending.runId);
+  expect(store.getState().save.active?.runId).toBe(pending.runId);
+  expect(store.getState().save.pendingStart).toBeUndefined();
+  await store.getState().startLevel(1);
+  expect(api.startRun).toHaveBeenCalledTimes(2); // resume
+});
+it('defers a loss report until leaving/retrying, and retries a failed finish with the same run', async () => {
+  modernReady(); await store.getState().startLevel(1);
+  const active = store.getState().save.active!;
+  active.moves = 0; active.swordQi = 0;
+  store.setState({save:{...store.getState().save,active}});
+  expect(api.finishRun).not.toHaveBeenCalled();
+  (api.finishRun as jest.Mock).mockRejectedValueOnce(new api.GameApiError('TIMEOUT'));
+  expect(await store.getState().finishLevel('lost')).toBe(false);
+  expect(store.getState().save.pendingFinish?.runId).toBe(active.runId);
+  (api.finishRun as jest.Mock).mockResolvedValue({session:guest,value:{profile:domain.emptyProfile(),stars:0}});
+  store.setState({online:true,connectionFailed:false});
+  await store.getState().syncProgress();
+  expect(api.finishRun).toHaveBeenCalledTimes(2);
+  expect((api.finishRun as jest.Mock).mock.calls.map(call=>call[1])).toEqual([active.runId,active.runId]);
+  expect(store.getState().save.active).toBeNull();
+  expect(store.getState().save.pendingFinish).toBeUndefined();
+});
+it('startup requests one chapter without fetching map definitions or starting a new run', async () => {
+  const content = modernReady();
+  store.setState({initialized:false,bootstrapLoaded:false,online:false,save:{...saveTools.emptySave(),ownerId:guest.uid}});
+  (api.fetchBootstrap as jest.Mock).mockResolvedValue({contentVersion:content.version,content:domain.contentWire(content),levelCount:40,rewardedAdsEnabled:false,minClientVersion:'1.4.0'});
+  await store.getState().initialize();
+  expect(store.getState().chapterId).toBe('chapter-1');
+  expect(api.fetchChapterMaps).toHaveBeenCalledTimes(1);
+  expect(api.startRun).not.toHaveBeenCalled();
+  expect(api.fetchContent).not.toHaveBeenCalled();
+});
+it('clears a superseded run receipt rather than blocking recovery forever', async () => {
+  modernReady(); await store.getState().startLevel(1);
+  const active = store.getState().save.active!; active.moves=0; active.swordQi=0;
+  store.setState({save:{...store.getState().save,active}});
+  (api.finishRun as jest.Mock).mockRejectedValue(new api.GameApiError('RUN_CONFLICT',409));
+  expect(await store.getState().finishLevel('lost')).toBe(false);
+  expect(store.getState().save.pendingFinish).toBeUndefined();
+  expect(store.getState().save.active).toBeNull();
+  expect(store.getState().notice).toContain('bắt đầu ván mới');
 });

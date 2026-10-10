@@ -11,6 +11,7 @@ import { highestUnlocked } from './domain/game';
 import { currentContent, loadContent } from './content';
 import { profileFromDocument, profileFields, parseOperations, processOperations, type OperationReceipt } from './domain/profile';
 import { API_TIMEOUT_SECONDS, isTimeoutError } from './timeout';
+import { createRunsRouter } from './runs';
 
 if (getApps().length === 0) initializeApp();
 const db = getFirestore();
@@ -24,12 +25,14 @@ app.set('trust proxy', 1);
 app.use(express.json({ limit: '32kb' }));
 const { router: identityRouter, requireAuth, assertInstallation } = createIdentityApi(db, auth, () => apiKey.value());
 app.use(identityRouter);
+app.use(createRunsRouter(db, requireAuth, assertInstallation));
 
 app.get('/health', (_req, res) => { res.set('Cache-Control', 'no-store').json({ ok: true }); });
 app.get('/v1/bootstrap', (_req, _res, next) => next(new ApiError(426, 'CLIENT_UPDATE_REQUIRED')));
 app.get('/v2/bootstrap', async (_req, res, next) => {
   try {
     const { config, content } = await currentContent();
+    if (content.layoutCodes) throw new ApiError(426, 'CLIENT_UPDATE_REQUIRED');
     res.set('Cache-Control', 'no-store').json({ contentVersion: content.version, content, levelCount: content.levelCount, rewardedAdsEnabled: config.rewardedAdsEnabled === true, minClientVersion: config.minClientVersion && config.minClientVersion.localeCompare('1.3.0', undefined, { numeric: true }) > 0 ? config.minClientVersion : '1.3.0' });
   } catch (error) { next(error); }
 });
@@ -58,6 +61,7 @@ app.post('/v2/profile/sync', requireAuth, async (req: AuthenticatedRequest, res,
     const [{ content: profileContent }, content] = await Promise.all([currentContent(), loadContent(req.body?.contentVersion)]);
     let operations;
     try { operations = parseOperations(req.body?.operations, content); } catch { throw new ApiError(400, 'INVALID_OPERATIONS'); }
+    if (content.layoutCodes && operations.some(op => op.kind === 'win')) throw new ApiError(400, 'RUN_REQUIRED');
     const ref = db.collection('players').doc(req.playerId!);
     const response = await db.runTransaction(async tx => {
       // Read the binding inside the transaction to reject requests racing an account switch.

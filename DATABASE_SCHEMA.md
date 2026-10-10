@@ -94,3 +94,21 @@ Firebase Auth quản lý UID/email/thông tin đăng nhập. Access token và re
 ID ngẫu nhiên 128 bit dạng hex; mỗi document chỉ có một `playerUid` hiện tại. Nhiều document có thể trỏ cùng tài khoản. Trường: `secretHash` (SHA-256, không lưu khóa rõ), `playerUid`, `bindingVersion`, `status` (active/revoked), `isGuest`, `authValidAfter`, `createdAt`, `updatedAt`. Các timestamp là Unix milliseconds. `authValidAfter` là baseline Firebase `tokensValidAfterTime` tại lần xác thực hợp lệ, dùng ngăn khôi phục bằng khóa thiết bị sau thu hồi.
 
 Subcollection `operations` lưu `kind`, `targetUid`, `bindingVersion`, `createdAt`. Receipt không lưu mật khẩu, token hay khóa thiết bị. Operation đã bị một lần đổi liên kết mới thay thế không được replay để khôi phục binding cũ. `registration: {id, email}` tạm thời bảo vệ bước liên kết Firebase Auth/Firestore; nếu bị gián đoạn có thể hoàn tất bằng xác thực đúng email/mật khẩu.
+
+## Content v4 / map collection
+
+`gameContent/{version}` không còn chứa `levels`; giữ `layoutCodes`, `normalTileIds`, registry
+`tiles`, `chapters`, `levelBaseExp` và luật chung. Map nằm ở `gameMaps/{version}_{levelId}`,
+có `chapterId`, `orderInChapter` và `layoutRows: [{cells: number[]}]` (thứ tự từ trên xuống).
+API chuyển `layoutRows` thành `layout: number[][]`. `0` là khuyết, `-1` là random thường,
+số dương tham chiếu registry. Registry mới dùng 1/2/3/4/5 cho Kiếm/Hỏa/Lôi/Linh Châu/Đá;
+v3 tiếp tục dùng ID cũ. `initialSeals` chứa `{row,column}` zero-based từ trên xuống.
+
+`players/{uid}/runs/{runId}` giữ map phiên bản cố định (cũng mã hóa `layoutRows`), seed,
+loadout/EXP, mức hỗ trợ, installation, attempt, status, report và receipt kết quả.
+`players/{uid}/mapStats/{levelId}` giữ attemptsStarted/retryCount/wins/losses/abandoned,
+consecutiveFailures/bestStars/bestMovesUsed/firstWinAt (lần thắng đầu được ghi từ khi bật tính năng).
+Report chứa outcome, movesUsed, objectiveProgress, extraMovesUsed; không lưu từng nước đi.
+
+Chỉ mục chương và miễn index layout được định nghĩa trong `firestore.indexes.json`.
+Chi tiết vận hành: [MAP_AUTHORING.md](content/MAP_AUTHORING.md).

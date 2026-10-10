@@ -5,7 +5,13 @@
     "api:build": "npm --prefix server run build",
     "api:test": "npm --prefix server test",
     "api:serve": "npm --prefix server run serve",
-    "api:deploy": "npm run api:build && firebase deploy --only functions:game-api,firestore:rules",
-    "api:seed": "npm run api:build && node tools/seed_game_content.mjs"
+    "api:deploy": "npm run api:build && firebase deploy --only functions:game-api,firestore:rules,firestore:indexes",
+    "api:seed": "npm run api:build && node tools/seed_game_content.mjs",
+    "maps:simulate": "node tools/simulate_maps.cjs",
+    "maps:calibrate": "node tools/calibrate_maps.cjs",
+    "maps:check": "node tools/simulate_maps.cjs --seeds 100 --check --output .balance-reports/ci.json",
+    "maps:release": "node tools/simulate_maps.cjs --seeds 1000 --powers minimum,expected,strong --retry-seeds 100 --check --output .balance-reports/release.json",
+    "api:test:maps": "npm --prefix server run build && MAP_EMULATOR_TEST=1 node --test server/test/integration/maps.cjs",
+    "api:test:integration:local": "npm --prefix server run build && node tools/run_api_emulator_tests.cjs"
   }
 }

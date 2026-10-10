@@ -73,3 +73,17 @@ Mở game tự chơi khách, vẫn cần internet. Tạo tài khoản giữ ti�
 Server cấp custom token Firebase có claims bản cài đặt và binding version. Production cần cấp quyền `iam.serviceAccounts.signBlob` cho service account chạy Functions. Phiên 1.2 còn hợp lệ được chuyển sang 1.3 giữ UID; khóa thiết bị chưa tồn tại thì không thể tự khôi phục khách có legacy token đã bị thu hồi. Gỡ app/xóa dữ liệu có thể làm mất khóa khách.
 
 Kiểm thử simulator và fault injection: [ACCEPTANCE_GUEST.md](ACCEPTANCE_GUEST.md). Không bật `EXPO_PUBLIC_ACCEPTANCE_TEST` trong release.
+
+## Map theo chương / client 1.4.0 / content v4
+
+Cấu hình mới ở `content/game-config.json`; map riêng ở `content/game-maps.json`.
+Layout là ma trận ID (`0`: khuyết, `-1`: random thường, số dương: loại quân ban đầu).
+Firestore lưu từng hàng có `cells` trong `gameMaps/{version}_{id}`. Bootstrap không tải map;
+client chỉ lấy danh sách chương đang mở, cấu hình đầy đủ được cấp khi bắt đầu phiên.
+
+Phiên/retry do server quản lý; gameplay tiếp tục chạy trên client. Pilot độ khó và điều tiết
+spawn áp dụng màn 1–10; 11–40 và ván v3 giữ đường tương thích. Hướng dẫn schema, API,
+calibration, CI và migration: [MAP_AUTHORING.md](content/MAP_AUTHORING.md).
+
+Báo cáo pilot: [pilot-v4.md](content/balance/pilot-v4.md) — 58.000 mô phỏng, 1.000 seed
+cho mỗi màn/kiểu bot ở sức mạnh tham chiếu, cùng kiểm tra sức mạnh và chuỗi retry.

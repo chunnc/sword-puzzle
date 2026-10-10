@@ -1,9 +1,9 @@
 import { getCurrentSession, getSessionGeneration, saveRefreshedSession, type SessionData } from './session';
 import { loadDeviceIdentity, markDeviceProvisioned, identityOperation, clearIdentityOperation } from './device';
-import { requireContent, type GameContent, type PlayerOperation, type PlayerProfile, type SyncResponse } from '../game/domain';
+import { requireContent, type GameContentWire, type MapSummary, type RunDefinition, type RunReport, type PlayerOperation, type PlayerProfile, type SyncResponse, type OperationReward, type Stars } from '../game/domain';
 export interface BootstrapResponse {
   contentVersion: number;
-  content: GameContent;
+  content: GameContentWire;
   levelCount: number;
   rewardedAdsEnabled: boolean;
   minClientVersion: string;
@@ -132,8 +132,17 @@ async function authorized<T>(session: SessionData, method: string, path: string,
     session: getCurrentSession() ?? used
   };
 }
-export const fetchBootstrap = () => request<BootstrapResponse>('/v2/bootstrap');
-export const fetchContent = (version: number) => request<GameContent>(`/v2/content/${version}`);
+export const fetchBootstrap = () => request<BootstrapResponse>('/v3/bootstrap');
+export const fetchContent = (version: number) => request<GameContentWire>(`/${version <= 3 ? 'v2' : 'v3'}/content/${version}`);
+export async function fetchChapterMaps(session: SessionData, chapterId: string, contentVersion: number) {
+  return authorized<{ contentVersion: number; chapterId: string; maps: MapSummary[] }>(session, 'GET', `/v3/chapters/${encodeURIComponent(chapterId)}/maps?contentVersion=${contentVersion}`);
+}
+export async function startRun(session: SessionData, body: { runId: string; levelId: number; contentVersion: number; previousRunId: string | null }) {
+  return authorized<{ run: RunDefinition }>(session, 'POST', '/v3/runs/start', body);
+}
+export async function finishRun(session: SessionData, runId: string, report: RunReport) {
+  return authorized<{ profile: PlayerProfile; stars: Stars; reward?: OperationReward }>(session, 'POST', `/v3/runs/${encodeURIComponent(runId)}/finish`, report);
+}
 export async function syncProfile(session: SessionData, operations: PlayerOperation[], contentVersion = requireContent().version) {
   const result = await authorized<SyncResponse>(session, 'POST', '/v2/profile/sync', {
     contentVersion,

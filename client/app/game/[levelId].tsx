@@ -16,7 +16,7 @@ import { Notice } from '../../src/components/Notice';
 import { BoardEngine } from '../../src/game/BoardEngine';
 import { skillTarget } from '../../src/game/skillTargets';
 import { getLevel } from '../../src/game/levels';
-import { CONTENT, LEVEL_COUNT, SKILLS, realmForExp, type SkillId } from '../../src/game/domain';
+import { tileId, CONTENT, LEVEL_COUNT, SKILLS, realmForExp, type SkillId } from '../../src/game/domain';
 import { GoalKind, TileKind, type BoardActionPresenter, type BoardSnapshot, type CellPosition } from '../../src/game/types';
 import { useGameStore, type BoardActionResult } from '../../src/state/gameStore';
 import { colors } from '../../src/theme';
@@ -31,13 +31,13 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const router = useRouter(), { width } = useWindowDimensions();
     const store = useGameStore();
     const persisted = store.save.active?.levelId === levelId ? store.save.active : null;
+    const [board, setBoard] = useState<BoardSnapshot | null>(persisted);
     const level = useMemo(() => { try {
-        return persisted?.level ?? getLevel(levelId);
+        return persisted?.level ?? board?.level ?? getLevel(levelId);
     }
     catch {
         return null;
-    } }, [levelId, persisted?.level]);
-    const [board, setBoard] = useState<BoardSnapshot | null>(persisted);
+    } }, [levelId, persisted?.level, board?.level]);
     const [selected, setSelected] = useState<CellPosition | null>(null);
     const [targetSkill, setTargetSkill] = useState<SkillId | null>(null);
     const [targets, setTargets] = useState<CellPosition[]>([]);
@@ -117,9 +117,15 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const requestLeave = useCallback(() => {
         if (busyRef.current) return;
         if (resultRef.current) {
-            if (resultReady.current) { busyRef.current = true; setBusy(true); router.replace('/map'); }
+            if (resultReady.current) {
+                busyRef.current = true; setBusy(true);
+                void (async () => {
+                    if (resultRef.current?.kind === 'lost' && !await store.finishLevel('lost')) { busyRef.current = false; setBusy(false); return; }
+                    router.replace('/map');
+                })();
+            }
         } else setLeave(true);
-    }, [router]);
+    }, [router, store.finishLevel]);
     useFocusEffect(useCallback(() => {
         const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
             if (busyRef.current) return true;
@@ -135,7 +141,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
     if (!board || !level || !engine)
         return <ScreenFrame background="bgGame"><Text style={styles.body}>Không tìm thấy màn chơi.</Text><GameButton title="VỀ TIÊN LỘ" onPress={() => router.replace('/map')}/></ScreenFrame>;
     const content = engine.contentDefinition;
-    const locked = !store.online || !store.foreground || store.recovering || store.authRequired || Boolean(store.save.pending);
+    const locked = !store.online || !store.foreground || store.recovering || store.authRequired || Boolean(store.save.pending || store.save.pendingFinish || store.save.pendingStart);
     const available = engine.availableSkills();
     const skill = content.skills.find(s => s.id === targetSkill);
     const targetMode = skillTarget(targetSkill);
@@ -240,7 +246,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
         if (targetSkill) {
             const tile = board.tiles[y * level.board.width + x];
             if (!tile) return;
-            if (targetMode === 'triple' && (tile.locked || tile.chargeTier || tile.kind === TileKind.Rock || tile.kind === TileKind.Lightning) || targetMode === 'chargedPair' && (!tile.chargeTier || tile.locked) || targetMode === 'pair' && (tile.locked || tile.kind === TileKind.Rock) || targetMode === 'kind' && tile.kind === TileKind.Rock)
+            if (targetMode === 'triple' && (tile.locked || tile.chargeTier || tile.kind === tileId('rock', content) || tile.kind === tileId('lightning', content)) || targetMode === 'chargedPair' && (!tile.chargeTier || tile.locked) || targetMode === 'pair' && (tile.locked || tile.kind === tileId('rock', content)) || targetMode === 'kind' && tile.kind === tileId('rock', content))
                 return;
             const exists = targets.some(p => p.x === x && p.y === y);
             setTargets(exists ? targets.filter(p => p.x !== x || p.y !== y) : required === 1 ? [{ x, y }] : [...targets.slice(-(required - 1)), { x, y }]);
@@ -281,6 +287,16 @@ function GameplaySession({ levelId }: { levelId: number }) {
             }
         }
     };
+    const continueWithAd = async () => {
+        if (busyRef.current || resultRef.current?.kind !== 'lost' || !resultReady.current) return;
+        busyRef.current = true; setBusy(true);
+        try {
+            if (await store.requestExtraMoves() && alive.current) {
+                setBoard(useGameStore.getState().save.active);
+                resultRef.current = null; resultReady.current = false; setResult(null);
+            }
+        } finally { busyRef.current = false; if (alive.current) setBusy(false); }
+    };
     const overlayOpen = help || leave || Boolean(result);
     const displayResult = result?.kind === 'won' && store.save.lastWin?.runId === result.runId
         ? { ...result, summary: store.save.lastWin } : result;
@@ -290,7 +306,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
       <ScreenFrame background={level.objectives.some(o => o.type === 'Boss') ? 'bgBoss' : 'bgGame'}>
         <View testID="game-content" style={styles.gameContent} onLayout={event => setViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
           <View ref={sceneRef} collapsable={false} testID="game-scene" onLayout={measureFlightLayout} style={styles.scene} pointerEvents={overlayOpen ? 'none' : 'auto'} accessibilityElementsHidden={overlayOpen} importantForAccessibility={overlayOpen ? 'no-hide-descendants' : 'auto'}>
-            <GameplayHeader levelId={levelId} busy={busy || Boolean(result) || locked} compact={compact} onBack={requestLeave} onHelp={() => { if (!busyRef.current && !resultRef.current) setHelp(true); }} />
+            <GameplayHeader levelId={levelId} difficulty={level.mapDefinition?.difficulty} busy={busy || Boolean(result) || locked} compact={compact} onBack={requestLeave} onHelp={() => { if (!busyRef.current && !resultRef.current) setHelp(true); }} />
             <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion}
                 duration={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects, effect.sourceActivation) : BOARD_CLEAR_MS} />
             <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setHeight(event.nativeEvent.layout.height)}>
@@ -308,7 +324,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
               cues={spiritCues} geometry={level.board} layout={flightLayout} progress={spiritMotion.progress}
               durationMs={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects, effect.sourceActivation) : BOARD_CLEAR_MS} /> : null}
           </View>
-          {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} /> : null}
+          {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} onExtraMoves={displayResult.kind === 'lost' && store.adsEnabled && !board.extraMovesUsed ? () => void continueWithAd() : undefined} /> : null}
           <View pointerEvents="box-none" style={styles.noticeLayer}><Notice message={store.notice} onDismiss={() => store.setNotice('')} /></View>
           {help && !leave ? <View accessibilityViewIsModal style={styles.overlay}><ArtPanel art="dialogPanel" style={styles.dialog}><Text style={styles.dialogTitle}>LINH VẬT</Text><Text style={styles.body}>Ghép 3 nhận sát thương và khí. Ghép 4–5 giữ một ô cường hóa; ghép tiếp cùng loại để kích hoạt.</Text>{content.tiles.map(tile => <Text key={tile.id} style={styles.rule}>{tile.name}: {tile.damage} sát thương · {tile.qi} khí</Text>)}<Text style={styles.body}>Kiếm: hàng / chữ thập. Hỏa: 3×3 / 13 ô. Lôi: thêm 50% / toàn bộ Lôi. Châu: nhiều khí / Ngưng Khí.</Text><GameButton title="ĐÃ HIỂU" onPress={() => setHelp(false)} /></ArtPanel></View> : null}
           {leave ? <GameplayLeaveDialog busy={busy} compact={(viewport.width || width) < 360} onContinue={() => setLeave(false)} onBack={() => { if (!busyRef.current) router.replace('/map'); }} /> : null}

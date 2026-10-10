@@ -1,0 +1,17 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "gameMaps",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "contentVersion", "order": "ASCENDING" },
+        { "fieldPath": "chapterId", "order": "ASCENDING" },
+        { "fieldPath": "orderInChapter", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    { "collectionGroup": "gameMaps", "fieldPath": "layoutRows", "indexes": [] },
+    { "collectionGroup": "runs", "fieldPath": "map", "indexes": [] }
+  ]
+}

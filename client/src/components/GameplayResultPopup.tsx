@@ -28,9 +28,10 @@ function ResultStar({ image, index, earned, elapsed, size }: { image: SkImage | 
   </Animated.View>;
 }
 
-export function GameplayResultPopup({ result, busy, reduceMotion, onReady, onContinue, onBack }: {
+export function GameplayResultPopup({ result, busy, reduceMotion, onReady, onContinue, onBack, onExtraMoves }: {
   result: GameplayResult; busy: boolean; reduceMotion: boolean;
   onReady: () => void; onContinue: () => void; onBack: () => void;
+  onExtraMoves?: () => void;
 }) {
   const won = result.kind === 'won', stars = won ? result.summary.stars : 0;
   const exp = won ? result.summary.expGained : 0, coins = won ? result.summary.coinsGained : 0;
@@ -86,6 +87,7 @@ export function GameplayResultPopup({ result, busy, reduceMotion, onReady, onCon
             {coins > 0 ? <View style={styles.coinReward}><Image source={ART.iconLinhThach} contentFit="contain" accessible={false} style={styles.coin} /><Text accessibilityLabel={`+${coins} Linh Thạch`} maxFontSizeMultiplier={1.2} style={styles.reward}>+{coins}</Text></View> : null}
           </Animated.View> : null}
           <View testID="result-actions" style={[styles.actions, compact && styles.compactActions]}>
+            {!won && onExtraMoves ? <GameplayDialogButton title="XEM QC · +3 LƯỢT" art="buttonPrimary" width={buttonWidth} disabled={disabled} onPress={onExtraMoves} /> : null}
             <GameplayDialogButton title={won ? 'TIẾP TỤC' : 'CHƠI LẠI'} art="buttonPrimary" width={buttonWidth} disabled={disabled} onPress={onContinue} />
             <GameplayDialogButton title="QUAY VỀ" art="buttonSecondary" width={buttonWidth} disabled={disabled} onPress={onBack} />
           </View>

@@ -1,12 +1,15 @@
-import { emptyProfile, realmForExp, skillCost, requireContent, getContentVersion, type GameContent, type SkillId } from './domain';
-import { BoardActionAnimation, BoardActionStart, BoardResolutionStep, BoardAnimationEffect, BoardAnimationFall, BoardSnapshot, CellPosition, GoalKind, LevelDefinition, Loadout, Tile, TileKind } from './types';
+import { emptyProfile, realmForExp, skillCost, requireContent, getContentVersion, tileId, validateMap, type TileKey, type GameContent, type SkillId } from './domain';
+import { BoardActionAnimation, BoardActionStart, BoardResolutionStep, BoardAnimationEffect, BoardAnimationFall, BoardSnapshot, CellPosition, GoalKind, LevelDefinition, Loadout, Tile } from './types';
 export function newId(): string { return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 13)}_${Math.random().toString(36).slice(2, 13)}`; }
-const plain = (kind: TileKind): Tile => ({ kind, chargeTier: 0, locked: false });
+const plain = (kind: number): Tile => ({ kind, chargeTier: 0, locked: false });
 const copy = (tile: Tile): Tile => ({ ...tile });
 export class BoardEngine {
     private tiles: (Tile | null)[] = [];
     private randomState: number;
     private drops = 0;
+    private directorPressure = 1;
+    private reshuffles = 0;
+    private kinds!: Record<TileKey, number>;
     private runId: string;
     private loadout: Loadout;
     private damageScale: number;
@@ -15,6 +18,8 @@ export class BoardEngine {
     moves: number;
     objectiveProgress: Record<string, number>;
     private readonly content: GameContent;
+    private kind(key: TileKey): number { return this.kinds[key]; }
+    get movesUsed(): number { return this.level.moves + (this.extraMovesUsed ? 3 : 0) - this.moves; }
     private get width() { return this.level.board.width; }
     private get height() { return this.level.board.height; }
     private indexOf = (p: CellPosition) => p.y * this.width + p.x;
@@ -29,7 +34,8 @@ export class BoardEngine {
     }) {
         this.level = restore?.level ?? level;
         level = this.level;
-        this.content = restore ? getContentVersion(restore.contentVersion) : requireContent();
+        this.content = restore ? getContentVersion(restore.contentVersion) : level.contentVersion ? getContentVersion(level.contentVersion) : requireContent();
+        this.kinds = Object.fromEntries((['sword','fire','lightning','spirit','rock'] as TileKey[]).map(key => [key, tileId(key, this.content)])) as Record<TileKey, number>;
         this.randomState = level.seed >>> 0;
         this.moves = level.moves;
         this.objectiveProgress = Object.fromEntries(level.objectives.map(o => [o.id, 0]));
@@ -43,6 +49,8 @@ export class BoardEngine {
             this.swordQi = restore.swordQi;
             this.score = restore.score;
             this.drops = restore.drops;
+            this.directorPressure = restore.directorPressure ?? 1;
+            this.reshuffles = restore.reshuffles ?? 0;
             this.randomState = restore.randomState >>> 0 || level.seed >>> 0;
             this.runId = restore.runId;
             this.loadout = { ...restore.loadout, skills: [...restore.loadout.skills] };
@@ -52,13 +60,12 @@ export class BoardEngine {
             this.skillUsed = restore.skillUsed;
             return;
         }
-        this.fillInitial();
-        this.placeObstacles();
-        this.ensureMove();
+        if (level.mapDefinition && !level.mapDefinition.legacy) this.fillLayout();
+        else { this.fillInitial(); this.placeObstacles(); this.ensureMove(); }
     }
     get won(): boolean { return this.level.objectives.every(o => this.objectiveProgress[o.id] >= o.target); }
     get contentDefinition(): GameContent { return this.content; }
-    private advance(type: string, amount: number, tileKind?: TileKind): void {
+    private advance(type: string, amount: number, tileKind?: number): void {
         for (const o of this.level.objectives) if (o.type === type && (o.type !== 'Collect' || o.tileKind === tileKind)) this.objectiveProgress[o.id] = Math.min(o.target, this.objectiveProgress[o.id] + amount);
     }
     get lost(): boolean { return this.moves <= 0 && !this.won && !this.availableSkills().length; }
@@ -68,7 +75,7 @@ export class BoardEngine {
     snapshot(): BoardSnapshot {
         if (this.tiles.some((t,i) => this.level.board.activeCells[i] && !t))
             throw new Error('UNSETTLED_BOARD');
-        return { contentVersion: this.content.version, level: this.level, runId: this.runId, levelId: this.level.id, moves: this.moves, objectiveProgress: { ...this.objectiveProgress }, swordQi: this.swordQi, score: this.score, drops: this.drops, randomState: this.randomState >>> 0, extraMovesUsed: this.extraMovesUsed, condensed: this.condensed, skillUsed: this.skillUsed, loadout: { ...this.loadout, skills: [...this.loadout.skills] }, damageScale: this.damageScale, tiles: this.tiles.map(t => t ? copy(t) : null) };
+        return { contentVersion: this.content.version, level: this.level, runId: this.runId, levelId: this.level.id, moves: this.moves, objectiveProgress: { ...this.objectiveProgress }, swordQi: this.swordQi, score: this.score, drops: this.drops, ...(this.level.mapDefinition && !this.level.mapDefinition.legacy ? { directorPressure: this.directorPressure, reshuffles: this.reshuffles } : {}), randomState: this.randomState >>> 0, extraMovesUsed: this.extraMovesUsed, condensed: this.condensed, skillUsed: this.skillUsed, loadout: { ...this.loadout, skills: [...this.loadout.skills] }, damageScale: this.damageScale, tiles: this.tiles.map(t => t ? copy(t) : null) };
     }
     cost(id: SkillId): number { return skillCost(id, this.loadout.sword, this.condensed, this.content); }
     availableSkills(): SkillId[] {
@@ -120,7 +127,7 @@ export class BoardEngine {
         }
         else if (id === 'dan-loi') {
             for (const i of indices)
-                this.tiles[i] = plain(TileKind.Lightning);
+                this.tiles[i] = plain(this.kind('lightning'));
             mutation = indices;
         }
         else if (id === 'hoi-linh') {
@@ -204,7 +211,7 @@ export class BoardEngine {
             for (const group of groups) {
                 const charged = group.some(i => this.tiles[i]!.chargeTier > 0);
                 if (!charged && group.length >= 4) {
-                    const eligible = group.filter(i => !this.tiles[i]!.locked && this.tiles[i]!.kind !== TileKind.Rock);
+                    const eligible = group.filter(i => !this.tiles[i]!.locked && this.tiles[i]!.kind !== this.kind('rock'));
                     const anchor = anchors.find(i => eligible.includes(i)) ?? eligible[0];
                     if (anchor !== undefined) {
                         this.tiles[anchor] = { ...this.tiles[anchor]!, chargeTier: group.length >= 5 ? 5 : 4 };
@@ -215,7 +222,7 @@ export class BoardEngine {
                 group.forEach(i => direct.add(i));
             }
             const qiFor = (tile: Tile) => this.content.tiles.find(t => t.id === tile.kind)?.qi ?? 0;
-            const baseQi = (tile: Tile) => qiFor(tile) + (this.loadout.sword === 'thanh-phong' && tile.kind === TileKind.Sword || this.loadout.sword === 'loi-minh' && tile.kind === TileKind.Lightning ? 1 : this.loadout.sword === 'tu-linh' && tile.kind === TileKind.SpiritOrb ? 2 : 0);
+            const baseQi = (tile: Tile) => qiFor(tile) + (this.loadout.sword === 'thanh-phong' && tile.kind === this.kind('sword') || this.loadout.sword === 'loi-minh' && tile.kind === this.kind('lightning') ? 1 : this.loadout.sword === 'tu-linh' && tile.kind === this.kind('spirit') ? 2 : 0);
             const weaken = (i: number) => {
                 const p = { x: i % this.width, y: Math.floor(i / this.width) };
                 for (let dy = -1; dy <= 1; dy++)
@@ -228,7 +235,7 @@ export class BoardEngine {
                         const n = y * this.width + x, t = this.tiles[n];
                         if (!t || protectedCells.has(n))
                             continue;
-                        if (t.kind === TileKind.Rock) {
+                        if (t.kind === this.kind('rock')) {
                             this.tiles[n] = plain(this.nextKind());
                             changed.add(n);
                             unlocked.add(n);
@@ -245,7 +252,7 @@ export class BoardEngine {
             const remove = (cells: number[]) => {
                 for (const i of cells) {
                     const tile = this.tiles[i];
-                    if (!tile || cleared.has(i) || protectedCells.has(i) || unlocked.has(i) || tile.kind === TileKind.Rock)
+                    if (!tile || cleared.has(i) || protectedCells.has(i) || unlocked.has(i) || tile.kind === this.kind('rock'))
                         continue;
                     if (tile.locked) {
                         this.tiles[i] = { ...tile, locked: false };
@@ -261,9 +268,9 @@ export class BoardEngine {
                     cleared.add(i);
                     this.tiles[i] = null;
                     let multiplier = this.damageScale;
-                    if (this.loadout.sword === 'trong-nhac' && tile.kind === TileKind.Sword)
+                    if (this.loadout.sword === 'trong-nhac' && tile.kind === this.kind('sword'))
                         multiplier *= 1.3;
-                    if (this.loadout.sword === 'hoa-van' && tile.kind === TileKind.Fire)
+                    if (this.loadout.sword === 'hoa-van' && tile.kind === this.kind('fire'))
                         multiplier *= 1.5;
                     if (this.loadout.sword === 'lien-tinh' && chain >= 2)
                         multiplier *= 1.2;
@@ -289,7 +296,7 @@ export class BoardEngine {
             if (initial && obstacleOnly) {
                 for (const i of initial) {
                     const t = this.tiles[i]!;
-                    if (t.kind === TileKind.Rock) {
+                    if (t.kind === this.kind('rock')) {
                         this.tiles[i] = null;
                         cleared.add(i);
                         this.advance('BreakRocks', 1);
@@ -310,29 +317,29 @@ export class BoardEngine {
             for (let cursor = 0; cursor < queue.length; cursor++) {
                 const { index, tile } = queue[cursor];
                 let cells: number[] = [], kind: BoardAnimationEffect['kind'] = 'spirit';
-                if (tile.kind === TileKind.Sword) {
+                if (tile.kind === this.kind('sword')) {
                     kind = tile.chargeTier === 5 ? 'cross' : 'slash';
                     cells = this.row(Math.floor(index / this.width)).filter(i => this.level.board.activeCells[i]);
                     if (tile.chargeTier === 5)
                         cells.push(...this.column(index % this.width).filter(i => this.level.board.activeCells[i]));
                 }
-                else if (tile.kind === TileKind.Fire) {
+                else if (tile.kind === this.kind('fire')) {
                     kind = 'fire';
                     cells = this.area(index, tile.chargeTier === 5 ? 2 : 1, tile.chargeTier === 5);
                 }
-                else if (tile.kind === TileKind.Lightning) {
+                else if (tile.kind === this.kind('lightning')) {
                     kind = 'lightning';
-                    cells = this.tiles.flatMap((t, i) => t?.kind === TileKind.Lightning && !cleared.has(i) && !protectedCells.has(i) ? [i] : []);
+                    cells = this.tiles.flatMap((t, i) => t?.kind === this.kind('lightning') && !cleared.has(i) && !protectedCells.has(i) ? [i] : []);
                     cells.sort((a, b) => this.distance(a, index) - this.distance(b, index) || a - b);
                     if (tile.chargeTier === 4)
                         cells = cells.slice(0, Math.ceil(cells.length / 2));
                 }
-                record(kind, cells, index, tile.kind === TileKind.SpiritOrb ? () => {
+                record(kind, cells, index, tile.kind === this.kind('spirit') ? () => {
                     this.swordQi = Math.min(this.content.qiCap, this.swordQi + baseQi(tile) * (tile.chargeTier === 5 ? 4 : 2));
                     if (tile.chargeTier === 5)
                         this.condensed = true;
-                } : undefined, tile.kind === TileKind.Sword ? (tile.chargeTier === 5 ? 5 : 4) : undefined,
-                    tile.kind === TileKind.SpiritOrb ? (tile.chargeTier === 5 ? 5 : 4) : undefined);
+                } : undefined, tile.kind === this.kind('sword') ? (tile.chargeTier === 5 ? 5 : 4) : undefined,
+                    tile.kind === this.kind('spirit') ? (tile.chargeTier === 5 ? 5 : 4) : undefined);
             }
             const falls = this.refill();
             yield { before, after: this.snapshot(), cleared: [...cleared], changed: [...changed], effects, falls, damage: waveDamage, chain };
@@ -349,29 +356,29 @@ export class BoardEngine {
             return false;
         const indices = targets.map(this.indexOf);
         if (id === 'ngu-kiem')
-            return targets.length === 2 && this.adjacent(targets[0], targets[1]) && indices.every(i => this.movable(i)) && indices.some(i => this.tiles[i]!.kind === TileKind.Sword) && (this.tiles[indices[0]]!.kind !== this.tiles[indices[1]]!.kind || this.tiles[indices[0]]!.chargeTier !== this.tiles[indices[1]]!.chargeTier);
+            return targets.length === 2 && this.adjacent(targets[0], targets[1]) && indices.every(i => this.movable(i)) && indices.some(i => this.tiles[i]!.kind === this.kind('sword')) && (this.tiles[indices[0]]!.kind !== this.tiles[indices[1]]!.kind || this.tiles[indices[0]]!.chargeTier !== this.tiles[indices[1]]!.chargeTier);
         if (id === 'dan-loi')
-            return targets.length === 3 && indices.every(i => this.movable(i) && this.tiles[i]!.kind !== TileKind.Lightning && !this.tiles[i]!.chargeTier);
+            return targets.length === 3 && indices.every(i => this.movable(i) && this.tiles[i]!.kind !== this.kind('lightning') && !this.tiles[i]!.chargeTier);
         if (id === 'lien-kiem')
             return targets.length === 2 && indices.every(i => this.movable(i) && this.tiles[i]!.chargeTier > 0);
         if (targets.length !== 1)
             return false;
         if (id === 'van-kiem')
-            return this.tiles[indices[0]]!.kind !== TileKind.Rock;
+            return this.tiles[indices[0]]!.kind !== this.kind('rock');
         if (id === 'pha-chuong')
-            return this.area(indices[0], 1).some(i => this.tiles[i]!.kind === TileKind.Rock || this.tiles[i]!.locked);
+            return this.area(indices[0], 1).some(i => this.tiles[i]!.kind === this.kind('rock') || this.tiles[i]!.locked);
         if (id === 'hoi-linh') {
             const cells = this.area(indices[0], 1).filter(i => this.movable(i));
             return cells.length > 1 && new Set(cells.map(i => `${this.tiles[i]!.kind}:${this.tiles[i]!.chargeTier}`)).size > 1;
         }
         if (id === 'nhat-kiem')
-            return this.row(targets[0].y).some(i => !!this.tiles[i] && this.tiles[i]!.kind !== TileKind.Rock);
+            return this.row(targets[0].y).some(i => !!this.tiles[i] && this.tiles[i]!.kind !== this.kind('rock'));
         return id === 'hoa-lien';
     }
     private hasSkillTarget(id: SkillId): boolean {
         const positions = this.tiles.flatMap((t, i) => t ? [{ x: i % this.width, y: Math.floor(i / this.width) }] : []);
         if (id === 'dan-loi')
-            return positions.filter(p => this.movable(this.indexOf(p)) && this.tiles[this.indexOf(p)]!.kind !== TileKind.Lightning && !this.tiles[this.indexOf(p)]!.chargeTier).length >= 3;
+            return positions.filter(p => this.movable(this.indexOf(p)) && this.tiles[this.indexOf(p)]!.kind !== this.kind('lightning') && !this.tiles[this.indexOf(p)]!.chargeTier).length >= 3;
         if (id === 'lien-kiem')
             return positions.filter(p => this.movable(this.indexOf(p)) && this.tiles[this.indexOf(p)]!.chargeTier).length >= 2;
         if (id === 'ngu-kiem')
@@ -380,7 +387,7 @@ export class BoardEngine {
     }
     private inside(p: CellPosition): boolean { return p.x >= 0 && p.y >= 0 && p.x < this.width && p.y < this.height && this.level.board.activeCells[this.indexOf(p)]; }
     private adjacent(a: CellPosition, b: CellPosition): boolean { return this.inside(a) && this.inside(b) && Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1; }
-    private movable(i: number): boolean { const t = this.tiles[i]; return !!t && t.kind !== TileKind.Rock && !t.locked; }
+    private movable(i: number): boolean { const t = this.tiles[i]; return !!t && t.kind !== this.kind('rock') && !t.locked; }
     private row(y: number): number[] { return Array.from({ length: this.width }, (_, x) => y * this.width + x); }
     private column(x: number): number[] { return Array.from({ length: this.height }, (_, y) => y * this.width + x); }
     private distance(a: number, b: number): number { return Math.abs(a % this.width - b % this.width) + Math.abs(Math.floor(a / this.width) - Math.floor(b / this.width)); }
@@ -400,9 +407,9 @@ export class BoardEngine {
             for (let start = 0; start < line.length;) {
                 const tile = this.tiles[line[start]];
                 let end = start + 1;
-                while (end < line.length && tile && tile.kind !== TileKind.Rock && this.tiles[line[end]]?.kind === tile.kind)
+                while (end < line.length && tile && tile.kind !== this.kind('rock') && this.tiles[line[end]]?.kind === tile.kind)
                     end++;
-                if (tile && tile.kind !== TileKind.Rock && end - start >= 3) {
+                if (tile && tile.kind !== this.kind('rock') && end - start >= 3) {
                     const set = new Set(line.slice(start, end));
                     for (let g = groups.length - 1; g >= 0; g--)
                         if ([...groups[g]].some(i => set.has(i))) {
@@ -446,6 +453,7 @@ export class BoardEngine {
     private ensureMove(): void { if (!this.legalMoves().length)
         this.reshuffle(); }
     private reshuffle(): void {
+        this.reshuffles++;
         const cells = this.tiles.flatMap((_, i) => this.movable(i) ? [i] : []);
         const tiles = cells.map(i => this.tiles[i]!);
         for (let attempt = 0; attempt < 200; attempt++) {
@@ -464,13 +472,41 @@ export class BoardEngine {
         throw new Error('NO_PLAYABLE_BOARD');
     }
     private refill(): BoardAnimationFall[] {
+        const map = this.level.mapDefinition;
+        if (!map || map.legacy) return this.refillOnce();
+        const spent = Math.max(1, this.movesUsed) / this.level.moves;
+        const progress = this.level.objectives.reduce((sum,o) => sum + this.objectiveProgress[o.id] / o.target, 0) / this.level.objectives.length;
+        const target = Math.max(.35, Math.min(1.2, progress / spent));
+        this.directorPressure += (target - this.directorPressure) * .25;
+        const pressure = this.effectivePressure();
+        const before = this.tiles.map(t => t ? copy(t) : null);
+        const candidates: { tiles: (Tile|null)[]; falls: BoardAnimationFall[]; weight: number }[] = [];
+        for (let n = 0; n < map.spawnPolicy.candidates; n++) {
+            this.tiles = before.map(t => t ? copy(t) : null);
+            const falls = this.refillOnce();
+            const generated = new Set(falls.filter(f => f.spawned).map(f => f.index));
+            const groups = this.findGroups().filter(g => g.some(i => generated.has(i)));
+            const comboScore = groups.reduce((sum,g) => sum + g.length - 2 + (g.length >= 4 ? 2 : 0), 0);
+            const obstacleScore = groups.reduce((sum,g) => sum + g.filter(i => this.area(i, 1).some(j => before[j]?.kind === this.kind('rock') || before[j]?.locked)).length, 0);
+            candidates.push({ tiles: this.tiles, falls, weight: Math.exp(-Math.min(20, pressure * (map.spawnPolicy.comboPressure * comboScore + map.spawnPolicy.obstaclePressure * obstacleScore))) });
+        }
+        let draw = this.nextIndex(1_000_000) / 1_000_000 * candidates.reduce((sum,c) => sum + c.weight, 0);
+        const chosen = candidates.find(c => (draw -= c.weight) < 0) ?? candidates[candidates.length-1];
+        this.tiles = chosen.tiles;
+        return chosen.falls;
+    }
+    private effectivePressure(): number {
+        const remainingBaseMoves = Math.max(0, this.level.moves - this.movesUsed);
+        return this.directorPressure * (1 - (this.level.assistReduction ?? 0)) * Math.min(1, remainingBaseMoves / (this.level.moves * .2));
+    }
+    private refillOnce(): BoardAnimationFall[] {
         const falls: BoardAnimationFall[] = [];
         for (let x = 0; x < this.width; x++) {
             let start = 0;
             for (let boundary = 0; boundary <= this.height; boundary++) {
                 const i = boundary * this.width + x;
                 const t = boundary < this.height ? this.tiles[i] : null;
-                if (boundary < this.height && this.level.board.activeCells[i] && !(t && (t.kind === TileKind.Rock || t.locked))) continue;
+                if (boundary < this.height && this.level.board.activeCells[i] && !(t && (t.kind === this.kind('rock') || t.locked))) continue;
                 let write = start;
                 for (let y = start; y < boundary; y++) {
                     const tile = this.tiles[y * this.width + x];
@@ -480,7 +516,7 @@ export class BoardEngine {
                 }
                 for (let y = write; y < boundary; y++) {
                     this.tiles[y * this.width + x] = plain(this.nextKind());
-                    falls.push({ index: y * this.width + x, fromY: boundary });
+                    falls.push({ index: y * this.width + x, fromY: boundary, ...(this.level.mapDefinition && !this.level.mapDefinition.legacy ? { spawned: true } : {}) });
                 }
                 start = boundary + 1;
             }
@@ -502,20 +538,46 @@ export class BoardEngine {
         }
         throw new Error('NO_PLAYABLE_BOARD');
     }
+    private fillLayout(): void {
+        const map = validateMap(this.level.mapDefinition, this.content);
+        const cells = [...map.layout].reverse().flat();
+        for (let attempt = 0; attempt < 200; attempt++) {
+            this.tiles = [];
+            for (let i = 0; i < cells.length; i++) {
+                if (cells[i] === 0) { this.tiles.push(null); continue; }
+                let kind = cells[i] === -1 ? this.nextKind(true) : cells[i];
+                if (cells[i] === -1) {
+                    for (let tries = 0; tries < 100 && (i % this.width >= 2 && this.tiles[i-1]?.kind === kind && this.tiles[i-2]?.kind === kind || i >= 2*this.width && this.tiles[i-this.width]?.kind === kind && this.tiles[i-2*this.width]?.kind === kind); tries++) kind = this.nextKind(true);
+                }
+                this.tiles.push(plain(kind));
+            }
+            for (const seal of map.initialSeals) this.tiles[(this.height-1-seal.row)*this.width+seal.column]!.locked = true;
+            if (!this.findGroups().length && this.legalMoves().length) return;
+        }
+        throw new Error('NO_PLAYABLE_LAYOUT');
+    }
     private placeObstacles(): void {
         const available = this.tiles.flatMap((t,i) => t && i >= this.width && i < this.width * (this.height-1) ? [i] : []);
         this.shuffle(available);
-        for (const i of available.splice(0, this.level.obstacles.rocks)) this.tiles[i] = plain(TileKind.Rock);
-        const candidates = this.tiles.flatMap((t,i) => t && t.kind !== TileKind.Rock ? [i] : []);
+        for (const i of available.splice(0, this.level.obstacles.rocks)) this.tiles[i] = plain(this.kind('rock'));
+        const candidates = this.tiles.flatMap((t,i) => t && t.kind !== this.kind('rock') ? [i] : []);
         this.shuffle(candidates);
         for (const i of candidates.slice(0, this.level.obstacles.seals)) this.tiles[i]!.locked = true;
     }
-    private nextKind(): TileKind {
+    private nextKind(initial = false): number {
         this.drops++;
+        const map = this.level.mapDefinition;
+        if (map && !map.legacy) {
+            const ids = this.content.normalTileIds!;
+            const targets = new Set(this.level.objectives.filter(o => o.type === 'Collect' && this.objectiveProgress[o.id] < o.target).map(o => o.type === 'Collect' ? o.tileKind : -1));
+            const weights = ids.map(id => map.spawnPolicy.weights[id] * (initial || !targets.has(id) ? 1 : Math.max(.1, 1 - map.spawnPolicy.collectionPressure * this.effectivePressure())));
+            let draw = this.nextIndex(1_000_000) / 1_000_000 * weights.reduce((a,b) => a+b, 0);
+            return (ids.find((_,i) => (draw -= weights[i]) < 0) ?? ids[ids.length-1]);
+        }
         const phase = [...this.level.spawnPhases].reverse().find(p => this.moves >= p.minMovesRemaining)!;
         let draw = this.nextIndex(phase.weights.reduce((a,b) => a+b,0));
-        for (let kind=0;kind<4;kind++) { draw-=phase.weights[kind]; if(draw<0)return kind as TileKind; }
-        return TileKind.SpiritOrb;
+        for (let kind=0;kind<4;kind++) { draw-=phase.weights[kind]; if(draw<0)return this.kind((['sword','fire','lightning','spirit'] as TileKey[])[kind]); }
+        return this.kind('spirit');
     }
     private nextIndex(max: number): number {
         let state = this.randomState >>> 0;

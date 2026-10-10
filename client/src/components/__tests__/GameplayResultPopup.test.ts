@@ -126,6 +126,15 @@ describe('result popup presentation and choreography', () => {
     expect(buttons().map(node => node.props.accessibilityLabel)).toEqual(['CHƠI LẠI', 'QUAY VỀ']);
   });
 
+  it('offers extra moves on loss without triggering retry or return', () => {
+    const onExtraMoves = jest.fn();
+    act(() => { renderer = create(React.createElement(GameplayResultPopup, { ...props, result: { kind: 'lost', runId: 'ad-run', levelId: 4 }, reduceMotion: true, onExtraMoves })); });
+    expect(buttons().map(node => node.props.accessibilityLabel)).toEqual(['XEM QC · +3 LƯỢT', 'CHƠI LẠI', 'QUAY VỀ']);
+    act(() => { button('XEM QC · +3 LƯỢT').props.onPress(); });
+    expect(onExtraMoves).toHaveBeenCalledTimes(1);
+    expect(onContinue).not.toHaveBeenCalled(); expect(onBack).not.toHaveBeenCalled();
+  });
+
   it('cancels animation and ignores a queued completion after unmount', () => {
     mount(); act(() => { renderer.unmount(); }); act(() => { jest.advanceTimersByTime(1600); });
     expect(cancelAnimation).toHaveBeenCalled(); expect(onReady).not.toHaveBeenCalled();
