@@ -120,6 +120,18 @@ Every report records its data source: project, content version, sync time, last 
 cache file, a SHA-256 hash per map and config, and a combined snapshot hash. The overview header
 shows whether the run used a freshly synced server snapshot or the local cache.
 
+### Parallel simulation
+
+First-attempt seeds and retry sequences are split into chunks and executed across worker threads,
+so a run uses every available CPU core by default. `--jobs N` caps the concurrency; `--jobs 1`
+runs in-process for debugging or profiling. Chunking depends on the core count, but every seed
+maps to the same absolute index regardless of `--jobs`, so reports are identical for any worker
+count; progress lines print as each profile's chunks finish.
+
+```sh
+npm run maps:simulate -- --jobs 4 --seeds 1000 --check
+```
+
 ### Viewing a simulation report
 
 Every `maps:simulate`, `maps:check`, and `maps:release` invocation automatically writes a

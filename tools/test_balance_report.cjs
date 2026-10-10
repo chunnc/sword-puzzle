@@ -5,7 +5,7 @@ const os=require('node:os');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
 const {JSDOM}=require(require.resolve('jsdom',{paths:[path.resolve(__dirname,'../client')]}));
-const {simulateRetries,evaluateChecks,parseOptions,catalog,targets,seedFor}=require('./simulate_maps.cjs');
+const {simulateRetries,evaluateChecks,parseOptions,catalog,targets,seedFor,simulateRetryChunk,mergeRetryChunks,finalizeRetries}=require('./simulate_maps.cjs');
 const {renderBalanceReport,renderReportFile}=require('./render_balance_report.cjs');
 const {resolveSnapshot}=require('./sync_content_cache.cjs');
 const config=require('../content/game-config.json');
@@ -64,6 +64,14 @@ test('retry handles unused support tiers and sequences with no wins without misl
   assert.equal(lost.byAttempt[29].cumulativeWinRate,0);
 });
 
+test('retry chunks merge into the same aggregate as the sequential path',()=>{
+  const fake=(_map,seed,_bot,_power,assist)=>((seed+Math.round(assist*100))%7<2?{won:false,stars:0}:{won:true,stars:(seed%3)+1});
+  const map=catalog[4];
+  const sequential=simulateRetries(map,12,fake);
+  const merged=finalizeRetries(map,12,mergeRetryChunks([simulateRetryChunk(map,0,5,fake),simulateRetryChunk(map,5,7,fake)]));
+  assert.deepEqual(merged,sequential);
+});
+
 function profile(id=1,bot='normal',power='expected') {
   return {id,bot,power,difficulty:catalog[id-1].difficulty,samples:1000,winRate:.8,starRates:[.2,.2,.28,.32],
     movesHistogram:{10:320,12:280,14:200},averageMoves:11.7,averageProgress:.9,averageFailedProgress:.5,
@@ -86,15 +94,17 @@ test('check assessment retains small-sample tolerance, strict star coverage and 
 });
 
 test('CLI rejects malformed sample counts and selections before simulations start',()=>{
-  for(const args of [['--seeds','0'],['--seeds','NaN'],['--retry-seeds','-1'],['--maps','41'],['--maps',''],['--bots','expert'],['--powers',''],['--suite','typo'],['--output'],['--project'],['--unknown']]) {
+  for(const args of [['--seeds','0'],['--seeds','NaN'],['--retry-seeds','-1'],['--jobs','0'],['--jobs','-1'],['--jobs','abc'],['--jobs'],['--maps','41'],['--maps',''],['--bots','expert'],['--powers',''],['--suite','typo'],['--output'],['--project'],['--unknown']]) {
     assert.throws(()=>parseOptions(args));
   }
-  const options=parseOptions(['--maps','1,3,1','--retry-seeds','100','--powers','minimum,expected,strong','--check','--offline','--project','demo']);
+  const options=parseOptions(['--maps','1,3,1','--retry-seeds','100','--powers','minimum,expected,strong','--check','--offline','--project','demo','--jobs','3']);
   assert.deepEqual(options.ids,[1,3]);
   assert.equal(options.check,true);
   assert.equal(options.retryCount,100);
   assert.equal(options.offline,true);
   assert.equal(options.project,'demo');
+  assert.equal(options.jobs,3);
+  assert.ok(parseOptions([]).jobs>=1);
 });
 
 function fixture() {
@@ -235,6 +245,26 @@ test('CLI exports HTML and JSON even when a check fails, preserving default HTML
   t.after(()=>dom.window.close());
   assert.match(dom.window.document.body.textContent,/Không đạt kiểm tra/);
   assert.equal(JSON.parse(dom.window.document.getElementById('report-data').textContent).checks.status,'failed');
+});
+
+test('parallel workers produce the same report as a sequential run',async t=>{
+  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'balance-parallel-test-'));
+  t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
+  await seedCache(directory);
+  const run=jobs=>{
+    const jsonPath=path.join(directory,`jobs-${jobs}.json`);
+    const args=[path.join(__dirname,'simulate_maps.cjs'),'--maps','1,10','--bots','basic,normal','--powers','expected','--seeds','3','--retry-seeds','2','--jobs',String(jobs),'--offline','--project','demo-cache','--output',jsonPath];
+    const child=spawnSync(process.execPath,args,{encoding:'utf8',env:{...process.env,BALANCE_CACHE_DIR:directory}});
+    assert.equal(child.status,0,child.stderr);
+    return JSON.parse(fs.readFileSync(jsonPath,'utf8'));
+  };
+  const sequential=run(1),parallel=run(4);
+  assert.equal(sequential.run.jobs,1);
+  assert.equal(parallel.run.jobs,4);
+  assert.deepEqual(parallel.reports,sequential.reports);
+  assert.deepEqual(parallel.retries,sequential.retries);
+  assert.deepEqual(parallel.checks,sequential.checks);
+  assert.deepEqual(parallel.maps,sequential.maps);
 });
 
 test('renderer CLI rebuilds a one-row-per-map overview from saved JSON without altering its source',t=>{

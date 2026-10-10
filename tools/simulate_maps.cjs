@@ -1,11 +1,18 @@
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
+const { Worker } = require('node:worker_threads');
 const { BoardEngine, installContent, validateMap, mapToLevel, mapStars, tileId, assistForFailures } = require('./game-runtime.cjs');
 const {createHash}=require('node:crypto');
 const { renderBalanceReport } = require('./render_balance_report.cjs');
 const { resolveSnapshot, defaultProject } = require('./sync_content_cache.cjs');
 let content = installContent(require('../content/game-config.json'));
 let catalog = require('../content/game-maps.json').map(m => validateMap(m, content));
+function installSnapshot(config, maps) {
+  content = installContent(config);
+  catalog = maps.map(map => validateMap(map, content));
+  return { content, catalog };
+}
 function rng(seed) { let state = seed >>> 0 || 1; return () => { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; return (state >>> 0) / 4294967296; }; }
 function seedFor(index, suite = 'validation') { return ((index+1)*2654435761 + (suite === 'training' ? 104729 : 13007)) >>> 0 || 1; }
 function matched(snapshot, move) {
@@ -104,12 +111,12 @@ function summarize(map, results) {
 }
 const targets={easy:{win:[.85,.95],three:[.35,.60]},medium:{win:[.50,.70],three:[.15,.30]},hard:{win:[.15,.30],three:[.03,.10]},'very-hard':{win:[.05,.15],three:[.01,.05]}};
 
-function simulateRetries(map, count, playAttempt=play) {
+function simulateRetryChunk(map, start, count, playAttempt=play) {
   const maxAttempts=30, attempts=[], levels=[...new Set([0,...map.retryAssistPolicy.reductions])].sort((a,b)=>a-b);
   const byAssist=new Map(levels.map(assist=>[assist,{assist,samples:0,wins:0,losses:0,starCounts:[0,0,0,0]}]));
   const byAttempt=Array.from({length:maxAttempts},(_,i)=>({attempt:i+1,assist:assistForFailures(map,i),samples:0,wins:0,losses:0}));
   let unfinished=0;
-  for(let i=0;i<count;i++) {
+  for(let i=start;i<start+count;i++) {
     let done=false;
     for(let attempt=0;attempt<maxAttempts;attempt++) {
       const assist=assistForFailures(map,attempt);
@@ -122,15 +129,46 @@ function simulateRetries(map, count, playAttempt=play) {
     }
     if(!done)unfinished++;
   }
+  return {attempts,unfinished,byAssist:[...byAssist.values()],byAttempt};
+}
+function mergeRetryChunks(chunks) {
+  const byAssist=new Map(),byAttempt=[],attempts=[];
+  let unfinished=0;
+  for(const chunk of chunks) {
+    unfinished+=chunk.unfinished;
+    attempts.push(...chunk.attempts);
+    for(const bucket of chunk.byAssist) {
+      const target=byAssist.get(bucket.assist)??{assist:bucket.assist,samples:0,wins:0,losses:0,starCounts:[0,0,0,0]};
+      target.samples+=bucket.samples;target.wins+=bucket.wins;target.losses+=bucket.losses;
+      bucket.starCounts.forEach((value,index)=>{target.starCounts[index]+=value;});
+      byAssist.set(bucket.assist,target);
+    }
+    chunk.byAttempt.forEach((step,index)=>{
+      if(!byAttempt[index])byAttempt[index]={attempt:step.attempt,assist:step.assist,samples:0,wins:0,losses:0};
+      byAttempt[index].samples+=step.samples;byAttempt[index].wins+=step.wins;byAttempt[index].losses+=step.losses;
+    });
+  }
+  return {attempts,unfinished,byAssist:[...byAssist.values()].sort((a,b)=>a.assist-b.assist),byAttempt};
+}
+function finalizeRetries(map, count, merged) {
+  const {attempts}=merged,maxAttempts=30;
   let cumulativeWins=0;
   const policy=map.spawnPolicy;
-  return {id:map.id,bot:'normal',power:'expected',samples:count,completed:attempts.length,unfinished,maxAttempts,
+  return {id:map.id,bot:'normal',power:'expected',samples:count,completed:attempts.length,unfinished:merged.unfinished,maxAttempts,
     averageAttempts:attempts.length?attempts.reduce((a,b)=>a+b,0)/attempts.length:null,
-    totalAttempts:byAttempt.reduce((sum,r)=>sum+r.samples,0),
+    totalAttempts:merged.byAttempt.reduce((sum,r)=>sum+r.samples,0),
     hasSpawnPressure:!map.legacy&&(map.objectives.some(o=>o.type==='Collect')&&policy.collectionPressure>0||policy.candidates>1&&(policy.comboPressure>0||policy.obstaclePressure>0)),
     attemptsHistogram:Object.fromEntries(Array.from({length:maxAttempts},(_,n)=>[n+1,attempts.filter(a=>a===n+1).length]).filter(([,n])=>n)),
-    byAssist:[...byAssist.values()].map(({starCounts,...r})=>({...r,winRate:r.samples?r.wins/r.samples:null,starRates:r.samples?starCounts.map(n=>n/r.samples):[0,0,0,0]})),
-    byAttempt:byAttempt.map(r=>{cumulativeWins+=r.wins;return {...r,winRate:r.samples?r.wins/r.samples:null,cumulativeWinRate:count?cumulativeWins/count:null};})};
+    byAssist:merged.byAssist.map(({starCounts,...r})=>({...r,winRate:r.samples?r.wins/r.samples:null,starRates:r.samples?starCounts.map(n=>n/r.samples):[0,0,0,0]})),
+    byAttempt:merged.byAttempt.map(r=>{cumulativeWins+=r.wins;return {...r,winRate:r.samples?r.wins/r.samples:null,cumulativeWinRate:count?cumulativeWins/count:null};})};
+}
+function simulateRetries(map, count, playAttempt=play) {
+  return finalizeRetries(map, count, mergeRetryChunks([simulateRetryChunk(map, 0, count, playAttempt)]));
+}
+function executeTask(task) {
+  const map=catalog[task.id-1];
+  if(task.kind==='simulate')return {results:Array.from({length:task.count},(_,index)=>play(map,seedFor(task.start+index,task.suite),task.bot,task.power))};
+  return {chunk:simulateRetryChunk(map,task.start,task.count)};
 }
 
 function evaluateChecks(reports, count, enabled) {
@@ -156,7 +194,7 @@ function evaluateChecks(reports, count, enabled) {
 
 function parseOptions(args) {
   const values={}, flags=new Set(['--check','--offline']);
-  const options=new Set(['--seeds','--suite','--bots','--powers','--maps','--retry-seeds','--output','--html-output','--project']);
+  const options=new Set(['--seeds','--suite','--bots','--powers','--maps','--retry-seeds','--output','--html-output','--project','--jobs']);
   for(let i=0;i<args.length;i++) {
     const key=args[i];
     if(flags.has(key)){values[key]=true;continue;}
@@ -167,6 +205,8 @@ function parseOptions(args) {
   const count=Number(values['--seeds']??100),retryCount=Number(values['--retry-seeds']??0);
   if(!Number.isSafeInteger(count)||count<1)throw new Error('--seeds must be a positive integer');
   if(!Number.isSafeInteger(retryCount)||retryCount<0)throw new Error('--retry-seeds must be a non-negative integer');
+  const jobs=values['--jobs']===undefined?os.availableParallelism():Number(values['--jobs']);
+  if(!Number.isSafeInteger(jobs)||jobs<1)throw new Error('--jobs must be a positive integer');
   const list=(key, fallback, valid)=>{
     const entries=[...new Set((values[key]??fallback).split(',').map(s=>s.trim()))];
     if(entries.some(s=>!valid(s)))throw new Error(`Invalid value for ${key}`);
@@ -174,37 +214,111 @@ function parseOptions(args) {
   };
   const suite=values['--suite']??'validation';
   if(!['training','validation'].includes(suite))throw new Error('--suite must be training or validation');
-  return {count,retryCount,suite,check:values['--check']===true,offline:values['--offline']===true,project:values['--project']??defaultProject(),
+  return {count,retryCount,suite,check:values['--check']===true,offline:values['--offline']===true,project:values['--project']??defaultProject(),jobs,
     ids:list('--maps','1,2,3,4,5,6,7,8,9,10',s=>/^\d+$/.test(s)&&Number(s)>=1&&Number(s)<=catalog.length).map(Number),
     bots:list('--bots','basic,normal,strategic',s=>['basic','normal','strategic'].includes(s)),
     powers:list('--powers','expected',s=>['minimum','expected','strong'].includes(s)),
     output:values['--output']??null,htmlOutput:values['--html-output']??null};
 }
 
+function createWorkerPool(size, workerData) {
+  const workerPath=path.join(__dirname,'simulate_maps_worker.cjs');
+  const workers=new Set(),idle=[],queue=[],pending=new Map();
+  let sequence=0,failure=null,closing=false;
+  const fail=error=>{
+    if(failure||closing)return;
+    failure=error;
+    for(const entry of pending.values())entry.reject(error);
+    pending.clear();
+    for(const entry of queue)entry.reject(error);
+    queue.length=0;
+  };
+  const drain=()=>{
+    while(!failure&&queue.length&&idle.length) {
+      const worker=idle.pop(),entry=queue.shift(),key=sequence++;
+      pending.set(key,entry);
+      worker.postMessage({key,task:entry.task});
+    }
+  };
+  for(let index=0;index<size;index++) {
+    const worker=new Worker(workerPath,{workerData});
+    workers.add(worker);idle.push(worker);
+    worker.on('message',message=>{
+      if(failure)return;
+      if(message.error){fail(new Error(message.error));return;}
+      const entry=pending.get(message.key);
+      if(!entry)return;
+      pending.delete(message.key);
+      entry.resolve(message.payload);
+      idle.push(worker);
+      drain();
+    });
+    worker.on('error',fail);
+    worker.on('exit',code=>{if(!closing&&code!==0)fail(new Error(`Simulation worker exited with code ${code}.`));});
+  }
+  return {
+    run(task){
+      if(failure)return Promise.reject(failure);
+      return new Promise((resolve,reject)=>{queue.push({task,resolve,reject});drain();});
+    },
+    async close(){
+      closing=true;
+      for(const entry of queue)entry.reject(new Error('Simulation cancelled.'));
+      queue.length=0;
+      await Promise.all([...workers].map(worker=>worker.terminate()));
+    }
+  };
+}
+
 async function main(args) {
-  const options=parseOptions(args),startedAt=new Date(),reports=[],retries=[];
+  const options=parseOptions(args),startedAt=new Date();
   const runId=startedAt.toISOString().replace(/[:.]/g,'-')+`-${process.pid}`;
   const directory=path.resolve(__dirname,'../.balance-reports');
   const jsonPath=path.resolve(options.output??path.join(directory,`maps-${runId}.json`));
   const htmlPath=path.resolve(options.htmlOutput??path.join(path.dirname(jsonPath),`maps-${runId}.html`));
   if(jsonPath===htmlPath)throw new Error('--output and --html-output must point to different files');
   const snapshot=await resolveSnapshot({project:options.project,offline:options.offline});
-  content=installContent(snapshot.config);
-  catalog=snapshot.maps.map(m=>validateMap(m,content));
+  installSnapshot(snapshot.config,snapshot.maps);
   for(const id of options.ids)if(id<1||id>content.levelCount)throw new Error(`Map ${id} is not in published content v${content.version} (${content.levelCount} maps)`);
   console.log(`Content v${content.version} · ${snapshot.source==='server'?'synced from server':'local cache'} · ${snapshot.project}${snapshot.cacheFile?` · ${path.relative(process.cwd(),snapshot.cacheFile)}`:''}`);
+  const reportSlots=[],retrySlots=[],tasks=[];
+  const seedChunk=Math.max(1,Math.ceil(options.count/(options.jobs*4)));
+  for(const id of options.ids)for(const bot of options.bots)for(const power of options.powers) {
+    const slot={id,bot,power,chunks:new Map(),total:0};reportSlots.push(slot);
+    for(let start=0;start<options.count;start+=seedChunk) {slot.total++;tasks.push({slot,kind:'simulate',id,bot,power,suite:options.suite,start,count:Math.min(seedChunk,options.count-start)});}
+  }
+  if(options.retryCount) {
+    const retryChunk=Math.max(1,Math.ceil(options.retryCount/(options.jobs*4)));
+    for(const id of options.ids) {
+      const slot={id,chunks:new Map(),total:0};retrySlots.push(slot);
+      for(let start=0;start<options.retryCount;start+=retryChunk) {slot.total++;tasks.push({slot,kind:'retry',id,start,count:Math.min(retryChunk,options.retryCount-start)});}
+    }
+  }
+  const collect=(task,payload)=>{
+    task.slot.chunks.set(task.start,payload);
+    if(task.slot.chunks.size<task.slot.total)return;
+    if(task.kind==='simulate') {
+      const results=[...task.slot.chunks.entries()].sort((a,b)=>a[0]-b[0]).flatMap(([,value])=>value.results);
+      const report={...summarize(catalog[task.slot.id-1],results),bot:task.slot.bot,power:task.slot.power};
+      task.slot.report=report;
+      console.log(`Map ${task.slot.id} ${task.slot.bot}/${task.slot.power}: win ${(report.winRate*100).toFixed(1)}%, 3★ ${(report.starRates[3]*100).toFixed(1)}%`);
+    } else {
+      const map=catalog[task.slot.id-1];
+      const chunks=[...task.slot.chunks.entries()].sort((a,b)=>a[0]-b[0]).map(([,value])=>value.chunk);
+      const retry=finalizeRetries(map,options.retryCount,mergeRetryChunks(chunks));
+      task.slot.retry=retry;
+      console.log(`Map ${task.slot.id} retry: ${retry.completed}/${retry.samples} completed, average ${retry.averageAttempts?.toFixed(2)??'—'} attempts`);
+    }
+  };
+  const pool=options.jobs>1&&tasks.length>1?createWorkerPool(Math.min(options.jobs,tasks.length),{config:snapshot.config,maps:snapshot.maps}):null;
   let error=null;
   try {
-    for(const id of options.ids)for(const bot of options.bots)for(const power of options.powers) {
-      const map=catalog[id-1],results=Array.from({length:options.count},(_,i)=>play(map,seedFor(i,options.suite),bot,power));
-      const report={...summarize(map,results),bot,power};reports.push(report);
-      console.log(`Map ${id} ${bot}/${power}: win ${(report.winRate*100).toFixed(1)}%, 3★ ${(report.starRates[3]*100).toFixed(1)}%`);
-    }
-    if(options.retryCount)for(const id of options.ids) {
-      const retry=simulateRetries(catalog[id-1],options.retryCount);retries.push(retry);
-      console.log(`Map ${id} retry: ${retry.completed}/${retry.samples} completed, average ${retry.averageAttempts?.toFixed(2)??'—'} attempts`);
-    }
-  } catch(cause) { error=cause.message; }
+    const settled=await Promise.allSettled(tasks.map(task=>(pool?pool.run(task):Promise.resolve().then(()=>executeTask(task))).then(payload=>collect(task,payload))));
+    for(const result of settled)if(result.status==='rejected')throw result.reason;
+  } catch(cause) { error=cause?.message??String(cause); }
+  finally { if(pool)await pool.close(); }
+  const reports=reportSlots.filter(slot=>slot.report).map(slot=>slot.report);
+  const retries=retrySlots.filter(slot=>slot.retry).map(slot=>slot.retry);
   const finishedAt=new Date(),checks=evaluateChecks(reports,options.count,options.check);
   const report={contentVersion:content.version,configHash:snapshot.hashes.config,
     source:{kind:snapshot.source,project:snapshot.project,version:snapshot.version,syncedAt:snapshot.syncedAt,checkedAt:snapshot.checkedAt,
@@ -212,7 +326,7 @@ async function main(args) {
     suite:options.suite,seeds:options.count,targets,reports,retries,checks,
     run:{id:runId,startedAt:startedAt.toISOString(),finishedAt:finishedAt.toISOString(),durationSeconds:(finishedAt-startedAt)/1000,
       command:['node','tools/simulate_maps.cjs',...args].map(s=>/^[\w./,=-]+$/.test(s)?s:JSON.stringify(s)).join(' '),
-      maps:options.ids,bots:options.bots,powers:options.powers,retrySeeds:options.retryCount,status:error?'error':'completed',error},
+      maps:options.ids,bots:options.bots,powers:options.powers,retrySeeds:options.retryCount,jobs:options.jobs,status:error?'error':'completed',error},
     maps:options.ids.map(id=>{const m=catalog[id-1];return {id:m.id,name:m.name,difficulty:m.difficulty,moves:m.moves,objectives:m.objectives,
       starThresholds:m.starThresholds,spawnPolicy:m.spawnPolicy,retryAssistPolicy:m.retryAssistPolicy,legacy:!!m.legacy};})};
   for(const [filename,body]of[[jsonPath,JSON.stringify(report,null,2)+'\n'],[htmlPath,renderBalanceReport(report)]]) {
@@ -229,4 +343,4 @@ async function main(args) {
 if(require.main===module) {
   main(process.argv.slice(2)).catch(error=>{ console.error(error.message);process.exitCode=1; });
 }
-module.exports={play,summarize,seedFor,targets,catalog,simulateRetries,evaluateChecks,parseOptions,main};
+module.exports={play,summarize,seedFor,targets,catalog,simulateRetries,evaluateChecks,parseOptions,main,installSnapshot,executeTask,simulateRetryChunk,mergeRetryChunks,finalizeRetries};
