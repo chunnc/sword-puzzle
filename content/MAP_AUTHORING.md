@@ -92,8 +92,9 @@ and actual user metrics are still needed before expanding gameplay changes beyon
 Every `maps:simulate`, `maps:check`, and `maps:release` invocation automatically writes a
 self-contained HTML report and a JSON data file. The terminal prints both paths. By default,
 files are saved under `.balance-reports/maps-<UTC timestamp>-<process ID>.*`. Open the HTML in
-a browser; it works offline and includes map/bot/power filters, difficulty target bands,
-star rates, move histograms, and cascade/reshuffle metrics. Reports still export when
+a browser; it works offline and opens on an overview with exactly one row per map. Each row
+shows difficulty/move budget, first-attempt win/star rates, retry completion, mean attempts,
+conditional win rates at each assist level, and assessment status. Reports still export when
 `--check` fails, and a runtime failure exports the profiles completed before the error.
 
 ```sh
@@ -106,6 +107,20 @@ open .balance-reports/maps-<timestamp>-<process-ID>.html
 including when CI reuses `ci.json` or `release.json`. The report embeds its data and offers a
 JSON download. Its header records the command, content/config hash, seed suite, sample counts,
 duration, and check status. JSON retains the fields used by the pilot merge tool.
+
+The overview defaults to normal/expected when that profile is present, otherwise an available
+profile. Selecting another bot or power updates values in place without duplicating map rows.
+A missing profile shows dashes and "Chưa chạy profile" while retaining the map and its retry
+data. Retry metrics always use normal/expected. Click a map to open all of its bot/power
+comparisons, move histograms, cascade/reshuffle metrics, and detailed retry results.
+
+Rebuild the current overview from an existing simulation JSON without running seeds again:
+
+```sh
+node tools/render_balance_report.cjs --input .balance-reports/report.json
+# Writes .balance-reports/report.overview.html
+node tools/render_balance_report.cjs --input .balance-reports/report.json --output .balance-reports/overview.html
+```
 
 Retry simulation is enabled with `--retry-seeds N`. Each map runs N independent sequences
 using normal/expected, a new deterministic seed for each attempt, and the map's retry assist

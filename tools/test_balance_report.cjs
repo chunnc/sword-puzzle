@@ -6,7 +6,7 @@ const path=require('node:path');
 const {spawnSync}=require('node:child_process');
 const {JSDOM}=require(require.resolve('jsdom',{paths:[path.resolve(__dirname,'../client')]}));
 const {simulateRetries,evaluateChecks,parseOptions,catalog,targets,seedFor}=require('./simulate_maps.cjs');
-const {renderBalanceReport}=require('./render_balance_report.cjs');
+const {renderBalanceReport,renderReportFile}=require('./render_balance_report.cjs');
 
 test('retry aggregation stops at the first win and accounts for each support boundary and censored sequence',()=>{
   let sequence=0,attempt=0;
@@ -85,36 +85,94 @@ test('CLI rejects malformed sample counts and selections before simulations star
 });
 
 function fixture() {
-  const reports=[profile(),profile(3,'basic','strong')];
+  const reports=[profile(),profile(3,'basic','strong'),
+    {...profile(1,'basic'),winRate:.2,starRates:[.8,.05,.1,.05],movesHistogram:{10:50,12:100,14:50}},
+    {...profile(1,'normal','strong'),winRate:.95,starRates:[.05,.05,.1,.8],movesHistogram:{10:800,12:100,14:50}}];
   return {contentVersion:4,suite:'validation',seeds:1000,targets,reports,
     retries:[simulateRetries(catalog[0],2,()=>({won:true,stars:3}))],checks:evaluateChecks(reports,1000,true),
     run:{id:'test-run',startedAt:'2026-10-10T08:00:00Z',durationSeconds:1.25,command:'node tools/simulate_maps.cjs',maps:[1,3],status:'completed'},
     maps:[catalog[0],catalog[2]],configHash:'test-config-hash'};
 }
 
-test('standalone HTML filters profiles, retains map-only retry filtering, opens details and resets',async t=>{
+test('overview keeps one row per map while changing profile values, retaining retries, opening details and resetting',async t=>{
   const report=fixture(),html=renderBalanceReport(report);
   const dom=new JSDOM(html,{runScripts:'dangerously'}),{document,Event}=dom.window;
   t.after(()=>dom.window.close());
   assert.deepEqual(JSON.parse(document.getElementById('report-data').textContent),report);
   assert.equal(document.querySelectorAll('script[src],link[rel="stylesheet"]').length,0);
-  assert.equal(document.getElementById('filter-count').textContent,'2 / 2 profile');
   const map=document.getElementById('filter-map'),bot=document.getElementById('filter-bot'),power=document.getElementById('filter-power');
+  const rows=()=>document.querySelectorAll('#overview-table tbody tr');
+  const row=id=>document.querySelector(`[data-overview][data-map="${id}"]`);
+  const value=(id,field)=>[...row(id).querySelector(`[data-field="${field}"]`).children].find(el=>!el.hidden)?.textContent;
+  assert.equal(rows().length,2);
+  assert.equal(document.getElementById('filter-count').textContent,'2 / 2 map');
+  assert.equal(bot.value,'normal');
+  assert.equal(power.value,'expected');
+  assert.match(value(1,'win'),/80,0%/);
+  assert.equal(value(3,'win'),'—');
+  assert.match(document.getElementById('overview-selection').textContent,/1 \/ 2 map có dữ liệu/);
+  assert.equal(document.querySelectorAll('[data-map-detail][open]').length,0);
+  assert.match(row(1).querySelector('[data-field="retry"]').textContent,/100,0%/);
+  assert.deepEqual([...row(1).querySelectorAll('[data-field="assist"] .assist-grid span')].map(el=>el.textContent),['100,0%','—','—','—']);
   power.value='strong';power.dispatchEvent(new Event('change',{bubbles:true}));
-  assert.equal(document.getElementById('filter-count').textContent,'1 / 2 profile');
+  assert.equal(rows().length,2);
+  assert.equal(document.getElementById('filter-count').textContent,'2 / 2 map');
+  assert.match(value(1,'win'),/95,0%/);
   map.value='1';map.dispatchEvent(new Event('change',{bubbles:true}));
-  assert.equal(document.getElementById('filter-count').textContent,'0 / 2 profile');
-  assert.equal(document.querySelector('#profiles-table').closest('[data-filter-group]').querySelector('[data-empty]').hidden,false);
-  assert.equal(document.querySelector('tr[data-retry]').hidden,false);
+  assert.equal(document.getElementById('filter-count').textContent,'1 / 2 map');
+  assert.equal(row(1).hidden,false);
+  assert.equal(row(3).hidden,true);
+  assert.equal(document.getElementById('map-3').hidden,true);
   bot.value='basic';bot.dispatchEvent(new Event('change',{bubbles:true}));
-  assert.equal(document.querySelector('tr[data-retry]').hidden,false);
+  assert.equal(row(1).hidden,false);
+  assert.equal(value(1,'win'),'—');
+  assert.match(value(1,'assessment'),/Chưa chạy profile/);
+  assert.equal(document.getElementById('overview-empty').hidden,true);
+  assert.match(row(1).querySelector('[data-field="retry"]').textContent,/100,0%/);
+  power.value='expected';power.dispatchEvent(new Event('change',{bubbles:true}));
+  assert.match(value(1,'win'),/20,0%/);
   document.getElementById('filters').reset();
   await new Promise(resolve=>setTimeout(resolve,10));
-  assert.equal(document.getElementById('filter-count').textContent,'2 / 2 profile');
-  document.querySelector('#profiles-table a').click();
-  assert.equal(document.getElementById('profile-1-normal-expected').open,true);
+  assert.equal(document.getElementById('filter-count').textContent,'2 / 2 map');
+  assert.equal(bot.value,'normal');
+  assert.equal(power.value,'expected');
+  assert.match(value(1,'win'),/80,0%/);
+  document.querySelector('#overview-table a').click();
+  assert.equal(document.getElementById('map-1').open,true);
+  assert.equal(document.querySelectorAll('#map-1 .comparison-table tbody tr').length,3);
+  document.getElementById('map-1').open=false;
+  document.querySelector('.comparison-table a[href="#profile-1-basic-expected"]').click();
+  assert.equal(document.getElementById('map-1').open,true);
+  assert.equal(document.getElementById('profile-1-basic-expected').open,true);
+  document.getElementById('map-1').open=false;
   document.querySelector('a[href="#retry-1"]').click();
+  assert.equal(document.getElementById('map-1').open,true);
   assert.equal(document.getElementById('retry-1').open,true);
+});
+
+test('overview handles an unplayed map, nonstandard assist levels and a report without the default profile',t=>{
+  const report=fixture();
+  report.reports=[profile(3,'basic','strong')];
+  report.run.maps.push(10);report.maps.push(catalog[9]);
+  report.retries=[{...simulateRetries(catalog[9],2,()=>({won:false,stars:0})),
+    byAssist:[{assist:0,samples:2,wins:0,losses:2,winRate:0,starRates:[1,0,0,0]},
+      {assist:.15,samples:2,wins:0,losses:2,winRate:0,starRates:[1,0,0,0]}]}];
+  const dom=new JSDOM(renderBalanceReport(report),{runScripts:'dangerously'}),{document}=dom.window;
+  t.after(()=>dom.window.close());
+  assert.equal(document.querySelectorAll('#overview-table tbody tr').length,3);
+  assert.equal(document.getElementById('filter-bot').value,'basic');
+  assert.equal(document.getElementById('filter-power').value,'strong');
+  const row=document.querySelector('[data-overview][data-map="10"]');
+  assert.equal(row.querySelector('[data-field="win"] [data-missing-value]').hidden,false);
+  assert.match(row.querySelector('[data-field="retry"]').textContent,/0,0%/);
+  assert.equal(row.querySelector('[data-field="retry-average"]').textContent,'—');
+  assert.match(document.querySelector('.assist-labels').textContent,/15%/);
+  const emptyReport={...report,reports:[],retries:[]};
+  const emptyDom=new JSDOM(renderBalanceReport(emptyReport),{runScripts:'dangerously'});
+  t.after(()=>emptyDom.window.close());
+  assert.equal(emptyDom.window.document.querySelectorAll('#overview-table tbody tr').length,3);
+  assert.equal(emptyDom.window.document.getElementById('filter-bot').disabled,true);
+  assert.match(emptyDom.window.document.getElementById('overview-selection').textContent,/0 \/ 3 map có dữ liệu/);
 });
 
 test('HTML safely embeds run text and raw JSON and explains missing retry/error results',t=>{
@@ -153,4 +211,24 @@ test('CLI exports HTML and JSON even when a check fails, preserving default HTML
   t.after(()=>dom.window.close());
   assert.match(dom.window.document.body.textContent,/Không đạt kiểm tra/);
   assert.equal(JSON.parse(dom.window.document.getElementById('report-data').textContent).checks.status,'failed');
+});
+
+test('renderer CLI rebuilds a one-row-per-map overview from saved JSON without altering its source',t=>{
+  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'balance-overview-test-'));
+  t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
+  const input=path.join(directory,'report.json'),source=JSON.stringify(fixture());
+  fs.writeFileSync(input,source);
+  const child=spawnSync(process.execPath,[path.join(__dirname,'render_balance_report.cjs'),'--input',input],{encoding:'utf8'});
+  assert.equal(child.status,0,child.stderr);
+  const output=path.join(directory,'report.overview.html');
+  assert.ok(child.stdout.includes(output));
+  assert.equal(fs.readFileSync(input,'utf8'),source);
+  const dom=new JSDOM(fs.readFileSync(output,'utf8'),{runScripts:'dangerously'});
+  t.after(()=>dom.window.close());
+  assert.equal(dom.window.document.querySelectorAll('#overview-table tbody tr').length,2);
+  assert.deepEqual(JSON.parse(dom.window.document.getElementById('report-data').textContent),JSON.parse(source));
+  assert.throws(()=>renderReportFile(input,input),/different files/);
+  const invalid=spawnSync(process.execPath,[path.join(__dirname,'render_balance_report.cjs'),'--input'],{encoding:'utf8'});
+  assert.equal(invalid.status,1);
+  assert.match(invalid.stderr,/Missing value/);
 });
