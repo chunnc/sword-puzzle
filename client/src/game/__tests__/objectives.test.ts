@@ -125,7 +125,7 @@ it('completing collection first does not finish a live boss', () => {
   expect(b.snapshot().objectiveProgress.swords).toBe(1);
   expect(b.won).toBe(false);
 });
-it('completes every objective with a final free skill at zero moves', () => {
+it('completes every objective with the final paid swap at zero moves', () => {
   const {
     level,
     snapshot
@@ -140,13 +140,15 @@ it('completes every objective with a final free skill at zero moves', () => {
     target: 1,
     enemy
   }]);
-  snapshot.moves = 0;
+  snapshot.moves = 1;
+  snapshot.tiles[0]!.kind = 0;
+  snapshot.tiles[1]!.kind = 0;
+  snapshot.tiles[2]!.kind = 1;
+  snapshot.tiles[9]!.kind = 0;
   const b = new BoardEngine(level, snapshot);
   expect(b.lost).toBe(false);
-  expect(b.trySkill('nhat-kiem', [{
-    x: 0,
-    y: 0
-  }])).toBe(true);
+  expect(b.trySwap(2, 1, 2, 0)).toBe(true);
+  expect(b.moves).toBe(0);
   expect(b.won).toBe(true);
   expect(b.lost).toBe(false);
   expect(normalizeSnapshot(b.snapshot())).toEqual(b.snapshot());

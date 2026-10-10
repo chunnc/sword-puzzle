@@ -57,7 +57,7 @@ jest.mock('../Art', () => {
 const mockParams = { levelId: '15' };
 let mockReduceMotion = true;
 const mockRouter = { push: jest.fn(), replace: jest.fn() };
-const mockState = { save: emptySave(), notice: '', online: true, foreground: true, initialized: true, recovering: false, authRequired: false, adsEnabled: false, session: null, setNotice: jest.fn(), swap: jest.fn(), castSkill: jest.fn(), startLevel: jest.fn() };
+const mockState = { save: emptySave(), notice: '', online: true, foreground: true, initialized: true, recovering: false, authRequired: false, adsEnabled: false, session: null, setNotice: jest.fn(), swap: jest.fn(), castSkill: jest.fn(), startLevel: jest.fn(), requestExtraMoves: jest.fn() };
 
 describe('gameplay presentation and exit behavior', () => {
   let renderer: ReactTestRenderer, hardwareBack: () => boolean;
@@ -108,6 +108,7 @@ describe('gameplay presentation and exit behavior', () => {
     jest.clearAllMocks(); mockReduceMotion = true; mockParams.levelId = '15'; mockState.save = emptySave();
     mockState.save.active = new BoardEngine(getLevel(15)).snapshot(); mockState.save.active.swordQi = 100;
     mockState.startLevel.mockResolvedValue(true);
+    mockState.adsEnabled = false; mockState.requestExtraMoves.mockResolvedValue(false);
     jest.spyOn(Native, 'useWindowDimensions').mockReturnValue({ width: 320, height: 568, scale: 3, fontScale: 1 });
     jest.spyOn(Native.BackHandler, 'addEventListener').mockImplementation((_event, handler) => { hardwareBack = handler as () => boolean; return { remove: removeBack }; });
   });
@@ -226,13 +227,14 @@ describe('gameplay presentation and exit behavior', () => {
     expect(renderer.root.findAllByType(Native.View).filter(node => String(node.props.accessibilityLabel).startsWith('Máu '))).toHaveLength(goal === GoalKind.Battle || goal === GoalKind.Boss ? 1 : 0);
   });
 
-  it('allows a final skill at zero moves and disables skills already used', () => {
-    mockState.save.active!.moves = 0; mount();
-    expect(button('Nhất Kiếm, 60 kiếm khí').props.disabled).toBe(false);
-    expect(renderer.root.findAllByType(Native.Text).some(node => node.props.children === 'HẾT LƯỢT')).toBe(false);
-    act(() => { renderer.unmount(); }); mockState.save.active!.skillUsed = true; mount();
+  it.each([false, true])('opens loss at zero moves with enough qi and skillUsed=%s', skillUsed => {
+    mockState.save.active!.moves = 0; mockState.save.active!.skillUsed = skillUsed; mount();
     expect(button('Nhất Kiếm, 60 kiếm khí').props.disabled).toBe(true);
     expect(popup().props.result.kind).toBe('lost');
+    expect(board().props.locked).toBe(true);
+    act(() => { board().props.onSwipe(0, 0, 1, 0); board().props.onCellPress(0, 0); });
+    expect(mockState.swap).not.toHaveBeenCalled();
+    expect(mockState.castSkill).not.toHaveBeenCalled();
   });
 
   it('cancels exit with targets intact and confirms without altering the saved run', () => {
@@ -297,6 +299,27 @@ describe('gameplay presentation and exit behavior', () => {
       mockState.foreground = true;
       act(() => { renderer.update(React.createElement(GameScreen)); });
       expect(board().props.locked).toBe(false);
+    } finally { mockState.foreground = true; }
+  });
+
+  it('opens loss on resume when the final zero-move board was saved before playback was cancelled', async () => {
+    jest.useFakeTimers(); mockReduceMotion = false;
+    mockState.save.active!.moves = 1;
+    const animation = cascadeAnimation(1);
+    await startAnimation(animation, 'lost');
+    await advance(BOARD_SWAP_MS + BOARD_CLEAR_MS);
+    expect(board().props.visualEffect.kind).toBe('fall');
+    try {
+      mockState.save.active = animation.finalBoard;
+      mockState.foreground = false;
+      await act(async () => { renderer.update(React.createElement(GameScreen)); });
+      expect(board().props.snapshot).toEqual(animation.finalBoard);
+      expect(board().props.visualEffect).toBeNull();
+      mockState.foreground = true;
+      act(() => { renderer.update(React.createElement(GameScreen)); });
+      expect(popup().props.result.kind).toBe('lost');
+      expect(board().props.locked).toBe(true);
+      expect(mockState.setNotice).not.toHaveBeenCalled();
     } finally { mockState.foreground = true; }
   });
 
@@ -413,7 +436,7 @@ describe('gameplay presentation and exit behavior', () => {
   });
 
   it('restores a lost run and restarts with a new board without changing routes', async () => {
-    mockState.save.active!.moves = 0; mockState.save.active!.swordQi = 0; mount();
+    mockState.save.active!.moves = 0; mount();
     expect(popup().props.result.kind).toBe('lost');
     const runId = board().props.snapshot.runId;
     mockState.startLevel.mockImplementation(async () => { mockState.save.active = new BoardEngine(getLevel(15)).snapshot(); return true; });
@@ -423,6 +446,22 @@ describe('gameplay presentation and exit behavior', () => {
     expect(board().props.snapshot.runId).not.toBe(runId);
     expect(board().props.locked).toBe(false);
     expect(mockRouter.replace).not.toHaveBeenCalled();
+  });
+
+  it('dismisses loss and unlocks the board and skills after rewarded extra moves', async () => {
+    mockState.adsEnabled = true; mockState.save.active!.moves = 0;
+    mockState.requestExtraMoves.mockImplementation(async () => {
+      mockState.save.active = { ...mockState.save.active!, moves: 3, extraMovesUsed: true };
+      return true;
+    });
+    mount();
+    expect(popup().props.result.kind).toBe('lost');
+    await act(async () => { popup().props.onReady(); popup().props.onExtraMoves(); });
+    expect(mockState.requestExtraMoves).toHaveBeenCalledTimes(1);
+    expect(popup()).toBeUndefined();
+    expect(board().props.snapshot).toMatchObject({ moves: 3, extraMovesUsed: true });
+    expect(board().props.locked).toBe(false);
+    expect(button('Nhất Kiếm, 60 kiếm khí').props.disabled).toBe(false);
   });
 
   it('uses only reward reconciliation for the same run and resets when the route changes', async () => {
@@ -439,29 +478,40 @@ describe('gameplay presentation and exit behavior', () => {
     expect(board().props.snapshot.levelId).toBe(16);
   });
 
-  it('finishes the real last-skill board animation before opening a zero-star win', async () => {
+  it.each(['won', 'lost'] as const)('finishes the real final paid swap animation before opening %s with enough qi', async outcome => {
     jest.useFakeTimers();
     try {
       mockReduceMotion = false; mockParams.levelId = '1';
       const snapshot = new BoardEngine(getLevel(1)).snapshot();
-      snapshot.moves = 0; snapshot.objectiveProgress.main = getLevel(1).objectives[0].target - 1; snapshot.swordQi = 60;
-      for (let x = 0; x < 7; x++) snapshot.tiles[x] = { kind: 0, chargeTier: 0, locked: false };
+      snapshot.moves = 1; snapshot.objectiveProgress.main = outcome === 'won' ? getLevel(1).objectives[0].target - 1 : 0; snapshot.swordQi = 100;
+      snapshot.tiles = snapshot.tiles.map((tile, i) => tile ? {
+        kind: (i % 7 + 2 * Math.floor(i / 7)) % 4, chargeTier: 0, locked: false,
+      } : null);
+      snapshot.tiles[0]!.kind = 0; snapshot.tiles[1]!.kind = 0;
+      snapshot.tiles[2]!.kind = 1; snapshot.tiles[9]!.kind = 0;
       mockState.save.active = snapshot;
       const engine = new BoardEngine(getLevel(1), snapshot);
-      expect(engine.trySkill('nhat-kiem', [{ x: 0, y: 0 }])).toBe(true);
+      expect(engine.trySwap(2, 1, 2, 0)).toBe(true);
+      expect(engine.moves).toBe(0);
+      expect(engine.won).toBe(outcome === 'won');
+      expect(engine.lost).toBe(outcome === 'lost');
+      expect(engine.swordQi).toBeGreaterThanOrEqual(engine.cost('nhat-kiem'));
       const summary = { runId: snapshot.runId, levelId: 1, stars: 0 as const, bestStars: 0 as const, expGained: 30, totalExp: 30, coinsGained: 100, realmBefore: 0, realmAfter: 0 };
-      mockState.castSkill.mockImplementation(async () => {
-        mockState.save.active = null; mockState.save.lastWin = summary;
-        return { changed: true, won: true, lost: false, stars: 0, levelId: 1, summary, animation: engine.animation };
+      mockState.swap.mockImplementation(async () => {
+        mockState.save.active = engine.snapshot();
+        if (engine.won) mockState.save.lastWin = summary;
+        return { changed: true, won: engine.won, lost: engine.lost, stars: 0, levelId: 1,
+          summary: engine.won ? summary : undefined, animation: engine.animation };
       });
-      mount(); act(() => { button('Nhất Kiếm, 60 kiếm khí').props.onPress(); board().props.onCellPress(0, 0); });
-      await act(async () => { button('Thi triển · 60 khí').props.onPress(); });
+      mount();
+      await act(async () => { board().props.onSwipe(2, 1, 2, 0); });
       expect(renderer.root.findAllByType(GameplayResultPopup).filter(node => node.props.result)).toHaveLength(0);
       expect(board().props.locked).toBe(true);
       for (let phase = 0; jest.getTimerCount() && phase < 200; phase++) {
         await act(async () => { await jest.runOnlyPendingTimersAsync(); });
       }
-      expect(popup().props.result.summary.stars).toBe(0);
+      expect(popup().props.result.kind).toBe(outcome);
+      if (outcome === 'won') expect(popup().props.result.summary.stars).toBe(0);
       expect(board().props.snapshot).toEqual(engine.animation!.finalBoard);
       expect(mockRouter.replace).not.toHaveBeenCalled();
     } finally { jest.useRealTimers(); }
@@ -542,9 +592,16 @@ describe('gameplay presentation and exit behavior', () => {
 
   it.each(['won', 'lost'] as const)('waits for the final settle before opening the %s result', async outcome => {
     jest.useFakeTimers(); mockReduceMotion = false;
-    const animation = cascadeAnimation(1);
+    mockState.save.active!.moves = 1;
+    const animation = cascadeAnimation(2);
     await startAnimation(animation, outcome);
     await advance(BOARD_SWAP_MS + BOARD_CLEAR_MS + BOARD_FALL_MS);
+    expect(board().props.snapshot.moves).toBe(0);
+    expect(popup()).toBeUndefined();
+    await advance(BOARD_CHAIN_DELAY_MS);
+    expect(board().props.visualEffect.kind).toBe('clear');
+    expect(popup()).toBeUndefined();
+    await advance(BOARD_CLEAR_MS + BOARD_FALL_MS);
     await advance(BOARD_CHAIN_DELAY_MS - 1);
     expect(popup()).toBeUndefined();
     expect(board().props.locked).toBe(true);

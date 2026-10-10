@@ -106,9 +106,12 @@ function GameplaySession({ levelId }: { levelId: number }) {
     useEffect(() => {
         if (busyRef.current || !persisted || !level) return;
         setBoard(persisted);
-        if (new BoardEngine(level, persisted).lost)
-            openResult({ kind: 'lost', runId: persisted.runId, levelId });
-    }, [level, levelId, openResult, persisted]);
+    }, [level, persisted]);
+    useEffect(() => {
+        // Reconcile a settled save after playback is cancelled, too.
+        if (busy || busyRef.current || !board || !engine?.lost) return;
+        openResult({ kind: 'lost', runId: board.runId, levelId });
+    }, [board, busy, engine, levelId, openResult]);
     useEffect(() => {
         const summary = store.save.lastWin;
         if (!busy && summary && summary.levelId === levelId && summary.runId === persisted?.runId) openResult({ kind: 'won', runId: summary.runId, summary });

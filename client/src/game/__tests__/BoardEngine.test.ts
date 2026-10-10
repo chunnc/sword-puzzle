@@ -98,7 +98,33 @@ describe('board rules v2', () => {
     });
     it('locked charges are unlocked rather than activated in that wave', () => { const s = fixture(); s.tiles[21] = { ...tile(1, 5), locked: true }; const b = new BoardEngine(getLevel(5), s); b.trySkill('nhat-kiem', [{ x: 0, y: 3 }]); expect(b.animation!.steps[0].effects.some(e => e.kind === 'fire')).toBe(false); });
     it('casts at most once until a successful paid swap and rejects invalid targets without spending', () => { const s = fixture(); s.loadout.skills = ['ngu-kiem', 'nhat-kiem']; s.condensed = true; const b = new BoardEngine(getLevel(5), s); const old = b.snapshot(); expect(b.trySkill('ngu-kiem', [{ x: 0, y: 0 }, { x: 3, y: 0 }])).toBe(false); expect(b.snapshot()).toEqual(old); expect(b.trySkill('nhat-kiem', [{ x: 0, y: 0 }])).toBe(true); expect(b.trySkill('nhat-kiem', [{ x: 0, y: 1 }])).toBe(false); const move = b.legalMoves()[0]; b.trySwap(...move); expect(b.snapshot().skillUsed).toBe(false); });
-    it('allows a final free skill at zero moves and then loses or wins', () => { const s = fixture(); s.moves = 0; const b = new BoardEngine(getLevel(5), s); expect(b.lost).toBe(false); b.trySkill('nhat-kiem', [{ x: 0, y: 0 }]); expect(b.lost).toBe(true); expect(b.grantExtraMoves()).toBe(true); expect(b.grantExtraMoves()).toBe(false); });
+    it.each([0, 100])('loses at zero moves with %i qi and rejects skills without spending', swordQi => {
+        const s = fixture(); s.moves = 0; s.swordQi = swordQi;
+        const b = new BoardEngine(s.level, s), before = b.snapshot();
+        expect(b.lost).toBe(true);
+        expect(b.availableSkills()).toEqual([]);
+        expect(b.trySwap(0, 0, 1, 0)).toBe(false);
+        expect(b.trySkill('nhat-kiem', [{ x: 0, y: 0 }])).toBe(false);
+        expect(b.snapshot()).toEqual(before);
+        expect(b.grantExtraMoves()).toBe(true);
+        expect(b.moves).toBe(3);
+        expect(b.lost).toBe(false);
+        expect(b.availableSkills()).toEqual(swordQi ? ['nhat-kiem'] : []);
+        expect(b.grantExtraMoves()).toBe(false);
+    });
+    it('settles the final paid swap and loses even when a skill is still affordable', () => {
+        const s = fixture(); s.moves = 1;
+        s.tiles[0] = tile(0); s.tiles[1] = tile(0); s.tiles[2] = tile(1); s.tiles[9] = tile(0);
+        const b = new BoardEngine(s.level, s);
+        expect(b.availableSkills()).toEqual(['nhat-kiem']);
+        expect(b.trySwap(2, 1, 2, 0)).toBe(true);
+        expect(b.moves).toBe(0);
+        expect(b.won).toBe(false);
+        expect(b.lost).toBe(true);
+        expect(b.swordQi).toBeGreaterThanOrEqual(b.cost('nhat-kiem'));
+        expect(b.animation!.finalBoard).toEqual(b.snapshot());
+        expect(b.snapshot().tiles.every(Boolean)).toBe(true);
+    });
     it('supports every skill with valid targets', () => { for (const skill of SKILLS) {
         const s = fixture();
         s.loadout.skills = [skill.id];

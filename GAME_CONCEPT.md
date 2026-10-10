@@ -114,7 +114,7 @@ Các cảnh trước Chân Tiên có Sơ kỳ, Trung kỳ, Hậu kỳ, Viên mã
 
 Danh mục, chỉ số, giá và mốc mở bán nằm trong content/game-content.json. Mỗi người dùng một bảo kiếm và một skill; ô skill thứ hai mở tại 1.500 EXP. Nhất Kiếm và Thanh Phong miễn phí ban đầu.
 
-Kiếm thuật gồm Nhất Kiếm, Ngự Kiếm, Hỏa Liên, Dẫn Lôi, Phá Chướng, Liên Kiếm, Hồi Linh, Vạn Kiếm. Không tiêu lượt; tối đa một cast giữa hai nước đổi thành công có tiêu lượt. Hủy chọn không tiêu khí. Hết lượt vẫn cho dùng cast cuối còn hợp lệ.
+Kiếm thuật gồm Nhất Kiếm, Ngự Kiếm, Hỏa Liên, Dẫn Lôi, Phá Chướng, Liên Kiếm, Hồi Linh, Vạn Kiếm. Không tiêu lượt; tối đa một cast giữa hai nước đổi thành công có tiêu lượt. Hủy chọn không tiêu khí. Chỉ được thi triển khi còn lượt. Khi hết lượt, xử lý hết hiệu ứng và combo của nước đổi cuối: hoàn thành mọi mục tiêu thì thắng, nếu còn mục tiêu chưa hoàn thành thì hiện dialog thua.
 
 Bảo kiếm gồm Thanh Phong, Trọng Nhạc, Hỏa Vân, Lôi Minh, Tụ Linh, Liên Tinh, Phá Quân, Huyền Cơ. Cấp tự dùng tu vi hiện tại. Bộ trang bị và uy lực cố định khi bắt đầu màn; thay đổi áp dụng từ màn tiếp.
 

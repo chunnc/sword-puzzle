@@ -307,6 +307,16 @@ it('purchases only after server confirmation and freezes the run loadout', async
   expect(store.getState().save.active!.loadout.skills).toEqual(['nhat-kiem']);
 });
 const flushAction = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
+function finalWinningSwap(): [number, number, number, number] {
+  const snapshot = store.getState().save.active!;
+  snapshot.moves = 1; snapshot.objectiveProgress.main = 17; snapshot.swordQi = 100;
+  snapshot.tiles = snapshot.tiles.map((tile, i) => tile ? {
+    kind: (i % 7 + 2 * Math.floor(i / 7)) % 4, chargeTier: 0, locked: false
+  } : null);
+  snapshot.tiles[0]!.kind = 0; snapshot.tiles[1]!.kind = 0;
+  snapshot.tiles[2]!.kind = 1; snapshot.tiles[9]!.kind = 0;
+  return [2, 1, 2, 0];
+}
 function livePresenter(lastWave: number) {
   let waves = 0;
   let finish!: () => void;
@@ -346,18 +356,40 @@ it('starts live animation before storage and keeps the final animation independe
   expect(store.getState().save.active).toEqual(expected.snapshot());
   expect(api.syncProfile).not.toHaveBeenCalled();
 });
+it('persists a final-swap loss with enough qi and returns it only after playback settles', async () => {
+  ready(); await store.getState().startLevel(1);
+  const { BoardEngine } = require('../../game/BoardEngine');
+  const move = finalWinningSwap(), snapshot = store.getState().save.active!;
+  snapshot.objectiveProgress.main = 0;
+  const expected = new BoardEngine(snapshot.level, snapshot);
+  expect(expected.trySwap(...move)).toBe(true);
+  expect(expected.lost).toBe(true);
+  const live = livePresenter(expected.animation.steps.length);
+  const action = store.getState().swap(...move, live.presenter);
+  let done = false; void action.then(() => { done = true; });
+  await flushAction();
+  expect(live.phases.at(-1)!.kind).toBe('step');
+  expect(done).toBe(false);
+  live.finish();
+  expect(await action).toMatchObject({ changed: true, won: false, lost: true, animation: null });
+  expect(live.phases.at(-1)!.kind).toBe('settled');
+  expect(store.getState().save.active).toEqual(expected.snapshot());
+  const restored = (await saveTools.loadSave(guest.uid)).active!;
+  expect(new BoardEngine(restored.level, restored).lost).toBe(true);
+  expect(restored.swordQi).toBeGreaterThanOrEqual(expected.cost('nhat-kiem'));
+  expect(api.syncProfile).not.toHaveBeenCalled();
+});
 it('runs winning animation while server confirmation is pending and never grants rewards early', async () => {
   ready(); await store.getState().startLevel(1);
   const { BoardEngine } = require('../../game/BoardEngine');
+  const move = finalWinningSwap();
   const snapshot = store.getState().save.active!;
-  snapshot.moves = 0; snapshot.objectiveProgress.main = 17; snapshot.swordQi = 60;
-  for (let x = 0; x < 7; x++) snapshot.tiles[x] = { kind: 0, chargeTier: 0, locked: false };
   const expected = new BoardEngine(snapshot.level, snapshot);
-  expected.trySkill('nhat-kiem', [{ x: 0, y: 0 }]);
+  expect(expected.trySwap(...move)).toBe(true);
   const live = livePresenter(expected.animation.steps.length);
   let confirm!: (value: unknown) => void;
   (api.syncProfile as jest.Mock).mockImplementationOnce(() => new Promise(resolve => { confirm = resolve; }));
-  const action = store.getState().castSkill('nhat-kiem', [{ x: 0, y: 0 }], live.presenter);
+  const action = store.getState().swap(...move, live.presenter);
   let done = false; void action.then(() => { done = true; });
   await flushAction();
   expect(api.syncProfile).toHaveBeenCalledTimes(1);
@@ -372,26 +404,16 @@ it('runs winning animation while server confirmation is pending and never grants
   confirm({ session: guest, response: { profile: canonical, acknowledged: [operation.id], rejected: [],
     rewards: [{ id: operation.id, expGained: 30, coinsGained: 100, bestStars: 0, realmBefore: 0, realmAfter: 0 }] } });
   const result = await action;
-  expect(result).toMatchObject({ won: true, animation: null, summary: { coinsGained: 100 } });
+  expect(result).toMatchObject({ won: true, lost: false, stars: 0, animation: null, summary: { coinsGained: 100 } });
   expect(store.getState().save.pending).toBeNull();
 });
 it('retries a timed-out committed result with the same run ID without local rewards', async () => {
   ready();
   await store.getState().startLevel(1);
+  const move = finalWinningSwap();
   const snapshot = store.getState().save.active!;
-  snapshot.moves = 0;
-  snapshot.objectiveProgress.main = 17;
-  snapshot.swordQi = 60;
-  for (let x = 0; x < 7; x++) snapshot.tiles[x] = {
-    kind: 0,
-    chargeTier: 0,
-    locked: false
-  };
   (api.syncProfile as jest.Mock).mockRejectedValueOnce(new api.GameApiError('TIMEOUT'));
-  const result = await store.getState().castSkill('nhat-kiem', [{
-    x: 0,
-    y: 0
-  }]);
+  const result = await store.getState().swap(...move);
   expect(result.won).toBe(true);
   expect(result.summary).toBeUndefined();
   expect(store.getState().save.profile.coins).toBe(0);
@@ -591,6 +613,28 @@ it('defers a loss report until leaving/retrying, and retries a failed finish wit
   expect((api.finishRun as jest.Mock).mock.calls.map(call=>call[1])).toEqual([active.runId,active.runId]);
   expect(store.getState().save.active).toBeNull();
   expect(store.getState().save.pendingFinish).toBeUndefined();
+});
+it('grants rewarded extra moves to a lost run even when a skill is affordable', async () => {
+  modernReady(); await store.getState().startLevel(1);
+  const { BoardEngine } = require('../../game/BoardEngine');
+  const ads = require('../../services/ads');
+  const active = store.getState().save.active!;
+  active.moves = 0; active.swordQi = 100;
+  store.setState({ adsEnabled: true, save: { ...store.getState().save, active } });
+  expect((await store.getState().castSkill('nhat-kiem', [{ x: 0, y: 0 }])).changed).toBe(false);
+  (api.createAdIntent as jest.Mock).mockResolvedValue({ session: guest, intent: { intentId: 'extra-moves', customData: 'reward' } });
+  (api.checkAdIntent as jest.Mock).mockResolvedValue(guest);
+  ads.showRewardedForIntent.mockResolvedValue(true);
+  expect(await store.getState().requestExtraMoves()).toBe(true);
+  const restored = (await saveTools.loadSave(guest.uid)).active!;
+  expect(restored).toMatchObject({ runId: active.runId, moves: 3, extraMovesUsed: true, swordQi: 100 });
+  const engine = new BoardEngine(restored.level, restored);
+  expect(engine.lost).toBe(false);
+  expect(engine.availableSkills()).toContain('nhat-kiem');
+  expect(await store.getState().requestExtraMoves()).toBe(false);
+  expect(api.createAdIntent).toHaveBeenCalledTimes(1);
+  expect(ads.showRewardedForIntent).toHaveBeenCalledWith('reward');
+  expect(api.finishRun).not.toHaveBeenCalled();
 });
 it('startup requests one chapter without fetching map definitions or starting a new run', async () => {
   const content = modernReady();

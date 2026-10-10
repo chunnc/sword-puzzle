@@ -68,7 +68,7 @@ export class BoardEngine {
     private advance(type: string, amount: number, tileKind?: number): void {
         for (const o of this.level.objectives) if (o.type === type && (o.type !== 'Collect' || o.tileKind === tileKind)) this.objectiveProgress[o.id] = Math.min(o.target, this.objectiveProgress[o.id] + amount);
     }
-    get lost(): boolean { return this.moves <= 0 && !this.won && !this.availableSkills().length; }
+    get lost(): boolean { return this.moves <= 0 && !this.won; }
     get levelDefinition(): LevelDefinition { return this.level; }
     get animation(): BoardActionAnimation | null { return this.lastAnimation; }
     get(x: number, y: number): Tile | null { const tile = this.inside({ x, y }) ? this.tiles[y * this.width + x] : null; return tile ? copy(tile) : null; }
@@ -79,7 +79,7 @@ export class BoardEngine {
     }
     cost(id: SkillId): number { return skillCost(id, this.loadout.sword, this.condensed, this.content); }
     availableSkills(): SkillId[] {
-        if (this.won || this.skillUsed)
+        if (this.won || this.moves <= 0 || this.skillUsed)
             return [];
         return this.loadout.skills.filter(id => this.swordQi >= this.cost(id) && this.hasSkillTarget(id));
     }
@@ -112,7 +112,7 @@ export class BoardEngine {
     beginSkill(id: SkillId, targets: CellPosition[]): BoardActionStart | null {
         if (this.resolution) throw new Error('BOARD_ACTION_IN_PROGRESS');
         this.lastAnimation = null;
-        if (this.won || this.skillUsed || !this.loadout.skills.includes(id) || this.swordQi < this.cost(id) || !this.validTargets(id, targets))
+        if (this.won || this.moves <= 0 || this.skillUsed || !this.loadout.skills.includes(id) || this.swordQi < this.cost(id) || !this.validTargets(id, targets))
             return null;
         const indices = targets.map(this.indexOf);
         this.swordQi -= this.cost(id);
