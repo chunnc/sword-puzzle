@@ -277,7 +277,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
           const name = content.tiles.find(def => def.id === tile.kind)?.name ?? 'Đá chắn';
           return <Pressable key={index} accessibilityRole="button" accessibilityLabel={`${name}${tile.chargeTier ? `, cường hóa ${tile.chargeTier}` : ''}${tile.locked ? ', phong ấn' : ''}, hàng ${y + 1}, cột ${x + 1}`} accessibilityState={{ disabled: locked }} disabled={locked} onPress={sfxPress(() => onCellPress(x, y), !locked)} style={[styles.touchCell, { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }]} />;
         }) : null}
-        {side > geometry.width * 2 && tutorialHint && tutorialMove ? <Text pointerEvents="none" style={[
+        {side > geometry.width * 2 && tutorialMove ? <Text pointerEvents="none" style={[
           styles.tutorialArrow,
           { left: side * ((tutorialMove.from.x + tutorialMove.to.x) / 2 + .5) - 10,
             top: side * ((tutorialMove.from.y + tutorialMove.to.y) / 2 + .5) - 16 },
