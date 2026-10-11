@@ -22,3 +22,4 @@ client/UserSettings/
 __pycache__/
 
 /.balance-reports/
+/content/.map-generation.lock

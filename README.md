@@ -72,3 +72,24 @@ kích hoạt ô Lôi cấp 4 trong hai nước. Hai map không sinh cascade tự
 
 Dọn catalog Firestore và dọn các fixture/cache/report map cũ là các thao tác độc lập. Bản local
 này chưa được publish lên Firestore.
+
+## Skill sinh map và publish theo index
+
+Skill [`generate-map`](.agents/skills/generate-map/SKILL.md) sinh layout đa dạng tối đa
+**7 cột × 8 hàng**, có 12–40% ô khuyết, rồi dùng engine thật để chọn mục tiêu/HP,
+ngân sách lượt và ngưỡng sao. Training và validation độc lập; retry được đo đến
+lần thắng đầu và lần đạt 3 sao đầu. Mức trung bình mặc định thắng lần đầu >80% và
+đạt 3 sao lần đầu 45–55%.
+
+```sh
+npm run maps:generate -- --difficulty medium --objective collect --tiles sword,fire
+npm run maps:generate -- --difficulty hard --objective boss --seed 12345
+npm run maps:balance -- 3
+npm run maps:publish -- 3
+```
+
+Đầu ra ở `content/map-seeds/INDEX/`: seed local, snapshot config, report balance và
+preview HTML. Map đạt validation được nối vào catalog local; publish dùng project
+trong `.firebaserc` và Firebase CLI login, giữ các revision cũ và mở rộng content
+version theo từng index. Catalog ban đầu cần được seed trên project trước khi
+publish map mới. Tất cả tùy chọn: [generate-map commands](.agents/skills/generate-map/references/commands.md).

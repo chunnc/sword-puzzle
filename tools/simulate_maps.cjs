@@ -84,8 +84,8 @@ function cast(engine,bot,random) {
   const row=rows[0];const x=row.cells.find(i=>snapshot.level.board.activeCells[i])%w;
   return engine.trySkill('nhat-kiem',[{x,y:row.y}]);
 }
-function play(map, seed, bot='normal', power='expected', assist=0, trace=false) {
-  const random=rng(seed^0x5a17c9e3), totalExp=power==='minimum'?0:power==='strong'?(map.id-1)*100+1500:(map.id-1)*60;
+function play(map, seed, bot='normal', power='expected', assist=0, trace=false, context={}) {
+  const random=rng(seed^0x5a17c9e3), totalExp=context.totalExp??(power==='minimum'?0:power==='strong'?(map.id-1)*100+1500:(map.id-1)*60);
   const level=mapToLevel(map,seed,assist,content);
   const engine=new BoardEngine(level,null,{loadout:{sword:'thanh-phong',skills:['nhat-kiem']},totalExp});
   let waves=0,maxChain=0,actions=0,damage=0;
@@ -103,6 +103,7 @@ function play(map, seed, bot='normal', power='expected', assist=0, trace=false) 
   }
   const snapshot=engine.snapshot();
   return {won:engine.won,stars:engine.won?mapStars(map,engine.movesUsed):0,movesUsed:engine.movesUsed,waves,maxChain,reshuffles:snapshot.reshuffles??0,actions,waveCounts,metrics,...(trace?{timeline}:{}),
+    stalled:!engine.won&&!engine.lost,objectiveProgress:{...snapshot.objectiveProgress},
     progress:map.objectives.reduce((sum,o)=>sum+snapshot.objectiveProgress[o.id]/o.target,0)/map.objectives.length};
 }
 function summarize(map, results) {

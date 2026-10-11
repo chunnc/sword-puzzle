@@ -34,7 +34,7 @@ the direction, refills deterministically, and stabilizes any gravity match witho
 the first two maps. A different legal move dismisses the hint for that run; a retry starts it
 again. The hint step is saved with the run snapshot.
 
-Content v8 maps use percentage stars: 3 stars below 50% and 2 stars below 75% of the
+Tutorial maps use percentage stars: 3 stars below 50% and 2 stars below 75% of the
 original move budget. Extra moves do not enlarge that budget. Collect targets are capped at
 30; all objectives must finish before the run wins.
 
@@ -50,3 +50,24 @@ The reset flag is required to shrink a previous catalog. On apply it is accepted
 `gameMaps` is empty. Seeding writes the current config and the two numeric map resources; it
 does not recreate historical content. This repository currently contains the local catalog
 only. Publishing to a shared project is a separate operation.
+
+## Generated maps after the tutorials
+
+Use `npm run maps:generate -- --difficulty medium --objective collect` or
+`--objective boss`. The generator adds the next contiguous local ID, defaults to
+the last chapter, and produces a seed/config/report/preview bundle under
+`content/map-seeds/INDEX/`. Maps are bounded to 7 columns × 8 rows, contain 12–40%
+holes, and use random normal cells rather than a single fixed opening for every run.
+
+The generation profiles are easy win >95% / three-star >80%; medium win >80% /
+three-star 45–55%; hard win 25–40% / three-star 5–15%; very-hard win 10–20% /
+three-star 2–6%. Training fits targets, move budget, spawn policy and percentage
+star cutoffs; a frozen candidate must pass at least 1000 independent validation
+seeds. Generation and `maps:balance INDEX` also measure first-win and first-three-star
+retry sequences with the server's consecutive-failure reset semantics.
+
+Once the initial catalog is configured, `npm run maps:publish -- INDEX` publishes
+that single generated map. It allocates immutable map revisions, appends one level
+to a fresh immutable content version when necessary, and updates catalogRevision
+transactionally. See [skill commands](../.agents/skills/generate-map/references/commands.md)
+for fixed targets, custom bands, reference EXP, new chapters and emulator usage.

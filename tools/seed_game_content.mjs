@@ -18,7 +18,7 @@ if (content.version < 8 || maps.length !== content.levelCount || maps.some((map,
 const args = process.argv.slice(2), flag = name => { const i=args.indexOf(name); return i<0?null:args[i+1]; };
 const project = flag('--project'), apply = args.includes('--apply'), resetCatalog = args.includes('--reset-catalog');
 if (!apply) {
-  console.log('Validated content v8 and its two tutorial maps. Dry run; no database writes.');
+  console.log(`Validated content v${content.version} and ${maps.length} maps (${maps.filter(map => map.tutorial).length} tutorials). Dry run; no database writes.`);
   process.exit(0);
 }
 if (!project || project.startsWith('--')) throw new Error('An explicit --project ID is required.');
