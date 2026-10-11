@@ -7,7 +7,7 @@ import { Board, BOARD_CLEAR_MS, BOARD_FIRE_MS, BOARD_LIGHTNING_MS, BOARD_FALL_MS
 import { GameplayDock, GameplayInfo } from '../GameplayChrome';
 import { GameplayProgressBar } from '../GameplayProgressBar';
 import { GameplayResultPopup } from '../GameplayResultPopup';
-import { BOARD_FIRE_CHARGE_MS, BOARD_SPIRIT_EMIT_AT_MS, BOARD_SPIRIT_MS } from '../boardVisuals';
+import { BOARD_COLLECTION_STEP_MS, BOARD_FIRE_CHARGE_MS, BOARD_SPIRIT_EMIT_AT_MS, BOARD_SPIRIT_MS } from '../boardVisuals';
 import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
 import { installContent, mapToLevel, validateMap } from '../../game/domain';
@@ -24,6 +24,7 @@ jest.mock('react-native-reanimated', () => ({
   default: { View: require('react-native').View }, useReducedMotion: () => mockReduceMotion,
   useSharedValue: (value: number) => require('react').useRef({ value }).current,
   useAnimatedStyle: (style: () => unknown) => style(), withTiming: (value: number) => value,
+  cancelAnimation: jest.fn(), withSequence: (...values: unknown[]) => values.at(-1), Easing: { out: (value: unknown) => value, back: () => ({}), quad: {} },
   makeMutable: (value: unknown) => ({ value }),
 }));
 jest.mock('../SpiritQiFlightOverlay', () => ({ SpiritQiFlightOverlay: require('react-native').View }));
@@ -244,6 +245,52 @@ describe('gameplay presentation and exit behavior', () => {
       expect(renderer.root.findByType(GameplayInfo).props.board.objectiveProgress).toEqual({main:30,secondary:12});
       expect(renderer.root.findAllByType(Native.Text).some(t=>String(t.props.children).includes('✓'))).toBe(true);
     } finally {installContent(require('../../../../content/game-content.json'));}
+  });
+
+  it('holds collection progress until every cascade and fall finishes, then counts one beat at a time', async () => {
+    jest.useFakeTimers(); mockReduceMotion = false;
+    const collectLevel = Array.from({ length: 40 }, (_, index) => getLevel(index + 1))
+      .find(candidate => candidate.objectives[0].type === 'Collect')!;
+    const collectObjective = { ...collectLevel.objectives[0], target: 10 } as Extract<typeof collectLevel.objectives[number], { type: 'Collect' }>;
+    const level = { ...collectLevel, objectives: [collectObjective] };
+    const collectId = collectObjective.id;
+    mockParams.levelId = String(level.id);
+    const initialBoard = new BoardEngine(level).snapshot();
+    initialBoard.objectiveProgress = { [collectId]: 0 };
+    mockState.save.active = initialBoard;
+    const animation = cascadeAnimation(2);
+    animation.swappedBoard = { ...animation.swappedBoard, level, objectiveProgress: { [collectId]: 0 } };
+    animation.steps = animation.steps.map((step, index) => {
+      const beforeProgress = index, afterProgress = index + 1;
+      return {
+        ...step,
+        before: { ...step.before, level, objectiveProgress: { [collectId]: beforeProgress } },
+        after: { ...step.after, level, objectiveProgress: { [collectId]: afterProgress } },
+        effects: [{ kind: 'skill', cells: [0], damage: 0, qi: 0, objectiveProgressAfter: { [collectId]: afterProgress } }],
+      };
+    });
+    animation.finalBoard = { ...animation.steps[1].after, objectiveProgress: { [collectId]: 2 } };
+    await startAnimation(animation);
+    const progressText = () => renderer.root.findByProps({ testID: `objective-${collectId}` })
+      .findAllByType(Native.Text).find(node => Array.isArray(node.props.children)
+        && typeof node.props.children[0] === 'number')!.props.children[0];
+
+    expect(progressText()).toBe(0);
+    await advance(BOARD_SWAP_MS + BOARD_CLEAR_MS);
+    expect(board().props.visualEffect.kind).toBe('fall');
+    expect(progressText()).toBe(0);
+    await advance(BOARD_FALL_MS + BOARD_CHAIN_DELAY_MS + BOARD_CLEAR_MS);
+    expect(board().props.visualEffect.kind).toBe('fall');
+    expect(progressText()).toBe(0);
+    await advance(BOARD_FALL_MS + BOARD_CHAIN_DELAY_MS);
+    expect(progressText()).toBe(1);
+    expect(board().props.locked).toBe(true);
+    await advance(BOARD_COLLECTION_STEP_MS);
+    expect(progressText()).toBe(2);
+    expect(board().props.locked).toBe(true);
+    await advance(BOARD_COLLECTION_STEP_MS);
+    expect(board().props.locked).toBe(false);
+    expect(popup()).toBeUndefined();
   });
 
   it.each([false, true])('opens loss at zero moves with enough qi and skillUsed=%s', skillUsed => {

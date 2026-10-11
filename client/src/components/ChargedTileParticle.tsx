@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { useIsFocused } from 'expo-router';
-import { Circle, Group } from '@shopify/react-native-skia';
+import { BlurMask, Circle, Group, Path, Skia } from '@shopify/react-native-skia';
 import { useAnimatedReaction, useDerivedValue, useFrameCallback, useSharedValue, type FrameInfo, type SharedValue } from 'react-native-reanimated';
 import { runOnJS } from 'react-native-worklets';
 import { chargedTileParticle as config } from '../theme';
@@ -49,11 +49,24 @@ function SparkDot({ bounds, color, elementPhase, phase, reduced, tail }: {
   const frame = useDerivedValue(() => chargedParticleFrame(bounds, phase.value, elementPhase, reduced, tail));
   const transform = useDerivedValue(() => [{ translateX: frame.value.x }, { translateY: frame.value.y }]);
   const opacity = useDerivedValue(() => frame.value.opacity);
+  const sparkleTransform = useDerivedValue(() => [{ scale: frame.value.sparkleScale }]);
+  const sparkleOpacity = useDerivedValue(() => frame.value.sparkleOpacity);
   const radius = chargedParticleRadius(bounds) * (tail ? 1 - tail * .15 : 1);
+  const sparkle = React.useMemo(() => {
+    const tip = radius * 2.25, waist = radius * .22;
+    return Skia.Path.Make().moveTo(0, -tip).lineTo(waist, -waist).lineTo(tip, 0)
+      .lineTo(waist, waist).lineTo(0, tip).lineTo(-waist, waist).lineTo(-tip, 0)
+      .lineTo(-waist, -waist).close();
+  }, [radius]);
   return <Group transform={transform} opacity={opacity}>
     {!tail ? <>
-      <Circle cx={0} cy={0} r={radius * config.haloRatio} color={color} opacity={.15} />
-      <Circle cx={0} cy={0} r={radius * 1.5} color={color} opacity={.25} />
+      <Circle cx={0} cy={0} r={radius * config.haloRatio} color={color} opacity={.2}>
+        <BlurMask blur={radius * .8} style="normal" />
+      </Circle>
+      <Circle cx={0} cy={0} r={radius * 1.5} color={color} opacity={.32} />
+      <Group transform={sparkleTransform} opacity={sparkleOpacity}>
+        <Path path={sparkle} color="#fff7d1" />
+      </Group>
     </> : null}
     <Circle cx={0} cy={0} r={radius} color={color} />
     {!tail ? <Circle cx={0} cy={0} r={radius * .4} color="#FFFFFF" /> : null}

@@ -26,6 +26,8 @@ export interface SpiritParticle {
   star: boolean;
 }
 
+export const SPIRIT_PARTICLE_RADIUS_SCALE = 1.5;
+
 export function buildSpiritFlightCues(effect: BoardVisualEffect | null, geometry: BoardGeometry, runId: string): SpiritFlightCue[] {
   if (effect?.kind !== 'clear') return [];
   return effect.effects.flatMap((trace, index) => {
@@ -53,7 +55,7 @@ export function buildSpiritParticles(cue: SpiritFlightCue, layout: SpiritFlightL
       control: { x: lifted.x + (layout.target.x - lifted.x) * .2 + (random() - .5) * pitch * 1.5,
         y: lifted.y + (layout.target.y - lifted.y) * .15 - pitch * (.3 + random() * .6) },
       delayMs: random() * 100,
-      radius: pitch * (.021 + random() * .012) * (cue.chargeTier === 5 ? 1.15 : 1),
+      radius: pitch * (.021 + random() * .012) * (cue.chargeTier === 5 ? 1.15 : 1) * SPIRIT_PARTICLE_RADIUS_SCALE,
       phase: random() * Math.PI * 2,
       color: ['#54ed67', '#77ff9b', '#b2ff79'][index % 3],
       star: index % 4 === 0,

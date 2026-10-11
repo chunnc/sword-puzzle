@@ -15,14 +15,14 @@ function fixture(reduceMotion = false, resolutionStep?: BoardResolutionStep) {
             { kind: 'lightning', source: 1, cells: [1], qi: 10, damage: 0 }],
     };
     const controller = new AbortController();
-    const setBoard = jest.fn(), setEffect = jest.fn(), onSfx = jest.fn();
+    const setBoard = jest.fn(), setEffect = jest.fn(), onSfx = jest.fn(), onCollectionProgress = jest.fn();
     let id = 0;
     const playback = createBoardPresenter({ runId: board.runId, signal: controller.signal,
-        reduceMotion, qiCap: 100, nextId: () => ++id, setBoard, setEffect, onStart: jest.fn(), onSfx });
+        reduceMotion, qiCap: 100, nextId: () => ++id, setBoard, setEffect, onStart: jest.fn(), onSfx, onCollectionProgress });
     const effect = () => setEffect.mock.calls.at(-1)![0] as BoardVisualEffect;
     const begin = () => playback.onMotionStarted(board.runId, effect().id);
     const finish = () => playback.onMotionFinished(board.runId, effect().id);
-    return { board, step, controller, playback, setBoard, setEffect, onSfx, effect, begin, finish };
+    return { board, step, controller, playback, setBoard, setEffect, onSfx, onCollectionProgress, effect, begin, finish };
 }
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => jest.useRealTimers());
@@ -342,6 +342,40 @@ it('skips animations and rest in reduced motion while yielding between waves', a
     await phase.started; await phase.finished;
     expect(jest.getTimerCount()).toBe(0);
     expect(f.setEffect).toHaveBeenLastCalledWith(null);
+    f.playback.dispose();
+});
+
+it('holds collect counts through every cascade step, then ticks all goals after the settled board', async () => {
+    const f = fixture();
+    const objectives = [
+        { id: 'main', type: 'Collect' as const, tileKind: TileKind.Fire, target: 3 },
+        { id: 'secondary', type: 'Collect' as const, tileKind: TileKind.Sword, target: 2 },
+    ];
+    const before = { ...f.board, level: { ...f.board.level, objectives }, objectiveProgress: { main: 0, secondary: 0 } };
+    const mid = { ...before, objectiveProgress: { main: 2, secondary: 1 } };
+    const after = { ...before, objectiveProgress: { main: 3, secondary: 2 } };
+    const start = f.playback.presenter.present({ kind: 'start', action: { kind: 'swap', swappedBoard: before } });
+    await jest.advanceTimersByTimeAsync(0); await start.finished;
+    expect(f.onCollectionProgress).toHaveBeenLastCalledWith({ main: 0, secondary: 0 });
+
+    for (const board of [mid, after]) {
+        const step = { ...f.step, before, after: board, effects: [], falls: [] };
+        const wave = f.playback.presenter.present({ kind: 'step', step });
+        await jest.advanceTimersByTimeAsync(0); await wave.finished;
+        expect(f.onCollectionProgress).toHaveBeenLastCalledWith({ main: 0, secondary: 0 });
+    }
+
+    const settled = f.playback.presenter.present({ kind: 'settled', board: after });
+    const expected = [
+        { main: 1, secondary: 1 }, { main: 2, secondary: 2 }, { main: 3, secondary: 2 },
+    ];
+    for (const progress of expected) {
+        expect(f.onCollectionProgress).toHaveBeenLastCalledWith(progress);
+        await jest.advanceTimersByTimeAsync(220);
+    }
+    await settled.finished;
+    expect(f.onCollectionProgress).toHaveBeenLastCalledWith(after.objectiveProgress);
+    expect(jest.getTimerCount()).toBe(0);
     f.playback.dispose();
 });
 

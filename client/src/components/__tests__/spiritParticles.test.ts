@@ -1,4 +1,4 @@
-import { buildSpiritFlightCues, buildSpiritParticles, spiritArrivalOpacity, spiritParticleFrame, type SpiritFlightLayout } from '../spiritParticles';
+import { buildSpiritFlightCues, buildSpiritParticles, SPIRIT_PARTICLE_RADIUS_SCALE, spiritArrivalOpacity, spiritParticleFrame, type SpiritFlightLayout } from '../spiritParticles';
 import { boardClearDurationMs, buildCellVisuals, cellMotion, type BoardVisualEffect } from '../boardVisuals';
 
 const geometry = { width: 7, height: 7, activeCells: Array(49).fill(true) };
@@ -13,6 +13,11 @@ it.each([4, 5] as const)('animates tier %s even with empty cells and zero qi at 
   const clear = effect(tier) as Extract<BoardVisualEffect, { kind: 'clear' }>;
   expect(boardClearDurationMs(clear.effects)).toBe(1000);
   expect(buildSpiritParticles(cues[0], layout, geometry)).toHaveLength(tier === 5 ? 28 : 16);
+  expect(SPIRIT_PARTICLE_RADIUS_SCALE).toBe(1.5);
+  const radius = buildSpiritParticles(cues[0], layout, geometry)[0].radius;
+  const tierScale = tier === 5 ? 1.15 : 1;
+  expect(radius).toBeGreaterThan(350 / 7 * .021 * tierScale * SPIRIT_PARTICLE_RADIUS_SCALE);
+  expect(radius).toBeLessThan(350 / 7 * .033 * tierScale * SPIRIT_PARTICLE_RADIUS_SCALE);
 });
 
 it.each([4, 5] as const)('emits tier %s particles before the source disappears and reserves the full delayed flight', tier => {

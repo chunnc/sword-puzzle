@@ -48,7 +48,7 @@ function Spark({ particle, elapsedMs, progress }: { particle: SpiritParticle; el
     <Circle cx={0} cy={0} r={particle.radius * 2.5} color={particle.color} opacity={.45}>
       <BlurMask blur={particle.radius * 1.2} style="normal" />
     </Circle>
-    {particle.star ? <Path path={star} color="#bcffce" opacity={.7} /> : null}
+    {particle.star ? <Path path={star} color="#d8ffe0" opacity={.95} /> : null}
     <Circle cx={0} cy={0} r={particle.radius} color={particle.color} />
     <Circle cx={0} cy={0} r={particle.radius * .45} color="#effff4" />
   </Group>;

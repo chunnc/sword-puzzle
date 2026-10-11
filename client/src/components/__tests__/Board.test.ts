@@ -618,7 +618,8 @@ describe('Skia Board integration', () => {
     expect(effects.findAllByType(IdleAtlasTile)).toHaveLength(2);
     expect(effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === colors.boardCell)).toHaveLength(0);
     expect(effects.findAllByType(ChargedTileParticle)).toHaveLength(2);
-    expect(effects.findAll(node => node.type === 'Path' as never)).toHaveLength(tier === 5 ? 6 : 3);
+    expect(effects.findAll(node => node.type === 'Path' as never)).toHaveLength(tier === 5 ? 8 : 5);
+    expect(effects.findAll(node => node.type === 'Path' as never && node.props.color === '#fff7d1')).toHaveLength(2);
     const progress = effects.props.progress;
     const afterimages = effects.findAll(node => node.type === 'RoundedRect' as never && node.props.color === '#ffffff');
     expect(afterimages).toHaveLength(tier === 5 ? 2 : 1);

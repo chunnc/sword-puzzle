@@ -16,6 +16,7 @@ jest.mock('react-native-reanimated', () => ({
   default: { View: require('react-native').View }, useReducedMotion: () => true,
   useSharedValue: (value: number) => require('react').useRef({ value }).current,
   useAnimatedStyle: (style: () => unknown) => style(), withTiming: (value: number) => value,
+  cancelAnimation: jest.fn(), withSequence: (...values: unknown[]) => values.at(-1), Easing: { out: (value: unknown) => value, back: () => ({}), quad: {} },
 }));
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: require('react-native').View }));
 jest.mock('../../services/ads', () => ({ hasRewardedAdUnit: () => false }));

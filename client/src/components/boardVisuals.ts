@@ -10,6 +10,7 @@ export const BOARD_SPIRIT_MS = 1000;
 export const BOARD_FALL_MS = 450;
 export const BOARD_CHAIN_DELAY_MS = 300;
 export const BOARD_SETTLE_MS = 150;
+export const BOARD_COLLECTION_STEP_MS = 220;
 export const BOARD_REJECT_MS = 390;
 export const BOARD_REJECT_OUT_MS = 165;
 export const BOARD_REJECT_BACK_MS = BOARD_REJECT_MS - BOARD_REJECT_OUT_MS;

@@ -49,6 +49,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const [effect, setEffect] = useState<BoardVisualEffect | null>(null), [help, setHelp] = useState(false);
     const [leave, setLeave] = useState(false);
     const [result, setResult] = useState<GameplayResult | null>(null);
+    const [collectProgress, setCollectProgress] = useState<BoardSnapshot['objectiveProgress'] | null>(null);
     const resultRef = useRef<GameplayResult | null>(null), resultReady = useRef(false);
     const busyRef = useRef(false), alive = useRef(true), effectId = useRef(0);
     const reduceMotion = useReducedMotion();
@@ -196,6 +197,9 @@ function GameplaySession({ levelId }: { levelId: number }) {
         const playback = createBoardPresenter({
             runId: board.runId, signal: controller.signal, reduceMotion, qiCap: content.qiCap,
             nextId: () => ++effectId.current, setBoard, setEffect,
+            onCollectionProgress: progress => setCollectProgress(Object.fromEntries(level.objectives
+                .filter(objective => objective.type === 'Collect')
+                .map(objective => [objective.id, progress[objective.id] ?? 0]))),
             onStart: () => { setTargetSkill(null); setTargets([]); },
             onSfx: playSfx,
         });
@@ -238,6 +242,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
                 if (!completed && saved?.runId === board.runId) setBoard(saved);
                 setBusy(false);
                 setEffect(null);
+                setCollectProgress(null);
             }
         }
     };
@@ -313,7 +318,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
         <View testID="game-content" style={styles.gameContent} onLayout={event => setViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
           <View ref={sceneRef} collapsable={false} testID="game-scene" onLayout={measureFlightLayout} style={styles.scene} pointerEvents={overlayOpen ? 'none' : 'auto'} accessibilityElementsHidden={overlayOpen} importantForAccessibility={overlayOpen ? 'no-hide-descendants' : 'auto'}>
             <GameplayHeader levelId={levelId} difficulty={level.mapDefinition?.difficulty} busy={busy || Boolean(result) || locked} compact={compact} onBack={requestLeave} onHelp={() => { if (!busyRef.current && !resultRef.current) setHelp(true); }} />
-            <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion}
+            <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion} collectProgress={collectProgress}
                 duration={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects, effect.sourceActivation) : BOARD_CLEAR_MS} />
             <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setHeight(event.nativeEvent.layout.height)}>
               <View style={{ width: boardWidth, height: boardHeight }}>

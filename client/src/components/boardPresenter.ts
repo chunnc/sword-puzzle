@@ -2,7 +2,7 @@ import { BoardActionCancelled } from '../game/boardAction';
 import type { BoardActionPhase, BoardActionPresenter, BoardPhasePlayback, BoardSnapshot } from '../game/types';
 import type { SfxId } from '../audio/SfxProvider';
 import { boardSoundCues } from '../audio/boardSoundCues';
-import { BOARD_CHAIN_DELAY_MS, type BoardVisualEffect } from './boardVisuals';
+import { BOARD_CHAIN_DELAY_MS, BOARD_COLLECTION_STEP_MS, type BoardVisualEffect } from './boardVisuals';
 
 function deferred() {
     let resolve!: () => void, reject!: (error: unknown) => void;
@@ -19,6 +19,7 @@ export function createBoardPresenter(options: {
     nextId: () => number;
     setBoard: (board: BoardSnapshot) => void;
     setEffect: (effect: BoardVisualEffect | null) => void;
+    onCollectionProgress?: (progress: BoardSnapshot['objectiveProgress']) => void;
     onStart: () => void;
     onSfx?: (id: SfxId) => void;
 }) {
@@ -26,6 +27,7 @@ export function createBoardPresenter(options: {
     let reduceMotion = options.reduceMotion;
     let finishDelay: (() => void) | null = null;
     let active: { id: number; started: ReturnType<typeof deferred>; finished: ReturnType<typeof deferred> } | null = null;
+    let collectionProgress: BoardSnapshot['objectiveProgress'] = {};
     const check = () => { if (signal.aborted) throw new BoardActionCancelled(); };
     const wait = (ms: number) => new Promise<void>((resolve, reject) => {
         check();
@@ -72,6 +74,8 @@ export function createBoardPresenter(options: {
             };
             if (phase.kind === 'start') {
                 options.onStart();
+                collectionProgress = { ...phase.action.swappedBoard.objectiveProgress };
+                options.onCollectionProgress?.(collectionProgress);
                 if (!reduceMotion && phase.action.swap) {
                     const { x1, y1, x2, y2 } = phase.action.swap;
                     await motion({ id: options.nextId(), kind: 'swap', first: { x: x1, y: y1 }, second: { x: x2, y: y2 } });
@@ -128,7 +132,37 @@ export function createBoardPresenter(options: {
                         if (!reduceMotion) await motion({ id: options.nextId(), kind: 'settle', direction: 'in' });
                     }
                 } else options.setBoard(step.after);
-            } else options.setBoard(phase.board);
+            } else {
+                options.setBoard(phase.board);
+                const objectives = phase.board.level.objectives.filter(objective => objective.type === 'Collect');
+                const targetProgress = phase.board.objectiveProgress;
+                if (objectives.length) {
+                    if (reduceMotion) {
+                        collectionProgress = { ...targetProgress };
+                        options.onCollectionProgress?.(collectionProgress);
+                    } else {
+                        let beats = 0;
+                        for (const objective of objectives) {
+                            beats = Math.max(beats, (targetProgress[objective.id] ?? 0) - (collectionProgress[objective.id] ?? 0));
+                        }
+                        if (beats <= 0) {
+                            collectionProgress = { ...targetProgress };
+                            options.onCollectionProgress?.(collectionProgress);
+                        }
+                        for (let beat = 0; beat < beats; beat++) {
+                            check();
+                            const next = { ...collectionProgress };
+                            for (const objective of objectives) {
+                                const current = next[objective.id] ?? 0;
+                                if (current < (targetProgress[objective.id] ?? 0)) next[objective.id] = current + 1;
+                            }
+                            collectionProgress = next;
+                            options.onCollectionProgress?.(collectionProgress);
+                            if (!reduceMotion) await wait(BOARD_COLLECTION_STEP_MS);
+                        }
+                    }
+                }
+            }
             if (!began) {
                 // Yield between invisible/reduced-motion waves as well.
                 if (phase.kind !== 'settled') await wait(0);

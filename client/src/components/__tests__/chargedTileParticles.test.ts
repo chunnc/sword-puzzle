@@ -59,6 +59,14 @@ it('keeps a short diminishing tail across the loop boundary and does not blink o
   for (let tick = 0; tick < 240; tick++) expect(chargedParticleFrame(bounds, tick / 240, 0, false).opacity).toBeGreaterThanOrEqual(.6);
 });
 
+it('adds a bright pulsing four-point sparkle to the orbiting lead particle', () => {
+  const peak = chargedParticleFrame(bounds, 0, 0, false);
+  const fade = chargedParticleFrame(bounds, .125, 0, false);
+  expect(peak.sparkleScale).toBeGreaterThan(fade.sparkleScale);
+  expect(peak.sparkleOpacity).toBeGreaterThan(fade.sparkleOpacity);
+  expect(chargedParticleFrame(bounds, 0, 0, true).sparkleScale).toBeGreaterThan(1);
+});
+
 it('freezes all element phases at the top right without twinkling in Reduce Motion', () => {
   const frozen = chargedParticleFrame(bounds, 0, 0, true);
   expect(frozen.x).toBe(92);

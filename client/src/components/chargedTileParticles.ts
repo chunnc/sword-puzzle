@@ -50,6 +50,8 @@ export function chargedParticleFrame(bounds: ParticleBounds, phase: number, elem
   const point = roundedPerimeterPoint(bounds, position - tail * config.tailSpacing);
   const radius = chargedParticleRadius(bounds);
   const twinkle = reduced ? 1 : .8 + .2 * Math.cos(position * Math.PI * 6);
+  const sparkle = reduced ? .65 : .35 + .65 * (.5 + .5 * Math.cos(position * Math.PI * 8));
   return { ...point, radius: radius * (tail ? 1 - tail * .15 : 1),
-    opacity: tail ? (.6 - tail * .1) * twinkle : twinkle };
+    opacity: tail ? (.6 - tail * .1) * twinkle : twinkle,
+    sparkleScale: .7 + sparkle * .55, sparkleOpacity: .35 + sparkle * .65 };
 }

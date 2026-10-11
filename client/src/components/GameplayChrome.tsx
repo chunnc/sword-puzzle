@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Image } from 'expo-image';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { ART, SKILL_ART, SWORD_ART, tileArtwork } from '../assets';
 import { semanticTileKind, getContentVersion, type SkillId, type Difficulty } from '../game/domain';
 import { GoalKind, TileKind, type BoardSnapshot, type LevelDefinition } from '../game/types';
@@ -27,8 +28,9 @@ export function GameplayHeader({ levelId, difficulty, busy, compact, onBack, onH
   );
 }
 
-export function GameplayInfo({ level, board, compact, reduceMotion, duration }: {
+export function GameplayInfo({ level, board, compact, reduceMotion, duration, collectProgress }: {
   level: LevelDefinition; board: BoardSnapshot; compact: boolean; reduceMotion: boolean; duration: number;
+  collectProgress?: BoardSnapshot['objectiveProgress'] | null;
 }) {
   const content = getContentVersion(board.contentVersion);
   const multipleGoals = level.objectives.length > 1 ? { height: compact ? 116 : 140 } : undefined;
@@ -41,9 +43,13 @@ export function GameplayInfo({ level, board, compact, reduceMotion, duration }: 
               const battle = objective.type === 'Battle' || objective.type === 'Boss';
               const name = battle ? objective.enemy.name : objective.type === 'Collect' ? `Thu ${content.tiles.find(t => t.id === objective.tileKind)?.name ?? 'linh vật'}` : objective.type === 'BreakRocks' ? 'Phá đá' : 'Phá phong ấn';
               const icon = battle ? ART[objective.enemy.artKey as keyof typeof ART] ?? ART.beast : objective.type === 'Collect' ? tileArtwork(semanticTileKind(objective.tileKind, content)) : objective.type === 'BreakRocks' ? tileArtwork(TileKind.Rock) : ART.overlaySeal;
-              const progress = board.objectiveProgress[objective.id] ?? 0;
+              const progress = objective.type === 'Collect'
+                ? collectProgress?.[objective.id] ?? board.objectiveProgress[objective.id] ?? 0
+                : board.objectiveProgress[objective.id] ?? 0;
               return <View key={objective.id} testID={`objective-${objective.id}`} style={[styles.goalRow, { minHeight: compact ? 48 : 58 }]}>
-                {battle ? <View testID="game-enemy-avatar" style={[styles.avatar, compact && styles.compactAvatar]}><Image source={icon} contentFit="cover" style={[styles.avatarArt, compact && styles.compactAvatarArt]} accessible={false} /></View> : <Image source={icon} contentFit="contain" style={styles.goalIcon} accessible={false} />}
+                {battle ? <View testID="game-enemy-avatar" style={[styles.avatar, compact && styles.compactAvatar]}><Image source={icon} contentFit="cover" style={[styles.avatarArt, compact && styles.compactAvatarArt]} accessible={false} /></View>
+                  : objective.type === 'Collect' ? <CollectGoalIcon id={objective.id} icon={icon} progress={progress} reduceMotion={reduceMotion} />
+                  : <Image source={icon} contentFit="contain" style={styles.goalIcon} accessible={false} />}
                 <View style={[styles.goalText, styles.enemyText]}>
                   <Text numberOfLines={1} style={styles.eyebrow}>{`${name}${progress >= objective.target ? ' ✓' : ''}`}</Text>
                   {battle ? <GameplayProgressBar value={objective.target-progress} max={objective.target} tone="health" accessibilityLabel={`Máu ${name}`} animated={!reduceMotion} duration={duration} /> : <Text style={styles.goalNumber}>{progress}<Text style={styles.goalTotal}> / {objective.target}</Text></Text>}
@@ -59,6 +65,27 @@ export function GameplayInfo({ level, board, compact, reduceMotion, duration }: 
       </View>
     </View>
   );
+}
+
+function CollectGoalIcon({ id, icon, progress, reduceMotion }: {
+  id: string; icon: ImageSourcePropType; progress: number; reduceMotion: boolean;
+}) {
+  const scale = useSharedValue(1);
+  const previousProgress = useRef(progress);
+  useEffect(() => {
+    if (previousProgress.current === progress) return;
+    previousProgress.current = progress;
+    cancelAnimation(scale);
+    if (reduceMotion) { scale.value = 1; return; }
+    scale.value = withSequence(
+      withTiming(1.28, { duration: 90, easing: Easing.out(Easing.back(1.7)) }),
+      withTiming(1, { duration: 130, easing: Easing.out(Easing.quad) }),
+    );
+  }, [progress, reduceMotion, scale]);
+  const motion = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return <Animated.View testID={`objective-icon-${id}`} style={[styles.goalIconFrame, motion]}>
+    <Image source={icon} contentFit="contain" style={styles.goalIcon} accessible={false} />
+  </Animated.View>;
 }
 
 export function GameplayDock({ board, skillSlots, available, cost, targetSkill, targetCount, canCast, busy, compact, onSkill, onCancel, onCast, qiBarRef, onQiBarLayout }: {
@@ -139,6 +166,7 @@ const styles = StyleSheet.create({
   compactObjective: { height: 66, paddingVertical: 6, paddingHorizontal: 12 },
   goalRow: { flexDirection: 'row', gap: 8, alignItems: 'center', flex: 1 },
   goalIcon: { width: 40, height: 40, flexShrink: 0 },
+  goalIconFrame: { width: 40, height: 40, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   goalText: { flex: 1, minWidth: 0 },
   enemyText: { gap: 6, paddingRight: 28 },
   avatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: colors.gold, backgroundColor: colors.inkDeep, overflow: 'hidden', flexShrink: 0 },
