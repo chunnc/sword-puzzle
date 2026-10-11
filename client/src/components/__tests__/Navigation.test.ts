@@ -15,7 +15,7 @@ import { emptySave } from '../../game/save';
 import type { SaveData, WinSummary } from '../../game/types';
 
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
-jest.mock('expo-image', () => ({ Image: require('react-native').View }));
+jest.mock('expo-image', () => ({ Image: jest.fn(props => require('react').createElement(require('react-native').View, props)) }));
 jest.mock('expo-router', () => ({
   useRouter: () => mockRouter,
   useLocalSearchParams: () => mockParams,
@@ -72,7 +72,8 @@ describe('scene navigation', () => {
     mockState.save = emptySave();
     mockState.foreground = true;
     installContent(require('../../../../content/game-config.json'));
-    mockState.chapterId='';mockState.chapterMaps=[];mockState.selectChapter.mockResolvedValue(undefined);
+    mockState.chapterId='chapter-1';mockState.chapterMaps=require('../../../../content/game-maps.json').map(mapSummary);
+    mockState.chapterLoading=false;mockState.chapterError='';mockState.notice='';mockState.selectChapter.mockResolvedValue(undefined);
     mockRouter.canGoBack.mockReturnValue(true);
     mockState.startLevel.mockResolvedValue(true);
   });
@@ -82,7 +83,7 @@ describe('scene navigation', () => {
     let finish!: (result: boolean) => void;
     mockState.startLevel.mockImplementation(() => new Promise<boolean>(resolve => { finish = resolve; }));
     mount(React.createElement(MapScreen));
-    act(() => { button('Màn 1, màn hiện tại').props.onPress(); });
+    act(() => { button(`Màn 1, ${{ easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[mockState.chapterMaps[0].difficulty]}, màn hiện tại`).props.onPress(); });
     expect(mockState.startLevel).toHaveBeenCalledWith(1);
     expect(mockRouter.push).not.toHaveBeenCalled();
 
@@ -94,7 +95,7 @@ describe('scene navigation', () => {
     let finish!: (value:boolean)=>void;
     mockState.startLevel.mockImplementation(()=>new Promise<boolean>(resolve=>{finish=resolve;}));
     mount(React.createElement(MapScreen));
-    act(()=>{button('Màn 1, màn hiện tại').props.onPress();button('Màn 1, màn hiện tại').props.onPress();});
+    act(()=>{button(`Màn 1, ${{ easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[mockState.chapterMaps[0].difficulty]}, màn hiện tại`).props.onPress();button(`Màn 1, ${{ easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[mockState.chapterMaps[0].difficulty]}, màn hiện tại`).props.onPress();});
     expect(mockState.startLevel).toHaveBeenCalledTimes(1);
     await act(async()=>{finish(true);});expect(mockRouter.push).toHaveBeenCalledTimes(1);
   });
@@ -102,7 +103,7 @@ describe('scene navigation', () => {
     let finish!: (value:boolean)=>void;
     const scene=()=>React.createElement(SafeAreaInsetsContext.Provider,{value:{top:0,bottom:0,left:0,right:0}},React.createElement(MapScreen));
     mockState.startLevel.mockImplementation(()=>new Promise<boolean>(resolve=>{finish=resolve;}));
-    mount(React.createElement(MapScreen));act(()=>{button('Màn 1, màn hiện tại').props.onPress();});
+    mount(React.createElement(MapScreen));act(()=>{button(`Màn 1, ${{ easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[mockState.chapterMaps[0].difficulty]}, màn hiện tại`).props.onPress();});
     mockState.foreground=false;
     act(()=>{renderer.update(scene());});
     await act(async()=>{finish(true);});expect(mockRouter.push).not.toHaveBeenCalled();
@@ -111,16 +112,57 @@ describe('scene navigation', () => {
   });
 
   it('renders only the active chapter and waits for an explicit chapter selection', () => {
-    installContent(require('../../../../content/game-config.json'));
-    mockState.chapterId='chapter-1';
-    mockState.chapterMaps=require('../../../../content/game-maps.json').map(mapSummary);
-    mockState.save.profile.levels=Array.from({length:10},(_,i)=>({levelId:i+1,stars:1}));
+    const config = structuredClone(require('../../../../content/game-config.json'));
+    const first = config.chapters[0], count = first.lastLevelId;
+    const second = { ...first, id: 'chapter-2', name: 'Chương thử nghiệm', order: 2, firstLevelId: count + 1, lastLevelId: count * 2 };
+    installContent({ ...config, levelCount: count * 2, levelBaseExp: Array(count * 2).fill(100), chapters: [first, second] });
+    mockState.chapterMaps = [...mockState.chapterMaps, ...mockState.chapterMaps.map(map => ({ ...map, id: map.id + count, chapterId: second.id }))];
+    mockState.save.profile.levels = Array.from({ length: count }, (_, i) => ({ levelId: i + 1, stars: 1 }));
     mount(React.createElement(MapScreen));
-    const labels=renderer.root.findAll(node=>typeof node.props.onPress==='function').map(node=>node.props.accessibilityLabel);
-    expect(labels.some(label=>String(label).startsWith('Màn 1,'))).toBe(true);
-    expect(labels.some(label=>String(label).startsWith('Màn 11,'))).toBe(false);
-    act(()=>{button('Huyền Kiếm Bí Cảnh').props.onPress();});
-    expect(mockState.selectChapter).toHaveBeenCalledWith('chapter-2');
+    const labels = renderer.root.findAll(node => typeof node.props.onPress === 'function').map(node => node.props.accessibilityLabel);
+    expect(labels.some(label => String(label).startsWith('Màn 1,'))).toBe(true);
+    expect(labels.some(label => String(label).startsWith(`Màn ${second.firstLevelId},`))).toBe(false);
+    act(() => { button(second.name).props.onPress(); });
+    expect(mockState.selectChapter).toHaveBeenCalledWith(second.id);
+  });
+
+  it('preserves the map list and row renders until their displayed data changes', () => {
+    mockState.save.profile.levels = mockState.chapterMaps.map(map => ({ levelId: map.id, stars: 1 }));
+    const scene = () => React.createElement(SafeAreaInsetsContext.Provider, { value: { top: 0, bottom: 0, left: 0, right: 0 } }, React.createElement(MapScreen));
+    const image = require('expo-image').Image as jest.Mock;
+    const stageCalls = () => image.mock.calls.filter(([props]) => [ART.stageCurrent, ART.stageDone, ART.stageLocked].includes(props.source));
+    mount(React.createElement(MapScreen));
+    const list = renderer.root.findByType(require('react-native').FlatList);
+    const data = list.props.data;
+    expect(stageCalls()).toHaveLength(mockState.chapterMaps.length);
+    image.mockClear();
+    mockState.notice = 'Thông báo mới';
+    mockState.save = { ...mockState.save, profile: { ...mockState.save.profile, coins: 123 } };
+    act(() => { renderer.update(scene()); });
+    expect(renderer.root.findByType(require('react-native').FlatList).props.data).toBe(data);
+    expect(stageCalls()).toHaveLength(0);
+    mockState.save = { ...mockState.save, profile: { ...mockState.save.profile,
+      levels: mockState.save.profile.levels.map((level, i) => i ? level : { ...level, stars: 2 }),
+    } };
+    act(() => { renderer.update(scene()); });
+    expect(stageCalls()).toHaveLength(1);
+    expect(button(`Màn 1, ${{ easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[mockState.chapterMaps[0].difficulty]}, đã hoàn thành, 2 sao`)).toBeDefined();
+    image.mockClear();
+    mockState.chapterMaps = mockState.chapterMaps.map((map, i) => i ? map : { ...map, difficulty: 'hard' });
+    act(() => { renderer.update(scene()); });
+    expect(stageCalls()).toHaveLength(1);
+    expect(button('Màn 1, Khó, đã hoàn thành, 2 sao')).toBeDefined();
+    expect(mockState.selectChapter).toHaveBeenCalledTimes(1);
+  });
+
+  it('forces a refresh from the map retry button without hiding cached levels', () => {
+    mockState.chapterError = 'Không thể tải';
+    mount(React.createElement(MapScreen));
+    const retry = renderer.root.findAll(node => typeof node.props.onPress === 'function'
+      && node.findAllByType(Text).some(text => String(text.props.children).includes('Thử lại')))[0];
+    act(() => { retry.props.onPress(); });
+    expect(mockState.selectChapter).toHaveBeenLastCalledWith('chapter-1', { force: true });
+    expect(renderer.root.findByType(require('react-native').FlatList).props.data).toHaveLength(mockState.chapterMaps.length);
   });
 
   it('does not replace the selected scene and opens the shop from the bottom bar', () => {

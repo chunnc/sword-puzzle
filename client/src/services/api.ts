@@ -34,6 +34,7 @@ export function isApiConfigured() {
 }
 async function request<T>(path: string, options: RequestInit = {}, session?: SessionData): Promise<T> {
   if (!isApiConfigured()) throw new GameApiError('API_NOT_CONFIGURED');
+  const generation = getSessionGeneration();
   const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_resolve, reject) => {
@@ -66,7 +67,7 @@ async function request<T>(path: string, options: RequestInit = {}, session?: Ses
     const problem = error instanceof GameApiError ? error : new GameApiError(
       controller.signal.aborted || error instanceof Error && ['AbortError', 'TimeoutError'].includes(error.name) ? 'TIMEOUT' : 'NETWORK_ERROR'
     );
-    if (isConnectionError(problem)) connectionErrorHandler?.(problem);
+    if (isConnectionError(problem) && (!session || generation === getSessionGeneration())) connectionErrorHandler?.(problem);
     throw problem;
   } finally {
     clearTimeout(timeout);

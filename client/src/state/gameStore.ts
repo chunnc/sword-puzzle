@@ -23,7 +23,7 @@ interface GameState {
   chapterMaps: MapSummary[];
   chapterLoading: boolean;
   chapterError: string;
-  selectChapter: (id: string) => Promise<void>;
+  selectChapter: (id: string, options?: { force?: boolean }) => Promise<void>;
   finishLevel: (outcome: RunReport['outcome']) => Promise<boolean>;
   leaveLevel: () => Promise<boolean>;
   session: SessionData | null;
@@ -75,29 +75,104 @@ async function persistNext(save: SaveData) {
     save
   });
 }
-async function loadChapter(chapterId: string) {
+const CHAPTER_CACHE_MS = 5 * 60 * 1000;
+interface ChapterCacheEntry {
+  maps: MapSummary[];
+  fetchedAt: number;
+  contentVersion: number;
+  catalogRevision?: number;
+  stale: boolean;
+}
+const chapterCache = new Map<string, ChapterCacheEntry>();
+const chapterRequests = new Map<string, Promise<void>>();
+let chapterCacheScope = { epoch: -1, uid: '', contentVersion: -1 };
+let catalogRevision: number | undefined;
+
+// Token refreshes keep the session generation; identity changes retire all requests.
+function syncChapterCacheScope() {
+  const next = { epoch: getSessionGeneration(), uid: getCurrentSession()?.uid ?? '', contentVersion: CONTENT?.version ?? -1 };
+  if (next.epoch === chapterCacheScope.epoch && next.uid === chapterCacheScope.uid && next.contentVersion === chapterCacheScope.contentVersion) return;
+  chapterCacheScope = next;
+  chapterCache.clear();
+  chapterRequests.clear();
+  catalogRevision = undefined;
+  const state = useGameStore.getState();
+  if (state.chapterMaps.length || state.chapterLoading || state.chapterError) {
+    useGameStore.setState({ chapterMaps: [], chapterLoading: false, chapterError: '' });
+  }
+}
+
+function observeCatalogRevision(revision?: number) {
+  if (revision === undefined || catalogRevision !== undefined && revision <= catalogRevision) return;
+  catalogRevision = revision;
+  for (const entry of chapterCache.values()) {
+    if (entry.catalogRevision !== revision) entry.stale = true;
+  }
+}
+
+function sameMapData(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(a) !== Array.isArray(b)) return false;
+  const left = a as Record<string, unknown>, right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every(key =>
+    Object.prototype.hasOwnProperty.call(right, key) && sameMapData(left[key], right[key]));
+}
+
+async function loadChapter(chapterId: string, options?: { force?: boolean }) {
+  syncChapterCacheScope();
   const session = getCurrentSession();
   if (!session) throw new GameApiError('INVALID_SESSION', 401);
   const chapter = CONTENT.chapters?.find(c => c.id === chapterId);
-  if (chapter && chapter.firstLevelId > highestUnlocked(useGameStore.getState().save.profile.levels)) return;
+  if (!chapter || chapter.firstLevelId > highestUnlocked(useGameStore.getState().save.profile.levels)) return;
   const epoch = getSessionGeneration();
-  useGameStore.setState({ chapterId, chapterMaps: [], chapterLoading: true, chapterError: '' });
-  try {
-    const result = await fetchChapterMaps(session, chapterId);
-    if (epoch !== getSessionGeneration()) throw new GameApiError('SESSION_CHANGED');
-    const payload = result.value;
-    if (!Number.isSafeInteger(payload.contentVersion) || payload.contentVersion < 3 || payload.chapterId !== chapterId || !Array.isArray(payload.maps)) throw new GameApiError('INVALID_RESPONSE');
-    if (payload.contentVersion !== CONTENT.version) throw new GameApiError('CONTENT_MISMATCH');
-    const currentChapter = CONTENT.chapters?.find(c => c.id === chapterId);
-    if (!currentChapter || payload.maps.length !== currentChapter.lastLevelId-currentChapter.firstLevelId+1
-      || payload.maps.some((m,i) => m.chapterId !== chapterId || m.id !== currentChapter.firstLevelId+i || m.orderInChapter !== i+1 || !['easy','medium','hard','very-hard'].includes(m.difficulty) || !Array.isArray(m.objectives))) throw new GameApiError('INVALID_RESPONSE');
-    useGameStore.setState({ session: result.session });
-    useGameStore.setState({ chapterMaps: payload.maps, chapterLoading: false });
-  } catch (error) {
-    useGameStore.setState({ chapterLoading: false, chapterError: apiErrorMessage(error) });
-    await failure(error);
-    throw error;
+  const scope = chapterCacheScope;
+  const cached = chapterCache.get(chapterId);
+  const state = useGameStore.getState();
+  const maps = cached?.maps;
+  const inFlight = chapterRequests.get(chapterId);
+  const fresh = cached && !cached.stale && Date.now() - cached.fetchedAt < CHAPTER_CACHE_MS;
+  if (state.chapterId !== chapterId || maps && state.chapterMaps !== maps || !maps && state.chapterMaps.length
+    || state.chapterLoading !== !maps || state.chapterError && (options?.force || inFlight)) {
+    useGameStore.setState({ chapterId, chapterMaps: maps ?? [], chapterLoading: !maps, chapterError: '' });
   }
+  if (inFlight) return inFlight;
+  if (fresh && !options?.force) return;
+  if (useGameStore.getState().chapterError) useGameStore.setState({ chapterError: '' });
+  const currentRequest = () => epoch === getSessionGeneration() && scope === chapterCacheScope && CONTENT.version === scope.contentVersion;
+  // Maps are reads: keep refreshes out of the gameplay mutation queue.
+  const request = (async () => {
+    try {
+      const result = await fetchChapterMaps(session, chapterId);
+      if (!currentRequest()) return;
+      const payload = result.value;
+      if (!Number.isSafeInteger(payload.contentVersion) || payload.contentVersion < 3 || payload.chapterId !== chapterId || !Array.isArray(payload.maps)) throw new GameApiError('INVALID_RESPONSE');
+      if (payload.catalogRevision !== undefined && (!Number.isSafeInteger(payload.catalogRevision) || payload.catalogRevision < 0)) throw new GameApiError('INVALID_RESPONSE');
+      if (payload.contentVersion !== CONTENT.version) throw new GameApiError('CONTENT_MISMATCH');
+      const currentChapter = CONTENT.chapters?.find(c => c.id === chapterId);
+      if (!currentChapter || payload.maps.length !== currentChapter.lastLevelId-currentChapter.firstLevelId+1
+        || payload.maps.some((m,i) => m.chapterId !== chapterId || m.id !== currentChapter.firstLevelId+i || m.orderInChapter !== i+1 || !['easy','medium','hard','very-hard'].includes(m.difficulty) || !Array.isArray(m.objectives))) throw new GameApiError('INVALID_RESPONSE');
+      observeCatalogRevision(payload.catalogRevision);
+      const nextMaps = cached && sameMapData(cached.maps, payload.maps) ? cached.maps : payload.maps;
+      chapterCache.set(chapterId, { maps: nextMaps, fetchedAt: Date.now(), contentVersion: payload.contentVersion,
+        catalogRevision: payload.catalogRevision, stale: payload.catalogRevision !== undefined && catalogRevision !== undefined && payload.catalogRevision < catalogRevision });
+      useGameStore.setState({ session: getCurrentSession() ?? result.session });
+      const latest = useGameStore.getState();
+      if (latest.chapterId === chapterId && (latest.chapterMaps !== nextMaps || latest.chapterLoading || latest.chapterError)) {
+        useGameStore.setState({ chapterMaps: nextMaps, chapterLoading: false, chapterError: '' });
+      }
+    } catch (error) {
+      if (!currentRequest()) return;
+      if (useGameStore.getState().chapterId === chapterId) {
+        useGameStore.setState({ chapterLoading: false, chapterError: apiErrorMessage(error) });
+      }
+      await failure(error);
+      throw error;
+    }
+  })();
+  chapterRequests.set(chapterId, request);
+  try { await request; }
+  finally { if (chapterRequests.get(chapterId) === request) chapterRequests.delete(chapterId); }
 }
 async function recoverRunStart() {
   const state = useGameStore.getState(), pending = state.save.pendingStart, session = getCurrentSession();
@@ -409,6 +484,8 @@ async function hydrate() {
   if (epoch !== lifecycle) return;
   if (useGameStore.getState().save.pendingStart) await recoverRunStart();
   const restored = useGameStore.getState().save.active;
+  syncChapterCacheScope();
+  observeCatalogRevision(bootstrap.catalogRevision);
   await loadChapter(chapterForLevel(restored?.levelId ?? highestUnlocked(useGameStore.getState().save.profile.levels)).id);
   useGameStore.setState({
     initialized: true,
@@ -420,7 +497,7 @@ async function hydrate() {
 export const useGameStore = create<GameState>((set, get) => ({
   save: emptySave(),
   chapterId: '', chapterMaps: [], chapterLoading: false, chapterError: '',
-  selectChapter: id => serialize(async () => { if (available()) await loadChapter(id); }),
+  selectChapter: async (id, options) => { if (available()) await loadChapter(id, options); },
   finishLevel: outcome => serialize(async () => {
     if (!available()) return false;
     try { return await finishActive(outcome); } catch (error) { await failure(error); return false; }
@@ -520,7 +597,7 @@ export const useGameStore = create<GameState>((set, get) => ({
           previousRunId: current.active?.level.mapDefinition ? current.active.runId : null } });
         await recoverRunStart();
         const ch = get().save.active!.level.mapDefinition!.chapterId;
-        if (get().chapterId !== ch) set({ chapterId: ch, chapterMaps: [] });
+        if (get().chapterId !== ch) set({ chapterId: ch, chapterMaps: chapterCache.get(ch)?.maps ?? [], chapterLoading: false, chapterError: '' });
         return true;
       } catch (error) { await failure(error); return false; }
     }).finally(() => { startRequestInFlight = false; });
@@ -700,6 +777,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     notice
   })
 }));
+useGameStore.subscribe(syncChapterCacheScope);
 setConnectionErrorHandler(reportConnectionFailure);
 export function getHighestUnlocked(save: SaveData) {
   return highestUnlocked(save.profile.levels);

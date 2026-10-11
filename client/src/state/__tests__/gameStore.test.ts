@@ -566,19 +566,16 @@ function modernReady() {
   } } }));
   return content;
 }
-it('loads only unlocked chapters and refreshes summaries on each entry', async () => {
-  modernReady();
-  await store.getState().selectChapter('chapter-1');
-  expect(store.getState().chapterMaps.map(m => m.id)).toEqual([1,2,3,4,5,6,7,8,9,10]);
-  await store.getState().selectChapter('chapter-2');
-  expect(api.fetchChapterMaps).toHaveBeenCalledTimes(1); // locked chapter
-  await store.getState().selectChapter('chapter-1');
-  expect(api.fetchChapterMaps).toHaveBeenCalledTimes(2);
-  const profile = domain.emptyProfile(); profile.levels = Array.from({length:10},(_,i)=>({levelId:i+1,stars:1}));
-  store.setState({save:{...store.getState().save,profile}});
-  await store.getState().selectChapter('chapter-2');
-  expect(store.getState().chapterMaps[0].id).toBe(11);
-  expect(api.fetchChapterMaps).toHaveBeenCalledTimes(3);
+it('reuses chapter summaries on repeated entries', async () => {
+  const content = modernReady();
+  const chapterId = content.chapters![0].id;
+  await store.getState().selectChapter(chapterId);
+  const expected = require('../../../../content/game-maps.json').filter((map: any) => map.chapterId === chapterId);
+  expect(store.getState().chapterMaps.map(map => map.id)).toEqual(expected.map((map: any) => map.id));
+  const maps = store.getState().chapterMaps;
+  await store.getState().selectChapter(chapterId);
+  expect(api.fetchChapterMaps).toHaveBeenCalledTimes(1);
+  expect(store.getState().chapterMaps).toBe(maps);
 });
 it('persists a start request before sending and reuses its ID after an uncertain timeout', async () => {
   modernReady();

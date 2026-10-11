@@ -39,6 +39,18 @@ afterEach(() => {
   global.fetch = originalFetch;
   jest.useRealTimers();
 });
+it('does not report a late maps network failure against a new session', async () => {
+  let reject!: (error: Error) => void;
+  fetchMock.mockImplementationOnce(() => new Promise((_resolve, no) => { reject = no; }));
+  const handler = jest.fn();
+  api.setConnectionErrorHandler(handler);
+  const pending = api.fetchChapterMaps(initial, 'chapter-1');
+  const outcome = expect(pending).rejects.toThrow('NETWORK_ERROR');
+  await session.saveSession({ ...initial, uid: 'other-player' });
+  reject(new Error('Failed to fetch'));
+  await outcome;
+  expect(handler).not.toHaveBeenCalled();
+});
 it('refreshes any 401 and persists the rotated token before replay', async () => {
   fetchMock.mockResolvedValueOnce(response({
     error: 'ANY_AUTH_ERROR'

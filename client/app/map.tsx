@@ -1,18 +1,68 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { ART, Artwork } from '../src/assets';
+import { ART, type Artwork } from '../src/assets';
 import { BottomNav, TopHud } from '../src/components/Chrome';
 import { ArtPanel, ScreenFrame } from '../src/components/Art';
 import { Notice } from '../src/components/Notice';
-import { CONTENT } from '../src/game/domain';
+import { CONTENT, type MapSummary } from '../src/game/domain';
 import { navigateTab, type BottomNavId } from '../src/components/Navigation';
 import { getHighestUnlocked, getLevelStars, getLevelCompleted, useGameStore } from '../src/state/gameStore';
 import { useSfxPress } from '../src/audio/useSfxPress';
-import { colors, type } from '../src/theme';
+import { colors } from '../src/theme';
 
+const mapKey = (map: MapSummary) => String(map.id);
 
+const MapLevelItem = React.memo(function MapLevelItem({ levelId, difficulty, stars, completed, locked, onOpen }: {
+  levelId: number;
+  difficulty: MapSummary['difficulty'];
+  stars: number;
+  completed: boolean;
+  locked: boolean;
+  onOpen: (levelId: number) => Promise<void>;
+}) {
+  const sfxPress = useSfxPress();
+  const current = !locked && !completed;
+  const difficultyName = difficulty ? { easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[difficulty] : '';
+  const art: Artwork = completed ? 'stageDone' : locked ? 'stageLocked' : 'stageCurrent';
+  return (
+    <View style={styles.levelItem}>
+      <View pointerEvents="none" style={styles.starArc}>
+        {[0, 1, 2].map((starIndex) => (
+          <Image
+            key={starIndex}
+            source={starIndex < stars ? ART.starBright : ART.starGray}
+            contentFit="contain"
+            style={[
+              styles.starIcon,
+              starIndex === 0 && styles.starLeft,
+              starIndex === 1 && styles.starTop,
+              starIndex === 2 && styles.starRight,
+            ]}
+          />
+        ))}
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Màn ${levelId}${difficultyName ? `, ${difficultyName}` : ''}${completed ? `, đã hoàn thành, ${stars} sao` : current ? ', màn hiện tại' : ', đã khóa'}`}
+        accessibilityState={{ disabled: locked }}
+        disabled={locked}
+        onPress={sfxPress(() => void onOpen(levelId), !locked)}
+        style={styles.stage}
+      >
+        <Image
+          source={ART[art]}
+          contentFit="contain"
+          style={[StyleSheet.absoluteFill, locked && styles.lockedStageArt]}
+        />
+        <Text style={[styles.stageNumber, locked && styles.lockedStageNumber]}>{levelId}</Text>
+        {completed && stars === 0 ? <Text style={{ color: '#fff2c9', position: 'absolute', bottom: 7, fontSize: 11 }}>✓ VƯỢT ẢI</Text> : null}
+      </Pressable>
+      {difficultyName ? <Text style={styles.difficulty}>{difficultyName}</Text> : null}
+    </View>
+  );
+});
 
 export default function MapScreen() {
   const sfxPress = useSfxPress();
@@ -24,7 +74,7 @@ export default function MapScreen() {
   const selectChapter = useGameStore(state => state.selectChapter);
   const chapters = CONTENT.chapters ?? [];
   const chapter = chapters.find(ch => ch.id === chapterId);
-  const levelIds = maps.filter(map => map.chapterId === chapterId).map(map => map.id);
+  const chapterMaps = useMemo(() => maps.filter(map => map.chapterId === chapterId), [maps, chapterId]);
   const save = useGameStore((state) => state.save);
   const notice = useGameStore((state) => state.notice);
   const setNotice = useGameStore((state) => state.setNotice);
@@ -48,7 +98,7 @@ export default function MapScreen() {
     return () => { focused.current=false;pendingNavigation.current=null; };
   }, []));
 
-  const openLevel = async (levelId: number) => {
+  const openLevel = useCallback(async (levelId: number) => {
     if (opening.current) return;
     opening.current = true;
     try {
@@ -58,7 +108,11 @@ export default function MapScreen() {
         else pendingNavigation.current=levelId;
       }
     } finally { opening.current = false; }
-  };
+  }, [startLevel, router]);
+  const renderLevel = useCallback(({ item }: { item: MapSummary }) => (
+    <MapLevelItem levelId={item.id} difficulty={item.difficulty} stars={getLevelStars(save, item.id)}
+      completed={getLevelCompleted(save, item.id)} locked={item.id > unlocked} onOpen={openLevel} />
+  ), [save, unlocked, openLevel]);
   const nav = (id: BottomNavId) => navigateTab(router, id);
 
   return (
@@ -74,60 +128,15 @@ export default function MapScreen() {
       </View> : null}
       <View style={styles.mapArea}>
         {loading ? <Text accessibilityLiveRegion="polite" style={styles.status}>Đang tải chương…</Text> : null}
-        {chapterError ? <Pressable accessibilityRole="button" onPress={sfxPress(() => void selectChapter(chapterId).catch(() => undefined))}><Text style={styles.status}>{chapterError} · Thử lại</Text></Pressable> : null}
+        {chapterError ? <Pressable accessibilityRole="button" onPress={sfxPress(() => void selectChapter(chapterId, { force: true }).catch(() => undefined))}><Text style={styles.status}>{chapterError} · Thử lại</Text></Pressable> : null}
         <FlatList
-          data={levelIds}
+          data={chapterMaps}
           inverted
-          keyExtractor={(levelId) => String(levelId)}
+          keyExtractor={mapKey}
           style={StyleSheet.absoluteFill}
           contentContainerStyle={styles.levelListContent}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item: levelId }) => {
-            const stars = getLevelStars(save, levelId);
-            const locked = levelId > unlocked;
-            const completed = getLevelCompleted(save, levelId);
-            const current = !locked && !completed;
-            const difficulty = maps?.find(map => map.id === levelId)?.difficulty;
-            const difficultyName = difficulty ? { easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[difficulty] : '';
-            const art: Artwork = completed ? 'stageDone' : locked ? 'stageLocked' : 'stageCurrent';
-
-            return (
-              <View style={styles.levelItem}>
-                <View pointerEvents="none" style={styles.starArc}>
-                  {[0, 1, 2].map((starIndex) => (
-                    <Image
-                      key={starIndex}
-                      source={starIndex < stars ? ART.starBright : ART.starGray}
-                      contentFit="contain"
-                      style={[
-                        styles.starIcon,
-                        starIndex === 0 && styles.starLeft,
-                        starIndex === 1 && styles.starTop,
-                        starIndex === 2 && styles.starRight,
-                      ]}
-                    />
-                  ))}
-                </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Màn ${levelId}${difficultyName ? `, ${difficultyName}` : ''}${completed ? `, đã hoàn thành, ${stars} sao` : current ? ', màn hiện tại' : ', đã khóa'}`}
-                  accessibilityState={{ disabled: locked }}
-                  disabled={locked}
-                  onPress={sfxPress(() => void openLevel(levelId), !locked)}
-                  style={styles.stage}
-                >
-                  <Image
-                    source={ART[art]}
-                    contentFit="contain"
-                    style={[StyleSheet.absoluteFill, locked && styles.lockedStageArt]}
-                  />
-                  <Text style={[styles.stageNumber, locked && styles.lockedStageNumber]}>{levelId}</Text>
-                  {completed && stars === 0 ? <Text style={{ color: '#fff2c9', position: 'absolute', bottom: 7, fontSize: 11 }}>✓ VƯỢT ẢI</Text> : null}
-                </Pressable>
-                {difficultyName ? <Text style={styles.difficulty}>{difficultyName}</Text> : null}
-              </View>
-            );
-          }}
+          renderItem={renderLevel}
         />
         <ArtPanel art="chapterCard" style={styles.chapter}>
           <Text style={styles.chapterEyebrow}>TIÊN LỘ · {chapter ? chapter.lastLevelId-chapter.firstLevelId+1 : maps.length} MÀN</Text>
