@@ -42,11 +42,13 @@ export type ObjectiveProgress = Record<string, number>;
 export type TileKey = 'sword' | 'fire' | 'lightning' | 'spirit' | 'rock';
 export interface ChapterDefinition { id: string; name: string; order: number; firstLevelId: number; lastLevelId: number }
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'very-hard';
+export type StarThresholds = { twoStarMaxMovesUsed: number; threeStarMaxMovesUsed: number }
+  | { mode: 'percentage'; threeStarBelowPercent: number; twoStarBelowPercent: number };
 export interface MapDefinition {
   contentVersion: number; id: number; chapterId: string; orderInChapter: number; name: string;
   difficulty: Difficulty; layout: number[][]; initialSeals: { row: number; column: number }[];
   objectives: ObjectiveDefinition[]; moves: number; baseExp: number;
-  starThresholds: { twoStarMaxMovesUsed: number; threeStarMaxMovesUsed: number };
+  starThresholds: StarThresholds;
   spawnPolicy: { weights: Record<string, number>; collectionPressure: number; comboChance: number; setupChance?: number; obstaclePressure: number; candidates: number };
   retryAssistPolicy: { thresholds: number[]; reductions: number[] };
   legacy?: { seed: number; obstacles: { rocks: number; seals: number }; spawnPhases: LevelDefinition['spawnPhases'] };
@@ -221,7 +223,10 @@ export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
     else return bad();
   }
   const s = m.starThresholds, p = m.spawnPolicy, a = m.retryAssistPolicy;
-  if (!s || !integer(s.threeStarMaxMovesUsed, 1, m.moves-1) || !integer(s.twoStarMaxMovesUsed, s.threeStarMaxMovesUsed+1, m.moves)) return bad();
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return bad();
+  if (c.version >= 7 && m.id <= 10) {
+    if (!('mode' in s) || s.mode !== 'percentage' || s.threeStarBelowPercent !== 50 || s.twoStarBelowPercent !== 75) return bad();
+  } else if ('mode' in s || !integer(s.threeStarMaxMovesUsed, 1, m.moves-1) || !integer(s.twoStarMaxMovesUsed, s.threeStarMaxMovesUsed+1, m.moves)) return bad();
   if (!p || !p.weights || Object.keys(p.weights).length !== c.normalTileIds!.length || c.normalTileIds!.some(id => !integer(p.weights[id], 1, 10000)) || !integer(p.candidates, 1, 8) || !Number.isFinite(p.comboChance) || p.comboChance < 0 || p.comboChance > 1 || [p.collectionPressure, p.obstaclePressure].some(v => !Number.isFinite(v) || v < 0 || v > .9)) return bad();
   if ((c.version >= 6 || p.setupChance !== undefined) && (!Number.isFinite(p.setupChance) || p.setupChance! < 0 || p.setupChance! > 1)) return bad();
   if (!a || !Array.isArray(a.thresholds) || !Array.isArray(a.reductions) || a.thresholds.length !== a.reductions.length || a.thresholds.some((n,i) => !integer(n, 1) || i > 0 && n <= a.thresholds[i-1]) || a.reductions.some((n,i) => !Number.isFinite(n) || n < 0 || n > .3 || i > 0 && n < a.reductions[i-1])) return bad();
@@ -250,7 +255,12 @@ export function mapToLevel(m: MapDefinition, seed: number, assistReduction = 0, 
     spawnPhases: m.legacy?.spawnPhases ?? [{ minMovesRemaining: 0, weights: [1,1,1,1] }] };
 }
 export function mapStars(map: MapDefinition, movesUsed: number): Stars {
-  return movesUsed <= map.starThresholds.threeStarMaxMovesUsed ? 3 : movesUsed <= map.starThresholds.twoStarMaxMovesUsed ? 2 : 1;
+  const thresholds = map.starThresholds;
+  if ('mode' in thresholds) {
+    if (movesUsed * 100 < map.moves * thresholds.threeStarBelowPercent) return 3;
+    return movesUsed * 100 < map.moves * thresholds.twoStarBelowPercent ? 2 : 1;
+  }
+  return movesUsed <= thresholds.threeStarMaxMovesUsed ? 3 : movesUsed <= thresholds.twoStarMaxMovesUsed ? 2 : 1;
 }
 export function assistForFailures(map: MapDefinition, failures: number): number {
   let reduction = 0;

@@ -47,6 +47,6 @@ try { await db.runTransaction(async tx => {
     if (existing[i].exists && !isDeepStrictEqual(existing[i].data(), expected)) throw new Error(`Published content is immutable: ${refs[i].path}`);
     if (!existing[i].exists) tx.create(refs[i], expected);
   }
-  tx.set(config, { ...(!settings.exists ? { rewardedAdsEnabled: false } : {}), contentVersion: content.version, minClientVersion: '1.6.0' }, { merge: true });
+  tx.set(config, { ...(!settings.exists ? { rewardedAdsEnabled: false } : {}), contentVersion: content.version, minClientVersion: '1.7.0' }, { merge: true });
 }); } finally { await db.terminate(); }
 console.log(`Published config v${content.version} and ${maps.length} maps to ${project}.`);

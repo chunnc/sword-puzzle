@@ -42,7 +42,7 @@ try {
   check(health.status === 200 && health.data.ok === true, 'Health check failed');
   check(bootstrap.status === 200 && bootstrap.data.contentVersion === content.version && !('levels' in bootstrap.data.content), 'Bootstrap is not map-free content v4');
   check(historical.status === 200 && isDeepStrictEqual(historical.data, legacy), 'Historical v3 API changed');
-  check(current.get('contentVersion') === content.version && current.get('minClientVersion') === '1.6.0', 'Current configuration pointer is incorrect');
+  check(current.get('contentVersion') === content.version && current.get('minClientVersion') === '1.7.0', 'Current configuration pointer is incorrect');
   check(v4.exists && isDeepStrictEqual(v4.data(), domain.contentWire(content)), 'Published global configuration differs');
   check(maps.size === expectedMaps.length, 'Published map count differs');
   const actualMaps = maps.docs.map(doc => domain.mapFromDocument(doc.data(), content)).sort((a,b) => a.id-b.id);

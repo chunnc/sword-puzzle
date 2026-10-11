@@ -25,7 +25,7 @@ test('starts count retries, abandoning leaves failure streak intact, and assista
 });
 test('server grades results from moves used, retains best stars, and handles final failure after extra moves',()=>{
  const map=maps[0],run={runId:'run_test_0001',seed:1,map,assistReduction:.3,attempt:1,loadout:game.emptyProfile().loadout,totalExp:0};
- const report=runs.parseRunReport({outcome:'won',movesUsed:map.starThresholds.threeStarMaxMovesUsed,objectiveProgress:{main:map.objectives[0].target},extraMovesUsed:false},map);
+ const report=runs.parseRunReport({outcome:'won',movesUsed:3,objectiveProgress:{main:map.objectives[0].target},extraMovesUsed:false},map);
  const result=runs.completeRun(run,report,runs.startedStats(runs.emptyMapStats()),game.emptyProfile(),content,content,100);
  assert.equal(result.receipt.stars,3);assert.equal(result.stats.firstWinAt,100);assert.equal(result.stats.consecutiveFailures,0);assert.equal(result.profile.levels[0].stars,3);
  const failed=runs.parseRunReport({outcome:'lost',movesUsed:map.moves+3,objectiveProgress:{main:0},extraMovesUsed:true},map);
@@ -34,4 +34,17 @@ test('server grades results from moves used, retains best stars, and handles fin
  assert.throws(()=>runs.parseRunReport({...report,objectiveProgress:{main:0}},map));
  const zero=runs.completeRun(run,{...report,movesUsed:map.moves},result.stats,result.profile,content,content,300);
  assert.equal(zero.receipt.stars,1);assert.equal(zero.profile.levels[0].stars,3);
+});
+test('server grades strict percentage cutoffs and counts rewarded swaps against the original budget',()=>{
+ const base=maps[0],map={...base,moves:10,starThresholds:{mode:'percentage',threeStarBelowPercent:50,twoStarBelowPercent:75}};
+ assert.deepEqual([4,5,7,8,10].map(used=>game.mapStars(map,used)),[3,2,2,1,1]);
+ assert.equal(game.mapStars({...map,moves:8},9),1);
+ const run={runId:'run_percentage_0001',seed:2,map,assistReduction:0,attempt:1,loadout:game.emptyProfile().loadout,totalExp:0};
+ const report=runs.parseRunReport({outcome:'won',movesUsed:4,objectiveProgress:{main:map.objectives[0].target},extraMovesUsed:false},map);
+ const result=runs.completeRun(run,report,runs.startedStats(runs.emptyMapStats()),game.emptyProfile(),content,content,100);
+ assert.equal(result.receipt.stars,3);
+ const bonusMap={...map,moves:8},bonusRun={...run,runId:'run_percentage_bonus_0001',map:bonusMap};
+ const bonusReport=runs.parseRunReport({outcome:'won',movesUsed:9,objectiveProgress:{main:map.objectives[0].target},extraMovesUsed:true},bonusMap);
+ const bonusResult=runs.completeRun(bonusRun,bonusReport,runs.startedStats(runs.emptyMapStats()),game.emptyProfile(),content,content,101);
+ assert.equal(bonusResult.receipt.stars,1);
 });

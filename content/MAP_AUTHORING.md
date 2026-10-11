@@ -1,4 +1,4 @@
-# Map authoring and balance (local content v6)
+# Map authoring and balance (local content v7)
 
 `game-config.json` is the global versioned configuration, without map layouts.
 `game-maps.json` is the authoring catalog, with top-first `number[][]` matrices.
@@ -56,7 +56,9 @@ for gameplay reports in this release; the server verifies report structure, chec
 and computes stars/rewards. This is not replay-based anti-cheat.
 
 Swap usage = initial budget + granted extra moves - moves remaining. Skills do not count as
-paid swaps. Wins always earn 1 star; thresholds use paid swaps, including those after ads.
+paid swaps. For content v7 maps 1–10, a win earns 3 stars below 50% of the original move
+budget, 2 stars below 75%, and 1 star at or above 75%. Extra moves count as used moves but do
+not enlarge that denominator. Content v3–v6 and maps 11–40 keep their absolute move thresholds.
 Retry assistance activates at 3/5/7 consecutive losses (10/20/30%). In v6 non-legacy maps it
 adds that amount to direct-match and setup probability and reduces collection/obstacle pressure.
 It does not grant moves, damage or change star thresholds. Wins reset the streak; abandonment does neither.
@@ -96,6 +98,10 @@ With `--apply`, successful maps are updated and failed maps keep their input con
 Historical v3/v5 runs keep the old engine path. In particular v5 uses its ×1.5 chain boost,
 stops injected matches at refill wave 6, and retains the 20-wave safety cap. Legacy maps 11–40
 ignore both probabilities and retain their historical RNG, regardless of current content version.
+
+Content v7 maps 1–10 use strict percentage star cutoffs: 3 stars below 50% and 2 below 75% of
+the original move budget. Extra swaps count as used, but do not increase the denominator; skills
+do not count. Runs pinned to v3–v6 and v7 maps 11–40 keep their absolute star thresholds.
 
 ## Validation and calibration
 
@@ -283,5 +289,5 @@ setups/fallbacks/use and charge creation/activation. Paired assist uses the same
 at 0/10/20/30%; maps 5/7/10 require +5 percentage points at maximum assist and no intermediate
 regression over 2 points. Balance reports are bound to map and engine hashes. A failed merge
 writes an explicitly FAILED pilot report and exits nonzero; it never claims release readiness.
-Content v6/client 1.6.0 are local changes; production still uses v5 until a separate rollout.
+Content v7/client 1.7.0 are local changes; production currently uses v6 until a separate rollout.
 Device animation/layout playtesting remains required.

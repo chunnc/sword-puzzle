@@ -88,15 +88,46 @@ it('keeps non-pilot rules and RNG equivalent after mapping legacy tile IDs', () 
     installContent(legacy);
   }
 });
-it('bootstrap has metadata and no maps; stars and capped retry support have explicit boundaries', () => {
+it('bootstrap has metadata and no maps; percentage stars and capped retry support have explicit boundaries', () => {
   expect(contentWire(content)).not.toHaveProperty('levels');
   expect(content.levels).toEqual([]);
   expect(chapterForLevel(11,content).id).toBe('chapter-2');
   const m=map();
-  expect(mapStars(m,m.starThresholds.threeStarMaxMovesUsed)).toBe(3);
-  expect(mapStars(m,m.starThresholds.twoStarMaxMovesUsed)).toBe(2);
-  expect(mapStars(m,m.moves+3)).toBe(1);
+  expect(mapStars(m,3)).toBe(3);
+  expect(mapStars(m,4)).toBe(2);
+  expect(mapStars(m,6)).toBe(1);
   expect([0,2,3,5,7,99].map(n=>assistForFailures(m,n))).toEqual([0,0,.1,.2,.3,.3]);
+});
+it.each([
+  [8,3,4,5,6],
+  [10,4,5,7,8],
+  [7,3,4,5,6],
+  [11,5,6,8,9],
+])('uses strict 50%%/75%% cutoffs for a %i-move map', (moves, lastThree, firstTwo, lastTwo, firstOne) => {
+  const m=map();m.moves=moves;
+  expect(mapStars(m,lastThree)).toBe(3);
+  expect(mapStars(m,lastThree+1)).toBe(2);
+  expect(mapStars(m,firstTwo)).toBe(2);
+  expect(mapStars(m,lastTwo)).toBe(2);
+  expect(mapStars(m,firstOne)).toBe(1);
+  expect(mapStars(m,moves+3)).toBe(1); // Bonus moves count as moves used; denominator stays at the map budget.
+});
+it('validates v7 percentage rules for maps 1–10 and preserves absolute rules for v6 and maps 11–40', () => {
+  const current=map();
+  expect(mapFromDocument(mapToDocument(current),content)).toEqual(current);
+  const saved=normalizeSnapshot(new BoardEngine(mapToLevel(current,42,0,content)).snapshot())!;
+  expect(saved.level.mapDefinition?.starThresholds).toEqual(current.starThresholds);
+  expect(mapStars(saved.level.mapDefinition!,4)).toBe(2);
+  const invalid=clone(current);invalid.starThresholds={mode:'percentage',threeStarBelowPercent:51,twoStarBelowPercent:75};
+  expect(()=>validateMap(invalid,content)).toThrow('INVALID_MAP');
+  const eleventh=mapFromDocument(mapToDocument(sources[10]),content);
+  if('mode' in eleventh.starThresholds) throw new Error('Map 11 must keep absolute thresholds');
+  expect(mapStars(eleventh,eleventh.starThresholds.threeStarMaxMovesUsed)).toBe(3);
+  const previous=clone(sources[0]);previous.contentVersion=6;previous.starThresholds={threeStarMaxMovesUsed:6,twoStarMaxMovesUsed:7};
+  const oldConfig=clone(config);oldConfig.version=6;
+  const oldContent=validateContent(oldConfig),oldMap=validateMap(previous,oldContent);
+  expect(mapStars(oldMap,6)).toBe(3);
+  expect(mapStars(oldMap,7)).toBe(2);
 });
 it('keeps sword damage modifiers correct with registry IDs instead of legacy enum values', () => {
   const m=map(5),s=new BoardEngine(mapToLevel(m,54321,0,content)).snapshot();

@@ -74,7 +74,7 @@ Server cấp custom token Firebase có claims bản cài đặt và binding vers
 
 Kiểm thử simulator và fault injection: [ACCEPTANCE_GUEST.md](ACCEPTANCE_GUEST.md). Không bật `EXPO_PUBLIC_ACCEPTANCE_TEST` trong release.
 
-## Map theo chương / local client 1.6.0 / content v6
+## Map theo chương / local client 1.7.0 / content v7
 
 Cấu hình mới ở `content/game-config.json`; map riêng ở `content/game-maps.json`.
 Layout là ma trận ID (`0`: khuyết, `-1`: random thường, số dương: loại quân ban đầu).
@@ -82,10 +82,10 @@ Firestore lưu từng hàng có `cells` trong `gameMaps/{version}_{id}`. Bootstr
 client chỉ lấy danh sách chương đang mở, cấu hình đầy đủ được cấp khi bắt đầu phiên.
 
 Phiên/retry do server quản lý; gameplay tiếp tục chạy trên client. Pilot độ khó và điều tiết
-spawn áp dụng màn 1–10; 11–40 và ván v3/v5 giữ đường tương thích. Hướng dẫn schema, API,
+spawn áp dụng màn 1–10; 11–40 và run v3–v6 giữ cách chấm sao cũ. Hướng dẫn schema, API,
 calibration, CI và migration: [MAP_AUTHORING.md](content/MAP_AUTHORING.md).
 
-Bản local v6 có retry assist sinh ô, tối đa 4 wave và thế chuẩn bị match 4/5.
+Bản local v7 bổ sung chấm sao theo phần trăm lượt gốc cho map 1–10; gameplay v6 có retry assist sinh ô, tối đa 4 wave và thế chuẩn bị match 4/5.
 Validation local dùng `--source local`; chưa publish/deploy.
 
 Báo cáo production v5: [pilot-v5.md](content/balance/pilot-v5.md) — 90.000 mô phỏng, 1.000 seed

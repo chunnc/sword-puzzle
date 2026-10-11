@@ -5,7 +5,8 @@ const os=require('node:os');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
 const {JSDOM}=require(require.resolve('jsdom',{paths:[path.resolve(__dirname,'../client')]}));
-const {simulateRetries,evaluateChecks,parseOptions,catalog,targets,seedFor,simulateRetryChunk,mergeRetryChunks,finalizeRetries,spawnAssistMechanisms}=require('./simulate_maps.cjs');
+const {play,simulateRetries,evaluateChecks,parseOptions,catalog,targets,seedFor,simulateRetryChunk,mergeRetryChunks,finalizeRetries,spawnAssistMechanisms}=require('./simulate_maps.cjs');
+const {mapStars}=require('./game-runtime.cjs');
 const {renderBalanceReport,renderReportFile}=require('./render_balance_report.cjs');
 const {resolveSnapshot}=require('./sync_content_cache.cjs');
 const config=require('../content/game-config.json');
@@ -122,6 +123,15 @@ test('v6 overview exposes paired assistance separately from retry survivor bucke
   const section=dom.window.document.getElementById('paired-assist');
   assert.match(section.textContent,/2\.000 seed/);assert.match(section.textContent,/50,0%/);
   dom.window.close();
+});
+test('simulator uses the shared percent star thresholds and the report explains strict cutoffs',()=>{
+  const map={...catalog[0],starThresholds:{mode:'percentage',threeStarBelowPercent:50,twoStarBelowPercent:75}};
+  const run=play(map,seedFor(0),'normal','expected');
+  assert.equal(run.stars,run.won?mapStars(map,run.movesUsed):0);
+  const report=fixture();report.maps=[map];
+  const html=renderBalanceReport(report);
+  assert.match(html,/3 sao &lt; 50% \(tối đa 3\)/);
+  assert.match(html,/2 sao &lt; 75% \(tối đa 5\)/);
 });
 
 function fixture() {

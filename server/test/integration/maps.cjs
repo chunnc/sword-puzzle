@@ -13,7 +13,7 @@ before(async()=>{
  const batch=db.batch();batch.set(db.collection('gameContent').doc(String(version)),game.contentWire(content));
  batch.set(db.collection('gameContent').doc('3'),require('../../../content/game-content.json'));
  for(const raw of require('../../../content/game-maps.json')){const map=game.validateMap(raw,content);batch.set(db.collection('gameMaps').doc(`${version}_${map.id}`),game.mapToDocument(map));}
- batch.set(db.collection('gameConfig').doc('current'),{contentVersion:version,minClientVersion:'1.6.0',rewardedAdsEnabled:false});await batch.commit();
+ batch.set(db.collection('gameConfig').doc('current'),{contentVersion:version,minClientVersion:'1.7.0',rewardedAdsEnabled:false});await batch.commit();
  server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));base=`http://127.0.0.1:${server.address().port}`;
 });
 after(async()=>{if(server)await new Promise(resolve=>server.close(resolve));});
@@ -44,7 +44,7 @@ test('loss retries are idempotent, support is capped, and win rewards are graded
   assert.deepEqual((await request(`/v3/runs/${run.runId}/finish`,report,g.idToken)).data,finish.data);previous=run.runId;
  }
  run=(await start(g,randomUUID(),1,previous)).data.run;
- const report={outcome:'won',movesUsed:run.map.starThresholds.threeStarMaxMovesUsed,objectiveProgress:{main:run.map.objectives[0].target},extraMovesUsed:false,stars:0};
+ const report={outcome:'won',movesUsed:Math.ceil(run.map.moves*.5)-1,objectiveProgress:{main:run.map.objectives[0].target},extraMovesUsed:false,stars:0};
  const finished=await request(`/v3/runs/${run.runId}/finish`,report,g.idToken);assert.equal(finished.status,200,JSON.stringify(finished.data));assert.equal(finished.data.stars,3);
  assert.deepEqual((await request(`/v3/runs/${run.runId}/finish`,report,g.idToken)).data,finished.data);
  const stats=(await db.collection('players').doc(g.uid).collection('mapStats').doc('1').get()).data();assert.equal(stats.losses,8);assert.equal(stats.wins,1);assert.equal(stats.consecutiveFailures,0);

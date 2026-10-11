@@ -52,10 +52,13 @@ function renderBalanceReport(report) {
   };
   const profileDetail=r=>{
     const m=maps.get(r.id),gate=gateFor(r);
+    const starRules=!m?'':'mode' in m.starThresholds
+      ? `Ngân sách gốc ${m.moves} lượt · 3 sao &lt; ${m.starThresholds.threeStarBelowPercent}% (tối đa ${Math.ceil(m.moves*m.starThresholds.threeStarBelowPercent/100)-1}) · 2 sao &lt; ${m.starThresholds.twoStarBelowPercent}% (tối đa ${Math.ceil(m.moves*m.starThresholds.twoStarBelowPercent/100)-1}).`
+      : `Ngân sách ${m.moves} lượt · 3 sao ≤ ${m.starThresholds.threeStarMaxMovesUsed} · 2 sao ≤ ${m.starThresholds.twoStarMaxMovesUsed}.`;
     return `<details class="profile-detail" id="profile-${r.id}-${escape(r.bot)}-${escape(r.power)}" ${attributes(r)}>
       <summary><span>${escape(mapLabel(r.id))}</span><span class="muted">${escape(r.bot)} / ${escape(powerNames[r.power]??r.power)}</span></summary>
       <div class="detail-body"><div><h3>Số lượt đổi ô khi thắng</h3>${histogram(r.movesHistogram,'Số ván thắng theo số lượt đổi ô')}
-      <p class="muted">${m?`Ngân sách ${m.moves} lượt · 3 sao ≤ ${m.starThresholds.threeStarMaxMovesUsed} · 2 sao ≤ ${m.starThresholds.twoStarMaxMovesUsed}.`:''} Kỹ năng không tính vào lượt đổi ô.</p></div>
+      <p class="muted">${starRules} Kỹ năng không tính vào lượt đổi ô.</p></div>
       <div><h3>Diễn biến ván chơi</h3><dl class="metrics"><dt>Median lượt đổi ô khi thắng</dt><dd>${number(r.medianMoves,1)}</dd><dt>Settlement / hành động</dt><dd>${percent(r.settlementRate)}</dd>
       <dt>Thế chuẩn bị tạo / dùng</dt><dd>${number(r.metrics?.setups)} / ${number(r.metrics?.setupUsed)}</dd><dt>Charge tạo / kích hoạt</dt><dd>${number(r.metrics?.chargesCreated)} / ${number(r.metrics?.chargesActivated)}</dd>
       <dt>Tiến độ nhiệm vụ trung bình</dt><dd>${percent(r.averageProgress)}</dd>
