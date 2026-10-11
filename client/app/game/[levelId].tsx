@@ -13,6 +13,7 @@ import { GameplayResultPopup, type GameplayResult } from '../../src/components/G
 import { GameplayLeaveDialog } from '../../src/components/GameplayLeaveDialog';
 import { ArtPanel, GameButton, ScreenFrame } from '../../src/components/Art';
 import { Notice } from '../../src/components/Notice';
+import { useSfx } from '../../src/audio/SfxProvider';
 import { BoardEngine } from '../../src/game/BoardEngine';
 import { skillTarget } from '../../src/game/skillTargets';
 import { getLevel } from '../../src/game/levels';
@@ -30,6 +31,7 @@ export default function GameScreen() {
 function GameplaySession({ levelId }: { levelId: number }) {
     const router = useRouter(), { width } = useWindowDimensions();
     const store = useGameStore();
+    const playSfx = useSfx();
     const persisted = store.save.active?.levelId === levelId ? store.save.active : null;
     const [board, setBoard] = useState<BoardSnapshot | null>(persisted);
     const level = useMemo(() => { try {
@@ -195,6 +197,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
             runId: board.runId, signal: controller.signal, reduceMotion, qiCap: content.qiCap,
             nextId: () => ++effectId.current, setBoard, setEffect,
             onStart: () => { setTargetSkill(null); setTargets([]); },
+            onSfx: playSfx,
         });
         const action = { controller, playback };
         activeAction.current = action;

@@ -10,6 +10,7 @@ import { colors } from '../theme';
 import { ScreenFrame } from './Art';
 import { BottomNav, TopHud } from './Chrome';
 import { CollectionTabs, type CollectionCategory as Category } from './CollectionTabs';
+import { useSfxPress } from '../audio/useSfxPress';
 import { navigateTab } from './Navigation';
 import { Notice } from './Notice';
 
@@ -25,8 +26,9 @@ function EquipmentArt({ art, skill = false, empty = false }: { art?: Artwork; sk
 }
 
 function EquipButton({ title, label, disabled, onPress }: { title: string; label: string; disabled: boolean; onPress: () => void }) {
+  const sfxPress = useSfxPress();
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={disabled ? undefined : onPress} style={({ pressed }) => [styles.equipTap, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={sfxPress(disabled ? undefined : onPress)} style={({ pressed }) => [styles.equipTap, pressed && styles.pressed]}>
       <Image source={ART[disabled ? 'inventoryButtonDisabled' : 'inventoryButton']} contentFit="fill" accessible={false} style={styles.equipArt} />
       <Text maxFontSizeMultiplier={1.2} style={[styles.equipText, disabled && styles.disabledText]}>{title}</Text>
     </Pressable>
@@ -34,6 +36,7 @@ function EquipButton({ title, label, disabled, onPress }: { title: string; label
 }
 
 export function InventoryCollection({ initialCategory = 'sword' }: { initialCategory?: Category }) {
+  const sfxPress = useSfxPress();
   const router = useRouter();
   const store = useGameStore();
   const profile = store.save.profile;
@@ -134,7 +137,7 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
       <Notice message={store.notice} onDismiss={() => store.setNotice('')} />
       <Modal visible={Boolean(selectedSkill)} transparent animationType="none" onRequestClose={closeModal}>
         <SafeAreaView style={styles.modalOverlay}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Đóng bảng chọn ô" disabled={working} onPress={closeModal} style={StyleSheet.absoluteFill} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Đóng bảng chọn ô" disabled={working} onPress={sfxPress(closeModal, !working)} style={StyleSheet.absoluteFill} />
           {selectedSkill ? (
             <View accessibilityViewIsModal style={styles.dialog}>
               <Image source={ART.inventoryDialog} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />
@@ -147,7 +150,7 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
                   const unavailableMove = !current && profile.loadout.skills.includes(selectedSkill.id);
                   const disabled = working || selected || unavailableMove;
                   return (
-                    <Pressable key={slot} accessibilityRole="button" accessibilityLabel={`Trang bị ${selectedSkill.name} vào ô ${slot + 1}, ${current ? current.name : 'ô trống'}`} accessibilityState={{ disabled, selected }} disabled={disabled} onPress={disabled ? undefined : () => void equipSkill(selectedSkill.id, slot)} style={({ pressed }) => [styles.slotRow, selected && styles.selectedSlot, disabled && !selected && styles.disabledSlot, pressed && styles.pressed]}>
+                    <Pressable key={slot} accessibilityRole="button" accessibilityLabel={`Trang bị ${selectedSkill.name} vào ô ${slot + 1}, ${current ? current.name : 'ô trống'}`} accessibilityState={{ disabled, selected }} disabled={disabled} onPress={sfxPress(() => void equipSkill(selectedSkill.id, slot), !disabled)} style={({ pressed }) => [styles.slotRow, selected && styles.selectedSlot, disabled && !selected && styles.disabledSlot, pressed && styles.pressed]}>
                       <EquipmentArt art={current ? SKILL_ART[current.id] : undefined} skill empty={!current} />
                       <View style={styles.slotCopy}>
                         <Text style={styles.slotNumber}>Ô {slot + 1}</Text>
@@ -159,7 +162,7 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
                 })}
                 {working ? <Text accessibilityLiveRegion="polite" style={styles.dialogCaption}>Đang lưu…</Text> : null}
                 {modalError ? <Text accessibilityRole="alert" style={styles.modalError}>{modalError}</Text> : null}
-                <Pressable accessibilityRole="button" accessibilityLabel="Hủy trang bị" accessibilityState={{ disabled: working }} disabled={working} onPress={closeModal} style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Hủy trang bị" accessibilityState={{ disabled: working }} disabled={working} onPress={sfxPress(closeModal, !working)} style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}>
                   <Text style={styles.cancelText}>HỦY</Text>
                 </Pressable>
               </ScrollView>

@@ -5,6 +5,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Artwork, ART } from '../assets';
 import { colors } from '../theme';
+import { useSfxPress } from '../audio/useSfxPress';
 
 export function ScreenFrame({
   background,
@@ -71,12 +72,13 @@ export function GameButton({
   textStyle?: StyleProp<TextStyle>;
   accessibilityLabel?: string;
 }) {
+  const sfxPress = useSfxPress();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? title}
       accessibilityState={{ disabled }}
-      onPress={disabled ? undefined : onPress}
+      onPress={sfxPress(disabled ? undefined : onPress)}
       disabled={disabled}
       style={[styles.button, style, disabled && styles.disabled]}
     >

@@ -8,17 +8,19 @@ import { colors } from '../theme';
 import { ArtPanel } from './Art';
 import { GameplayProgressBar } from './GameplayProgressBar';
 import { OutlinedText } from './OutlinedText';
+import { useSfxPress } from '../audio/useSfxPress';
 
 export function GameplayHeader({ levelId, difficulty, busy, compact, onBack, onHelp }: {
   levelId: number; difficulty?: Difficulty; busy: boolean; compact: boolean; onBack: () => void; onHelp: () => void;
 }) {
+  const sfxPress = useSfxPress();
   return (
     <View style={[styles.header, compact && styles.compactHeader]}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Rời màn chơi" accessibilityState={{ disabled: busy }} disabled={busy} onPress={onBack} style={({ pressed }) => [styles.back, pressed && styles.pressed, busy && styles.dim]}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Rời màn chơi" accessibilityState={{ disabled: busy }} disabled={busy} onPress={sfxPress(onBack, !busy)} style={({ pressed }) => [styles.back, pressed && styles.pressed, busy && styles.dim]}>
         <Image source={ART.gameplayBack} contentFit="contain" accessible={false} style={styles.backArt} />
       </Pressable>
       <View style={styles.stageTitle}><OutlinedText accessibilityRole="header" numberOfLines={1} maxFontSizeMultiplier={1.2} style={[styles.stageText, compact && styles.compactStageText]}>Màn {levelId}{difficulty ? ` · ${{ easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[difficulty]}` : ''}</OutlinedText></View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Luật các ô" accessibilityState={{ disabled: busy }} disabled={busy} onPress={onHelp} style={({ pressed }) => [styles.help, pressed && styles.pressed]}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Luật các ô" accessibilityState={{ disabled: busy }} disabled={busy} onPress={sfxPress(onHelp, !busy)} style={({ pressed }) => [styles.help, pressed && styles.pressed]}>
         <OutlinedText maxFontSizeMultiplier={1.2} style={styles.helpText}>Luật ô</OutlinedText>
       </Pressable>
     </View>
@@ -65,6 +67,7 @@ export function GameplayDock({ board, skillSlots, available, cost, targetSkill, 
   onSkill: (id: SkillId) => void; onCancel: () => void; onCast: () => void;
   qiBarRef?: React.Ref<View>; onQiBarLayout?: () => void;
 }) {
+  const sfxPress = useSfxPress();
   const content = getContentVersion(board.contentVersion);
   const sword = content.swords.find(item => item.id === board.loadout.sword)!;
   return (
@@ -75,11 +78,11 @@ export function GameplayDock({ board, skillSlots, available, cost, targetSkill, 
       </View>
       <View testID="game-cast-actions" style={styles.actions}>
         {targetSkill ? <View style={styles.castRow}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Hủy chọn kỹ năng" accessibilityState={{ disabled: busy }} disabled={busy} onPress={onCancel} style={({ pressed }) => [styles.actionButton, styles.cancelButton, pressed && styles.pressed, busy && styles.disabledAction]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Hủy chọn kỹ năng" accessibilityState={{ disabled: busy }} disabled={busy} onPress={sfxPress(onCancel, !busy)} style={({ pressed }) => [styles.actionButton, styles.cancelButton, pressed && styles.pressed, busy && styles.disabledAction]}>
             <Image source={ART.gameplayCancel} contentFit="contain" accessible={false} style={StyleSheet.absoluteFill} />
             <Text maxFontSizeMultiplier={1.2} style={styles.cancelText}>Hủy</Text>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Thi triển · ${cost(targetSkill)} khí`} accessibilityState={{ disabled: busy || !canCast }} disabled={busy || !canCast} onPress={onCast} style={({ pressed }) => [styles.actionButton, styles.castButton, pressed && styles.pressed, (busy || !canCast) && styles.disabledAction]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Thi triển · ${cost(targetSkill)} khí`} accessibilityState={{ disabled: busy || !canCast }} disabled={busy || !canCast} onPress={sfxPress(onCast, !busy && canCast)} style={({ pressed }) => [styles.actionButton, styles.castButton, pressed && styles.pressed, (busy || !canCast) && styles.disabledAction]}>
             <Image source={ART.gameplayCast} contentFit="contain" accessible={false} style={StyleSheet.absoluteFill} />
             <Text numberOfLines={1} maxFontSizeMultiplier={1.2} style={styles.castText}>Thi triển · {cost(targetSkill)} khí</Text>
           </Pressable>
@@ -104,7 +107,7 @@ export function GameplayDock({ board, skillSlots, available, cost, targetSkill, 
           const disabled = busy || !definition || !ready;
           const frame = definition ? 'slotSkill' : locked ? 'slotSkillLocked' : 'slotSkillEmpty';
           return <View key={slot} testID={`game-skill-slot-${slot}`} style={styles.equipmentColumn}>
-            <Pressable accessibilityRole="button" accessibilityLabel={definition ? `${definition.name}, ${cost(definition.id)} kiếm khí` : locked ? `Ô kỹ năng ${slot + 1} bị khóa, mở tại 1500 EXP` : `Ô kỹ năng ${slot + 1} trống`} accessibilityHint={selected ? `Chọn ${targetCount} ô trên bàn cờ, sau đó bấm Thi triển` : undefined} accessibilityState={{ disabled, selected }} disabled={disabled} onPress={id ? () => onSkill(id) : undefined} style={({ pressed }) => [styles.socket, compact && styles.compactSocket, selected && styles.selectedSocket, pressed && styles.pressed]}>
+            <Pressable accessibilityRole="button" accessibilityLabel={definition ? `${definition.name}, ${cost(definition.id)} kiếm khí` : locked ? `Ô kỹ năng ${slot + 1} bị khóa, mở tại 1500 EXP` : `Ô kỹ năng ${slot + 1} trống`} accessibilityHint={selected ? `Chọn ${targetCount} ô trên bàn cờ, sau đó bấm Thi triển` : undefined} accessibilityState={{ disabled, selected }} disabled={disabled} onPress={sfxPress(id ? () => onSkill(id) : undefined, !disabled)} style={({ pressed }) => [styles.socket, compact && styles.compactSocket, selected && styles.selectedSocket, pressed && styles.pressed]}>
               <Image source={ART[frame]} contentFit="contain" accessible={false} style={[StyleSheet.absoluteFill, definition && !ready && styles.dim]} />
               {definition ? <Image source={ART[SKILL_ART[definition.id]]} contentFit="contain" accessible={false} style={[styles.equipmentIcon, compact && styles.compactEquipmentIcon, !ready && styles.dim]} /> : null}
               {ready && !selected && !busy ? <View pointerEvents="none" style={styles.readyDot} /> : null}

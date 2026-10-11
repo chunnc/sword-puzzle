@@ -3,17 +3,19 @@ import { Image } from 'expo-image';
 import { Image as NativeImage, Pressable, StyleSheet, Text } from 'react-native';
 import { ART } from '../assets';
 import { colors } from '../theme';
+import { useSfxPress } from '../audio/useSfxPress';
 
 /** Both gameplay dialogs render each sprite at its intrinsic proportions. */
 export function GameplayDialogButton({ title, art, width, disabled, onPress }: {
   title: string; art: 'buttonPrimary' | 'buttonSecondary'; width: number;
   disabled: boolean; onPress: () => void;
 }) {
+  const sfxPress = useSfxPress();
   const source = NativeImage.resolveAssetSource(ART[art]);
   const ratio = source?.width && source?.height ? source.width / source.height
     : art === 'buttonPrimary' ? 1400 / 363 : 1400 / 356;
   const imageHeight = width / ratio;
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled }} disabled={disabled} onPress={disabled ? undefined : onPress}
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled }} disabled={disabled} onPress={sfxPress(disabled ? undefined : onPress)}
     style={({ pressed }) => [styles.button, { width, height: Math.max(44, imageHeight) }, disabled && styles.disabled, pressed && !disabled && styles.pressed]}>
     <Image source={ART[art]} contentFit="contain" accessible={false} style={[styles.art, { width, height: imageHeight }]} />
     <Text numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2} style={[styles.text, art === 'buttonPrimary' && styles.primaryText]}>{title}</Text>

@@ -15,17 +15,50 @@ function fixture(reduceMotion = false, resolutionStep?: BoardResolutionStep) {
             { kind: 'lightning', source: 1, cells: [1], qi: 10, damage: 0 }],
     };
     const controller = new AbortController();
-    const setBoard = jest.fn(), setEffect = jest.fn();
+    const setBoard = jest.fn(), setEffect = jest.fn(), onSfx = jest.fn();
     let id = 0;
     const playback = createBoardPresenter({ runId: board.runId, signal: controller.signal,
-        reduceMotion, qiCap: 100, nextId: () => ++id, setBoard, setEffect, onStart: jest.fn() });
+        reduceMotion, qiCap: 100, nextId: () => ++id, setBoard, setEffect, onStart: jest.fn(), onSfx });
     const effect = () => setEffect.mock.calls.at(-1)![0] as BoardVisualEffect;
     const begin = () => playback.onMotionStarted(board.runId, effect().id);
     const finish = () => playback.onMotionFinished(board.runId, effect().id);
-    return { board, step, controller, playback, setBoard, setEffect, effect, begin, finish };
+    return { board, step, controller, playback, setBoard, setEffect, onSfx, effect, begin, finish };
 }
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => jest.useRealTimers());
+
+it('plays eligible cues without starting a board animation when reduce motion is enabled', async () => {
+    const f = fixture(true);
+    const before = f.board;
+    const match = { kind: 'skill' as const, cells: [0, 1, 2], damage: 3, qi: 3, objectiveProgressAfter: {} };
+    before.tiles = Array.from({ length: 49 }, (_, i) => ({ kind: i % 4, chargeTier: 0 as const, locked: false }));
+    const step = { ...f.step, before, effects: [match], cleared: [0, 1, 2], falls: [] };
+    const play = f.playback.presenter.present({ kind: 'step', step });
+    await flush();
+    jest.runOnlyPendingTimers();
+    await flush();
+    await play.finished;
+    expect(f.onSfx).toHaveBeenCalledTimes(1);
+    expect(f.onSfx).toHaveBeenCalledWith('match_spirit');
+    expect(f.setEffect.mock.calls.every(([effect]) => effect === null)).toBe(true);
+});
+
+it('continues board resolution if audio playback reports a synchronous failure', async () => {
+    const f = fixture(true);
+    f.onSfx.mockImplementation(() => { throw new Error('AUDIO_UNAVAILABLE'); });
+    const before = f.board;
+    before.tiles = Array.from({ length: 49 }, (_, i) => ({ kind: i % 4, chargeTier: 0 as const, locked: false }));
+    const after = { ...before, score: 10 };
+    const step = { ...f.step, before, after, effects: [
+        { kind: 'skill' as const, cells: [0, 1, 2], damage: 3, qi: 3, objectiveProgressAfter: {} },
+    ], cleared: [0, 1, 2], falls: [] };
+    const play = f.playback.presenter.present({ kind: 'step', step });
+    await flush();
+    jest.runOnlyPendingTimers();
+    await flush();
+    await expect(play.finished).resolves.toBeUndefined();
+    expect(f.setBoard).toHaveBeenCalledWith(after);
+});
 
 it('presents reward-free settlement after landing, with the final board between fade phases', async () => {
     const f = fixture(false);

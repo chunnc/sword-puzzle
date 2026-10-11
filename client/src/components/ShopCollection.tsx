@@ -10,6 +10,7 @@ import { colors } from '../theme';
 import { ScreenFrame } from './Art';
 import { BottomNav, TopHud } from './Chrome';
 import { CollectionTabs, type CollectionCategory } from './CollectionTabs';
+import { useSfxPress } from '../audio/useSfxPress';
 import { navigateTab } from './Navigation';
 import { Notice } from './Notice';
 
@@ -47,8 +48,9 @@ function PurchaseButton({ price, label, width, disabled, onPress }: {
   disabled: boolean;
   onPress: () => void;
 }) {
+  const sfxPress = useSfxPress();
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={disabled ? undefined : onPress} style={({ pressed }) => [styles.button, { width }, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={sfxPress(disabled ? undefined : onPress)} style={({ pressed }) => [styles.button, { width }, pressed && styles.pressed]}>
       <Image source={ART[disabled ? 'shopButtonDisabled' : 'shopButton']} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />
       <View style={styles.buyContent}>
         <Text maxFontSizeMultiplier={1.2} style={[styles.buttonText, disabled && styles.secondaryText]}>Mua</Text>
@@ -60,6 +62,7 @@ function PurchaseButton({ price, label, width, disabled, onPress }: {
 }
 
 export function ShopCollection({ initialCategory = 'sword' }: { initialCategory?: CollectionCategory }) {
+  const sfxPress = useSfxPress();
   const router = useRouter();
   const store = useGameStore();
   const profile = store.save.profile;
@@ -150,10 +153,10 @@ export function ShopCollection({ initialCategory = 'sword' }: { initialCategory?
             {row.map(item => {
               const itemLocked = profile.levels.length < item.unlock;
               return (
-                <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`Xem ${item.name}`} accessibilityHint={`${item.price} Linh Thạch${itemLocked ? `, mở sau màn ${item.unlock}` : ''}`} accessibilityState={{ disabled: working }} disabled={working} onPress={() => {
+                <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`Xem ${item.name}`} accessibilityHint={`${item.price} Linh Thạch${itemLocked ? `, mở sau màn ${item.unlock}` : ''}`} accessibilityState={{ disabled: working }} disabled={working} onPress={sfxPress(() => {
                   setModalError('');
                   setSelection({ category, id: item.id });
-                }} style={({ pressed }) => [styles.card, { width: cardWidth }, pressed && styles.pressed]}>
+                }, !working)} style={({ pressed }) => [styles.card, { width: cardWidth }, pressed && styles.pressed]}>
                   <Image source={ART.shopCard} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />
                   <View style={[styles.iconArea, itemLocked && styles.lockedArt]}><ItemArt item={item} /></View>
                   <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={styles.name}>{item.name}</Text>
@@ -177,7 +180,7 @@ export function ShopCollection({ initialCategory = 'sword' }: { initialCategory?
       <Notice message={store.notice} onDismiss={() => store.setNotice('')} />
       <Modal visible={Boolean(selectedItem)} transparent animationType="none" onRequestClose={closeModal}>
         <View style={[styles.modalOverlay, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20, paddingLeft: insets.left + 20, paddingRight: insets.right + 20 }]}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Đóng chi tiết vật phẩm" accessibilityState={{ disabled: working }} disabled={working} onPress={closeModal} style={StyleSheet.absoluteFill} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Đóng chi tiết vật phẩm" accessibilityState={{ disabled: working }} disabled={working} onPress={sfxPress(closeModal, !working)} style={StyleSheet.absoluteFill} />
           {selectedItem ? (
             <View accessibilityViewIsModal pointerEvents="box-none" style={[styles.dialogWrapper, { width: dialogWidth + CLOSE_OVERHANG * 2, height: dialogHeight + CLOSE_OVERHANG * 2 }]}>
               <View style={[styles.dialog, { width: dialogWidth, height: dialogHeight }]}>
@@ -195,7 +198,7 @@ export function ShopCollection({ initialCategory = 'sword' }: { initialCategory?
                   <PurchaseButton width={(dialogWidth - 40) * 0.8} price={selectedItem.price} label={`Mua ${selectedItem.name}, ${selectedItem.price} Linh Thạch`} disabled={buyDisabled} onPress={() => void purchase()} />
                 </View>
               </View>
-              <Pressable accessibilityRole="button" accessibilityLabel="Đóng" accessibilityState={{ disabled: working }} disabled={working} onPress={working ? undefined : closeModal} style={({ pressed }) => [styles.close, working && styles.closeDisabled, pressed && styles.pressed]}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Đóng" accessibilityState={{ disabled: working }} disabled={working} onPress={sfxPress(closeModal, !working)} style={({ pressed }) => [styles.close, working && styles.closeDisabled, pressed && styles.pressed]}>
                 <Image source={ART.shopCloseIcon} contentFit="contain" accessible={false} style={styles.closeIcon} />
               </Pressable>
             </View>

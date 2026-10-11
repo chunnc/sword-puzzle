@@ -10,6 +10,7 @@ import {
   Easing, useAnimatedReaction, useDerivedValue, withSequence, withTiming, type SharedValue,
 } from 'react-native-reanimated';
 import { ART, tileArtwork } from '../assets';
+import { useSfxPress } from '../audio/useSfxPress';
 import { semanticTileKind, tileId, getContentVersion } from '../game/domain';
 import { TileKind, type BoardSnapshot, type CellPosition, type Tile } from '../game/types';
 import { colors } from '../theme';
@@ -118,6 +119,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   gridRef?: React.Ref<View>;
   onGridLayout?: () => void;
 }) {
+  const sfxPress = useSfxPress();
   const geometry = snapshot.level.board;
   const content = getContentVersion(snapshot.contentVersion);
   const indices = useMemo(() => displayIndices(geometry), [geometry]);
@@ -271,7 +273,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
           const tile = snapshot.tiles[index]!, x = index % geometry.width, y = Math.floor(index / geometry.width);
           const bounds = cellBounds(index, side, geometry);
           const name = content.tiles.find(def => def.id === tile.kind)?.name ?? 'Đá chắn';
-          return <Pressable key={index} accessibilityRole="button" accessibilityLabel={`${name}${tile.chargeTier ? `, cường hóa ${tile.chargeTier}` : ''}${tile.locked ? ', phong ấn' : ''}, hàng ${y + 1}, cột ${x + 1}`} accessibilityState={{ disabled: locked }} disabled={locked} onPress={() => onCellPress(x, y)} style={[styles.touchCell, { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }]} />;
+          return <Pressable key={index} accessibilityRole="button" accessibilityLabel={`${name}${tile.chargeTier ? `, cường hóa ${tile.chargeTier}` : ''}${tile.locked ? ', phong ấn' : ''}, hàng ${y + 1}, cột ${x + 1}`} accessibilityState={{ disabled: locked }} disabled={locked} onPress={sfxPress(() => onCellPress(x, y), !locked)} style={[styles.touchCell, { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }]} />;
         }) : null}
       </View>
     </GestureDetector>

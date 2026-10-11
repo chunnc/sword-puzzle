@@ -1,8 +1,10 @@
 import React from 'react';
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { ART } from '../assets';
 import { colors } from '../theme';
+import { Pressable } from 'react-native';
+import { useSfxPress } from '../audio/useSfxPress';
 
 export type CollectionCategory = 'sword' | 'skill';
 
@@ -11,10 +13,11 @@ export function CollectionTabs({ category, disabled = false, onSelect }: {
   disabled?: boolean;
   onSelect: (category: CollectionCategory) => void;
 }) {
+  const sfxPress = useSfxPress();
   return (
     <View style={styles.tabs}>
       {(['sword', 'skill'] as const).map(tab => (
-        <Pressable key={tab} accessibilityRole="tab" accessibilityLabel={tab === 'sword' ? 'Bảo kiếm' : 'Kiếm thuật'} accessibilityState={{ selected: category === tab, disabled }} disabled={disabled} onPress={() => onSelect(tab)} style={({ pressed }) => [styles.tab, pressed && styles.pressed]}>
+        <Pressable key={tab} accessibilityRole="tab" accessibilityLabel={tab === 'sword' ? 'Bảo kiếm' : 'Kiếm thuật'} accessibilityState={{ selected: category === tab, disabled }} disabled={disabled} onPress={sfxPress(() => onSelect(tab), !disabled)} style={({ pressed }) => [styles.tab, pressed && styles.pressed]}>
           <Image source={ART[category === tab ? 'inventoryTabActive' : 'inventoryTabIdle']} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />
           <Text maxFontSizeMultiplier={1.3} style={[styles.tabText, category === tab && styles.selectedTabText]}>{tab === 'sword' ? 'BẢO KIẾM' : 'KIẾM THUẬT'}</Text>
         </Pressable>

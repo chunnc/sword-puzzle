@@ -1,5 +1,7 @@
 import { BoardActionCancelled } from '../game/boardAction';
 import type { BoardActionPhase, BoardActionPresenter, BoardPhasePlayback, BoardSnapshot } from '../game/types';
+import type { SfxId } from '../audio/SfxProvider';
+import { boardSoundCues } from '../audio/boardSoundCues';
 import { BOARD_CHAIN_DELAY_MS, type BoardVisualEffect } from './boardVisuals';
 
 function deferred() {
@@ -18,6 +20,7 @@ export function createBoardPresenter(options: {
     setBoard: (board: BoardSnapshot) => void;
     setEffect: (effect: BoardVisualEffect | null) => void;
     onStart: () => void;
+    onSfx?: (id: SfxId) => void;
 }) {
     const { signal } = options;
     let reduceMotion = options.reduceMotion;
@@ -78,6 +81,9 @@ export function createBoardPresenter(options: {
                 options.setEffect(null);
             } else if (phase.kind === 'step') {
                 const { step } = phase;
+                for (const cue of boardSoundCues(step)) {
+                    try { options.onSfx?.(cue); } catch { /* Audio feedback never blocks board resolution. */ }
+                }
                 if (!reduceMotion) {
                     const cleared = new Set<number>();
                     const pendingSources = new Map<number, number>();

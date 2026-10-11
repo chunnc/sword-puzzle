@@ -5,8 +5,10 @@ import { TopHud } from '../src/components/Chrome';
 import { GameButton, ScreenFrame, TitleBanner } from '../src/components/Art';
 import { useGameStore } from '../src/state/gameStore';
 import { colors, type } from '../src/theme';
+import { useSfxPress } from '../src/audio/useSfxPress';
 
 export default function AccountScreen() {
+  const sfxPress = useSfxPress();
   const router = useRouter();
   const session = useGameStore((state) => state.session);
   const authRequired = useGameStore(s=>s.authRequired);
@@ -118,7 +120,7 @@ export default function AccountScreen() {
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={passwordVisible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                    onPress={() => setPasswordVisible((visible) => !visible)}
+                    onPress={sfxPress(() => setPasswordVisible((visible) => !visible))}
                     style={styles.showPasswordTap}
                   >
                     <Text style={styles.showPassword}>

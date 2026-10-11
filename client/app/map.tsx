@@ -10,11 +10,13 @@ import { LEVEL_COUNT, getLevel } from '../src/game/levels';
 import { CONTENT } from '../src/game/domain';
 import { navigateTab, type BottomNavId } from '../src/components/Navigation';
 import { getHighestUnlocked, getLevelStars, getLevelCompleted, useGameStore } from '../src/state/gameStore';
+import { useSfxPress } from '../src/audio/useSfxPress';
 import { colors, type } from '../src/theme';
 
 
 
 export default function MapScreen() {
+  const sfxPress = useSfxPress();
   const router = useRouter();
   const chapterId = useGameStore(state => state.chapterId);
   const maps = useGameStore(state => state.chapterMaps);
@@ -42,14 +44,14 @@ export default function MapScreen() {
       {chapters.length ? <View style={styles.chapterTabs}>
         {chapters.map(ch => <Pressable key={ch.id} accessibilityRole="button" accessibilityLabel={ch.name}
           accessibilityState={{ selected: ch.id === chapterId, disabled: loading || ch.firstLevelId > unlocked }}
-          disabled={loading || ch.firstLevelId > unlocked} onPress={() => void selectChapter(ch.id).catch(() => undefined)}
+          disabled={loading || ch.firstLevelId > unlocked} onPress={sfxPress(() => void selectChapter(ch.id).catch(() => undefined), !loading && ch.firstLevelId <= unlocked)}
           style={[styles.chapterTab, ch.id === chapterId && styles.chapterTabActive, ch.firstLevelId > unlocked && { opacity: .4 }]}>
           <Text style={styles.chapterTabText}>Chương {ch.order}</Text>
         </Pressable>)}
       </View> : null}
       <View style={styles.mapArea}>
         {loading ? <Text accessibilityLiveRegion="polite" style={styles.status}>Đang tải chương…</Text> : null}
-        {chapterError ? <Pressable accessibilityRole="button" onPress={() => void selectChapter(chapterId).catch(() => undefined)}><Text style={styles.status}>{chapterError} · Thử lại</Text></Pressable> : null}
+        {chapterError ? <Pressable accessibilityRole="button" onPress={sfxPress(() => void selectChapter(chapterId).catch(() => undefined))}><Text style={styles.status}>{chapterError} · Thử lại</Text></Pressable> : null}
         <FlatList
           data={levelIds}
           inverted
@@ -88,7 +90,7 @@ export default function MapScreen() {
                   accessibilityLabel={`Màn ${levelId}${difficultyName ? `, ${difficultyName}` : ''}${completed ? `, đã hoàn thành, ${stars} sao` : current ? ', màn hiện tại' : ', đã khóa'}`}
                   accessibilityState={{ disabled: locked }}
                   disabled={locked}
-                  onPress={() => void openLevel(levelId)}
+                  onPress={sfxPress(() => void openLevel(levelId), !locked)}
                   style={styles.stage}
                 >
                   <Image

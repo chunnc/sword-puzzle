@@ -9,6 +9,7 @@ import { useGameStore } from '../src/state/gameStore';
 import { ConnectionDialog } from '../src/components/ConnectionDialog';
 import { colors } from '../src/theme';
 import { installAcceptanceBridge } from '../src/services/acceptance';
+import { SfxProvider } from '../src/audio/SfxProvider';
 
 export default function RootLayout() {
   useEffect(() => { installAcceptanceBridge(); }, []);
@@ -45,28 +46,30 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.fill}>
       <SafeAreaProvider>
-        <StatusBar hidden />
-        <Stack screenOptions={{
-          headerShown: false,
-          animation: reduceMotion ? 'none' : 'fade',
-          animationTypeForReplace: 'push',
-          animationDuration: Platform.OS === 'ios' ? 150 : undefined,
-          contentStyle: { backgroundColor: colors.ink },
-          gestureEnabled: false,
-        }}>
-          <Stack.Screen name="index" />
-          <Stack.Protected guard={initialized}>
-            <Stack.Screen name="map" />
-            <Stack.Screen name="game/[levelId]" />
-            <Stack.Screen name="character" />
-            <Stack.Screen name="inventory" />
-            <Stack.Screen name="shop" />
-          </Stack.Protected>
-          <Stack.Protected guard={bootstrapLoaded}>
-            <Stack.Screen name="account" />
-          </Stack.Protected>
-        </Stack>
-        <ConnectionDialog />
+        <SfxProvider>
+          <StatusBar hidden />
+          <Stack screenOptions={{
+            headerShown: false,
+            animation: reduceMotion ? 'none' : 'fade',
+            animationTypeForReplace: 'push',
+            animationDuration: Platform.OS === 'ios' ? 150 : undefined,
+            contentStyle: { backgroundColor: colors.ink },
+            gestureEnabled: false,
+          }}>
+            <Stack.Screen name="index" />
+            <Stack.Protected guard={initialized}>
+              <Stack.Screen name="map" />
+              <Stack.Screen name="game/[levelId]" />
+              <Stack.Screen name="character" />
+              <Stack.Screen name="inventory" />
+              <Stack.Screen name="shop" />
+            </Stack.Protected>
+            <Stack.Protected guard={bootstrapLoaded}>
+              <Stack.Screen name="account" />
+            </Stack.Protected>
+          </Stack>
+          <ConnectionDialog />
+        </SfxProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

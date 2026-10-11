@@ -1,6 +1,6 @@
 import React from 'react';
 import { Image } from 'expo-image';
-import { ImageSourcePropType, ImageStyle, Pressable, StyleProp, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ImageSourcePropType, ImageStyle, StyleProp, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { ART } from '../assets';
 import { colors, type } from '../theme';
 import { ArtPanel } from './Art';
@@ -8,8 +8,11 @@ import { useGameStore } from '../state/gameStore';
 import { useRouter } from 'expo-router';
 import type { BottomNavId } from './Navigation';
 import { formatHudAmount } from './hudPresentation';
+import { Pressable } from 'react-native';
+import { useSfxPress } from '../audio/useSfxPress';
 
 export function TopHud({ onAccount }: { onAccount: () => void }) {
+  const sfxPress = useSfxPress();
   const { width } = useWindowDimensions();
   const profile = useGameStore(state => state.save.profile);
   const router = useRouter();
@@ -21,14 +24,14 @@ export function TopHud({ onAccount }: { onAccount: () => void }) {
         <Art image="avatarFrame" style={StyleSheet.absoluteFill} />
       </View>
       <View style={styles.currencies}>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Linh Thạch: ${profile.coins}, mở Cửa Hàng`} onPress={() => router.push('/shop')} style={styles.currency}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Linh Thạch: ${profile.coins}, mở Cửa Hàng`} onPress={sfxPress(() => router.push('/shop'))} style={styles.currency}>
           <HudStat image="iconLinhThach" value={formatHudAmount(profile.coins)} />
         </Pressable>
         <View accessible accessibilityRole="text" accessibilityLabel="Tiên Ngọc: 0" style={styles.currency}>
           <HudStat image="iconTienNgoc" value="0" />
         </View>
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Tài khoản" onPress={onAccount} style={styles.menu}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Tài khoản" onPress={sfxPress(onAccount)} style={styles.menu}>
         <Art image="iconMenu" style={styles.menuImage} />
       </Pressable>
     </ArtPanel>
@@ -56,6 +59,7 @@ const tabs = [
 ] as const;
 
 export function BottomNav({ active, onSelect }: { active: BottomNavId; onSelect: (id: BottomNavId) => void }) {
+  const sfxPress = useSfxPress();
   const { width } = useWindowDimensions();
 
   return (
@@ -69,7 +73,7 @@ export function BottomNav({ active, onSelect }: { active: BottomNavId; onSelect:
             accessibilityRole="button"
             accessibilityLabel={tab.label}
             accessibilityState={{ selected }}
-            onPress={() => { if (!selected) onSelect(tab.id); }}
+            onPress={sfxPress(() => { if (!selected) onSelect(tab.id); })}
             style={styles.navItem}
           >
             <ImageView source={image} selected={selected} />
