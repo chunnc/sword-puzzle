@@ -95,7 +95,7 @@ ID ngẫu nhiên 128 bit dạng hex; mỗi document chỉ có một `playerUid` 
 
 Subcollection `operations` lưu `kind`, `targetUid`, `bindingVersion`, `createdAt`. Receipt không lưu mật khẩu, token hay khóa thiết bị. Operation đã bị một lần đổi liên kết mới thay thế không được replay để khôi phục binding cũ. `registration: {id, email}` tạm thời bảo vệ bước liên kết Firebase Auth/Firestore; nếu bị gián đoạn có thể hoàn tất bằng xác thực đúng email/mật khẩu.
 
-## Content v4 / map collection
+## Historical content v4 / composite map collection
 
 `gameContent/{version}` không còn chứa `levels`; giữ `layoutCodes`, `normalTileIds`, registry
 `tiles`, `chapters`, `levelBaseExp` và luật chung. Map nằm ở `gameMaps/{version}_{levelId}`,
@@ -112,3 +112,18 @@ Report chứa outcome, movesUsed, objectiveProgress, extraMovesUsed; không lưu
 
 Chỉ mục chương và miễn index layout được định nghĩa trong `firestore.indexes.json`.
 Chi tiết vận hành: [MAP_AUTHORING.md](content/MAP_AUTHORING.md).
+
+## Numeric map resources / server-selected runs
+
+Current storage is `gameMaps/{mapId}` with `latestVersion`, `latestSummary` and immutable
+entries in an append-only `versions` array. Each entry includes independent `mapVersion`,
+explicit `rulesMode` and a tile registry. Its `contentVersion` is authoring provenance.
+
+`gameConfig/current.catalogRevision` invalidates caches independently of config version.
+Runs store `mapVersion` and `configVersion` alongside their trusted map snapshot.
+Updated start/finish requests contain no selection version; the server selects at start
+and reads pins by `runId` at finish. `profileV2.rewardCredits` stores credited
+`{exp, starBonus}` by stable map ID without repricing existing balances.
+
+See [MAP_VERSIONING.md](content/MAP_VERSIONING.md) for API contracts, lifecycle,
+immutable publication, migration and size constraints.

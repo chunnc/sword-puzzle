@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { ART, Artwork } from '../src/assets';
 import { BottomNav, TopHud } from '../src/components/Chrome';
@@ -25,16 +25,40 @@ export default function MapScreen() {
   const selectChapter = useGameStore(state => state.selectChapter);
   const chapters = CONTENT.chapters ?? [];
   const chapter = chapters.find(ch => ch.id === chapterId);
-  const levelIds = CONTENT.layoutCodes ? maps.filter(map => map.contentVersion === CONTENT.version && map.chapterId === chapterId).map(map => map.id) : Array.from({ length: LEVEL_COUNT }, (_, index) => index + 1);
+  const levelIds = CONTENT.layoutCodes ? maps.filter(map => map.chapterId === chapterId).map(map => map.id) : Array.from({ length: LEVEL_COUNT }, (_, index) => index + 1);
   const save = useGameStore((state) => state.save);
   const notice = useGameStore((state) => state.notice);
   const setNotice = useGameStore((state) => state.setNotice);
   const startLevel = useGameStore((state) => state.startLevel);
   const unlocked = getHighestUnlocked(save);
   const totalStars = save.profile.levels.filter(level => !chapter || level.levelId >= chapter.firstLevelId && level.levelId <= chapter.lastLevelId).reduce((sum, level) => sum + level.stars, 0);
+  const opening = useRef(false);
+  const focused = useRef(false);
+  const pendingNavigation = useRef<number | null>(null);
+  const foreground = useGameStore(state => state.foreground);
+  useEffect(() => {
+    if (foreground && pendingNavigation.current !== null) {
+      const id=pendingNavigation.current;pendingNavigation.current=null;
+      router.push(`/game/${id}` as never);
+    }
+  }, [foreground, router]);
+  useFocusEffect(useCallback(() => {
+    focused.current = true;
+    const state = useGameStore.getState();
+    if (CONTENT.layoutCodes && state.chapterId) void state.selectChapter(state.chapterId).catch(() => undefined);
+    return () => { focused.current=false;pendingNavigation.current=null; };
+  }, []));
 
   const openLevel = async (levelId: number) => {
-    if (await startLevel(levelId)) router.push(`/game/${levelId}` as never);
+    if (opening.current) return;
+    opening.current = true;
+    try {
+      if (await startLevel(levelId)) {
+        if (!focused.current) return;
+        if (useGameStore.getState().foreground) router.push(`/game/${levelId}` as never);
+        else pendingNavigation.current=levelId;
+      }
+    } finally { opening.current = false; }
   };
   const nav = (id: BottomNavId) => navigateTab(router, id);
 

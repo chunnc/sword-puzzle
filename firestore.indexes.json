@@ -4,6 +4,14 @@
       "collectionGroup": "gameMaps",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "chapterId", "order": "ASCENDING" },
+        { "fieldPath": "orderInChapter", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "gameMaps",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "contentVersion", "order": "ASCENDING" },
         { "fieldPath": "chapterId", "order": "ASCENDING" },
         { "fieldPath": "orderInChapter", "order": "ASCENDING" }
@@ -11,6 +19,8 @@
     }
   ],
   "fieldOverrides": [
+    { "collectionGroup": "gameMaps", "fieldPath": "versions", "indexes": [] },
+    { "collectionGroup": "gameMaps", "fieldPath": "latestSummary", "indexes": [] },
     { "collectionGroup": "gameMaps", "fieldPath": "layoutRows", "indexes": [] },
     { "collectionGroup": "runs", "fieldPath": "map", "indexes": [] }
   ]

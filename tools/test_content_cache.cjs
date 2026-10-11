@@ -36,7 +36,7 @@ test('first sync fetches server content, writes an atomic cache file and hashes 
   assert.ok(fs.existsSync(file));
   assert.deepEqual(fs.readdirSync(path.dirname(file)),[path.basename(file)]);
   const onDisk=JSON.parse(fs.readFileSync(file,'utf8'));
-  assert.equal(onDisk.format,1);
+  assert.equal(onDisk.format,2);
   assert.equal(onDisk.hashes.snapshot,snapshot.hashes.snapshot);
   assert.match(snapshot.hashes.config,/^[0-9a-f]{64}$/);
   assert.match(snapshot.hashes.maps[snapshot.maps[0].id],/^[0-9a-f]{64}$/);
@@ -123,4 +123,30 @@ test('cache paths honour the BALANCE_CACHE_DIR override',t=>{
   t.after(()=>{ if(previous===undefined)delete process.env.BALANCE_CACHE_DIR;else process.env.BALANCE_CACHE_DIR=previous; });
   assert.equal(defaultCacheDir(),path.resolve(directory));
   assert.equal(projectDir('demo'),path.join(path.resolve(directory),'demo'));
+});
+test('map-only catalog revisions invalidate caches while retaining both snapshots',async t=>{
+  const directory=tempDir(t);
+  const r=readers();let revision=1;
+  r.readConfig=async()=>{r.calls.config++;return {contentVersion:config.version,catalogRevision:revision};};
+  const first=await resolveSnapshot({project,cacheDir:directory,readers:r});
+  revision=2;
+  r.readMaps=async()=>rawMaps.map((m,i)=>i?m:{...m,moves:m.moves+2});
+  const second=await resolveSnapshot({project,cacheDir:directory,readers:r});
+  assert.equal(first.version,second.version);assert.notEqual(first.hashes.snapshot,second.hashes.snapshot);
+  assert.notEqual(first.cacheFile,second.cacheFile);assert.equal(second.maps[0].moves,rawMaps[0].moves+2);
+  assert.equal(loadSnapshot(project,{cacheDir:directory,version:config.version,catalogRevision:1}).hashes.snapshot,first.hashes.snapshot);
+});
+test('sync retries publication races without caching a mixed catalog',async t=>{
+  const directory=tempDir(t),r=readers();let reads=0;
+  r.readConfig=async()=>({contentVersion:config.version,catalogRevision:++reads===1?1:2});
+  const snapshot=await resolveSnapshot({project,cacheDir:directory,readers:r});
+  assert.equal(snapshot.catalogRevision,2);assert.equal(r.calls.maps,2);
+  assert.equal(fs.existsSync(cacheFileFor(project,config.version,directory,1)),false);
+});
+test('a validation failure during publication is retried only when the catalog changed',async t=>{
+  const directory=tempDir(t),r=readers();let reads=0,attempts=0;
+  r.readConfig=async()=>({contentVersion:config.version,catalogRevision:++reads===1?1:2});
+  r.readMaps=async()=>{if(++attempts===1)throw new Error('INVALID_MAP');return rawMaps;};
+  const snapshot=await resolveSnapshot({project,cacheDir:directory,readers:r});
+  assert.equal(snapshot.catalogRevision,2);assert.equal(attempts,2);
 });

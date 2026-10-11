@@ -1,5 +1,5 @@
 import { getFirestore } from 'firebase-admin/firestore';
-import { validateContent, mapFromDocument, mapSummary, type GameContent } from './domain/game';
+import { validateContent, mapFromDocument, mapResourceFromDocument, mapSummary, type GameContent } from './domain/game';
 const published = new Map<number, GameContent>();
 export async function loadContent(version: number): Promise<GameContent> {
   if (!Number.isSafeInteger(version) || version < 3) throw new Error('CONTENT_MISMATCH');
@@ -23,8 +23,10 @@ export async function currentContent() {
 export async function loadMap(version: number, levelId: number) {
   const content = await loadContent(version);
   const snap = await getFirestore().collection('gameMaps').doc(`${version}_${levelId}`).get();
-  if (!snap.exists) throw new Error('MAP_NOT_FOUND');
-  const map = mapFromDocument(snap.data(), content);
+  const resource = !snap.exists ? await getFirestore().collection('gameMaps').doc(String(levelId)).get() : null;
+  const entry = resource?.data()?.versions?.filter((m: any) => m.contentVersion === version).sort((a: any,b: any) => b.mapVersion-a.mapVersion)[0];
+  if (!snap.exists && !entry) throw new Error('MAP_NOT_FOUND');
+  const map = mapFromDocument(snap.exists ? snap.data() : entry, content);
   if (map.id !== levelId) throw new Error('INVALID_MAP');
   return map;
 }
@@ -34,6 +36,30 @@ export async function chapterMaps(version: number, chapterId: string) {
   const result = await getFirestore().collection('gameMaps').where('contentVersion', '==', version)
     .where('chapterId', '==', chapterId).orderBy('orderInChapter').get();
   const chapter = content.chapters.find(ch => ch.id === chapterId)!;
-  if (result.size !== chapter.lastLevelId - chapter.firstLevelId + 1) throw new Error('CHAPTER_NOT_READY');
-  return result.docs.map(doc => mapSummary(mapFromDocument(doc.data(), content)));
+  if (result.size === chapter.lastLevelId - chapter.firstLevelId + 1) return result.docs.map(doc => mapSummary(mapFromDocument(doc.data(), content)));
+  return Promise.all(Array.from({ length: chapter.lastLevelId-chapter.firstLevelId+1 }, (_,i) => loadMap(version, chapter.firstLevelId+i).then(mapSummary)));
+}
+export async function latestChapterMaps(content: GameContent, chapterId: string) {
+  const chapter = content.chapters?.find(ch => ch.id === chapterId);
+  if (!chapter) throw new Error('INVALID_CHAPTER');
+  const result = await getFirestore().collection('gameMaps').where('chapterId', '==', chapterId).orderBy('orderInChapter')
+    .select('id', 'latestVersion', 'latestSummary').get();
+  const resources = result.docs.filter(doc => /^[1-9]\d*$/.test(doc.id));
+  if (resources.length === chapter.lastLevelId-chapter.firstLevelId+1) {
+    return resources.map((doc,i) => {
+      const data = doc.data(), summary = data.latestSummary;
+      if (!summary || doc.id !== String(data.id) || data.id !== chapter.firstLevelId+i || summary.id !== data.id || summary.mapVersion !== data.latestVersion
+        || summary.chapterId !== chapterId || summary.orderInChapter !== i+1) throw new Error('INVALID_MAP_RESOURCE');
+      return summary;
+    });
+  }
+  // Transitional reader while numeric resources are being migrated.
+  return chapterMaps(content.version, chapterId);
+}
+export async function loadMapVersion(levelId: number, mapVersion: number, configVersion: number) {
+  const content = await loadContent(configVersion);
+  const snap = await getFirestore().collection('gameMaps').doc(String(levelId)).get();
+  const map = mapResourceFromDocument(snap.data(), content, mapVersion);
+  if (map.id !== levelId) throw new Error('INVALID_MAP_RESOURCE');
+  return map;
 }

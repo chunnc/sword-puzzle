@@ -1,5 +1,5 @@
 import { BoardEngine } from '../BoardEngine';
-import { installContent, mapToLevel, validateMap } from '../domain';
+import { installContent, mapToLevel, validateMap, versionMap } from '../domain';
 const config = require('../../../../content/game-config.json');
 const sources = require('../../../../content/game-maps.json');
 const v5 = require('../../../../content/balance/fixtures/v5.json');
@@ -82,9 +82,10 @@ it('stabilizes a charged match without granting rewards or dropping charges/barr
 it('repairs the captured NO_PLAYABLE_BOARD seed from a naive four-wave cap', () => {
     const fixture = require('../../../../content/balance/fixtures/cascade-cap-regression.json');
     const c = installContent(config), snapshot = clone(fixture.snapshot);
-    snapshot.contentVersion = 6; snapshot.level.contentVersion = 6;
+    snapshot.contentVersion = c.version; snapshot.configVersion = c.version;
     snapshot.level.mapDefinition.contentVersion = 6; snapshot.level.mapDefinition.spawnPolicy.setupChance = .3;
-    const map = validateMap(snapshot.level.mapDefinition, c);
+    const map = versionMap(snapshot.level.mapDefinition, c, 6);
+    snapshot.level=mapToLevel(map,fixture.seed,0,c);snapshot.mapVersion=6;
     const b = new BoardEngine(mapToLevel(map, fixture.seed, 0, c), snapshot), internal = b as any;
     const before = b.snapshot();
     expect(() => internal.stabilize(new Set())).not.toThrow();

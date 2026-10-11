@@ -28,9 +28,10 @@ export class BoardEngine {
     private runId: string;
     private loadout: Loadout;
     private damageScale: number;
+    private totalExpAtStart: number | undefined;
     private lastAnimation: BoardActionAnimation | null = null;
     private metrics = actionMetrics();
-    private get modernCombos(): boolean { return this.content.version >= 6 && !!this.level.mapDefinition && !this.level.mapDefinition.legacy; }
+    private get modernCombos(): boolean { const map = this.level.mapDefinition; return !!map && !map.legacy && (map.rulesMode ? map.rulesMode === 'modern' : this.content.version >= 6); }
     get actionMetrics(): BoardActionMetrics { return { ...this.metrics, ...(this.metrics.setupMove ? { setupMove: [...this.metrics.setupMove] as [number, number, number, number] } : {}) }; }
     private resolution: Generator<BoardResolutionStep, void> | null = null;
     moves: number;
@@ -52,7 +53,8 @@ export class BoardEngine {
     }) {
         this.level = restore?.level ?? level;
         level = this.level;
-        this.content = restore ? getContentVersion(restore.contentVersion) : level.contentVersion ? getContentVersion(level.contentVersion) : requireContent();
+        const configVersion = restore ? restore.configVersion ?? restore.contentVersion : level.configVersion ?? level.contentVersion;
+        this.content = configVersion ? getContentVersion(configVersion) : requireContent();
         this.kinds = Object.fromEntries((['sword','fire','lightning','spirit','rock'] as TileKey[]).map(key => [key, tileId(key, this.content)])) as Record<TileKey, number>;
         this.randomState = level.seed >>> 0;
         this.moves = level.moves;
@@ -60,6 +62,7 @@ export class BoardEngine {
         this.runId = newId();
         this.loadout = context ? { ...context.loadout, skills: [...context.loadout.skills] } : emptyProfile().loadout;
         this.damageScale = realmForExp(context?.totalExp ?? 0, this.content).damageScale;
+        this.totalExpAtStart = restore ? restore.totalExpAtStart : context?.totalExp ?? 0;
         if (restore && restore.contentVersion === this.content.version && restore.levelId === level.id && restore.tiles.length === this.width * this.height) {
             this.tiles = restore.tiles.map(t => t ? copy(t) : null);
             this.moves = restore.moves;
@@ -93,7 +96,7 @@ export class BoardEngine {
     snapshot(): BoardSnapshot {
         if (this.tiles.some((t,i) => this.level.board.activeCells[i] && !t))
             throw new Error('UNSETTLED_BOARD');
-        return { contentVersion: this.content.version, level: this.level, runId: this.runId, levelId: this.level.id, moves: this.moves, objectiveProgress: { ...this.objectiveProgress }, swordQi: this.swordQi, score: this.score, drops: this.drops, ...(this.level.mapDefinition && !this.level.mapDefinition.legacy ? { directorPressure: this.directorPressure, reshuffles: this.reshuffles } : {}), randomState: this.randomState >>> 0, extraMovesUsed: this.extraMovesUsed, condensed: this.condensed, skillUsed: this.skillUsed, loadout: { ...this.loadout, skills: [...this.loadout.skills] }, damageScale: this.damageScale, tiles: this.tiles.map(t => t ? copy(t) : null) };
+        return { contentVersion: this.content.version, configVersion: this.content.version, ...(this.level.mapVersion === undefined ? {} : { mapVersion: this.level.mapVersion }), ...(this.totalExpAtStart === undefined ? {} : { totalExpAtStart: this.totalExpAtStart }), level: this.level, runId: this.runId, levelId: this.level.id, moves: this.moves, objectiveProgress: { ...this.objectiveProgress }, swordQi: this.swordQi, score: this.score, drops: this.drops, ...(this.level.mapDefinition && !this.level.mapDefinition.legacy ? { directorPressure: this.directorPressure, reshuffles: this.reshuffles } : {}), randomState: this.randomState >>> 0, extraMovesUsed: this.extraMovesUsed, condensed: this.condensed, skillUsed: this.skillUsed, loadout: { ...this.loadout, skills: [...this.loadout.skills] }, damageScale: this.damageScale, tiles: this.tiles.map(t => t ? copy(t) : null) };
     }
     cost(id: SkillId): number { return skillCost(id, this.loadout.sword, this.condensed, this.content); }
     availableSkills(): SkillId[] {
@@ -530,9 +533,11 @@ export class BoardEngine {
             const falls = this.refillOnce();
             const generated = new Set(falls.filter(f => f.spawned).map(f => f.index));
             const groups = this.findGroups().filter(g => g.some(i => generated.has(i)));
+            const comboScore = groups.reduce((sum,g) => sum + g.length - 2 + (g.length >= 4 ? 2 : 0), 0);
             const obstacleScore = groups.reduce((sum,g) => sum + g.filter(i => this.area(i, 1).some(j => before[j]?.kind === this.kind('rock') || before[j]?.locked)).length, 0);
             const cascadePenalty = this.modernCombos ? (chain >= 4 ? 20 : Math.max(0, chain - 1) * 1.5) * groups.length : 0;
-            candidates.push({ tiles: this.tiles, falls, weight: Math.exp(-Math.min(this.modernCombos ? 40 : 20, pressure * map.spawnPolicy.obstaclePressure * obstacleScore + cascadePenalty)) });
+            const historicalComboPenalty = !this.modernCombos ? pressure * (map.spawnPolicy.comboPressure ?? 0) * comboScore : 0;
+            candidates.push({ tiles: this.tiles, falls, weight: Math.exp(-Math.min(this.modernCombos ? 40 : 20, historicalComboPenalty + pressure * map.spawnPolicy.obstaclePressure * obstacleScore + cascadePenalty)) });
         }
         let draw = this.nextIndex(1_000_000) / 1_000_000 * candidates.reduce((sum,c) => sum + c.weight, 0);
         const chosen = candidates.find(c => (draw -= c.weight) < 0) ?? candidates[candidates.length-1];

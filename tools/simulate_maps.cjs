@@ -160,7 +160,7 @@ function mergeRetryChunks(chunks) {
 function spawnAssistMechanisms(map) {
   if(map.legacy||!map.retryAssistPolicy.reductions.some(a=>a>0))return [];
   const p=map.spawnPolicy,mechanisms=[];
-  if(map.contentVersion>=6){if(p.comboChance<1)mechanisms.push('directMatch');if((p.setupChance??0)<1)mechanisms.push('preparedCombo');}
+  if(map.rulesMode ? map.rulesMode==='modern' : map.contentVersion>=6){if(p.comboChance<1)mechanisms.push('directMatch');if((p.setupChance??0)<1)mechanisms.push('preparedCombo');}
   if(map.objectives.some(o=>o.type==='Collect')&&p.collectionPressure>0)mechanisms.push('collectionWeights');
   if(p.candidates>1&&p.obstaclePressure>0&&(map.initialSeals.length>0||map.layout.flat().some(id=>id===tileId('rock',content))))mechanisms.push('obstacleCandidates');
   return mechanisms;

@@ -17,7 +17,7 @@ import { useSfx } from '../../src/audio/SfxProvider';
 import { BoardEngine } from '../../src/game/BoardEngine';
 import { skillTarget } from '../../src/game/skillTargets';
 import { getLevel } from '../../src/game/levels';
-import { tileId, CONTENT, LEVEL_COUNT, SKILLS, realmForExp, type SkillId } from '../../src/game/domain';
+import { tileId, CONTENT, SKILLS, realmForExp, type SkillId } from '../../src/game/domain';
 import { GoalKind, TileKind, type BoardActionPresenter, type BoardSnapshot, type CellPosition } from '../../src/game/types';
 import { useGameStore, type BoardActionResult } from '../../src/state/gameStore';
 import { colors } from '../../src/theme';
@@ -32,7 +32,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const router = useRouter(), { width } = useWindowDimensions();
     const store = useGameStore();
     const playSfx = useSfx();
-    const persisted = store.save.active?.levelId === levelId ? store.save.active : null;
+    const persisted = store.save.active?.levelId === levelId && store.save.retiredRunId !== store.save.active.runId ? store.save.active : null;
     const [board, setBoard] = useState<BoardSnapshot | null>(persisted);
     const level = useMemo(() => { try {
         return persisted?.level ?? board?.level ?? getLevel(levelId);
@@ -51,6 +51,17 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const [result, setResult] = useState<GameplayResult | null>(null);
     const resultRef = useRef<GameplayResult | null>(null), resultReady = useRef(false);
     const busyRef = useRef(false), alive = useRef(true), effectId = useRef(0);
+    const pendingNavigation = useRef<string | null>(null);
+    const navigate = useCallback((path: string) => {
+        if (!alive.current) return;
+        if (useGameStore.getState().foreground) router.replace(path as never);
+        else pendingNavigation.current=path;
+    }, [router]);
+    useEffect(() => {
+        if (store.foreground && pendingNavigation.current) {
+            const path=pendingNavigation.current;pendingNavigation.current=null;router.replace(path as never);
+        }
+    }, [store.foreground,router]);
     const reduceMotion = useReducedMotion();
     const sceneRef = useRef<View>(null), gridRef = useRef<View>(null), qiBarRef = useRef<View>(null);
     const measureId = useRef(0);
@@ -117,20 +128,20 @@ function GameplaySession({ levelId }: { levelId: number }) {
     useEffect(() => {
         const summary = store.save.lastWin;
         if (!busy && summary && summary.levelId === levelId && summary.runId === persisted?.runId) openResult({ kind: 'won', runId: summary.runId, summary });
-        if (!busy && store.initialized && !persisted && !store.save.pending && !resultRef.current && !store.save.lastWin) router.replace('/map');
-    }, [busy, store.save.lastWin, store.initialized, store.save.pending, persisted, levelId, openResult, router]);
+        if (!busy && store.foreground && store.initialized && !persisted && !store.save.pending && !resultRef.current && !store.save.lastWin) router.replace('/map');
+    }, [busy, store.foreground, store.save.lastWin, store.initialized, store.save.pending, persisted, levelId, openResult, router]);
     const requestLeave = useCallback(() => {
         if (busyRef.current) return;
         if (resultRef.current) {
             if (resultReady.current) {
                 busyRef.current = true; setBusy(true);
                 void (async () => {
-                    if (resultRef.current?.kind === 'lost' && !await store.finishLevel('lost')) { busyRef.current = false; setBusy(false); return; }
-                    router.replace('/map');
+                    if (!await store.leaveLevel()) { busyRef.current = false; setBusy(false); return; }
+                    navigate('/map');
                 })();
             }
         } else setLeave(true);
-    }, [router, store.finishLevel]);
+    }, [navigate, store.leaveLevel]);
     useFocusEffect(useCallback(() => {
         const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
             if (busyRef.current) return true;
@@ -272,9 +283,9 @@ function GameplaySession({ levelId }: { levelId: number }) {
         let navigating = false;
         try {
             if (completed.kind === 'won') {
-                if (levelId === LEVEL_COUNT) { router.replace('/map'); navigating = true; return; }
+                if (levelId === content.levelCount) { navigate('/map'); navigating = true; return; }
                 if (!await store.startLevel(levelId + 1)) throw new Error('START_FAILED');
-                if (alive.current) { router.replace(`/game/${levelId + 1}` as never); navigating = true; }
+                if (alive.current) { navigate(`/game/${levelId + 1}`); navigating = true; }
             } else {
                 if (!await store.startLevel(levelId, true)) throw new Error('START_FAILED');
                 if (alive.current) {
@@ -321,7 +332,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
                   motionSession={spiritMotion} gridRef={gridRef} onGridLayout={measureFlightLayout} />
               </View>
             </View>
-            <GameplayDock board={board} skillSlots={realmForExp(store.save.profile.totalExp).skillSlots} available={available} cost={id => engine.cost(id)} targetSkill={targetSkill} targetCount={required} canCast={targets.length === required} busy={busy || Boolean(result) || locked} compact={compact}
+            <GameplayDock board={board} skillSlots={realmForExp(board.totalExpAtStart ?? store.save.profile.totalExp, content).skillSlots} available={available} cost={id => engine.cost(id)} targetSkill={targetSkill} targetCount={required} canCast={targets.length === required} busy={busy || Boolean(result) || locked} compact={compact}
               qiBarRef={qiBarRef} onQiBarLayout={measureFlightLayout}
               onSkill={id => { if (!busyRef.current && !resultRef.current) { setTargetSkill(id); setTargets([]); setSelected(null); } }}
               onCancel={() => { if (!busyRef.current && !resultRef.current) { setTargetSkill(null); setTargets([]); } }}
@@ -333,7 +344,12 @@ function GameplaySession({ levelId }: { levelId: number }) {
           {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} onExtraMoves={displayResult.kind === 'lost' && store.adsEnabled && !board.extraMovesUsed ? () => void continueWithAd() : undefined} /> : null}
           <View pointerEvents="box-none" style={styles.noticeLayer}><Notice message={store.notice} onDismiss={() => store.setNotice('')} /></View>
           {help && !leave ? <View accessibilityViewIsModal style={styles.overlay}><ArtPanel art="dialogPanel" style={styles.dialog}><Text style={styles.dialogTitle}>LINH VẬT</Text><Text style={styles.body}>Ghép 3 nhận sát thương và khí. Ghép 4–5 giữ một ô cường hóa; ghép tiếp cùng loại để kích hoạt.</Text>{content.tiles.map(tile => <Text key={tile.id} style={styles.rule}>{tile.name}: {tile.damage} sát thương · {tile.qi} khí</Text>)}<Text style={styles.body}>Kiếm: hàng / chữ thập. Hỏa: 3×3 / 13 ô. Lôi: thêm 50% / toàn bộ Lôi. Châu: nhiều khí / Ngưng Khí.</Text><GameButton title="ĐÃ HIỂU" onPress={() => setHelp(false)} /></ArtPanel></View> : null}
-          {leave ? <GameplayLeaveDialog busy={busy} compact={(viewport.width || width) < 360} onContinue={() => setLeave(false)} onBack={() => { if (!busyRef.current) router.replace('/map'); }} /> : null}
+           {leave ? <GameplayLeaveDialog busy={busy} compact={(viewport.width || width) < 360} onContinue={() => setLeave(false)} onBack={() => {
+             if (busyRef.current) return;
+             busyRef.current = true; setBusy(true);
+             void store.leaveLevel().then(left => { if (left) navigate('/map'); })
+               .finally(() => { busyRef.current = false; if (alive.current) setBusy(false); });
+           }} /> : null}
         </View>
       </ScreenFrame>
     );

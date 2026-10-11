@@ -1,5 +1,10 @@
 # System Architecture — Sword Puzzle (Kiếm Khai Tiên Lộ)
 
+Current independent map/config revision and server-selected gameplay contracts are in
+[content/MAP_VERSIONING.md](content/MAP_VERSIONING.md). Numeric map resources and `/v4`
+start/list/finish supersede versioned `/v3` contracts for updated clients. Historical
+endpoints remain adapters during rollout.
+
 Agent-oriented map of the codebase. Read this before changing code. It covers the
 repository layout, the client/server boundary, the main runtime flows, the
 invariants you must not break, and where to make changes. Deep references:

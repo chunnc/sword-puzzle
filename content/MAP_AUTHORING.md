@@ -132,18 +132,21 @@ gameplay changes beyond maps 1–10.
 
 ### Server sync and local cache
 
+Current numeric-resource publication and independent map/config revisions are described
+in [MAP_VERSIONING.md](MAP_VERSIONING.md). Cache keys also include `catalogRevision`.
+
 `maps:simulate`, `maps:check`, and `maps:release` default to server content.
 Use `--source local` explicitly for unpublished authoring data; it never reads/writes Firestore.
 `--offline` remains server-cache-only and cannot combine with `--source local`.
 The server path works as follows:
 
-1. Read `gameConfig/current` to learn the active `contentVersion` (one Firestore read per run).
+1. Read `gameConfig/current` for active `contentVersion` and `catalogRevision` (one read on cache hit).
 2. Look for a local cache of that exact version at
-   `.balance-reports/content-cache/{project}/v{version}.json`.
+   `.balance-reports/content-cache/{project}/v{version}-r{catalogRevision}.json` (revision zero omits the suffix).
 3. If the cache matches the active version, run all seeds from the cached file with no further
    Firestore reads.
-4. Otherwise fetch `gameContent/{version}` and every `gameMaps` document of that version,
-   validate them, and atomically replace the cache before running seeds.
+4. Otherwise fetch `gameContent/{version}` and latest entries from numeric `gameMaps`
+   resources, validate them, recheck the pointer for races, and write the cache atomically.
 
 Cache files are validated again on every load, so a corrupt or outdated file is refetched
 instead of trusted. When the server publishes a new `contentVersion`, the next run syncs the

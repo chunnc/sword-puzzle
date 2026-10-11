@@ -96,4 +96,17 @@ describe('server-backed journal v3', () => {
     save.active = s;
     expect(normalizeSave(save)!.active).toEqual(s);
   });
+  it('migrates an uncertain start without fetching the previously requested config',async()=>{
+    await persistSave({...emptySave(),ownerId:'player',pendingStart:{runId:'pending_start_123',levelId:1,previousRunId:null,contentVersion:999}});
+    const resolve=jest.fn();const save=await loadSave('player',resolve);
+    expect(resolve).not.toHaveBeenCalled();
+    expect(save.pendingStart).toEqual({runId:'pending_start_123',levelId:1,previousRunId:null});
+  });
+  it('does not invent starting EXP when restoring a pre-pin snapshot',()=>{
+    const original=new BoardEngine(getLevel(1)).snapshot();
+    delete original.configVersion;delete original.totalExpAtStart;
+    const restored=new BoardEngine(original.level,original).snapshot();
+    expect(restored.totalExpAtStart).toBeUndefined();expect(restored.damageScale).toBe(original.damageScale);
+    expect(restored.randomState).toBe(original.randomState);expect(restored.runId).toBe(original.runId);
+  });
 });

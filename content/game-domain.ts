@@ -45,18 +45,25 @@ export type Difficulty = 'easy' | 'medium' | 'hard' | 'very-hard';
 export type StarThresholds = { twoStarMaxMovesUsed: number; threeStarMaxMovesUsed: number }
   | { mode: 'percentage'; threeStarBelowPercent: number; twoStarBelowPercent: number };
 export interface MapDefinition {
+  // contentVersion on historical maps records their authoring config, not their map revision.
+  mapVersion?: number;
+  rulesMode?: 'classic' | 'modern';
+  tileRegistry?: Record<TileKey, number>;
   contentVersion: number; id: number; chapterId: string; orderInChapter: number; name: string;
   difficulty: Difficulty; layout: number[][]; initialSeals: { row: number; column: number }[];
   objectives: ObjectiveDefinition[]; moves: number; baseExp: number;
   starThresholds: StarThresholds;
-  spawnPolicy: { weights: Record<string, number>; collectionPressure: number; comboChance: number; setupChance?: number; obstaclePressure: number; candidates: number };
+  spawnPolicy: { weights: Record<string, number>; collectionPressure: number; comboChance: number; comboPressure?: number; setupChance?: number; obstaclePressure: number; candidates: number };
   retryAssistPolicy: { thresholds: number[]; reductions: number[] };
   legacy?: { seed: number; obstacles: { rocks: number; seals: number }; spawnPhases: LevelDefinition['spawnPhases'] };
 }
-export type MapSummary = Pick<MapDefinition, 'contentVersion' | 'id' | 'chapterId' | 'orderInChapter' | 'name' | 'difficulty' | 'objectives'>;
-export interface RunDefinition { runId: string; seed: number; map: MapDefinition; assistReduction: number; attempt: number; loadout: Loadout; totalExp: number }
+export type MapSummary = Pick<MapDefinition, 'mapVersion' | 'contentVersion' | 'id' | 'chapterId' | 'orderInChapter' | 'name' | 'difficulty' | 'objectives'>;
+export interface MapResource { id: number; chapterId: string; orderInChapter: number; latestVersion: number; latestSummary: MapSummary; versions: ReturnType<typeof mapToDocument>[] }
+export interface RunDefinition { runId: string; mapVersion?: number; configVersion?: number; seed: number; map: MapDefinition; assistReduction: number; attempt: number; loadout: Loadout; totalExp: number }
 export interface RunReport { outcome: 'won' | 'lost' | 'abandoned'; movesUsed: number; objectiveProgress: ObjectiveProgress; extraMovesUsed: boolean }
 export interface LevelDefinition {
+  configVersion?: number;
+  mapVersion?: number;
   contentVersion?: number;
   mapDefinition?: MapDefinition;
   assistReduction?: number;
@@ -137,6 +144,7 @@ export function validateContent(raw: unknown): GameContent {
     throw new Error('INVALID_CONTENT');
   };
   if (!c || !integer(c.version, 3) || !integer(c.levelCount, 1, 1000) || !integer(c.qiCap, 1, 10000) || !Array.isArray(c.expRates) || c.expRates.length !== 4 || !c.expRates.every(x => integer(x, 0, 100)) || !c.rewards || !integer(c.rewards.firstWinCoins) || !integer(c.rewards.replayWinCoins) || !Array.isArray(c.rewards.starBonus) || c.rewards.starBonus.length !== 4 || !c.rewards.starBonus.every(x => integer(x))) return bad();
+  if (c.expRates.some((rate,i) => i > 0 && rate < c.expRates[i-1]) || c.rewards.starBonus.some((bonus,i) => i > 0 && bonus < c.rewards.starBonus[i-1])) return bad();
   const modern = !!c.layoutCodes;
   if (modern) {
     if (c.version < 4) return bad();
@@ -199,7 +207,14 @@ export function chapterForLevel(id: number, c = requireContent()): ChapterDefini
 export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
   const m = JSON.parse(JSON.stringify(raw)) as MapDefinition;
   const bad = (): never => { throw new Error('INVALID_MAP'); };
-  if (!m || !c.layoutCodes || m.contentVersion !== c.version || !integer(m.id, 1, c.levelCount) || !text(m.name) || !['easy', 'medium', 'hard', 'very-hard'].includes(m.difficulty) || !integer(m.moves, 1, 1000) || !integer(m.baseExp, 1) || m.baseExp !== c.levelBaseExp![m.id-1]) return bad();
+  const historicalV4 = c.version === 4 && m?.contentVersion === 4 && Number.isFinite((m.spawnPolicy as any)?.comboPressure);
+  if (historicalV4) {
+    m.spawnPolicy.comboChance ??= 0;
+    m.spawnPolicy.candidates ??= 4;
+  }
+  const versioned = m?.mapVersion !== undefined;
+  if (!m || !c.layoutCodes || !integer(m.contentVersion, 3) || (!versioned && m.contentVersion !== c.version) || !integer(m.id, 1, c.levelCount) || !text(m.name) || !['easy', 'medium', 'hard', 'very-hard'].includes(m.difficulty) || !integer(m.moves, 1, 1000) || !integer(m.baseExp, 1, 1000000) || (!versioned && m.baseExp !== c.levelBaseExp![m.id-1])) return bad();
+  if (versioned && (!integer(m.mapVersion, 1) || !['classic', 'modern'].includes(m.rulesMode!) || !m.tileRegistry || Object.keys(m.tileRegistry).length !== tileKeys.length || tileKeys.some(key => m.tileRegistry![key] !== tileId(key, c)))) return bad();
   const ch = chapterForLevel(m.id, c);
   if (m.chapterId !== ch.id || m.orderInChapter !== m.id - ch.firstLevelId + 1 || !Array.isArray(m.layout) || !integer(m.layout.length, 3, 12) || !Array.isArray(m.layout[0]) || !integer(m.layout[0].length, 3, 12)) return bad();
   const width = m.layout[0].length, rock = tileId('rock', c);
@@ -216,7 +231,9 @@ export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
   const seals = m.legacy?.obstacles.seals ?? m.initialSeals.length;
   for (const o of m.objectives) {
     if (!text(o.id) || !/^[a-zA-Z0-9_-]{1,80}$/.test(o.id) || !integer(o.target, 1)) return bad();
-    if (o.type === 'Collect') { if (!c.normalTileIds!.includes(o.tileKind) || o.target > 30) return bad(); }
+    if (o.type === 'Collect') {
+      if (!c.normalTileIds!.includes(o.tileKind) || !(m.contentVersion <= 4 && c.version === 4) && o.target > 30) return bad();
+    }
     else if (o.type === 'Battle' || o.type === 'Boss') { if (!o.enemy || !text(o.enemy.id) || !text(o.enemy.name) || !text(o.enemy.artKey)) return bad(); }
     else if (o.type === 'BreakRocks') { if (o.target > rocks) return bad(); }
     else if (o.type === 'BreakSeals') { if (o.target > seals) return bad(); }
@@ -224,11 +241,14 @@ export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
   }
   const s = m.starThresholds, p = m.spawnPolicy, a = m.retryAssistPolicy;
   if (!s || typeof s !== 'object' || Array.isArray(s)) return bad();
-  if (c.version >= 7 && m.id <= 10) {
+  if (versioned && 'mode' in s) {
+    if (s.mode !== 'percentage' || !integer(s.threeStarBelowPercent, 1, 99) || !integer(s.twoStarBelowPercent, s.threeStarBelowPercent+1, 100)) return bad();
+  } else if (!versioned && c.version >= 7 && m.id <= 10) {
     if (!('mode' in s) || s.mode !== 'percentage' || s.threeStarBelowPercent !== 50 || s.twoStarBelowPercent !== 75) return bad();
   } else if ('mode' in s || !integer(s.threeStarMaxMovesUsed, 1, m.moves-1) || !integer(s.twoStarMaxMovesUsed, s.threeStarMaxMovesUsed+1, m.moves)) return bad();
   if (!p || !p.weights || Object.keys(p.weights).length !== c.normalTileIds!.length || c.normalTileIds!.some(id => !integer(p.weights[id], 1, 10000)) || !integer(p.candidates, 1, 8) || !Number.isFinite(p.comboChance) || p.comboChance < 0 || p.comboChance > 1 || [p.collectionPressure, p.obstaclePressure].some(v => !Number.isFinite(v) || v < 0 || v > .9)) return bad();
-  if ((c.version >= 6 || p.setupChance !== undefined) && (!Number.isFinite(p.setupChance) || p.setupChance! < 0 || p.setupChance! > 1)) return bad();
+  if (((versioned ? m.rulesMode === 'modern' : c.version >= 6) || p.setupChance !== undefined) && (!Number.isFinite(p.setupChance) || p.setupChance! < 0 || p.setupChance! > 1)) return bad();
+  if (p.comboPressure !== undefined && (!historicalV4 || !Number.isFinite(p.comboPressure) || p.comboPressure < 0 || p.comboPressure > .9)) return bad();
   if (!a || !Array.isArray(a.thresholds) || !Array.isArray(a.reductions) || a.thresholds.length !== a.reductions.length || a.thresholds.some((n,i) => !integer(n, 1) || i > 0 && n <= a.thresholds[i-1]) || a.reductions.some((n,i) => !Number.isFinite(n) || n < 0 || n > .3 || i > 0 && n < a.reductions[i-1])) return bad();
   if (m.legacy && (!integer(m.legacy.seed, 1, 0xffffffff) || !integer(rocks) || !integer(seals) || rocks + seals > m.layout.flat().filter(Boolean).length - 6 || m.layout.flat().some(id => id !== 0 && id !== -1) || m.initialSeals.length || !Array.isArray(m.legacy.spawnPhases) || !m.legacy.spawnPhases.length || m.legacy.spawnPhases[0].minMovesRemaining !== 0 || m.legacy.spawnPhases.some((phase,i) => !integer(phase.minMovesRemaining, 0, m.moves) || i > 0 && phase.minMovesRemaining <= m.legacy!.spawnPhases[i-1].minMovesRemaining || phase.weights.length !== 4 || !phase.weights.every(w => integer(w, 1, 10000))))) return bad();
   return m;
@@ -242,13 +262,28 @@ export function mapFromDocument(raw: any, c = requireContent()): MapDefinition {
   if (!Array.isArray(layoutRows)) throw new Error('INVALID_MAP');
   return validateMap({ ...metadata, layout: layoutRows.map(row => row?.cells) }, c);
 }
+export function versionMap(map: MapDefinition, c: GameContent, mapVersion = map.mapVersion ?? map.contentVersion): MapDefinition {
+  return validateMap({ ...map, mapVersion, rulesMode: map.rulesMode ?? (map.contentVersion >= 6 ? 'modern' : 'classic'),
+    tileRegistry: map.tileRegistry ?? Object.fromEntries(tileKeys.map(key => [key, tileId(key, c)])) }, c);
+}
+export function mapResourceFromDocument(raw: any, c: GameContent, version = raw?.latestVersion): MapDefinition {
+  if (!raw || !integer(raw.id, 1) || !Array.isArray(raw.versions) || !raw.versions.length || !integer(raw.latestVersion, 1)
+    || raw.versions.some((m: any) => m?.id !== raw.id || !integer(m.mapVersion, 1))
+    || new Set(raw.versions.map((m: any) => m.mapVersion)).size !== raw.versions.length
+    || !raw.versions.some((m: any) => m.mapVersion === raw.latestVersion)) throw new Error('INVALID_MAP_RESOURCE');
+  const entry = raw.versions.find((m: any) => m.mapVersion === version);
+  if (!entry) throw new Error('MAP_VERSION_NOT_FOUND');
+  const map = mapFromDocument(entry, c);
+  if (map.chapterId !== raw.chapterId || map.orderInChapter !== raw.orderInChapter) throw new Error('INVALID_MAP_RESOURCE');
+  return map;
+}
 export function mapSummary(m: MapDefinition): MapSummary {
-  const { contentVersion, id, chapterId, orderInChapter, name, difficulty, objectives } = m;
-  return { contentVersion, id, chapterId, orderInChapter, name, difficulty, objectives };
+  const { mapVersion, contentVersion, id, chapterId, orderInChapter, name, difficulty, objectives } = m;
+  return { ...(mapVersion === undefined ? {} : { mapVersion }), contentVersion, id, chapterId, orderInChapter, name, difficulty, objectives };
 }
 export function mapToLevel(m: MapDefinition, seed: number, assistReduction = 0, c = requireContent()): LevelDefinition {
   const height = m.layout.length, width = m.layout[0].length;
-  return { id: m.id, contentVersion: m.contentVersion, mapDefinition: m, assistReduction, seed,
+  return { id: m.id, contentVersion: c.version, ...(m.mapVersion === undefined ? {} : { mapVersion: m.mapVersion, configVersion: c.version }), mapDefinition: m, assistReduction, seed,
     chapter: chapterForLevel(m.id, c).name, moves: m.moves, baseExp: m.baseExp,
     board: { width, height, activeCells: [...m.layout].reverse().flat().map(id => id !== 0) },
     objectives: m.objectives, obstacles: m.legacy?.obstacles ?? { rocks: m.layout.flat().filter(id => id === tileId('rock',c)).length, seals: m.initialSeals.length },
@@ -305,6 +340,7 @@ export interface Loadout {
   sword: SwordId;
 }
 export interface PlayerProfile {
+  rewardCredits?: Record<string, { exp: number; starBonus: number }>;
   levels: LevelResult[];
   coins: number;
   ownedSkills: SkillId[];
@@ -441,6 +477,14 @@ export function normalizeProfile(raw: unknown, c = requireContent()): PlayerProf
     ownedSkills: [...new Set<SkillId>(['nhat-kiem', ...p.ownedSkills.filter(id => c.skills.some(x => x.id === id))])],
     ownedSwords: [...new Set<SwordId>(['thanh-phong', ...p.ownedSwords.filter(id => c.swords.some(x => x.id === id))])]
   };
+  if (p.rewardCredits !== undefined) {
+    if (!p.rewardCredits || typeof p.rewardCredits !== 'object' || Array.isArray(p.rewardCredits)) return null;
+    result.rewardCredits = {};
+    for (const [id, credit] of Object.entries(p.rewardCredits)) {
+      if (!/^[1-9]\d*$/.test(id) || !credit || !integer(credit.exp) || !integer(credit.starBonus)) return null;
+      result.rewardCredits[id] = { exp: credit.exp, starBonus: credit.starBonus };
+    }
+  }
   result.loadout = validLoadout(p.loadout, result, c) ?? result.loadout;
   return result;
 }
@@ -504,9 +548,16 @@ export function applyOperation(profile: PlayerProfile, op: PlayerOperation, c = 
       error: 'INCOMPLETE_OBJECTIVES'
     };
     const previous = p.levels.find(x => x.levelId === op.levelId);
-    p.coins += previous ? c.rewards.replayWinCoins + Math.max(0, starBonus(op.stars, c) - starBonus(previous.stars, c)) : c.rewards.firstWinCoins + starBonus(op.stars, c);
     const best = Math.max(previous?.stars ?? 0, op.stars) as Stars;
-    p.totalExp += expForStars(best, getLevelData(op.levelId, c).baseExp, c) - (previous ? expForStars(previous.stars, getLevelData(op.levelId, c).baseExp, c) : 0);
+    const baseExp = getLevelData(op.levelId, c).baseExp;
+    const credit = p.rewardCredits?.[op.levelId] ?? { exp: previous ? expForStars(previous.stars, baseExp, c) : 0, starBonus: previous ? starBonus(previous.stars, c) : 0 };
+    const improved = !previous || op.stars > previous.stars;
+    const exp = improved ? Math.max(credit.exp, expForStars(op.stars, baseExp, c)) : credit.exp;
+    const bonus = improved ? Math.max(credit.starBonus, starBonus(op.stars, c)) : credit.starBonus;
+    p.coins += (previous ? c.rewards.replayWinCoins : c.rewards.firstWinCoins) + bonus - credit.starBonus;
+    p.totalExp += exp - credit.exp;
+    if (!integer(p.totalExp) || !integer(p.coins)) return { profile, error: 'INVALID_REWARD' };
+    p.rewardCredits = { ...p.rewardCredits, [op.levelId]: { exp, starBonus: bonus } };
     p.levels = mergeLevels(p.levels, [{
       levelId: op.levelId,
       stars: op.stars
@@ -556,6 +607,17 @@ export function mergeProfiles(a: PlayerProfile, b: PlayerProfile, c = requireCon
     revision: Math.max(a.revision, b.revision) + 1,
     totalExp: totalExp(levels, c)
   };
+  if (a.rewardCredits || b.rewardCredits) {
+    const credits = (p: PlayerProfile) => Object.fromEntries(p.levels.map(l => [l.levelId, p.rewardCredits?.[l.levelId] ?? {
+      exp: expForStars(l.stars, c.levelBaseExp?.[l.levelId-1] ?? getLevelData(l.levelId, c).baseExp, c), starBonus: starBonus(l.stars, c) }]));
+    const aCredits = credits(a), bCredits = credits(b);
+    result.rewardCredits = Object.fromEntries(levels.map(l => {
+      const ac = aCredits[l.levelId], bc = bCredits[l.levelId];
+      return [l.levelId, { exp: Math.max(ac?.exp ?? 0, bc?.exp ?? 0), starBonus: Math.max(ac?.starBonus ?? 0, bc?.starBonus ?? 0) }];
+    }));
+    const residual = (p: PlayerProfile, values: typeof aCredits) => p.totalExp - Object.values(values).reduce((sum, x) => sum+x.exp, 0);
+    result.totalExp = Object.values(result.rewardCredits).reduce((sum, x) => sum+x.exp, 0) + Math.max(residual(a,aCredits), residual(b,bCredits));
+  }
   result.loadout = validLoadout(b.loadout, result, c) ?? emptyProfile().loadout;
   return result;
 }

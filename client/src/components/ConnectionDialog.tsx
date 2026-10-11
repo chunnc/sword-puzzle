@@ -29,7 +29,7 @@ const messages: Record<VisibleDialogMode, { title: string; body: string }> = {
 function selectDialogMode(state: GameState): DialogMode {
   if (!state.online && state.connectionFailed) return 'network';
   if (state.authRequired) return 'authentication';
-  if (state.initialized && state.save.pending && state.notice) return 'pending';
+  if (state.initialized && (state.save.pending || state.save.pendingStart || state.save.pendingFinish) && state.notice) return 'pending';
   return 'hidden';
 }
 

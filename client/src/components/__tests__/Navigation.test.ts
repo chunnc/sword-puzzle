@@ -19,10 +19,11 @@ jest.mock('expo-image', () => ({ Image: require('react-native').View }));
 jest.mock('expo-router', () => ({
   useRouter: () => mockRouter,
   useLocalSearchParams: () => mockParams,
+  useFocusEffect: (callback: () => void) => require('react').useEffect(callback,[callback]),
 }));
 jest.mock('../FloatingCultivator', () => ({ FloatingCultivator: require('react-native').View }));
 jest.mock('../../state/gameStore', () => ({
-  useGameStore: (selector?: (state: typeof mockState) => unknown) => selector ? selector(mockState) : mockState,
+  useGameStore: Object.assign((selector?: (state: typeof mockState) => unknown) => selector ? selector(mockState) : mockState,{getState:()=>mockState}),
   getHighestUnlocked: (save: SaveData) => require('../../game/domain').highestUnlocked(save.profile.levels),
   getLevelStars: (save: SaveData, id: number) => save.profile.levels.find(level => level.levelId === id)?.stars ?? 0,
   getLevelCompleted: (save: SaveData, id: number) => require('../../game/domain').isCompleted(save.profile.levels, id),
@@ -43,7 +44,7 @@ jest.mock('../Art', () => {
 const mockRouter = { replace: jest.fn(), push: jest.fn(), back: jest.fn(), canGoBack: jest.fn() };
 let mockParams: Record<string, string> = {};
 const mockState = {
-  save: emptySave(), notice: '', session: null, online: false,
+  save: emptySave(), notice: '', session: null, online: false,foreground:true,
   chapterId: '', chapterMaps: [] as MapSummary[], chapterLoading: false, chapterError: '', selectChapter: jest.fn(),
   startLevel: jest.fn(), register: jest.fn(), login: jest.fn(), setNotice: jest.fn(),
 };
@@ -69,6 +70,7 @@ describe('scene navigation', () => {
     jest.clearAllMocks();
     mockParams = {};
     mockState.save = emptySave();
+    mockState.foreground = true;
     installContent(require('../../../../content/game-content.json'));
     mockState.chapterId='';mockState.chapterMaps=[];mockState.selectChapter.mockResolvedValue(undefined);
     mockRouter.canGoBack.mockReturnValue(true);
@@ -76,7 +78,7 @@ describe('scene navigation', () => {
   });
   afterEach(() => { act(() => { renderer?.unmount(); }); installContent(require('../../../../content/game-content.json')); });
 
-  it.each([true, false])('requests a resumable run from the map and navigates only after success=%s', async (success) => {
+  it.each([true, false])('requests a new run from the map and navigates only after success=%s', async (success) => {
     let finish!: (result: boolean) => void;
     mockState.startLevel.mockImplementation(() => new Promise<boolean>(resolve => { finish = resolve; }));
     mount(React.createElement(MapScreen));
@@ -87,6 +89,25 @@ describe('scene navigation', () => {
     await act(async () => { finish(success); });
     if (success) expect(mockRouter.push).toHaveBeenCalledWith('/game/1');
     else expect(mockRouter.push).not.toHaveBeenCalled();
+  });
+  it('does not create a second attempt for rapid duplicate map presses',async()=>{
+    let finish!: (value:boolean)=>void;
+    mockState.startLevel.mockImplementation(()=>new Promise<boolean>(resolve=>{finish=resolve;}));
+    mount(React.createElement(MapScreen));
+    act(()=>{button('Màn 1, màn hiện tại').props.onPress();button('Màn 1, màn hiện tại').props.onPress();});
+    expect(mockState.startLevel).toHaveBeenCalledTimes(1);
+    await act(async()=>{finish(true);});expect(mockRouter.push).toHaveBeenCalledTimes(1);
+  });
+  it('defers a start completed in background until foreground without starting again',async()=>{
+    let finish!: (value:boolean)=>void;
+    const scene=()=>React.createElement(SafeAreaInsetsContext.Provider,{value:{top:0,bottom:0,left:0,right:0}},React.createElement(MapScreen));
+    mockState.startLevel.mockImplementation(()=>new Promise<boolean>(resolve=>{finish=resolve;}));
+    mount(React.createElement(MapScreen));act(()=>{button('Màn 1, màn hiện tại').props.onPress();});
+    mockState.foreground=false;
+    act(()=>{renderer.update(scene());});
+    await act(async()=>{finish(true);});expect(mockRouter.push).not.toHaveBeenCalled();
+    mockState.foreground=true;act(()=>{renderer.update(scene());});
+    expect(mockRouter.push).toHaveBeenCalledWith('/game/1');expect(mockState.startLevel).toHaveBeenCalledTimes(1);
   });
 
   it('renders only the active chapter and waits for an explicit chapter selection', () => {
