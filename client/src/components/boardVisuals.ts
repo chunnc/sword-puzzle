@@ -9,6 +9,7 @@ export const BOARD_LIGHTNING_MS = 1600;
 export const BOARD_SPIRIT_MS = 1000;
 export const BOARD_FALL_MS = 450;
 export const BOARD_CHAIN_DELAY_MS = 300;
+export const BOARD_SETTLE_MS = 150;
 export const BOARD_REJECT_MS = 390;
 export const BOARD_REJECT_OUT_MS = 165;
 export const BOARD_REJECT_BACK_MS = BOARD_REJECT_MS - BOARD_REJECT_OUT_MS;
@@ -53,6 +54,10 @@ export function boardClearDurationMs(effectOrEffects: ClearTimingInput | readonl
 }
 
 export type BoardVisualEffect = {
+  id: number;
+  kind: 'settle';
+  direction: 'out' | 'in';
+} | {
   id: number;
   kind: 'swap' | 'reject';
   first: CellPosition;
@@ -109,6 +114,7 @@ export interface SwordBoardEffectCue extends BoardEffectCueBase {
 export type BoardEffectCue = ElementalBoardEffectCue | SwordBoardEffectCue;
 
 export interface CellVisual {
+  settling?: 'out' | 'in';
   dx: number;
   dy: number;
   falling: boolean;
@@ -286,6 +292,7 @@ export function buildCellVisuals(
       sourceAnimation: null,
     };
     if (!effect || reduceMotion) return visual;
+    if (effect.kind === 'settle') visual.settling = effect.direction;
     if (effect.kind === 'swap' || effect.kind === 'reject') {
       const x = index % geometry.width, y = Math.floor(index / geometry.width);
       const first = effect.first.x === x && effect.first.y === y;
@@ -329,6 +336,7 @@ export function buildCellVisuals(
 
 export function cellMotion(visual: CellVisual, pitch: number, progress: number, pulse: number) {
   'worklet';
+  if (visual.settling) return { tx: 0, ty: 0, scale: 1, opacity: visual.settling === 'out' ? 1-progress : progress };
   if (!visual.hidden && visual.sourceAnimation) {
     const { kind, durationMs } = visual.sourceAnimation;
     const localProgress = Math.max(0, Math.min(1, progress));

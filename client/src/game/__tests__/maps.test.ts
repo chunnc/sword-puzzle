@@ -63,6 +63,14 @@ it('rejects a fixed dead board without silently shuffling authored pieces', () =
   const m=map();m.layout=Array.from({length:3},(_,y)=>Array.from({length:3},(_,x)=>(x+y)%4+1));m.initialSeals=[];
   expect(()=>new BoardEngine(mapToLevel(m,42,0,content))).toThrow('NO_PLAYABLE_LAYOUT');
 });
+it('rejects invalid combo chance and collect targets above the cap', () => {
+  const missing = map(); delete (missing.spawnPolicy as any).comboChance;
+  expect(() => validateMap(missing, content)).toThrow('INVALID_MAP');
+  const negative = map(); negative.spawnPolicy.comboChance = -.1;
+  expect(() => validateMap(negative, content)).toThrow('INVALID_MAP');
+  const high = map(); high.objectives.find(o => o.type === 'Collect')!.target = 31;
+  expect(() => validateMap(high, content)).toThrow('INVALID_MAP');
+});
 it('keeps non-pilot rules and RNG equivalent after mapping legacy tile IDs', () => {
   const oldContent=installContent(legacy);
   for(const id of [11,16,18,21,40]) {

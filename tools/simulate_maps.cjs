@@ -2,10 +2,10 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { Worker } = require('node:worker_threads');
-const { BoardEngine, installContent, validateMap, mapToLevel, mapStars, tileId, assistForFailures } = require('./game-runtime.cjs');
+const { BoardEngine, installContent, validateContent, validateMap, mapToLevel, mapStars, tileId, assistForFailures, mapFromDocument, mapToDocument } = require('./game-runtime.cjs');
 const {createHash}=require('node:crypto');
 const { renderBalanceReport } = require('./render_balance_report.cjs');
-const { resolveSnapshot, defaultProject } = require('./sync_content_cache.cjs');
+const { resolveSnapshot, defaultProject, buildSnapshot } = require('./sync_content_cache.cjs');
 let content = installContent(require('../content/game-config.json'));
 let catalog = require('../content/game-maps.json').map(m => validateMap(m, content));
 function installSnapshot(config, maps) {
@@ -84,11 +84,12 @@ function cast(engine,bot,random) {
   const row=rows[0];const x=row.cells.find(i=>snapshot.level.board.activeCells[i])%w;
   return engine.trySkill('nhat-kiem',[{x,y:row.y}]);
 }
-function play(map, seed, bot='normal', power='expected', assist=0) {
+function play(map, seed, bot='normal', power='expected', assist=0, trace=false) {
   const random=rng(seed^0x5a17c9e3), totalExp=power==='minimum'?0:power==='strong'?(map.id-1)*100+1500:(map.id-1)*60;
   const level=mapToLevel(map,seed,assist,content);
   const engine=new BoardEngine(level,null,{loadout:{sword:'thanh-phong',skills:['nhat-kiem']},totalExp});
-  let waves=0,maxChain=0;
+  let waves=0,maxChain=0,actions=0,damage=0;
+  const waveCounts={},timeline=[],metrics={seeded:0,setups:0,setupAttempts:0,setupFallbacks:0,setupUsed:0,chargesCreated:0,chargesActivated:0,settlements:0};
   for(let action=0;action<map.moves*3+10&&!engine.won&&!engine.lost;action++) {
     if(!cast(engine,bot,random)) {
       const move=chooseSwap(engine,bot,random);
@@ -96,14 +97,20 @@ function play(map, seed, bot='normal', power='expected', assist=0) {
     }
     waves+=engine.animation?.steps.length??0;
     maxChain=Math.max(maxChain,...(engine.animation?.steps.map(s=>s.chain)??[0]));
+    actions++;const count=engine.animation?.steps.length??0;waveCounts[count]=(waveCounts[count]??0)+1;
+    for(const key of Object.keys(metrics))metrics[key]+=engine.actionMetrics[key];
+    if(trace){damage+=engine.animation.steps.reduce((sum,s)=>sum+s.damage,0);timeline.push({movesUsed:engine.movesUsed,damage,kind:engine.animation.kind});}
   }
   const snapshot=engine.snapshot();
-  return {won:engine.won,stars:engine.won?mapStars(map,engine.movesUsed):0,movesUsed:engine.movesUsed,waves,maxChain,reshuffles:snapshot.reshuffles??0,
+  return {won:engine.won,stars:engine.won?mapStars(map,engine.movesUsed):0,movesUsed:engine.movesUsed,waves,maxChain,reshuffles:snapshot.reshuffles??0,actions,waveCounts,metrics,...(trace?{timeline}:{}),
     progress:map.objectives.reduce((sum,o)=>sum+snapshot.objectiveProgress[o.id]/o.target,0)/map.objectives.length};
 }
 function summarize(map, results) {
   const won=results.filter(r=>r.won),lost=results.filter(r=>!r.won),histogram=[0,0,0,0];results.forEach(r=>histogram[r.stars]++);
+  const moves=won.map(r=>r.movesUsed).sort((a,b)=>a-b),waveCounts={},metrics={};let actions=0;
+  for(const r of results){actions+=r.actions??0;for(const [key,value]of Object.entries(r.waveCounts??{}))waveCounts[key]=(waveCounts[key]??0)+value;for(const [key,value]of Object.entries(r.metrics??{}))metrics[key]=(metrics[key]??0)+value;}
   return {mapHash:createHash('sha256').update(JSON.stringify(map)).digest('hex'),id:map.id,difficulty:map.difficulty,samples:results.length,winRate:won.length/results.length,starRates:histogram.map(n=>n/results.length),
+    medianMoves:moves.length?(moves[Math.floor((moves.length-1)/2)]+moves[Math.floor(moves.length/2)])/2:null,actions,waveCounts,metrics,settlementRate:actions?(metrics.settlements??0)/actions:0,
     movesHistogram:Object.fromEntries(Array.from({length:map.moves+1},(_,n)=>[n,won.filter(r=>r.movesUsed===n).length]).filter(([,n])=>n)),
     averageMoves:won.length?won.reduce((s,r)=>s+r.movesUsed,0)/won.length:null,averageProgress:results.reduce((s,r)=>s+r.progress,0)/results.length,
     averageFailedProgress:lost.length?lost.reduce((s,r)=>s+r.progress,0)/lost.length:null,
@@ -150,14 +157,22 @@ function mergeRetryChunks(chunks) {
   }
   return {attempts,unfinished,byAssist:[...byAssist.values()].sort((a,b)=>a.assist-b.assist),byAttempt};
 }
+function spawnAssistMechanisms(map) {
+  if(map.legacy||!map.retryAssistPolicy.reductions.some(a=>a>0))return [];
+  const p=map.spawnPolicy,mechanisms=[];
+  if(map.contentVersion>=6){if(p.comboChance<1)mechanisms.push('directMatch');if((p.setupChance??0)<1)mechanisms.push('preparedCombo');}
+  if(map.objectives.some(o=>o.type==='Collect')&&p.collectionPressure>0)mechanisms.push('collectionWeights');
+  if(p.candidates>1&&p.obstaclePressure>0&&(map.initialSeals.length>0||map.layout.flat().some(id=>id===tileId('rock',content))))mechanisms.push('obstacleCandidates');
+  return mechanisms;
+}
 function finalizeRetries(map, count, merged) {
   const {attempts}=merged,maxAttempts=30;
   let cumulativeWins=0;
-  const policy=map.spawnPolicy;
+  const assistMechanisms=spawnAssistMechanisms(map);
   return {id:map.id,bot:'normal',power:'expected',samples:count,completed:attempts.length,unfinished:merged.unfinished,maxAttempts,
     averageAttempts:attempts.length?attempts.reduce((a,b)=>a+b,0)/attempts.length:null,
     totalAttempts:merged.byAttempt.reduce((sum,r)=>sum+r.samples,0),
-    hasSpawnPressure:!map.legacy&&(map.objectives.some(o=>o.type==='Collect')&&policy.collectionPressure>0||policy.candidates>1&&(policy.comboPressure>0||policy.obstaclePressure>0)),
+    hasSpawnPressure:assistMechanisms.length>0,assistMechanisms,
     attemptsHistogram:Object.fromEntries(Array.from({length:maxAttempts},(_,n)=>[n+1,attempts.filter(a=>a===n+1).length]).filter(([,n])=>n)),
     byAssist:merged.byAssist.map(({starCounts,...r})=>({...r,winRate:r.samples?r.wins/r.samples:null,starRates:r.samples?starCounts.map(n=>n/r.samples):[0,0,0,0]})),
     byAttempt:merged.byAttempt.map(r=>{cumulativeWins+=r.wins;return {...r,winRate:r.samples?r.wins/r.samples:null,cumulativeWinRate:count?cumulativeWins/count:null};})};
@@ -168,6 +183,7 @@ function simulateRetries(map, count, playAttempt=play) {
 function executeTask(task) {
   const map=catalog[task.id-1];
   if(task.kind==='simulate')return {results:Array.from({length:task.count},(_,index)=>play(map,seedFor(task.start+index,task.suite),task.bot,task.power))};
+  if(task.kind==='assist')return {results:[0,.1,.2,.3].map(assist=>({assist,wins:Array.from({length:task.count},(_,index)=>play(map,seedFor(task.start+index), 'normal','expected',assist)).filter(r=>r.won).length}))};
   return {chunk:simulateRetryChunk(map,task.start,task.count)};
 }
 
@@ -179,22 +195,28 @@ function evaluateChecks(reports, count, enabled) {
     if(count>=1000&&r.starRates.slice(1).some(rate=>rate===0))failures.push(`Map ${r.id}: chưa quan sát đủ các mức 1–2–3 sao.`);
     if(below(r.winRate,t.win[0]-tolerance)||below(t.win[1]+tolerance,r.winRate))failures.push(`Map ${r.id}: tỷ lệ thắng nằm ngoài khoảng kiểm tra.`);
     if(below(r.starRates[3],t.three[0]-tolerance)||below(t.three[1]+tolerance,r.starRates[3]))failures.push(`Map ${r.id}: tỷ lệ 3 sao nằm ngoài khoảng kiểm tra.`);
+    if(content.version>=6&&!catalog[r.id-1].legacy){
+      if(r.maxChain>4)failures.push(`Map ${r.id}: cascade vượt 4 wave.`);
+      if(count>=1000&&catalog[r.id-1].objectives.every(o=>o.type==='Collect')&&(r.medianMoves<6||r.medianMoves>10))failures.push(`Map ${r.id}: median Collect ngoài 6–10 lượt.`);
+      if(count>=1000&&r.starRates.some(rate=>rate===0))failures.push(`Map ${r.id}: chưa quan sát đủ bốn mức kết quả.`);
+    }
     results.push({id:r.id,bot:r.bot,power:r.power,gate:'difficulty',passed:!failures.length,failures});
   }
   for(const r of reports.filter(r=>r.bot==='strategic'&&r.power==='expected')) {
     const basic=reports.find(b=>b.id===r.id&&b.bot==='basic'&&b.power===r.power);
     if(basic) {
-      const failures=below(r.winRate+.1,basic.winRate)?[`Map ${r.id}: bot strategic có tỷ lệ thắng thấp hơn basic quá 10 điểm phần trăm.`]:[];
+      const failures=content.version>=6?(below(r.winRate,basic.winRate)||below(r.starRates[3],basic.starRates[3])?[`Map ${r.id}: strategic kém basic về win hoặc 3 sao.`]:[]):below(r.winRate+.1,basic.winRate)?[`Map ${r.id}: bot strategic có tỷ lệ thắng thấp hơn basic quá 10 điểm phần trăm.`]:[];
       results.push({id:r.id,bot:r.bot,power:r.power,gate:'strategy',passed:!failures.length,failures});
     }
   }
   const failures=results.flatMap(r=>r.failures);
+  for(const r of reports)if(content.version>=6&&!catalog[r.id-1].legacy&&r.maxChain>4)failures.push(`Map ${r.id} ${r.bot}/${r.power}: cascade vượt 4 wave.`);
   return {enabled,tolerance,results,failures,status:!enabled?'not-run':!results.length?'not-applicable':failures.length?'failed':'passed'};
 }
 
 function parseOptions(args) {
   const values={}, flags=new Set(['--check','--offline']);
-  const options=new Set(['--seeds','--suite','--bots','--powers','--maps','--retry-seeds','--output','--html-output','--project','--jobs']);
+  const options=new Set(['--seeds','--suite','--bots','--powers','--maps','--retry-seeds','--assist-seeds','--source','--output','--html-output','--project','--jobs']);
   for(let i=0;i<args.length;i++) {
     const key=args[i];
     if(flags.has(key)){values[key]=true;continue;}
@@ -205,6 +227,10 @@ function parseOptions(args) {
   const count=Number(values['--seeds']??100),retryCount=Number(values['--retry-seeds']??0);
   if(!Number.isSafeInteger(count)||count<1)throw new Error('--seeds must be a positive integer');
   if(!Number.isSafeInteger(retryCount)||retryCount<0)throw new Error('--retry-seeds must be a non-negative integer');
+  const assistCount=Number(values['--assist-seeds']??0),source=values['--source']??'server';
+  if(!Number.isSafeInteger(assistCount)||assistCount<0)throw new Error('--assist-seeds must be a non-negative integer');
+  if(!['local','server'].includes(source))throw new Error('--source must be local or server');
+  if(source==='local'&&values['--offline'])throw new Error('--offline applies to server cache, not --source local');
   const jobs=values['--jobs']===undefined?os.availableParallelism():Number(values['--jobs']);
   if(!Number.isSafeInteger(jobs)||jobs<1)throw new Error('--jobs must be a positive integer');
   const list=(key, fallback, valid)=>{
@@ -214,7 +240,7 @@ function parseOptions(args) {
   };
   const suite=values['--suite']??'validation';
   if(!['training','validation'].includes(suite))throw new Error('--suite must be training or validation');
-  return {count,retryCount,suite,check:values['--check']===true,offline:values['--offline']===true,project:values['--project']??defaultProject(),jobs,
+  return {count,retryCount,assistCount,source,suite,check:values['--check']===true,offline:values['--offline']===true,project:values['--project']??defaultProject(),jobs,
     ids:list('--maps','1,2,3,4,5,6,7,8,9,10',s=>/^\d+$/.test(s)&&Number(s)>=1&&Number(s)<=catalog.length).map(Number),
     bots:list('--bots','basic,normal,strategic',s=>['basic','normal','strategic'].includes(s)),
     powers:list('--powers','expected',s=>['minimum','expected','strong'].includes(s)),
@@ -277,11 +303,14 @@ async function main(args) {
   const jsonPath=path.resolve(options.output??path.join(directory,`maps-${runId}.json`));
   const htmlPath=path.resolve(options.htmlOutput??path.join(path.dirname(jsonPath),`maps-${runId}.html`));
   if(jsonPath===htmlPath)throw new Error('--output and --html-output must point to different files');
-  const snapshot=await resolveSnapshot({project:options.project,offline:options.offline});
+  const localConfig=options.source==='local'?JSON.parse(fs.readFileSync(path.join(__dirname,'../content/game-config.json'),'utf8')):null;
+  const snapshot=options.source==='local'
+    ? {...buildSnapshot({project:options.project,config:localConfig,maps:JSON.parse(fs.readFileSync(path.join(__dirname,'../content/game-maps.json'),'utf8')).map(m=>mapFromDocument(mapToDocument(m),validateContent(localConfig))),syncedAt:new Date().toISOString()}),source:'local'}
+    : await resolveSnapshot({project:options.project,offline:options.offline});
   installSnapshot(snapshot.config,snapshot.maps);
   for(const id of options.ids)if(id<1||id>content.levelCount)throw new Error(`Map ${id} is not in published content v${content.version} (${content.levelCount} maps)`);
-  console.log(`Content v${content.version} · ${snapshot.source==='server'?'synced from server':'local cache'} · ${snapshot.project}${snapshot.cacheFile?` · ${path.relative(process.cwd(),snapshot.cacheFile)}`:''}`);
-  const reportSlots=[],retrySlots=[],tasks=[];
+  console.log(`Content v${content.version} · ${snapshot.source==='local'?'local authoring':snapshot.source==='server'?'synced from server':'local cache'} · ${snapshot.project}${snapshot.cacheFile?` · ${path.relative(process.cwd(),snapshot.cacheFile)}`:''}`);
+  const reportSlots=[],retrySlots=[],assistSlots=[],tasks=[];
   const seedChunk=Math.max(1,Math.ceil(options.count/(options.jobs*4)));
   for(const id of options.ids)for(const bot of options.bots)for(const power of options.powers) {
     const slot={id,bot,power,chunks:new Map(),total:0};reportSlots.push(slot);
@@ -294,6 +323,11 @@ async function main(args) {
       for(let start=0;start<options.retryCount;start+=retryChunk) {slot.total++;tasks.push({slot,kind:'retry',id,start,count:Math.min(retryChunk,options.retryCount-start)});}
     }
   }
+  if(options.assistCount)for(const id of options.ids.filter(id=>[5,7,10].includes(id))) {
+    const slot={id,chunks:new Map(),total:0};assistSlots.push(slot);
+    const chunk=Math.max(1,Math.ceil(options.assistCount/(options.jobs*4)));
+    for(let start=0;start<options.assistCount;start+=chunk){slot.total++;tasks.push({slot,kind:'assist',id,start,count:Math.min(chunk,options.assistCount-start)});}
+  }
   const collect=(task,payload)=>{
     task.slot.chunks.set(task.start,payload);
     if(task.slot.chunks.size<task.slot.total)return;
@@ -302,12 +336,19 @@ async function main(args) {
       const report={...summarize(catalog[task.slot.id-1],results),bot:task.slot.bot,power:task.slot.power};
       task.slot.report=report;
       console.log(`Map ${task.slot.id} ${task.slot.bot}/${task.slot.power}: win ${(report.winRate*100).toFixed(1)}%, 3★ ${(report.starRates[3]*100).toFixed(1)}%`);
-    } else {
+    } else if(task.kind==='retry') {
       const map=catalog[task.slot.id-1];
       const chunks=[...task.slot.chunks.entries()].sort((a,b)=>a[0]-b[0]).map(([,value])=>value.chunk);
       const retry=finalizeRetries(map,options.retryCount,mergeRetryChunks(chunks));
       task.slot.retry=retry;
       console.log(`Map ${task.slot.id} retry: ${retry.completed}/${retry.samples} completed, average ${retry.averageAttempts?.toFixed(2)??'—'} attempts`);
+    } else {
+      const rates=[0,.1,.2,.3].map((assist,i)=>({assist,samples:options.assistCount,wins:[...task.slot.chunks.values()].reduce((sum,v)=>sum+v.results[i].wins,0)})).map(r=>({...r,winRate:r.wins/r.samples}));
+      const failures=[];
+      if(rates[3].winRate-rates[0].winRate<.05-1e-12)failures.push(`Map ${task.slot.id}: assist 30% tăng win dưới 5 điểm phần trăm.`);
+      for(let i=1;i<rates.length;i++)if(rates[i].winRate<rates[i-1].winRate-.02-1e-12)failures.push(`Map ${task.slot.id}: assist không tăng đều trong dung sai 2 điểm phần trăm.`);
+      task.slot.report={id:task.slot.id,rates,passed:!failures.length,failures};
+      console.log(`Map ${task.slot.id} paired assist: ${rates.map(r=>(r.winRate*100).toFixed(1)+'%').join(' / ')}`);
     }
   };
   const pool=options.jobs>1&&tasks.length>1?createWorkerPool(Math.min(options.jobs,tasks.length),{config:snapshot.config,maps:snapshot.maps}):null;
@@ -320,10 +361,13 @@ async function main(args) {
   const reports=reportSlots.filter(slot=>slot.report).map(slot=>slot.report);
   const retries=retrySlots.filter(slot=>slot.retry).map(slot=>slot.retry);
   const finishedAt=new Date(),checks=evaluateChecks(reports,options.count,options.check);
-  const report={contentVersion:content.version,configHash:snapshot.hashes.config,
+  const assistReports=assistSlots.filter(s=>s.report).map(s=>s.report);
+  checks.failures.push(...assistReports.flatMap(r=>r.failures));
+  if(checks.enabled&&checks.failures.length)checks.status='failed';
+  const report={contentVersion:content.version,configHash:snapshot.hashes.config,engineHash:createHash('sha256').update(fs.readFileSync(path.join(__dirname,'../client/src/game/BoardEngine.ts'))).digest('hex'),
     source:{kind:snapshot.source,project:snapshot.project,version:snapshot.version,syncedAt:snapshot.syncedAt,checkedAt:snapshot.checkedAt,
       cacheFile:snapshot.cacheFile?path.relative(process.cwd(),snapshot.cacheFile):null,hashes:snapshot.hashes},
-    suite:options.suite,seeds:options.count,targets,reports,retries,checks,
+    suite:options.suite,seeds:options.count,targets,reports,retries,assistReports,checks,
     run:{id:runId,startedAt:startedAt.toISOString(),finishedAt:finishedAt.toISOString(),durationSeconds:(finishedAt-startedAt)/1000,
       command:['node','tools/simulate_maps.cjs',...args].map(s=>/^[\w./,=-]+$/.test(s)?s:JSON.stringify(s)).join(' '),
       maps:options.ids,bots:options.bots,powers:options.powers,retrySeeds:options.retryCount,jobs:options.jobs,status:error?'error':'completed',error},
@@ -343,4 +387,4 @@ async function main(args) {
 if(require.main===module) {
   main(process.argv.slice(2)).catch(error=>{ console.error(error.message);process.exitCode=1; });
 }
-module.exports={play,summarize,seedFor,targets,catalog,simulateRetries,evaluateChecks,parseOptions,main,installSnapshot,executeTask,simulateRetryChunk,mergeRetryChunks,finalizeRetries};
+module.exports={play,summarize,seedFor,targets,catalog,simulateRetries,evaluateChecks,parseOptions,main,installSnapshot,executeTask,simulateRetryChunk,mergeRetryChunks,finalizeRetries,spawnAssistMechanisms};

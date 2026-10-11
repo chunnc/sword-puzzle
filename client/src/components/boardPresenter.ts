@@ -109,12 +109,17 @@ export function createBoardPresenter(options: {
                         if (trace.source !== undefined && pendingSources.get(trace.source) === index) pendingSources.delete(trace.source);
                         if (deferSpirit) { visual = nextVisual; options.setBoard(visual); }
                     }
-                    options.setBoard(step.after);
+                    options.setBoard(step.settlement?.before ?? step.after);
                     if (step.falls.length && !reduceMotion) {
                         await motion({ id: options.nextId(), kind: 'fall', falls: step.falls });
                         // This delay starts only after the UI confirms the landing.
                         if (!reduceMotion) await wait(BOARD_CHAIN_DELAY_MS);
                         check();
+                    }
+                    if (step.settlement) {
+                        if (!reduceMotion) await motion({ id: options.nextId(), kind: 'settle', direction: 'out' });
+                        options.setBoard(step.after);
+                        if (!reduceMotion) await motion({ id: options.nextId(), kind: 'settle', direction: 'in' });
                     }
                 } else options.setBoard(step.after);
             } else options.setBoard(phase.board);

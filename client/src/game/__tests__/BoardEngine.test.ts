@@ -1,7 +1,7 @@
 import { BoardEngine } from '../BoardEngine';
 import { getLevel } from '../levels';
 import { TileKind, GoalKind, type BoardSnapshot, type Tile } from '../types';
-import { SKILLS, SWORDS, type SkillId } from '../domain';
+import { SKILLS, SWORDS, installContent, mapToLevel, validateMap, type SkillId } from '../domain';
 const tile = (kind: number, chargeTier: 0 | 4 | 5 = 0): Tile => ({ kind, chargeTier, locked: false });
 function fixture(): BoardSnapshot { const s = new BoardEngine(getLevel(5)).snapshot(); s.tiles = Array.from({ length: 49 }, (_, i) => tile((i % 7 + 2 * Math.floor(i / 7)) % 4)); s.level = { ...s.level, objectives: [{ id: 'main', type: 'Battle', target: 100000, enemy: { id: 'test', name: 'Test', artKey: 'beast' } }] }; s.objectiveProgress = { main: 0 }; s.swordQi = 100; s.loadout = { sword: 'thanh-phong', skills: ['nhat-kiem'] }; return s; }
 function matching(size: number, kind: TileKind, tier: 0 | 4 | 5 = 0) {
@@ -148,4 +148,59 @@ describe('board rules v2', () => {
         b.trySkill('nhat-kiem', [{ x: 0, y: 0 }]);
         expect(b.animation!.steps[0].damage).toBe(0);
     } });
+    describe('combo seeding', () => {
+        const { config, maps: sources } = require('../../../../content/balance/fixtures/v5.json');
+        const legacy = require('../../../../content/game-content.json');
+        const modern = (id = 1, chance = 1) => {
+            const content = installContent(JSON.parse(JSON.stringify(config)));
+            const raw = JSON.parse(JSON.stringify(sources[id - 1]));
+            raw.spawnPolicy.comboChance = chance;
+            return new BoardEngine(mapToLevel(validateMap(raw, content), 24680, 0, content));
+        };
+        const carve = (engine: BoardEngine, rows: number) => {
+            const internals = engine as any, board = engine.snapshot().level.board;
+            for (let y = board.height - rows; y < board.height; y++) for (let x = 0; x < board.width; x++) {
+                const index = y * board.width + x;
+                if (board.activeCells[index]) internals.tiles[index] = null;
+            }
+            return internals;
+        };
+        afterEach(() => installContent(legacy));
+        it('seeds a combo among spawned tiles when comboChance is 1', () => {
+            const engine = modern(1, 1), internals = carve(engine, 3);
+            const falls = internals.refill(1);
+            const spawned = new Set(falls.filter((f: any) => f.spawned).map((f: any) => f.index));
+            const groups = internals.findGroups();
+            expect(spawned.size).toBeGreaterThanOrEqual(3);
+            expect(groups.length).toBeGreaterThan(0);
+            expect(groups.every((g: number[]) => g.some(i => spawned.has(i)))).toBe(true);
+        });
+        it('does not seed combos when comboChance is 0', () => {
+            const engine = modern(1, 0), internals = carve(engine, 3);
+            let seeded = 0;
+            internals.seededRefill = () => { seeded++; return null; };
+            internals.refill(1);
+            expect(seeded).toBe(0);
+        });
+        it('creates a seeded run long enough for a tier-5 piece when the roll favors size 5', () => {
+            const engine = modern(1, 1), internals = carve(engine, 3);
+            internals.comboLength = () => 5;
+            const falls = internals.refill(1);
+            const spawned = new Set(falls.filter((f: any) => f.spawned).map((f: any) => f.index));
+            expect(internals.findGroups().some((g: number[]) => g.length >= 5 && g.some(i => spawned.has(i)))).toBe(true);
+        });
+        it('boosts the seeding chance on chains and stops at the injected chain limit', () => {
+            const internals = modern(1, .4) as any;
+            expect(internals.refillChance(1)).toBeCloseTo(.4);
+            expect(internals.refillChance(2)).toBeCloseTo(.6);
+            expect(internals.refillChance(5)).toBeCloseTo(.6);
+            expect(internals.refillChance(6)).toBe(0);
+        });
+        it('caps injected cascades at the chain limit and settles the board', () => {
+            const engine = modern(1, 1);
+            expect(engine.trySwap(...engine.legalMoves()[0])).toBe(true);
+            expect(engine.animation!.steps.length).toBeLessThanOrEqual(20);
+            expect(engine.snapshot().tiles.some(t => t === null)).toBe(false);
+        });
+    });
 });

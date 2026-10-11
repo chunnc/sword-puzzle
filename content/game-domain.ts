@@ -47,7 +47,7 @@ export interface MapDefinition {
   difficulty: Difficulty; layout: number[][]; initialSeals: { row: number; column: number }[];
   objectives: ObjectiveDefinition[]; moves: number; baseExp: number;
   starThresholds: { twoStarMaxMovesUsed: number; threeStarMaxMovesUsed: number };
-  spawnPolicy: { weights: Record<string, number>; collectionPressure: number; comboPressure: number; obstaclePressure: number; candidates: number };
+  spawnPolicy: { weights: Record<string, number>; collectionPressure: number; comboChance: number; setupChance?: number; obstaclePressure: number; candidates: number };
   retryAssistPolicy: { thresholds: number[]; reductions: number[] };
   legacy?: { seed: number; obstacles: { rocks: number; seals: number }; spawnPhases: LevelDefinition['spawnPhases'] };
 }
@@ -214,7 +214,7 @@ export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
   const seals = m.legacy?.obstacles.seals ?? m.initialSeals.length;
   for (const o of m.objectives) {
     if (!text(o.id) || !/^[a-zA-Z0-9_-]{1,80}$/.test(o.id) || !integer(o.target, 1)) return bad();
-    if (o.type === 'Collect') { if (!c.normalTileIds!.includes(o.tileKind)) return bad(); }
+    if (o.type === 'Collect') { if (!c.normalTileIds!.includes(o.tileKind) || o.target > 30) return bad(); }
     else if (o.type === 'Battle' || o.type === 'Boss') { if (!o.enemy || !text(o.enemy.id) || !text(o.enemy.name) || !text(o.enemy.artKey)) return bad(); }
     else if (o.type === 'BreakRocks') { if (o.target > rocks) return bad(); }
     else if (o.type === 'BreakSeals') { if (o.target > seals) return bad(); }
@@ -222,7 +222,8 @@ export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
   }
   const s = m.starThresholds, p = m.spawnPolicy, a = m.retryAssistPolicy;
   if (!s || !integer(s.threeStarMaxMovesUsed, 1, m.moves-1) || !integer(s.twoStarMaxMovesUsed, s.threeStarMaxMovesUsed+1, m.moves)) return bad();
-  if (!p || !p.weights || Object.keys(p.weights).length !== c.normalTileIds!.length || c.normalTileIds!.some(id => !integer(p.weights[id], 1, 10000)) || !integer(p.candidates, 1, 8) || [p.collectionPressure, p.comboPressure, p.obstaclePressure].some(v => !Number.isFinite(v) || v < 0 || v > .9)) return bad();
+  if (!p || !p.weights || Object.keys(p.weights).length !== c.normalTileIds!.length || c.normalTileIds!.some(id => !integer(p.weights[id], 1, 10000)) || !integer(p.candidates, 1, 8) || !Number.isFinite(p.comboChance) || p.comboChance < 0 || p.comboChance > 1 || [p.collectionPressure, p.obstaclePressure].some(v => !Number.isFinite(v) || v < 0 || v > .9)) return bad();
+  if ((c.version >= 6 || p.setupChance !== undefined) && (!Number.isFinite(p.setupChance) || p.setupChance! < 0 || p.setupChance! > 1)) return bad();
   if (!a || !Array.isArray(a.thresholds) || !Array.isArray(a.reductions) || a.thresholds.length !== a.reductions.length || a.thresholds.some((n,i) => !integer(n, 1) || i > 0 && n <= a.thresholds[i-1]) || a.reductions.some((n,i) => !Number.isFinite(n) || n < 0 || n > .3 || i > 0 && n < a.reductions[i-1])) return bad();
   if (m.legacy && (!integer(m.legacy.seed, 1, 0xffffffff) || !integer(rocks) || !integer(seals) || rocks + seals > m.layout.flat().filter(Boolean).length - 6 || m.layout.flat().some(id => id !== 0 && id !== -1) || m.initialSeals.length || !Array.isArray(m.legacy.spawnPhases) || !m.legacy.spawnPhases.length || m.legacy.spawnPhases[0].minMovesRemaining !== 0 || m.legacy.spawnPhases.some((phase,i) => !integer(phase.minMovesRemaining, 0, m.moves) || i > 0 && phase.minMovesRemaining <= m.legacy!.spawnPhases[i-1].minMovesRemaining || phase.weights.length !== 4 || !phase.weights.every(w => integer(w, 1, 10000))))) return bad();
   return m;

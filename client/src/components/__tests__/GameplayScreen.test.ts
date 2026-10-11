@@ -10,6 +10,8 @@ import { GameplayResultPopup } from '../GameplayResultPopup';
 import { BOARD_FIRE_CHARGE_MS, BOARD_SPIRIT_EMIT_AT_MS, BOARD_SPIRIT_MS } from '../boardVisuals';
 import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
+import { installContent, mapToLevel, validateMap } from '../../game/domain';
+import { normalizeSnapshot } from '../../game/save';
 import { emptySave } from '../../game/save';
 import type { BoardActionResult } from '../../state/gameStore';
 import { GoalKind, TileKind, type BoardActionAnimation, type BoardResolutionStep } from '../../game/types';
@@ -39,6 +41,7 @@ jest.mock('../Board', () => {
       const duration = effect.kind === 'swap' ? visuals.BOARD_SWAP_MS
         : effect.kind === 'fall' ? visuals.BOARD_FALL_MS
         : effect.kind === 'reject' ? visuals.BOARD_REJECT_MS
+        : effect.kind === 'settle' ? visuals.BOARD_SETTLE_MS / 2
         : visuals.boardClearDurationMs(effect.effects, effect.sourceActivation);
       const timer = setTimeout(() => props.onMotionFinished?.(props.snapshot.runId, effect.id), duration);
       return () => clearTimeout(timer);
@@ -225,6 +228,22 @@ describe('gameplay presentation and exit behavior', () => {
     const info = renderer.root.findByType(GameplayInfo);
     expect(info.props.board.moves).toBe(getLevel(id).moves); expect(info.props.board.objectiveProgress.main).toBe(0);
     expect(renderer.root.findAllByType(Native.View).filter(node => String(node.props.accessibilityLabel).startsWith('Máu '))).toHaveLength(goal === GoalKind.Battle || goal === GoalKind.Boss ? 1 : 0);
+  });
+
+  it.each([false,true])('shows both Collect goals and restores their separate progress (compact=%s)', compact => {
+    const c=installContent(require('../../../../content/game-config.json'));
+    try {
+      const map=validateMap(require('../../../../content/game-maps.json')[2],c);
+      const snapshot=new BoardEngine(mapToLevel(map,12345,0,c)).snapshot();
+      snapshot.objectiveProgress={main:30,secondary:12};
+      mockParams.levelId='3';mockState.save.active=normalizeSnapshot(snapshot)!;mount();
+      act(()=>{view('game-content').props.onLayout({nativeEvent:{layout:{width:320,height:compact?490:760}}});});
+      expect(view('objective-main')).toBeDefined();expect(view('objective-secondary')).toBeDefined();
+      expect(Native.StyleSheet.flatten(view('game-objective-panel').props.style).height).toBe(compact?116:140);
+      expect(Native.StyleSheet.flatten(view('game-moves-panel').props.style).height).toBe(compact?116:140);
+      expect(renderer.root.findByType(GameplayInfo).props.board.objectiveProgress).toEqual({main:30,secondary:12});
+      expect(renderer.root.findAllByType(Native.Text).some(t=>String(t.props.children).includes('✓'))).toBe(true);
+    } finally {installContent(require('../../../../content/game-content.json'));}
   });
 
   it.each([false, true])('opens loss at zero moves with enough qi and skillUsed=%s', skillUsed => {

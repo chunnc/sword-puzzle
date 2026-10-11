@@ -14,7 +14,7 @@ import { semanticTileKind, tileId, getContentVersion } from '../game/domain';
 import { TileKind, type BoardSnapshot, type CellPosition, type Tile } from '../game/types';
 import { colors } from '../theme';
 import {
-  BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS,
+  BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_SETTLE_MS,
   BOARD_REJECT_OUT_MS, BOARD_REJECT_BACK_MS, BOARD_FLASH_IN_MS, BOARD_PULSE_IN_MS,
   boardClearDurationMs, displayIndices, buildBoardEffectCues, buildCellVisuals, cellBounds, pointToCell,
   type BoardVisualEffect, type CellVisual,
@@ -207,6 +207,8 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
           withTiming(.38, { duration: BOARD_REJECT_OUT_MS }),
           withTiming(0, { duration: BOARD_REJECT_BACK_MS }, completed),
         );
+      } else if (kind === 'settle') {
+        progress.value = withTiming(1, { duration: BOARD_SETTLE_MS / 2 }, completed);
       } else if (kind === 'swap' || kind === 'fall') {
         progress.value = withTiming(1, { duration: kind === 'swap' ? BOARD_SWAP_MS : BOARD_FALL_MS }, completed);
       } else if (kind === 'clear') {

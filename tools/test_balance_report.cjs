@@ -5,7 +5,7 @@ const os=require('node:os');
 const path=require('node:path');
 const {spawnSync}=require('node:child_process');
 const {JSDOM}=require(require.resolve('jsdom',{paths:[path.resolve(__dirname,'../client')]}));
-const {simulateRetries,evaluateChecks,parseOptions,catalog,targets,seedFor,simulateRetryChunk,mergeRetryChunks,finalizeRetries}=require('./simulate_maps.cjs');
+const {simulateRetries,evaluateChecks,parseOptions,catalog,targets,seedFor,simulateRetryChunk,mergeRetryChunks,finalizeRetries,spawnAssistMechanisms}=require('./simulate_maps.cjs');
 const {renderBalanceReport,renderReportFile}=require('./render_balance_report.cjs');
 const {resolveSnapshot}=require('./sync_content_cache.cjs');
 const config=require('../content/game-config.json');
@@ -54,7 +54,7 @@ test('retry handles unused support tiers and sequences with no wins without misl
   const easy=simulateRetries(catalog[0],2,()=>({won:true,stars:1}));
   assert.equal(easy.averageAttempts,1);
   assert.equal(easy.totalAttempts,2);
-  assert.equal(easy.hasSpawnPressure,false);
+  assert.equal(easy.hasSpawnPressure,true);
   assert.equal(easy.byAssist[1].samples,0);
   assert.equal(easy.byAssist[1].winRate,null);
   const lost=simulateRetries(catalog[9],2,()=>({won:false,stars:0}));
@@ -71,11 +71,17 @@ test('retry chunks merge into the same aggregate as the sequential path',()=>{
   const merged=finalizeRetries(map,12,mergeRetryChunks([simulateRetryChunk(map,0,5,fake),simulateRetryChunk(map,5,7,fake)]));
   assert.deepEqual(merged,sequential);
 });
+test('assist mechanisms reflect real objectives, obstacles and versioned spawn help',()=>{
+  assert.deepEqual(spawnAssistMechanisms(catalog[4]),['directMatch','preparedCombo']);
+  assert.deepEqual(spawnAssistMechanisms({...catalog[4],contentVersion:5}),[]);
+  assert.deepEqual(spawnAssistMechanisms(catalog[10]),[]);
+  assert.ok(spawnAssistMechanisms(catalog[7]).includes('obstacleCandidates'));
+});
 
 function profile(id=1,bot='normal',power='expected') {
   return {id,bot,power,difficulty:catalog[id-1].difficulty,samples:1000,winRate:.8,starRates:[.2,.2,.28,.32],
     movesHistogram:{10:320,12:280,14:200},averageMoves:11.7,averageProgress:.9,averageFailedProgress:.5,
-    averageWaves:20,averageReshuffles:0,maxChain:8,mapHash:'test-map-hash'};
+    averageWaves:20,averageReshuffles:0,maxChain:4,mapHash:'test-map-hash'};
 }
 
 test('check assessment retains small-sample tolerance, strict star coverage and strategic comparison',()=>{
@@ -90,7 +96,8 @@ test('check assessment retains small-sample tolerance, strict star coverage and 
   assert.equal(evaluateChecks([profile(1,'basic')],100,true).status,'not-applicable');
   const basic={...profile(1,'basic'),winRate:.8},strategic={...profile(1,'strategic'),winRate:.69};
   assert.equal(evaluateChecks([basic,strategic],100,true).status,'failed');
-  assert.equal(evaluateChecks([basic,{...strategic,winRate:.7}],100,true).status,'passed');
+  assert.equal(evaluateChecks([basic,{...strategic,winRate:.7}],100,true).status,'failed');
+  assert.equal(evaluateChecks([basic,{...strategic,winRate:.8}],100,true).status,'passed');
 });
 
 test('CLI rejects malformed sample counts and selections before simulations start',()=>{
@@ -105,6 +112,16 @@ test('CLI rejects malformed sample counts and selections before simulations star
   assert.equal(options.project,'demo');
   assert.equal(options.jobs,3);
   assert.ok(parseOptions([]).jobs>=1);
+  assert.equal(parseOptions([]).source,'server');
+  assert.equal(parseOptions(['--source','local','--assist-seeds','2000']).assistCount,2000);
+  for(const args of [['--source','invalid'],['--assist-seeds','-1'],['--source','local','--offline']])assert.throws(()=>parseOptions(args));
+});
+test('v6 overview exposes paired assistance separately from retry survivor buckets',()=>{
+  const report=fixture();report.assistReports=[{id:5,rates:[0,.1,.2,.3].map((assist,i)=>({assist,samples:2000,winRate:.2+i*.1})),passed:true}];
+  const dom=new JSDOM(renderBalanceReport(report));
+  const section=dom.window.document.getElementById('paired-assist');
+  assert.match(section.textContent,/2\.000 seed/);assert.match(section.textContent,/50,0%/);
+  dom.window.close();
 });
 
 function fixture() {

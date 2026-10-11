@@ -36,7 +36,7 @@ function tileTransform(frame: ReturnType<typeof cellMotion>): TileTransform {
 export function createBoardMotionFrame(visuals: CellVisual[], pitch: number): BoardMotionFrame {
   const animated: BoardMotionFrame['animated'] = [];
   const cells = visuals.map(visual => {
-    if (visual.hidden || !(visual.dx || visual.dy || visual.clearing || visual.changed || visual.flashing || visual.sourceAnimation)) return null;
+    if (visual.hidden || !(visual.dx || visual.dy || visual.clearing || visual.changed || visual.flashing || visual.sourceAnimation || visual.settling)) return null;
     const frame = cellMotion(visual, pitch, 0, 1);
     const values = {
       transform: makeMutable(tileTransform(frame)),
@@ -54,7 +54,7 @@ export function updateBoardMotionFrame(frame: BoardMotionFrame, progress: number
   for (const cell of frame.animated) {
     const next = cellMotion(cell.visual, frame.pitch, progress, pulse);
     cell.values.transform.value = tileTransform(next);
-    if (cell.visual.clearing || cell.visual.sourceAnimation) cell.values.opacity.value = next.opacity;
+    if (cell.visual.clearing || cell.visual.sourceAnimation || cell.visual.settling) cell.values.opacity.value = next.opacity;
     if (cell.visual.flashing && cell.visual.flashAt !== null) {
       cell.values.flashOpacity.value = cellImpactOpacity(cell.visual, progress);
     }

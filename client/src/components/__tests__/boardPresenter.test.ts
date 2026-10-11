@@ -27,6 +27,31 @@ function fixture(reduceMotion = false, resolutionStep?: BoardResolutionStep) {
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => jest.useRealTimers());
 
+it('presents reward-free settlement after landing, with the final board between fade phases', async () => {
+    const f = fixture(false);
+    const landed = { ...f.board, score: 17 }, final = { ...landed, reshuffles: 1 };
+    const step = { ...f.step, effects: [], falls: [], after: final, settlement: { before: landed, reason: 'cascade-cap' as const } };
+    const play = f.playback.presenter.present({ kind: 'step', step });
+    await flush();
+    expect(f.setBoard.mock.calls.at(-1)![0]).toEqual(landed);
+    expect(f.effect()).toMatchObject({ kind: 'settle', direction: 'out' });
+    f.finish(); await flush();
+    expect(f.setBoard.mock.calls.at(-1)![0]).toEqual(final);
+    expect(f.effect()).toMatchObject({ kind: 'settle', direction: 'in' });
+    f.finish(); await play.finished;
+    expect(f.setEffect.mock.calls.at(-1)![0]).toBeNull();
+});
+
+it('settlement fades all cells over two 75ms phases and respects reduced motion', () => {
+    for (const direction of ['out','in'] as const) {
+        const effect = { id: 1, kind: 'settle' as const, direction };
+        const visual = buildCellVisuals(effect, null)[0];
+        expect(cellMotion(visual, 50, 0, 1).opacity).toBe(direction === 'out' ? 1 : 0);
+        expect(cellMotion(visual, 50, 1, 1).opacity).toBe(direction === 'out' ? 0 : 1);
+        expect(buildCellVisuals(effect, null, true)[0].settling).toBeUndefined();
+    }
+});
+
 function engineFixture() {
     const board = new BoardEngine(getLevel(5)).snapshot();
     board.tiles = Array.from({ length: 49 }, (_, i) => ({

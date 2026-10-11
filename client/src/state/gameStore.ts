@@ -55,7 +55,7 @@ interface GameState {
   syncProgress: () => Promise<void>;
   setNotice: (notice: string) => void;
 }
-const CLIENT_VERSION = '1.4.0';
+const CLIENT_VERSION = '1.6.0';
 const chapterCache = new Map<string, MapSummary[]>();
 let recoveryInFlight: Promise<void> | null = null,
   mutationQueue = Promise.resolve(),

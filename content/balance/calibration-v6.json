@@ -1,0 +1,1108 @@
+{
+  "suite": "training",
+  "status": "failed",
+  "trainingSeeds": 150,
+  "coarseSeeds": 40,
+  "results": [
+    {
+      "map": {
+        "contentVersion": 6,
+        "id": 1,
+        "chapterId": "chapter-1",
+        "orderInChapter": 1,
+        "name": "Màn 1",
+        "difficulty": "easy",
+        "layout": [
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            3,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            2,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "initialSeals": [],
+        "objectives": [
+          {
+            "id": "main",
+            "type": "Collect",
+            "tileKind": 1,
+            "target": 30
+          }
+        ],
+        "moves": 8,
+        "baseExp": 100,
+        "starThresholds": {
+          "threeStarMaxMovesUsed": 6,
+          "twoStarMaxMovesUsed": 7
+        },
+        "spawnPolicy": {
+          "weights": {
+            "1": 100,
+            "2": 100,
+            "3": 100,
+            "4": 100
+          },
+          "collectionPressure": 0.45,
+          "comboChance": 0.05,
+          "obstaclePressure": 0,
+          "candidates": 4,
+          "setupChance": 0.3
+        },
+        "retryAssistPolicy": {
+          "thresholds": [
+            3,
+            5,
+            7
+          ],
+          "reductions": [
+            0.1,
+            0.2,
+            0.3
+          ]
+        }
+      },
+      "report": {
+        "win": 0.9,
+        "median": 6,
+        "starRates": [
+          0.09999999999999998,
+          0.07333333333333336,
+          0.2533333333333333,
+          0.5733333333333334
+        ],
+        "thresholds": {
+          "threeStarMaxMovesUsed": 6,
+          "twoStarMaxMovesUsed": 7
+        },
+        "loss": 0.05383333333333345
+      },
+      "evaluated": 20,
+      "trainingSeeds": 150
+    },
+    {
+      "map": {
+        "contentVersion": 6,
+        "id": 2,
+        "chapterId": "chapter-1",
+        "orderInChapter": 2,
+        "name": "Màn 2",
+        "difficulty": "easy",
+        "layout": [
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            3,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            2,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "initialSeals": [],
+        "objectives": [
+          {
+            "id": "main",
+            "type": "Collect",
+            "tileKind": 2,
+            "target": 30
+          }
+        ],
+        "moves": 8,
+        "baseExp": 100,
+        "starThresholds": {
+          "threeStarMaxMovesUsed": 6,
+          "twoStarMaxMovesUsed": 7
+        },
+        "spawnPolicy": {
+          "weights": {
+            "1": 100,
+            "2": 100,
+            "3": 100,
+            "4": 100
+          },
+          "collectionPressure": 0.45,
+          "comboChance": 0.1,
+          "obstaclePressure": 0,
+          "candidates": 4,
+          "setupChance": 0.3
+        },
+        "retryAssistPolicy": {
+          "thresholds": [
+            3,
+            5,
+            7
+          ],
+          "reductions": [
+            0.1,
+            0.2,
+            0.3
+          ]
+        }
+      },
+      "report": {
+        "win": 0.9066666666666666,
+        "median": 6,
+        "starRates": [
+          0.09333333333333338,
+          0.05999999999999994,
+          0.29333333333333333,
+          0.5533333333333333
+        ],
+        "thresholds": {
+          "threeStarMaxMovesUsed": 6,
+          "twoStarMaxMovesUsed": 7
+        },
+        "loss": 0.058500000000000045
+      },
+      "evaluated": 20,
+      "trainingSeeds": 150
+    },
+    {
+      "map": {
+        "contentVersion": 6,
+        "id": 4,
+        "chapterId": "chapter-1",
+        "orderInChapter": 4,
+        "name": "Màn 4",
+        "difficulty": "easy",
+        "layout": [
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            3,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            2,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "initialSeals": [],
+        "objectives": [
+          {
+            "id": "main",
+            "type": "Collect",
+            "tileKind": 4,
+            "target": 30
+          },
+          {
+            "id": "secondary",
+            "type": "Collect",
+            "tileKind": 2,
+            "target": 30
+          }
+        ],
+        "moves": 8,
+        "baseExp": 100,
+        "starThresholds": {
+          "threeStarMaxMovesUsed": 6,
+          "twoStarMaxMovesUsed": 7
+        },
+        "spawnPolicy": {
+          "weights": {
+            "1": 100,
+            "2": 100,
+            "3": 100,
+            "4": 100
+          },
+          "collectionPressure": 0.45,
+          "comboChance": 0.1,
+          "obstaclePressure": 0,
+          "candidates": 4,
+          "setupChance": 0.3
+        },
+        "retryAssistPolicy": {
+          "thresholds": [
+            3,
+            5,
+            7
+          ],
+          "reductions": [
+            0.1,
+            0.2,
+            0.3
+          ]
+        }
+      },
+      "report": {
+        "win": 0.88,
+        "median": 6,
+        "starRates": [
+          0.12,
+          0.09333333333333338,
+          0.2799999999999999,
+          0.5066666666666667
+        ],
+        "thresholds": {
+          "threeStarMaxMovesUsed": 6,
+          "twoStarMaxMovesUsed": 7
+        },
+        "loss": 0.06716666666666658
+      },
+      "evaluated": 20,
+      "trainingSeeds": 150
+    },
+    {
+      "map": {
+        "contentVersion": 6,
+        "id": 5,
+        "chapterId": "chapter-1",
+        "orderInChapter": 5,
+        "name": "Màn 5",
+        "difficulty": "hard",
+        "layout": [
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            3,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            2,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "initialSeals": [],
+        "objectives": [
+          {
+            "id": "main",
+            "type": "Battle",
+            "target": 2819,
+            "enemy": {
+              "id": "enemy-5",
+              "name": "Yêu thú",
+              "artKey": "beast"
+            }
+          }
+        ],
+        "moves": 18,
+        "baseExp": 100,
+        "starThresholds": {
+          "threeStarMaxMovesUsed": 15,
+          "twoStarMaxMovesUsed": 16
+        },
+        "spawnPolicy": {
+          "weights": {
+            "1": 100,
+            "2": 100,
+            "3": 100,
+            "4": 100
+          },
+          "collectionPressure": 0.6,
+          "comboChance": 0.08,
+          "obstaclePressure": 0.3,
+          "candidates": 4,
+          "setupChance": 0.15
+        },
+        "retryAssistPolicy": {
+          "thresholds": [
+            3,
+            5,
+            7
+          ],
+          "reductions": [
+            0.1,
+            0.2,
+            0.3
+          ]
+        }
+      },
+      "report": {
+        "win": 0.22666666666666666,
+        "median": 17,
+        "starRates": [
+          0.7733333333333333,
+          0.13999999999999999,
+          0.04,
+          0.04666666666666667
+        ],
+        "thresholds": {
+          "threeStarMaxMovesUsed": 15,
+          "twoStarMaxMovesUsed": 16
+        },
+        "loss": 0.0035500000000000106
+      },
+      "evaluated": 1348,
+      "trainingSeeds": 150
+    },
+    {
+      "map": {
+        "contentVersion": 6,
+        "id": 6,
+        "chapterId": "chapter-1",
+        "orderInChapter": 6,
+        "name": "Màn 6",
+        "difficulty": "easy",
+        "layout": [
+          [
+            -1,
+            0,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            0,
+            0,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            0,
+            0,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            0,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            0,
+            0,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            0,
+            0,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            0,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "initialSeals": [
+          {
+            "row": 0,
+            "column": 0
+          },
+          {
+            "row": 6,
+            "column": 0
+          },
+          {
+            "row": 3,
+            "column": 0
+          }
+        ],
+        "objectives": [
+          {
+            "id": "main",
+            "type": "BreakSeals",
+            "target": 3
+          }
+        ],
+        "moves": 7,
+        "baseExp": 100,
+        "starThresholds": {
+          "threeStarMaxMovesUsed": 4,
+          "twoStarMaxMovesUsed": 5
+        },
+        "spawnPolicy": {
+          "weights": {
+            "1": 100,
+            "2": 100,
+            "3": 100,
+            "4": 20
+          },
+          "collectionPressure": 0,
+          "comboChance": 0.12,
+          "obstaclePressure": 0,
+          "candidates": 4,
+          "setupChance": 0.3
+        },
+        "retryAssistPolicy": {
+          "thresholds": [
+            3,
+            5,
+            7
+          ],
+          "reductions": [
+            0.1,
+            0.2,
+            0.3
+          ]
+        }
+      },
+      "report": {
+        "win": 0.8933333333333333,
+        "median": 4,
+        "starRates": [
+          0.10666666666666669,
+          0.17999999999999994,
+          0.17333333333333334,
+          0.54
+        ],
+        "thresholds": {
+          "threeStarMaxMovesUsed": 4,
+          "twoStarMaxMovesUsed": 5
+        },
+        "loss": 0.020216666666666605
+      },
+      "evaluated": 22,
+      "trainingSeeds": 150
+    },
+    {
+      "map": {
+        "contentVersion": 6,
+        "id": 7,
+        "chapterId": "chapter-1",
+        "orderInChapter": 7,
+        "name": "Màn 7",
+        "difficulty": "medium",
+        "layout": [
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            3,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            2,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "initialSeals": [],
+        "objectives": [
+          {
+            "id": "main",
+            "type": "Battle",
+            "target": 2185,
+            "enemy": {
+              "id": "enemy-7",
+              "name": "Yêu thú",
+              "artKey": "beast"
+            }
+          }
+        ],
+        "moves": 16,
+        "baseExp": 100,
+        "starThresholds": {
+          "threeStarMaxMovesUsed": 13,
+          "twoStarMaxMovesUsed": 14
+        },
+        "spawnPolicy": {
+          "weights": {
+            "1": 100,
+            "2": 100,
+            "3": 100,
+            "4": 100
+          },
+          "collectionPressure": 0.25,
+          "comboChance": 0.1,
+          "obstaclePressure": 0.125,
+          "candidates": 4,
+          "setupChance": 0.25
+        },
+        "retryAssistPolicy": {
+          "thresholds": [
+            3,
+            5,
+            7
+          ],
+          "reductions": [
+            0.1,
+            0.2,
+            0.3
+          ]
+        }
+      },
+      "report": {
+        "win": 0.6,
+        "median": 14,
+        "starRates": [
+          0.4,
+          0.1933333333333333,
+          0.18000000000000002,
+          0.22666666666666666
+        ],
+        "thresholds": {
+          "threeStarMaxMovesUsed": 13,
+          "twoStarMaxMovesUsed": 14
+        },
+        "loss": 0.00021666666666666774
+      },
+      "evaluated": 1330,
+      "trainingSeeds": 150
+    },
+    {
+      "map": {
+        "contentVersion": 6,
+        "id": 9,
+        "chapterId": "chapter-1",
+        "orderInChapter": 9,
+        "name": "Màn 9",
+        "difficulty": "easy",
+        "layout": [
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            3,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            2,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "initialSeals": [],
+        "objectives": [
+          {
+            "id": "main",
+            "type": "Battle",
+            "target": 1693,
+            "enemy": {
+              "id": "enemy-9",
+              "name": "Yêu thú",
+              "artKey": "beast"
+            }
+          }
+        ],
+        "moves": 14,
+        "baseExp": 100,
+        "starThresholds": {
+          "threeStarMaxMovesUsed": 11,
+          "twoStarMaxMovesUsed": 12
+        },
+        "spawnPolicy": {
+          "weights": {
+            "1": 100,
+            "2": 100,
+            "3": 100,
+            "4": 100
+          },
+          "collectionPressure": 0,
+          "comboChance": 0.12,
+          "obstaclePressure": 0,
+          "candidates": 4,
+          "setupChance": 0.3
+        },
+        "retryAssistPolicy": {
+          "thresholds": [
+            3,
+            5,
+            7
+          ],
+          "reductions": [
+            0.1,
+            0.2,
+            0.3
+          ]
+        }
+      },
+      "report": {
+        "win": 0.9,
+        "median": 11,
+        "starRates": [
+          0.09999999999999998,
+          0.20000000000000007,
+          0.19999999999999996,
+          0.5
+        ],
+        "thresholds": {
+          "threeStarMaxMovesUsed": 11,
+          "twoStarMaxMovesUsed": 12
+        },
+        "loss": 0.0025500000000001134
+      },
+      "evaluated": 1348,
+      "trainingSeeds": 150
+    },
+    {
+      "map": {
+        "contentVersion": 6,
+        "id": 10,
+        "chapterId": "chapter-1",
+        "orderInChapter": 10,
+        "name": "Màn 10",
+        "difficulty": "very-hard",
+        "layout": [
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            3,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            2,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          [
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1
+          ]
+        ],
+        "initialSeals": [],
+        "objectives": [
+          {
+            "id": "main",
+            "type": "Boss",
+            "target": 3255,
+            "enemy": {
+              "id": "enemy-10",
+              "name": "Yêu vương",
+              "artKey": "beast"
+            }
+          }
+        ],
+        "moves": 20,
+        "baseExp": 100,
+        "starThresholds": {
+          "threeStarMaxMovesUsed": 18,
+          "twoStarMaxMovesUsed": 19
+        },
+        "spawnPolicy": {
+          "weights": {
+            "1": 100,
+            "2": 100,
+            "3": 100,
+            "4": 100
+          },
+          "collectionPressure": 0.85,
+          "comboChance": 0.05,
+          "obstaclePressure": 0.425,
+          "candidates": 4,
+          "setupChance": 0.1
+        },
+        "retryAssistPolicy": {
+          "thresholds": [
+            3,
+            5,
+            7
+          ],
+          "reductions": [
+            0.1,
+            0.2,
+            0.3
+          ]
+        }
+      },
+      "report": {
+        "win": 0.1,
+        "median": 19,
+        "starRates": [
+          0.9,
+          0.026666666666666672,
+          0.06,
+          0.013333333333333334
+        ],
+        "thresholds": {
+          "threeStarMaxMovesUsed": 18,
+          "twoStarMaxMovesUsed": 19
+        },
+        "loss": 0.001666666666666667
+      },
+      "evaluated": 1338,
+      "trainingSeeds": 150
+    }
+  ],
+  "failures": [
+    {
+      "id": 3,
+      "error": "Map 3: no candidate satisfies training win/star and Collect median gates; constraints were not relaxed"
+    },
+    {
+      "id": 8,
+      "error": "Map 8: no candidate satisfies training win/star and Collect median gates; constraints were not relaxed"
+    }
+  ]
+}

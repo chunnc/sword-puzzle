@@ -21,7 +21,7 @@ function band(rate,range,tolerance=0) {
 function renderBalanceReport(report) {
   const run=report.run??{},checks=report.checks??{status:'not-run',tolerance:0,results:[],failures:[]};
   const source=report.source??null;
-  const sourceLabels={server:['Server (vừa đồng bộ)','good'],cache:['Cache local','neutral'],authoring:['Dữ liệu authoring','quiet']};
+  const sourceLabels={server:['Server (vừa đồng bộ)','good'],cache:['Cache local','neutral'],local:['Authoring local (chưa publish)','quiet'],authoring:['Dữ liệu authoring','quiet']};
   const [sourceLabel,sourceKind]=source?[...(sourceLabels[source.kind]??[source.kind??'—','neutral'])]:[null,null];
   const maps=new Map((report.maps??[]).map(m=>[m.id,m]));
   const profiles=report.reports??[],retries=report.retries??[];
@@ -56,10 +56,13 @@ function renderBalanceReport(report) {
       <summary><span>${escape(mapLabel(r.id))}</span><span class="muted">${escape(r.bot)} / ${escape(powerNames[r.power]??r.power)}</span></summary>
       <div class="detail-body"><div><h3>Số lượt đổi ô khi thắng</h3>${histogram(r.movesHistogram,'Số ván thắng theo số lượt đổi ô')}
       <p class="muted">${m?`Ngân sách ${m.moves} lượt · 3 sao ≤ ${m.starThresholds.threeStarMaxMovesUsed} · 2 sao ≤ ${m.starThresholds.twoStarMaxMovesUsed}.`:''} Kỹ năng không tính vào lượt đổi ô.</p></div>
-      <div><h3>Diễn biến ván chơi</h3><dl class="metrics"><dt>Tiến độ nhiệm vụ trung bình</dt><dd>${percent(r.averageProgress)}</dd>
+      <div><h3>Diễn biến ván chơi</h3><dl class="metrics"><dt>Median lượt đổi ô khi thắng</dt><dd>${number(r.medianMoves,1)}</dd><dt>Settlement / hành động</dt><dd>${percent(r.settlementRate)}</dd>
+      <dt>Thế chuẩn bị tạo / dùng</dt><dd>${number(r.metrics?.setups)} / ${number(r.metrics?.setupUsed)}</dd><dt>Charge tạo / kích hoạt</dt><dd>${number(r.metrics?.chargesCreated)} / ${number(r.metrics?.chargesActivated)}</dd>
+      <dt>Tiến độ nhiệm vụ trung bình</dt><dd>${percent(r.averageProgress)}</dd>
       <dt>Tiến độ khi thua</dt><dd>${percent(r.averageFailedProgress)}</dd><dt>Đợt giải quyết trung bình / ván</dt><dd>${number(r.averageWaves,2)}</dd>
       <dt>Chain lớn nhất</dt><dd>${number(r.maxChain)}</dd><dt>Xáo bàn trung bình / ván</dt><dd>${number(r.averageReshuffles,2)}</dd></dl>
       <p class="muted">Các đợt giải quyết bao gồm cả đổi ô và kỹ năng.</p>
+      ${r.waveCounts?`<h3>Wave / hành động</h3>${histogram(r.waveCounts,'Phân bố wave trên mỗi hành động')}`:''}
       ${m?`<h3>Mục tiêu map</h3><ul>${m.objectives.map(o=>`<li>${escape(o.type)}${o.type==='Collect'?` · loại ô ${escape(o.tileKind)}`:''}: ${number(o.target)}</li>`).join('')}</ul>`:''}
       ${gate?.failures.length?`<ul class="failure-list">${gate.failures.map(f=>`<li>${escape(f)}</li>`).join('')}</ul>`:''}
       <small class="hash">Map hash: ${escape(r.mapHash)}</small></div></div></details>`;
@@ -139,6 +142,7 @@ ${checks.failures.length?`<div class="error-panel"><strong>${checks.enabled?'Cá
 <p class="muted">Khoảng mục tiêu áp dụng cho normal / sức mạnh dự kiến. Dung sai kiểm tra: ${number(checks.tolerance*100)} điểm phần trăm${checks.tolerance?' do mẫu dưới 1.000 seed':''}. Strategic / dự kiến được đối chiếu với basic cùng sức mạnh khi có dữ liệu; các profile khác dùng để tham khảo.</p>
 ${!retries.length?'<p class="notice"><strong>Chưa chạy retry.</strong> Thêm <code>--retry-seeds 100</code> hoặc chạy <code>npm run maps:release</code> để quan sát hỗ trợ sau chuỗi thua.</p>':''}
 </section>
+${report.assistReports?.length?`<section id="paired-assist"><div class="section-heading"><h2>Assist trên cùng bộ seed</h2><p>Normal / dự kiến · ${number(report.assistReports[0].rates[0].samples)} seed mỗi mức</p></div><div class="panel table-wrap"><table><thead><tr><th>Map</th><th>Không assist</th><th>10%</th><th>20%</th><th>30%</th><th>Gate</th></tr></thead><tbody>${report.assistReports.map(r=>`<tr><th>${escape(r.id)}</th>${r.rates.map(rate=>`<td>${percent(rate.winRate)}</td>`).join('')}<td>${badge(r.passed?'Đạt':'Không đạt',r.passed?'good':'bad')}</td></tr>`).join('')}</tbody></table></div></section>`:''}
 <section><div class="section-heading"><h2>Chi tiết từng map</h2><p>Mở map để so sánh tất cả bot, sức mạnh và retry.</p></div>${mapDetails}</section>
 <section><div class="section-heading"><h2>Khoảng mục tiêu độ khó</h2></div><div class="panel target-table"><table><thead><tr><th>Độ khó</th><th>Thắng</th><th>3 sao</th></tr></thead><tbody>${Object.entries(report.targets).map(([name,t])=>`<tr><th scope="row">${escape(difficultyNames[name]??name)}</th><td>${percent(t.win[0])}–${percent(t.win[1])}</td><td>${percent(t.three[0])}–${percent(t.three[1])}</td></tr>`).join('')}</tbody></table></div></section>
 <footer><p>Report tự chứa, xem được offline. Bot dùng engine thật với kiếm thanh-phong và kỹ năng nhat-kiem. Thống kê mô phỏng dùng để đối chiếu cân bằng map.</p>${source?`<p>Nguồn dữ liệu: ${escape(sourceLabel)} · project <code>${escape(source.project)}</code> · content v${escape(source.version)} · snapshot <code>${escape(source.hashes?.snapshot??'—')}</code>${source.cacheFile?` · cache <code>${escape(source.cacheFile)}</code>`:''}</p>`:''}<p>Run ${escape(run.id??'—')} · Config hash <code>${escape(report.configHash??'—')}</code></p></footer>

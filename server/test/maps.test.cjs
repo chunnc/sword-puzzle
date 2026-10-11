@@ -6,6 +6,12 @@ test('all map documents round trip and config wire payload excludes map data',()
  assert.equal(maps.length,40);assert.equal(game.contentWire(content).levels,undefined);
  for(const map of maps)assert.deepEqual(game.mapFromDocument(game.mapToDocument(map),content),map);
 });
+test('a multi-Collect win requires complete progress for both objective IDs',()=>{
+ const map=maps[2],report={outcome:'won',movesUsed:5,objectiveProgress:{main:30,secondary:30},extraMovesUsed:false};
+ assert.equal(runs.parseRunReport(report,map).outcome,'won');
+ assert.throws(()=>runs.parseRunReport({...report,objectiveProgress:{main:30,secondary:29}},map));
+ assert.throws(()=>runs.parseRunReport({...report,objectiveProgress:{main:30}},map));
+});
 test('profile migration and normalization do not need map definitions',()=>{
  const p=game.profileFromLegacy([{levelId:1,stars:3},{levelId:2,stars:0}],content);
  assert.equal(p.totalExp,130);assert.equal(game.highestUnlocked(p.levels,content),3);

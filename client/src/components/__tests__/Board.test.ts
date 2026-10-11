@@ -569,6 +569,11 @@ describe('Skia Board integration', () => {
     expect(seal.props.y + seal.props.paragraph.getHeight()).toBeLessThanOrEqual(bounds.top + bounds.height);
   });
 
+  it.each(['out','in'] as const)('plays settlement %s over 75ms on the UI thread', direction => {
+    mount({ visualEffect: { id: 81, kind: 'settle', direction } });
+    expect(withTiming).toHaveBeenCalledWith(1, { duration: 75 }, expect.any(Function));
+  });
+
   it('uses the slower timing sequence, ignores HUD-only updates and cancels on cleanup', () => {
     const effect: BoardVisualEffect = { id: 1, kind: 'clear', cleared: [0], changed: [1], effects: [{ kind: 'fire', cells: [0], source: 0, damage: 0, qi: 0 }] };
     mount({ visualEffect: effect });

@@ -1,4 +1,4 @@
-# Map authoring and balance (content v4)
+# Map authoring and balance (local content v6)
 
 `game-config.json` is the global versioned configuration, without map layouts.
 `game-maps.json` is the authoring catalog, with top-first `number[][]` matrices.
@@ -20,6 +20,7 @@ Author layouts without pre-existing matches. Initialization only redraws `-1` po
 never moves explicit pieces, and tries up to 200 boards before rejecting a dead layout.
 Do not publish content which fails seed validation. Runtime reshuffles after a player action
 may move previously explicit ordinary pieces, since they are no longer initial constraints.
+Collect objectives cap their target at 30 items; validation rejects larger targets.
 
 Firestore encodes `layout` as `layoutRows: [{cells: [...]}]` because nested arrays are not
 supported. Both `gameMaps` and the map pinned inside `runs` use that encoding. API clients
@@ -56,12 +57,45 @@ and computes stars/rewards. This is not replay-based anti-cheat.
 
 Swap usage = initial budget + granted extra moves - moves remaining. Skills do not count as
 paid swaps. Wins always earn 1 star; thresholds use paid swaps, including those after ads.
-Retry assistance reduces spawn pressure by 10/20/30% after 3/5/7 consecutive losses. It does
-not grant moves or change star thresholds, and wins reset the streak. Abandonment does neither.
+Retry assistance activates at 3/5/7 consecutive losses (10/20/30%). In v6 non-legacy maps it
+adds that amount to direct-match and setup probability and reduces collection/obstacle pressure.
+It does not grant moves, damage or change star thresholds. Wins reset the streak; abandonment does neither.
 
 Maps 11–40 carry `legacy` seed-generation/obstacle rules. Their original random sequence can
 be reproduced using the historical seed; server-issued seeds vary across new attempts.
 Historical v3 snapshots and pending wins still use the old registry and rules.
+
+## Combo seeding and prepared moves (v6)
+
+`spawnPolicy.comboChance` controls direct matches from refill. After waves 1/2/3/4,
+the probability is `min(1, comboChance + assist) × 1/.5/.25/0`. Four refill candidates
+also discourage natural cascades after wave 1. Every swap/skill has at most four waves.
+The cap includes the initial wave and does not suppress charged-piece effects within a wave.
+
+At the cap the engine repairs remaining matches, preferring newly spawned ordinary pieces.
+A bounded constructive fallback retains barriers and charged-piece kind/tier/count. Stabilization
+awards no damage, objective progress, Qi or score. Optional resolution `settlement` carries the
+landing board; the presenter plays falls then fades to the settled board in 150 ms, with no extra
+clear wave. Reduced motion presents the final board directly.
+
+`spawnPolicy.setupChance` is required and finite in 0–1 for v6; historical v5 maps may omit it.
+Once the cascade ends, `min(1, setupChance + assist)` may prepare one legal swap that makes a
+match of four or five ordinary pieces (70/30 length preference, five falls back to four).
+Only ordinary tiles spawned in the final refill can change, and the resulting board must have
+no immediate match. Search is bounded to 64 candidate boards; failure keeps the original board.
+Constructive rearrangements skip setup because refill-cell provenance has been lost.
+
+Maps 1–2 collect one type; maps 3–4 collect two distinct types, capped at 30 per objective.
+All objectives must complete. Only unfinished Collect kinds receive collection pressure.
+Collect calibration searches 8–14 paid-swap budgets and requires winning median 6–10.
+Skills do not count as paid swaps. Calibration uses training seeds only; validation is acceptance,
+not parameter selection. Infeasible calibration is reported without relaxing the target or wave cap.
+With `--apply`, successful maps are updated and failed maps keep their input configuration;
+`calibration-v6.json` records both results and failures and the command exits nonzero.
+
+Historical v3/v5 runs keep the old engine path. In particular v5 uses its ×1.5 chain boost,
+stops injected matches at refill wave 6, and retains the 20-wave safety cap. Legacy maps 11–40
+ignore both probabilities and retain their historical RNG, regardless of current content version.
 
 ## Validation and calibration
 
@@ -80,18 +114,22 @@ reshuffles and retry attempts. Basic bots sometimes select weaker moves; normal 
 objectives/resources; strategic bots evaluate independent sampled futures. None sees the actual
 future RNG. Minimum, expected and stronger loadouts retain progression benefits.
 
-Calibration searches objective targets and sensible move budgets, then star thresholds. Maps
+Calibration searches objective targets and sensible move budgets, then star thresholds. Collect
+maps retain target 30 per kind and search comboChance .05/.10/.15, collectionPressure
+0/.15/.30/.45/.60 and budgets 8–14. Battle and boss targets may reach 12000/20000. Maps
 with authored obstacle puzzles vary move budgets instead of moving obstacles. Validation seeds
 are disjoint from training. A release check fails if normal expected-power win/3-star rates fall
-outside the selected difficulty bands, a star tier is unobserved, or strategic bots substantially
-underperform basic bots. CI no longer runs bot simulations; it validates authoring data and the
+outside the selected difficulty bands, a result tier is unobserved, or strategic bots have lower win/three-star rates
+than basic bots. CI no longer runs bot simulations; it validates authoring data and the
 report tooling only. Device playtests and actual user metrics are still needed before expanding
 gameplay changes beyond maps 1–10.
 
 ### Server sync and local cache
 
-`maps:simulate`, `maps:check`, and `maps:release` always run against the content published on
-the game server, never directly against the authoring files:
+`maps:simulate`, `maps:check`, and `maps:release` default to server content.
+Use `--source local` explicitly for unpublished authoring data; it never reads/writes Firestore.
+`--offline` remains server-cache-only and cannot combine with `--source local`.
+The server path works as follows:
 
 1. Read `gameConfig/current` to learn the active `contentVersion` (one Firestore read per run).
 2. Look for a local cache of that exact version at
@@ -201,7 +239,8 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 PATH=/opt/homebrew/opt/openjdk@21/bin:$PA
   firebase emulators:exec --project demo-kiem-khai --only auth,firestore 'npm run api:test:maps'
 ```
 
-The checked-in pilot evidence is [balance/pilot-v4.md](balance/pilot-v4.md), with the full
+The historical published pilot evidence is [balance/pilot-v5.md](balance/pilot-v5.md).
+The local v6 acceptance report is [balance/pilot-v6.md](balance/pilot-v6.md), with the full
 JSON report alongside it. `tools/merge_balance_reports.cjs` verifies per-map hashes and
 combines independently run validation batches; it rejects stale or incomplete evidence.
 For all new and historical API integration tests, use `npm run api:test:integration:local`
@@ -230,3 +269,19 @@ Add `--smoke` to create one disposable guest, check chapter access and idempoten
 then delete that test Auth user, installation, profile, runs and statistics. It never grants a
 win/reward or modifies another player's data. The normal shared auth throttle remains governed
 by its existing expiration policy. Results are saved under ignored `.balance-reports/`.
+
+### Local v6 acceptance
+
+```sh
+node tools/calibrate_maps.cjs --apply
+node tools/simulate_maps.cjs --source local --seeds 1000 --powers minimum,expected,strong --retry-seeds 100 --assist-seeds 2000 --check --output .balance-reports/v6-release.json
+node tools/merge_balance_reports.cjs .balance-reports/v6-release.json
+```
+
+The simulator records paid-swap median, waves/action histograms, settlement rate, prepared
+setups/fallbacks/use and charge creation/activation. Paired assist uses the same 2,000 seeds
+at 0/10/20/30%; maps 5/7/10 require +5 percentage points at maximum assist and no intermediate
+regression over 2 points. Balance reports are bound to map and engine hashes. A failed merge
+writes an explicitly FAILED pilot report and exits nonzero; it never claims release readiness.
+Content v6/client 1.6.0 are local changes; production still uses v5 until a separate rollout.
+Device animation/layout playtesting remains required.

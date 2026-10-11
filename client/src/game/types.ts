@@ -73,6 +73,8 @@ export interface BoardResolutionStep {
     falls: BoardAnimationFall[];
     damage: number;
     chain: number;
+    /** Refill board before a reward-free rearrangement; after is the durable settled board. */
+    settlement?: { before: BoardSnapshot; reason: 'cascade-cap' | 'no-moves' };
 }
 export interface BoardActionAnimation {
     kind: 'swap' | 'skill';

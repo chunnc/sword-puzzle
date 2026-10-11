@@ -29,10 +29,11 @@ export function GameplayInfo({ level, board, compact, reduceMotion, duration }: 
   level: LevelDefinition; board: BoardSnapshot; compact: boolean; reduceMotion: boolean; duration: number;
 }) {
   const content = getContentVersion(board.contentVersion);
+  const multipleGoals = level.objectives.length > 1 ? { height: compact ? 116 : 140 } : undefined;
   return (
     <View testID="game-info" style={[styles.info, compact && styles.compactInfo]}>
       <View style={styles.infoRow}>
-        <ArtPanel art="gameplayObjective" testID="game-objective-panel" style={[styles.objective, compact && styles.compactObjective, level.objectives.length > 1 && { height: compact ? 116 : 140 }]}>
+        <ArtPanel art="gameplayObjective" testID="game-objective-panel" style={[styles.objective, compact && styles.compactObjective, multipleGoals]}>
           <ScrollView showsVerticalScrollIndicator={false}>
             {level.objectives.map(objective => {
               const battle = objective.type === 'Battle' || objective.type === 'Boss';
@@ -49,7 +50,7 @@ export function GameplayInfo({ level, board, compact, reduceMotion, duration }: 
             })}
           </ScrollView>
         </ArtPanel>
-        <ArtPanel art="gameplayMoves" testID="game-moves-panel" style={[styles.moves, compact && styles.compactMoves]}>
+        <ArtPanel art="gameplayMoves" testID="game-moves-panel" style={[styles.moves, compact && styles.compactMoves, multipleGoals]}>
           <Text maxFontSizeMultiplier={1.2} style={styles.movesLabel}>Lượt</Text>
           <Text maxFontSizeMultiplier={1.2} style={[styles.movesNumber, compact && styles.compactGoalNumber, board.moves <= 3 && styles.lowMoves]}>{board.moves}</Text>
         </ArtPanel>
