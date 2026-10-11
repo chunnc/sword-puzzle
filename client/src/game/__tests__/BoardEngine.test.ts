@@ -2,6 +2,8 @@ import { BoardEngine } from '../BoardEngine';
 import { getLevel } from '../levels';
 import { TileKind, GoalKind, type BoardSnapshot, type Tile } from '../types';
 import { SKILLS, SWORDS, installContent, mapToLevel, validateMap, type SkillId } from '../domain';
+const currentConfig = require('../../../../content/game-config.json');
+const currentMaps = require('../../../../content/game-maps.json');
 const tile = (kind: number, chargeTier: 0 | 4 | 5 = 0): Tile => ({ kind, chargeTier, locked: false });
 function fixture(): BoardSnapshot { const s = new BoardEngine(getLevel(5)).snapshot(); s.tiles = Array.from({ length: 49 }, (_, i) => tile((i % 7 + 2 * Math.floor(i / 7)) % 4)); s.level = { ...s.level, objectives: [{ id: 'main', type: 'Battle', target: 100000, enemy: { id: 'test', name: 'Test', artKey: 'beast' } }] }; s.objectiveProgress = { main: 0 }; s.swordQi = 100; s.loadout = { sword: 'thanh-phong', skills: ['nhat-kiem'] }; return s; }
 function matching(size: number, kind: TileKind, tier: 0 | 4 | 5 = 0) {
@@ -149,11 +151,12 @@ describe('board rules v2', () => {
         expect(b.animation!.steps[0].damage).toBe(0);
     } });
     describe('combo seeding', () => {
-        const { config, maps: sources } = require('../../../../content/balance/fixtures/v5.json');
-        const legacy = require('../../../../content/game-content.json');
+        const modernContent = currentConfig;
         const modern = (id = 1, chance = 1) => {
-            const content = installContent(JSON.parse(JSON.stringify(config)));
-            const raw = JSON.parse(JSON.stringify(sources[id - 1]));
+            const content = installContent(JSON.parse(JSON.stringify(modernContent)));
+            const raw = JSON.parse(JSON.stringify(currentMaps[Math.min(id - 1, currentMaps.length - 1)]));
+            delete raw.tutorial;
+            raw.objectives = [{ id: 'main', type: 'Battle', target: 100000, enemy: { id: 'test', name: 'Test', artKey: 'beast' } }];
             raw.spawnPolicy.comboChance = chance;
             return new BoardEngine(mapToLevel(validateMap(raw, content), 24680, 0, content));
         };
@@ -165,7 +168,7 @@ describe('board rules v2', () => {
             }
             return internals;
         };
-        afterEach(() => installContent(legacy));
+        afterEach(() => installContent(currentConfig));
         it('seeds a combo among spawned tiles when comboChance is 1', () => {
             const engine = modern(1, 1), internals = carve(engine, 3);
             const falls = internals.refill(1);
@@ -192,14 +195,14 @@ describe('board rules v2', () => {
         it('boosts the seeding chance on chains and stops at the injected chain limit', () => {
             const internals = modern(1, .4) as any;
             expect(internals.refillChance(1)).toBeCloseTo(.4);
-            expect(internals.refillChance(2)).toBeCloseTo(.6);
-            expect(internals.refillChance(5)).toBeCloseTo(.6);
-            expect(internals.refillChance(6)).toBe(0);
+            expect(internals.refillChance(2)).toBeCloseTo(.2);
+            expect(internals.refillChance(3)).toBeCloseTo(.1);
+            expect(internals.refillChance(4)).toBe(0);
         });
         it('caps injected cascades at the chain limit and settles the board', () => {
             const engine = modern(1, 1);
             expect(engine.trySwap(...engine.legalMoves()[0])).toBe(true);
-            expect(engine.animation!.steps.length).toBeLessThanOrEqual(20);
+            expect(engine.animation!.steps.length).toBeLessThanOrEqual(4);
             expect(engine.snapshot().tiles.some(t => t === null)).toBe(false);
         });
     });

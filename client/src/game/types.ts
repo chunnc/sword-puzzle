@@ -1,6 +1,6 @@
 import type { Loadout, PlayerProfile, PlayerOperation, SkillId, Stars, LevelResult, LevelDefinition, ObjectiveProgress, RunReport } from './domain';
 export type { Loadout, SkillId, Stars, PlayerProfile, LevelDefinition, ObjectiveProgress } from './domain';
-// Historical v3 IDs and renderer semantics. Gameplay IDs resolve through the versioned registry.
+// Renderer tile kinds; gameplay IDs resolve through the current tile registry.
 export enum TileKind {
     Sword = 0,
     Fire = 1,
@@ -30,6 +30,7 @@ export interface BoardSnapshot {
     totalExpAtStart?: number;
     directorPressure?: number;
     reshuffles?: number;
+    tutorialStep?: number | null;
     contentVersion: number;
     level: LevelDefinition;
     runId: string;
@@ -121,7 +122,7 @@ export interface SaveData {
     pendingStart?: { runId: string; levelId: number; contentVersion?: number; previousRunId: string | null };
     retiredRunId?: string;
     pendingFinish?: { runId: string; levelId: number; contentVersion: number; report: RunReport };
-    schemaVersion: 3;
+    schemaVersion: 4;
     ownerId: string | null;
     profile: PlayerProfile;
     active: BoardSnapshot | null;

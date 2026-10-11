@@ -1,11 +1,10 @@
 import { create } from 'zustand';
 import { BoardEngine, newId } from '../game/BoardEngine';
 import { BoardActionCancelled, runBoardAction } from '../game/boardAction';
-import { getLevel } from '../game/levels';
-import { CONTENT, getContentVersion, registerContent, gradeStars, highestUnlocked, installContent, isCompleted, normalizeProfile, type Loadout, type PlayerOperation, type SkillId, type MapSummary, type RunReport, chapterForLevel, mapStars, mapToLevel, validateMap } from '../game/domain';
+import { CONTENT, registerContent, highestUnlocked, installContent, isCompleted, normalizeProfile, type Loadout, type PlayerOperation, type SkillId, type MapSummary, type RunReport, chapterForLevel, mapStars, mapToLevel, validateMap } from '../game/domain';
 import { clearSave, emptySave, loadSave, persistSave } from '../game/save';
 import type { BoardActionAnimation, BoardActionPresenter, BoardActionStart, CellPosition, SaveData, Stars, WinSummary } from '../game/types';
-import { checkHealth, createGuest, fetchBootstrap, fetchContent, fetchProfile, GameApiError, isApiConfigured, isConnectionError, setConnectionErrorHandler, loginAccount, registerAccount, syncProfile, createAdIntent, checkAdIntent, deviceSession, logoutAccount, fetchChapterMaps, startRun, finishRun } from '../services/api';
+import { checkHealth, createGuest, fetchBootstrap, fetchProfile, GameApiError, isApiConfigured, isConnectionError, setConnectionErrorHandler, loginAccount, registerAccount, syncProfile, createAdIntent, checkAdIntent, deviceSession, logoutAccount, fetchChapterMaps, startRun, finishRun } from '../services/api';
 import { initializeRewardedAds, showRewardedForIntent } from '../services/ads';
 import { resetDeviceIdentity } from '../services/device';
 import { clearSession, getCurrentSession, getSessionGeneration, loadSession, saveSession, type SessionData } from '../services/session';
@@ -56,7 +55,7 @@ interface GameState {
   syncProgress: () => Promise<void>;
   setNotice: (notice: string) => void;
 }
-const CLIENT_VERSION = '1.7.0';
+const CLIENT_VERSION = '1.8.0';
 let startRequestInFlight = false;
 let recoveryInFlight: Promise<void> | null = null,
   mutationQueue = Promise.resolve(),
@@ -88,11 +87,7 @@ async function loadChapter(chapterId: string) {
     if (epoch !== getSessionGeneration()) throw new GameApiError('SESSION_CHANGED');
     const payload = result.value;
     if (!Number.isSafeInteger(payload.contentVersion) || payload.contentVersion < 3 || payload.chapterId !== chapterId || !Array.isArray(payload.maps)) throw new GameApiError('INVALID_RESPONSE');
-    if (payload.contentVersion !== CONTENT.version) {
-      const config = await fetchContent(payload.contentVersion);
-      if (epoch !== getSessionGeneration()) throw new GameApiError('SESSION_CHANGED');
-      installContent(config);
-    }
+    if (payload.contentVersion !== CONTENT.version) throw new GameApiError('CONTENT_MISMATCH');
     const currentChapter = CONTENT.chapters?.find(c => c.id === chapterId);
     if (!currentChapter || payload.maps.length !== currentChapter.lastLevelId-currentChapter.firstLevelId+1
       || payload.maps.some((m,i) => m.chapterId !== chapterId || m.id !== currentChapter.firstLevelId+i || m.orderInChapter !== i+1 || !['easy','medium','hard','very-hard'].includes(m.difficulty) || !Array.isArray(m.objectives))) throw new GameApiError('INVALID_RESPONSE');
@@ -324,52 +319,15 @@ async function record(engine: BoardEngine, previous: SaveData): Promise<BoardAct
   const snapshot = engine.snapshot(),
     levelId = snapshot.levelId;
   if (engine.won) {
-    const map = engine.levelDefinition.mapDefinition;
-    const stars = map ? mapStars(map, engine.movesUsed) : gradeStars(engine.moves, engine.levelDefinition.moves);
-    if (map) {
-      await persistNext({ ...previous, active: snapshot, lastWin: null, pendingFinish: {
-        runId: snapshot.runId, levelId, contentVersion: snapshot.contentVersion,
-        report: { outcome: 'won', movesUsed: engine.movesUsed, objectiveProgress: snapshot.objectiveProgress, extraMovesUsed: snapshot.extraMovesUsed }
-      } });
-      let accepted = false;
-      try { accepted = await submitRunFinish(); } catch (error) { await failure(error); }
-      return { changed: true, won: true, lost: false, stars, levelId, animation: engine.animation,
-        summary: accepted ? useGameStore.getState().save.lastWin ?? undefined : undefined };
-    }
-    const operation: PlayerOperation = {
-      id: snapshot.runId,
-      kind: 'win',
-      levelId,
-      stars,
-      objectiveProgress: snapshot.objectiveProgress
-    };
-    useGameStore.setState({
-      notice: ''
-    });
-    await persistNext({
-      ...previous,
-      active: snapshot,
-      lastWin: null,
-      pending: {
-        contentVersion: snapshot.contentVersion,
-        operation
-      }
-    });
+    const stars = mapStars(engine.levelDefinition.mapDefinition!, engine.movesUsed);
+    await persistNext({ ...previous, active: snapshot, lastWin: null, pendingFinish: {
+      runId: snapshot.runId, levelId, contentVersion: snapshot.contentVersion,
+      report: { outcome: 'won', movesUsed: engine.movesUsed, objectiveProgress: snapshot.objectiveProgress, extraMovesUsed: snapshot.extraMovesUsed }
+    } });
     let accepted = false;
-    try {
-      accepted = await submitPending();
-    } catch (error) {
-      await failure(error);
-    }
-    return {
-      changed: true,
-      won: true,
-      lost: false,
-      stars,
-      levelId,
-      animation: engine.animation,
-      summary: accepted ? useGameStore.getState().save.lastWin ?? undefined : undefined
-    };
+    try { accepted = await submitRunFinish(); } catch (error) { await failure(error); }
+    return { changed: true, won: true, lost: false, stars, levelId, animation: engine.animation,
+      summary: accepted ? useGameStore.getState().save.lastWin ?? undefined : undefined };
   }
   await persistNext({
     ...previous,
@@ -426,7 +384,10 @@ async function hydrate() {
     bindingChanged = false;
   }
   const current = useGameStore.getState().save;
-  const saved = current.ownerId === session.uid ? current : await loadSave(session.uid, fetchContent);
+  const loaded = current.ownerId === session.uid ? current : await loadSave(session.uid);
+  const saved = loaded.active && loaded.active.contentVersion < 8
+    ? { ...loaded, active: null, lastWin: null, pendingStart: undefined, pendingFinish: undefined, retiredRunId: undefined }
+    : loaded;
   if (epoch !== lifecycle) return;
   // Keep pending ownership visible even if authentication fails before profile fetch.
   if (current.ownerId !== session.uid) useGameStore.setState({ save: { ...saved, ownerId: session.uid } });
@@ -446,11 +407,9 @@ async function hydrate() {
   });
   await submitPending();
   if (epoch !== lifecycle) return;
-  if (getContentVersion(content.version).layoutCodes) {
-    if (useGameStore.getState().save.pendingStart) await recoverRunStart();
-    const restored = useGameStore.getState().save.active;
-    await loadChapter(chapterForLevel(restored?.levelId ?? highestUnlocked(useGameStore.getState().save.profile.levels)).id);
-  }
+  if (useGameStore.getState().save.pendingStart) await recoverRunStart();
+  const restored = useGameStore.getState().save.active;
+  await loadChapter(chapterForLevel(restored?.levelId ?? highestUnlocked(useGameStore.getState().save.profile.levels)).id);
   useGameStore.setState({
     initialized: true,
     authRequired: false,
@@ -554,19 +513,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (!await submitPending()) return false;
         if (uncertainStart) return uncertainStart.levelId === levelId;
         const current = get().save;
-        if (!Number.isInteger(levelId) || levelId < 1 || !CONTENT.layoutCodes && levelId > highestUnlocked(current.profile.levels)) return false;
+        if (!Number.isInteger(levelId) || levelId < 1 || levelId > CONTENT.levelCount) return false;
         const previousEngine = current.active ? new BoardEngine(current.active.level, current.active) : null;
-        if (CONTENT.layoutCodes) {
-          if (previousEngine?.lost && !await finishActive('lost')) return false;
-          await persistNext({ ...get().save, pendingStart: { runId: newId(), levelId,
-            previousRunId: current.active?.level.mapDefinition ? current.active.runId : null } });
-          await recoverRunStart();
-          const ch = get().save.active!.level.mapDefinition!.chapterId;
-          if (get().chapterId !== ch) set({ chapterId: ch, chapterMaps: [] });
-          return true;
-        }
-        const active = new BoardEngine(getLevel(levelId), null, { loadout: current.profile.loadout, totalExp: current.profile.totalExp }).snapshot();
-        await persistNext({ ...current, active, lastWin: null });
+        if (previousEngine?.lost && !await finishActive('lost')) return false;
+        await persistNext({ ...get().save, pendingStart: { runId: newId(), levelId,
+          previousRunId: current.active?.level.mapDefinition ? current.active.runId : null } });
+        await recoverRunStart();
+        const ch = get().save.active!.level.mapDefinition!.chapterId;
+        if (get().chapterId !== ch) set({ chapterId: ch, chapterMaps: [] });
         return true;
       } catch (error) { await failure(error); return false; }
     }).finally(() => { startRequestInFlight = false; });
@@ -698,7 +652,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       const saved = previous.ownerId === session.uid ? previous : emptySave();
       const active = saved.active;
       await persistNext({ ...saved, ownerId: session.uid, profile, active });
-      if (CONTENT.layoutCodes) await loadChapter(chapterForLevel(active?.levelId ?? highestUnlocked(profile.levels)).id);
+      await loadChapter(chapterForLevel(active?.levelId ?? highestUnlocked(profile.levels)).id);
       set({ session: remote.session, initialized: true, authRequired: false, bootError: '', notice: '' });
       await submitPending();
     } catch (error) {

@@ -1,9 +1,12 @@
-require('../lib/domain/game').installContent(require('../../content/game-content.json'));
+const game=require('../lib/domain/game');
+const content=game.installContent(require('../../content/game-config.json'));
+const maps=require('../../content/game-maps.json').map(raw=>game.mapToLevel(game.validateMap(raw,content),24680,0,content));
+content.levels=maps;
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {emptyProfile,applyOperation,totalExp,realmForExp}=require('../lib/domain/game');
+const {emptyProfile,applyOperation,totalExp,realmForExp}=game;
 const {processOperations,parseOperations,profileFromDocument,mergeProfiles}=require('../lib/domain/profile');
-const win=(id,levelId,stars)=>({id,kind:'win',levelId,stars,objectiveProgress:{main:require('../lib/domain/game').getLevelData(levelId).objectives[0].target}});
+const win=(id,levelId,stars)=>({id,kind:'win',levelId,stars,objectiveProgress:{main:(content.levels.find(level=>level.id===levelId)??content.levels[0]).objectives[0].target}});
 test('first win, replay and star improvement are idempotent by operation ID',()=>{
  let p=emptyProfile(),receipts=new Map();
  for(const op of [win('win_zero_1',1,0),win('win_one__1',1,1),win('win_two__1',1,2),win('win_three1',1,3)]){
@@ -13,7 +16,8 @@ test('first win, replay and star improvement are idempotent by operation ID',()=
  assert.equal(p.totalExp,100);assert.equal(p.coins,180);assert.deepEqual(p.levels,[{levelId:1,stars:3}]);
 });
 test('purchase conflict on two devices is reconciled, and a duplicate item cannot be charged twice',()=>{
- let p=emptyProfile();for(let i=1;i<=3;i++)p=applyOperation(p,win(`win_level_${i}`,i,0)).profile;
+ let p=emptyProfile();for(let i=1;i<=2;i++)p=applyOperation(p,win(`win_level_${i}`,i,0)).profile;
+ p.levels.push({levelId:3,stars:0});
  p.coins=200;
  const a={id:'purchase_one',kind:'purchase',category:'sword',itemId:'trong-nhac'},b={id:'purchase_two',kind:'purchase',category:'skill',itemId:'ngu-kiem'};
  const r=processOperations(p,[a,b],new Map());assert.equal(r.profile.coins,0);assert.equal(r.rejected[0].reason,'INSUFFICIENT_COINS');
@@ -41,7 +45,7 @@ test('validates batches, star range, IDs and unsupported operations',()=>{
  assert.throws(()=>parseOperations([win('bad',1,3)]));assert.throws(()=>parseOperations([win('valid_id_1',1,4)]));assert.throws(()=>parseOperations([win('valid_id_1',1,0),win('valid_id_1',1,0)]));assert.throws(()=>parseOperations(Array.from({length:51},(_,i)=>win(`valid_id_${i}`,1,3))));
 });
 test('all published results yield the expected EXP totals and realm slots',()=>{
- for(const [stars,exp]of[[0,1200],[1,2400],[2,3200],[3,4000]])assert.equal(totalExp(Array.from({length:40},(_,i)=>({levelId:i+1,stars}))),exp);
+ for(const [stars,exp]of[[0,60],[1,120],[2,160],[3,200]])assert.equal(totalExp(Array.from({length:2},(_,i)=>({levelId:i+1,stars}))),exp);
  assert.equal(realmForExp(1499).skillSlots,1);assert.equal(realmForExp(1500).skillSlots,2);assert.equal(realmForExp(110000).name,'Chân Tiên');
 });
 

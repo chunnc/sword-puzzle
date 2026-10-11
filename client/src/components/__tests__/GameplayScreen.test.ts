@@ -247,7 +247,7 @@ describe('gameplay presentation and exit behavior', () => {
       expect(Native.StyleSheet.flatten(view('game-moves-panel').props.style).height).toBe(compact?116:140);
       expect(renderer.root.findByType(GameplayInfo).props.board.objectiveProgress).toEqual({main:30,secondary:12});
       expect(renderer.root.findAllByType(Native.Text).some(t=>String(t.props.children).includes('✓'))).toBe(true);
-    } finally {installContent(require('../../../../content/game-content.json'));}
+    } finally {installContent(require('../../../../content/game-config.json'));}
   });
 
   it('holds collection progress until every cascade and fall finishes, then counts one beat at a time', async () => {

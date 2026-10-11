@@ -122,7 +122,7 @@ it('offers retry for an uncertain purchase while health is good', async () => {
   mockState.initialized = true;
   mockState.notice = 'Timeout';
   mockState.save.pending = {
-    contentVersion: 3,
+    contentVersion: 8,
     operation: {
       id: 'purchase_pending',
       kind: 'purchase',

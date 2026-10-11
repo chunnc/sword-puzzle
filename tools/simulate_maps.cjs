@@ -158,9 +158,10 @@ function mergeRetryChunks(chunks) {
   return {attempts,unfinished,byAssist:[...byAssist.values()].sort((a,b)=>a.assist-b.assist),byAttempt};
 }
 function spawnAssistMechanisms(map) {
-  if(map.legacy||!map.retryAssistPolicy.reductions.some(a=>a>0))return [];
+  if(map.tutorial||!map.retryAssistPolicy.reductions.some(a=>a>0))return [];
   const p=map.spawnPolicy,mechanisms=[];
-  if(map.rulesMode ? map.rulesMode==='modern' : map.contentVersion>=6){if(p.comboChance<1)mechanisms.push('directMatch');if((p.setupChance??0)<1)mechanisms.push('preparedCombo');}
+  if(p.comboChance<1)mechanisms.push('directMatch');
+  if((p.setupChance??0)<1)mechanisms.push('preparedCombo');
   if(map.objectives.some(o=>o.type==='Collect')&&p.collectionPressure>0)mechanisms.push('collectionWeights');
   if(p.candidates>1&&p.obstaclePressure>0&&(map.initialSeals.length>0||map.layout.flat().some(id=>id===tileId('rock',content))))mechanisms.push('obstacleCandidates');
   return mechanisms;
@@ -195,7 +196,7 @@ function evaluateChecks(reports, count, enabled) {
     if(count>=1000&&r.starRates.slice(1).some(rate=>rate===0))failures.push(`Map ${r.id}: chưa quan sát đủ các mức 1–2–3 sao.`);
     if(below(r.winRate,t.win[0]-tolerance)||below(t.win[1]+tolerance,r.winRate))failures.push(`Map ${r.id}: tỷ lệ thắng nằm ngoài khoảng kiểm tra.`);
     if(below(r.starRates[3],t.three[0]-tolerance)||below(t.three[1]+tolerance,r.starRates[3]))failures.push(`Map ${r.id}: tỷ lệ 3 sao nằm ngoài khoảng kiểm tra.`);
-    if(content.version>=6&&!catalog[r.id-1].legacy){
+    if(content.version>=8){
       if(r.maxChain>4)failures.push(`Map ${r.id}: cascade vượt 4 wave.`);
       if(count>=1000&&catalog[r.id-1].objectives.every(o=>o.type==='Collect')&&(r.medianMoves<6||r.medianMoves>10))failures.push(`Map ${r.id}: median Collect ngoài 6–10 lượt.`);
       if(count>=1000&&r.starRates.some(rate=>rate===0))failures.push(`Map ${r.id}: chưa quan sát đủ bốn mức kết quả.`);
@@ -205,12 +206,12 @@ function evaluateChecks(reports, count, enabled) {
   for(const r of reports.filter(r=>r.bot==='strategic'&&r.power==='expected')) {
     const basic=reports.find(b=>b.id===r.id&&b.bot==='basic'&&b.power===r.power);
     if(basic) {
-      const failures=content.version>=6?(below(r.winRate,basic.winRate)||below(r.starRates[3],basic.starRates[3])?[`Map ${r.id}: strategic kém basic về win hoặc 3 sao.`]:[]):below(r.winRate+.1,basic.winRate)?[`Map ${r.id}: bot strategic có tỷ lệ thắng thấp hơn basic quá 10 điểm phần trăm.`]:[];
+      const failures=below(r.winRate,basic.winRate)||below(r.starRates[3],basic.starRates[3])?[`Map ${r.id}: strategic kém basic về win hoặc 3 sao.`]:[];
       results.push({id:r.id,bot:r.bot,power:r.power,gate:'strategy',passed:!failures.length,failures});
     }
   }
   const failures=results.flatMap(r=>r.failures);
-  for(const r of reports)if(content.version>=6&&!catalog[r.id-1].legacy&&r.maxChain>4)failures.push(`Map ${r.id} ${r.bot}/${r.power}: cascade vượt 4 wave.`);
+  for(const r of reports)if(r.maxChain>4)failures.push(`Map ${r.id} ${r.bot}/${r.power}: cascade vượt 4 wave.`);
   return {enabled,tolerance,results,failures,status:!enabled?'not-run':!results.length?'not-applicable':failures.length?'failed':'passed'};
 }
 
@@ -372,7 +373,7 @@ async function main(args) {
       command:['node','tools/simulate_maps.cjs',...args].map(s=>/^[\w./,=-]+$/.test(s)?s:JSON.stringify(s)).join(' '),
       maps:options.ids,bots:options.bots,powers:options.powers,retrySeeds:options.retryCount,jobs:options.jobs,status:error?'error':'completed',error},
     maps:options.ids.map(id=>{const m=catalog[id-1];return {id:m.id,name:m.name,difficulty:m.difficulty,moves:m.moves,objectives:m.objectives,
-      starThresholds:m.starThresholds,spawnPolicy:m.spawnPolicy,retryAssistPolicy:m.retryAssistPolicy,legacy:!!m.legacy};})};
+      starThresholds:m.starThresholds,spawnPolicy:m.spawnPolicy,retryAssistPolicy:m.retryAssistPolicy,tutorial:!!m.tutorial};})};
   for(const [filename,body]of[[jsonPath,JSON.stringify(report,null,2)+'\n'],[htmlPath,renderBalanceReport(report)]]) {
     fs.mkdirSync(path.dirname(filename),{recursive:true});fs.writeFileSync(filename,body);
   }

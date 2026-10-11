@@ -1,296 +1,52 @@
-# Map authoring and balance (local content v7)
+# Map authoring · content v8
 
-`game-config.json` is the global versioned configuration, without map layouts.
-`game-maps.json` is the authoring catalog, with top-first `number[][]` matrices.
-`game-content.json` is the immutable v3 historical catalog; do not rewrite it.
+`game-config.json` stores global progression and registry data. `game-maps.json` stores
+one map per numeric ID. The local catalog currently starts with two tutorial maps.
 
-## Tiles and layout
+Layouts are top-first matrices: `0` is a permanent hole, `-1` draws a random ordinary
+tile and positive values refer to `tiles[].id`. Explicit pieces cannot form a match before
+the player acts. Seals use zero-based top-first coordinates; engine board coordinates have
+their origin at the bottom. Firestore encodes layouts as `layoutRows: [{cells: [...]}]`.
 
-`0` is a permanent hole, `-1` draws from `normalTileIds`, and positive values reference
-`tiles[].id`. IDs need not be contiguous or ordered. The shipped registry maps 1/2/3/4/5
-to sword/fire/lightning/spirit/rock. Behaviors and artwork resolve through semantic keys;
-adding a new behavior requires client implementation before it can be published.
+Every map belongs to one chapter and has an immutable `mapVersion`, a tile registry, a
+percentage star rule and spawn/retry policies. New versions go into `gameMaps/{mapId}`;
+the document keeps a `versions` array and points `latestVersion` at the current map. Keep
+the map ID stable when revising a layout. Raise `mapVersion` when changing a published map.
 
-Explicit IDs describe initial pieces only. Gravity and refill can subsequently replace them.
-A rock remains an obstacle until broken. `initialSeals` uses zero-based `{row,column}`,
-where row 0 is the top. Seals cannot cover holes or rocks. Derived engine coordinates use
-y=0 at the bottom. Runtime snapshots store version-specific tile IDs.
+Tutorial maps add optional metadata:
 
-Author layouts without pre-existing matches. Initialization only redraws `-1` positions,
-never moves explicit pieces, and tries up to 200 boards before rejecting a dead layout.
-Do not publish content which fails seed validation. Runtime reshuffles after a player action
-may move previously explicit ordinary pieces, since they are no longer initial constraints.
-Collect objectives cap their target at 30 items; validation rejects larger targets.
-
-Firestore encodes `layout` as `layoutRows: [{cells: [...]}]` because nested arrays are not
-supported. Both `gameMaps` and the map pinned inside `runs` use that encoding. API clients
-receive the original matrix. No second width/height/mask is persisted.
-
-## Versioned collections and loading
-
-- `gameContent/{version}`: global rules, registry, chapter metadata and historical base EXP.
-- `gameMaps/{version}_{id}`: one immutable map with chapter ID and chapter order.
-- `gameConfig/current`: active version, minimum client version, ads flag.
-- `players/{uid}/runs/{runId}`: pinned map/rules reference, seed, assist, frozen loadout,
-  installation, attempt, status, normalized report and idempotent reward receipt.
-- `players/{uid}/mapStats/{id}`: starts, retries, wins, losses, abandoned runs, failure streak,
-  best stars/moves and first recorded win time. No historical attempts are invented.
-
-Deploy the composite index in `firestore.indexes.json`. Bootstrap contains no maps; chapter
-queries are server-side filters on version + chapter ID, ordered by `orderInChapter`.
-Map summaries exclude layout. Run start reads the selected map directly and returns details.
-Client cache keys contain version and chapter only; player stars/unlocks are separate.
-
-## Runs and rewards
-
-Start persists a client operation ID before calling the server. A retry of that operation
-returns the same seed and attempt, even across a catalog change. A deliberate restart creates
-a new operation ID. Starting another run abandons the previous active server run without
-increasing the failure streak. `installations.activeRunId` also finds an unfinished run after
-a local journal is lost, without affecting other installations. Returning to the map during play retains the local snapshot.
-
-A loss is submitted only when the player leaves the result or chooses retry, after any
-extra-move opportunity. Won results are submitted automatically. All outcomes are journaled
-before sending, and server transactions make starts/finishes idempotent. The client is trusted
-for gameplay reports in this release; the server verifies report structure, checks objectives,
-and computes stars/rewards. This is not replay-based anti-cheat.
-
-Swap usage = initial budget + granted extra moves - moves remaining. Skills do not count as
-paid swaps. For content v7 maps 1–10, a win earns 3 stars below 50% of the original move
-budget, 2 stars below 75%, and 1 star at or above 75%. Extra moves count as used moves but do
-not enlarge that denominator. Content v3–v6 and maps 11–40 keep their absolute move thresholds.
-Retry assistance activates at 3/5/7 consecutive losses (10/20/30%). In v6 non-legacy maps it
-adds that amount to direct-match and setup probability and reduces collection/obstacle pressure.
-It does not grant moves, damage or change star thresholds. Wins reset the streak; abandonment does neither.
-
-Maps 11–40 carry `legacy` seed-generation/obstacle rules. Their original random sequence can
-be reproduced using the historical seed; server-issued seeds vary across new attempts.
-Historical v3 snapshots and pending wins still use the old registry and rules.
-
-## Combo seeding and prepared moves (v6)
-
-`spawnPolicy.comboChance` controls direct matches from refill. After waves 1/2/3/4,
-the probability is `min(1, comboChance + assist) × 1/.5/.25/0`. Four refill candidates
-also discourage natural cascades after wave 1. Every swap/skill has at most four waves.
-The cap includes the initial wave and does not suppress charged-piece effects within a wave.
-
-At the cap the engine repairs remaining matches, preferring newly spawned ordinary pieces.
-A bounded constructive fallback retains barriers and charged-piece kind/tier/count. Stabilization
-awards no damage, objective progress, Qi or score. Optional resolution `settlement` carries the
-landing board; the presenter plays falls then fades to the settled board in 150 ms, with no extra
-clear wave. Reduced motion presents the final board directly.
-
-`spawnPolicy.setupChance` is required and finite in 0–1 for v6; historical v5 maps may omit it.
-Once the cascade ends, `min(1, setupChance + assist)` may prepare one legal swap that makes a
-match of four or five ordinary pieces (70/30 length preference, five falls back to four).
-Only ordinary tiles spawned in the final refill can change, and the resulting board must have
-no immediate match. Search is bounded to 64 candidate boards; failure keeps the original board.
-Constructive rearrangements skip setup because refill-cell provenance has been lost.
-
-Maps 1–2 collect one type; maps 3–4 collect two distinct types, capped at 30 per objective.
-All objectives must complete. Only unfinished Collect kinds receive collection pressure.
-Collect calibration searches 8–14 paid-swap budgets and requires winning median 6–10.
-Skills do not count as paid swaps. Calibration uses training seeds only; validation is acceptance,
-not parameter selection. Infeasible calibration is reported without relaxing the target or wave cap.
-With `--apply`, successful maps are updated and failed maps keep their input configuration;
-`calibration-v6.json` records both results and failures and the command exits nonzero.
-
-Historical v3/v5 runs keep the old engine path. In particular v5 uses its ×1.5 chain boost,
-stops injected matches at refill wave 6, and retains the 20-wave safety cap. Legacy maps 11–40
-ignore both probabilities and retain their historical RNG, regardless of current content version.
-
-Content v7 maps 1–10 use strict percentage star cutoffs: 3 stars below 50% and 2 below 75% of
-the original move budget. Extra swaps count as used, but do not increase the denominator; skills
-do not count. Runs pinned to v3–v6 and v7 maps 11–40 keep their absolute star thresholds.
-
-## Validation and calibration
-
-```sh
-npm run api:build
-npm run api:seed                      # validation only; no writes
-npm run maps:check                    # sync server content, then 100 validation seeds, all three bots
-npm run maps:release                  # sync server content, then 1000 seeds, three power profiles and retries
-npm run maps:test                     # report, retry aggregation, content cache and CLI checks
-CALIBRATION_SEEDS=150 npm run maps:calibrate # dry run, training seeds only
-node tools/calibrate_maps.cjs --apply # updates authoring data; never Firestore
+```json
+{
+  "tutorial": {
+    "type": "match-three",
+    "steps": [{
+      "from": { "row": 4, "column": 2 },
+      "to": { "row": 5, "column": 2 },
+      "text": "Kéo viên Kiếm xuống để ghép 3 viên."
+    }]
+  }
+}
 ```
 
-Reports include win/star rates, move histograms, failed-objective progress, cascade waves,
-reshuffles and retry attempts. Basic bots sometimes select weaker moves; normal bots prioritize
-objectives/resources; strategic bots evaluate independent sampled futures. None sees the actual
-future RNG. Minimum, expected and stronger loadouts retain progression benefits.
+Tutorial coordinates are one-based from the top. The engine highlights both cells, shows
+the direction, refills deterministically, and stabilizes any gravity match without reward.
+`comboChance`, `setupChance`, collection/obstacle pressure and retry assistance are zero on
+the first two maps. A different legal move dismisses the hint for that run; a retry starts it
+again. The hint step is saved with the run snapshot.
 
-Calibration searches objective targets and sensible move budgets, then star thresholds. Collect
-maps retain target 30 per kind and search comboChance .05/.10/.15, collectionPressure
-0/.15/.30/.45/.60 and budgets 8–14. Battle and boss targets may reach 12000/20000. Maps
-with authored obstacle puzzles vary move budgets instead of moving obstacles. Validation seeds
-are disjoint from training. A release check fails if normal expected-power win/3-star rates fall
-outside the selected difficulty bands, a result tier is unobserved, or strategic bots have lower win/three-star rates
-than basic bots. CI no longer runs bot simulations; it validates authoring data and the
-report tooling only. Device playtests and actual user metrics are still needed before expanding
-gameplay changes beyond maps 1–10.
+Content v8 maps use percentage stars: 3 stars below 50% and 2 stars below 75% of the
+original move budget. Extra moves do not enlarge that budget. Collect targets are capped at
+30; all objectives must finish before the run wins.
 
-### Server sync and local cache
-
-Current numeric-resource publication and independent map/config revisions are described
-in [MAP_VERSIONING.md](MAP_VERSIONING.md). Cache keys also include `catalogRevision`.
-
-`maps:simulate`, `maps:check`, and `maps:release` default to server content.
-Use `--source local` explicitly for unpublished authoring data; it never reads/writes Firestore.
-`--offline` remains server-cache-only and cannot combine with `--source local`.
-The server path works as follows:
-
-1. Read `gameConfig/current` for active `contentVersion` and `catalogRevision` (one read on cache hit).
-2. Look for a local cache of that exact version at
-   `.balance-reports/content-cache/{project}/v{version}-r{catalogRevision}.json` (revision zero omits the suffix).
-3. If the cache matches the active version, run all seeds from the cached file with no further
-   Firestore reads.
-4. Otherwise fetch `gameContent/{version}` and latest entries from numeric `gameMaps`
-   resources, validate them, recheck the pointer for races, and write the cache atomically.
-
-Cache files are validated again on every load, so a corrupt or outdated file is refetched
-instead of trusted. When the server publishes a new `contentVersion`, the next run syncs the
-new version; previous version files are kept so a rollback can serve from cache.
+## Seeding
 
 ```sh
-npm run maps:simulate -- --project sword-puzzle --seeds 100 --check     # default project from .firebaserc
-BALANCE_CACHE_DIR=/tmp/balance-cache npm run maps:simulate -- --offline # fail unless cache exists; no network
+npm run api:seed                         # validate locally; no writes
+npm run api:seed -- --reset-catalog      # validate a catalog reset; no writes
+npm run api:seed -- --project ID --firebase-cli --apply --reset-catalog
 ```
 
-`--project ID` selects the Firebase project; it defaults to the `.firebaserc` project.
-`--offline` skips the version check and runs from the newest cached version for that project.
-`BALANCE_CACHE_DIR` overrides the cache location. Authentication uses the existing Firebase CLI
-login via `tools/firebase_cli_credentials.mjs`; emulators are used when `FIRESTORE_EMULATOR_HOST`
-is set. A sync failure stops the run before any seed executes.
-
-Every report records its data source: project, content version, sync time, last version check,
-cache file, a SHA-256 hash per map and config, and a combined snapshot hash. The overview header
-shows whether the run used a freshly synced server snapshot or the local cache.
-
-### Parallel simulation
-
-First-attempt seeds and retry sequences are split into chunks and executed across worker threads,
-so a run uses every available CPU core by default. `--jobs N` caps the concurrency; `--jobs 1`
-runs in-process for debugging or profiling. Chunking depends on the core count, but every seed
-maps to the same absolute index regardless of `--jobs`, so reports are identical for any worker
-count; progress lines print as each profile's chunks finish.
-
-```sh
-npm run maps:simulate -- --jobs 4 --seeds 1000 --check
-```
-
-### Viewing a simulation report
-
-Every `maps:simulate`, `maps:check`, and `maps:release` invocation automatically writes a
-self-contained HTML report and a JSON data file. The terminal prints both paths. By default,
-files are saved under `.balance-reports/maps-<UTC timestamp>-<process ID>.*`. Open the HTML in
-a browser; it works offline and opens on an overview with exactly one row per map. Each row
-shows difficulty/move budget, first-attempt win/star rates, retry completion, mean attempts,
-conditional win rates at each assist level, and assessment status. Reports still export when
-`--check` fails, and a runtime failure exports the profiles completed before the error. The
-report header shows the synced or cached server snapshot that produced the numbers.
-
-```sh
-npm run maps:simulate -- --seeds 100 --powers minimum,expected,strong --retry-seeds 100 --check
-open .balance-reports/maps-<timestamp>-<process-ID>.html
-```
-
-`--output path.json` sets the JSON path; the timestamped HTML is saved alongside it.
-`--html-output path.html` sets an explicit HTML path; default HTML names preserve run history
-even when `ci.json` or `release.json` is overwritten by a later run. The report embeds its data
-and offers a JSON download. Its header records the command, data source (project, version, sync
-and check times), config/map/snapshot hashes, seed suite, sample counts, duration, and check
-status. JSON retains the fields used by the pilot merge tool.
-
-The overview defaults to normal/expected when that profile is present, otherwise an available
-profile. Selecting another bot or power updates values in place without duplicating map rows.
-A missing profile shows dashes and "Chưa chạy profile" while retaining the map and its retry
-data. Retry metrics always use normal/expected. Click a map to open all of its bot/power
-comparisons, move histograms, cascade/reshuffle metrics, and detailed retry results.
-
-Rebuild the current overview from an existing simulation JSON without running seeds again:
-
-```sh
-node tools/render_balance_report.cjs --input .balance-reports/report.json
-# Writes .balance-reports/report.overview.html
-node tools/render_balance_report.cjs --input .balance-reports/report.json --output .balance-reports/overview.html
-```
-
-Retry simulation is enabled with `--retry-seeds N`. Each map runs N independent sequences
-using normal/expected, a new deterministic seed for each attempt, and the map's retry assist
-policy. A sequence stops on its first win or after 30 attempts. The report includes:
-
-- Completed and unfinished sequences; mean attempts among completed sequences (null if none).
-- Per-assist-level attempts, wins, losses, win rates, and star rates; unused levels show no rate.
-- Per-attempt reach counts, wins, conditional win rate, and cumulative completion rate.
-- A flag identifying maps without effective spawn pressure, where retry assist has no effect.
-
-Assist-level rates are conditional on attempts that reach that level; 0% includes first attempts.
-They do not measure causal uplift versus an unassisted run on the same seeds. Assistance reduces
-spawn pressure, not the move budget or star thresholds. Cascade metrics count both skill and
-swap resolutions; failed-objective progress is reported separately from all-attempt progress.
-
-## Publishing
-
-```sh
-node tools/seed_game_content.mjs --apply --project PROJECT_ID
-```
-
-The seed tool validates all 40 maps and publishes the global config, immutable maps, historical
-v3 catalog and current pointer in one transaction. Existing unequal documents cause rejection;
-increment the content version instead. Deploy compatible client/API and Firestore indexes before
-switching the pointer. Implementation/testing does not deploy or write production data.
-
-Local API integration:
-
-```sh
-JAVA_HOME=/opt/homebrew/opt/openjdk@21 PATH=/opt/homebrew/opt/openjdk@21/bin:$PATH \
-  firebase emulators:exec --project demo-kiem-khai --only auth,firestore 'npm run api:test:maps'
-```
-
-The historical published pilot evidence is [balance/pilot-v5.md](balance/pilot-v5.md).
-The local v6 acceptance report is [balance/pilot-v6.md](balance/pilot-v6.md), with the full
-JSON report alongside it. `tools/merge_balance_reports.cjs` verifies per-map hashes and
-combines independently run validation batches; it rejects stale or incomplete evidence.
-For all new and historical API integration tests, use `npm run api:test:integration:local`
-inside the same Auth/Firestore emulator command above.
-
-### Using an existing Firebase CLI login
-
-When Application Default Credentials are not configured, seed with the CLI account selected
-for this workspace:
-
-```sh
-node tools/seed_game_content.mjs --firebase-cli --apply --project sword-puzzle
-```
-
-`--firebase-cli` uses short-lived access tokens in memory. It does not create a service-account
-key, print tokens, or install a seed function. Without `--apply`, the command remains an offline
-dry run. The default credential path remains available for CI/service-account environments.
-
-After deployment and seeding, verify the live version and index without creating users:
-
-```sh
-node tools/verify_live_game.mjs --project sword-puzzle
-```
-
-Add `--smoke` to create one disposable guest, check chapter access and idempotent start/abandon,
-then delete that test Auth user, installation, profile, runs and statistics. It never grants a
-win/reward or modifies another player's data. The normal shared auth throttle remains governed
-by its existing expiration policy. Results are saved under ignored `.balance-reports/`.
-
-### Local v6 acceptance
-
-```sh
-node tools/calibrate_maps.cjs --apply
-node tools/simulate_maps.cjs --source local --seeds 1000 --powers minimum,expected,strong --retry-seeds 100 --assist-seeds 2000 --check --output .balance-reports/v6-release.json
-node tools/merge_balance_reports.cjs .balance-reports/v6-release.json
-```
-
-The simulator records paid-swap median, waves/action histograms, settlement rate, prepared
-setups/fallbacks/use and charge creation/activation. Paired assist uses the same 2,000 seeds
-at 0/10/20/30%; maps 5/7/10 require +5 percentage points at maximum assist and no intermediate
-regression over 2 points. Balance reports are bound to map and engine hashes. A failed merge
-writes an explicitly FAILED pilot report and exits nonzero; it never claims release readiness.
-Content v7/client 1.7.0 are local changes; production currently uses v6 until a separate rollout.
-Device animation/layout playtesting remains required.
+The reset flag is required to shrink a previous catalog. On apply it is accepted only when
+`gameMaps` is empty. Seeding writes the current config and the two numeric map resources; it
+does not recreate historical content. This repository currently contains the local catalog
+only. Publishing to a shared project is a separate operation.

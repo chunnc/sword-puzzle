@@ -104,7 +104,7 @@ it('uses the wide artwork and metadata ratio only for network failures and prese
 
   act(() => useGameStore.setState({
     authRequired: false, notice: 'Timeout',
-    save: { ...emptySave(), pending: { contentVersion: 3, operation: { id: 'pending_purchase1', kind: 'purchase', category: 'skill', itemId: 'ngu-kiem' } } },
+    save: { ...emptySave(), pending: { contentVersion: 8, operation: { id: 'pending_purchase1', kind: 'purchase', category: 'skill', itemId: 'ngu-kiem' } } },
   }));
   expect(panel().props.art).toBe('dialogPanel');
   expect(panel().props.contentFit).toBe('fill');
@@ -211,7 +211,7 @@ it('closes after retry succeeds without replacing the mounted modal', async () =
 });
 
 it('keeps pending feedback stable and retries the operation instead of health', async () => {
-  useGameStore.setState({ online: true, notice: 'Timeout', save: { ...emptySave(), pending: { contentVersion: 3, operation: { id: 'pending_purchase1', kind: 'purchase', category: 'skill', itemId: 'ngu-kiem' } } } });
+  useGameStore.setState({ online: true, notice: 'Timeout', save: { ...emptySave(), pending: { contentVersion: 8, operation: { id: 'pending_purchase1', kind: 'purchase', category: 'skill', itemId: 'ngu-kiem' } } } });
   act(() => { renderer = create(tree()); });
   const originalPanel = panel(), originalText = texts(); commits.mockClear();
   act(() => useGameStore.setState({ checkingConnection: true, notice: 'A different failure', save: { ...useGameStore.getState().save, pending: { ...useGameStore.getState().save.pending! } } }));

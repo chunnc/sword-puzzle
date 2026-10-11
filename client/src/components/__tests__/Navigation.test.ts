@@ -71,12 +71,12 @@ describe('scene navigation', () => {
     mockParams = {};
     mockState.save = emptySave();
     mockState.foreground = true;
-    installContent(require('../../../../content/game-content.json'));
+    installContent(require('../../../../content/game-config.json'));
     mockState.chapterId='';mockState.chapterMaps=[];mockState.selectChapter.mockResolvedValue(undefined);
     mockRouter.canGoBack.mockReturnValue(true);
     mockState.startLevel.mockResolvedValue(true);
   });
-  afterEach(() => { act(() => { renderer?.unmount(); }); installContent(require('../../../../content/game-content.json')); });
+  afterEach(() => { act(() => { renderer?.unmount(); }); installContent(require('../../../../content/game-config.json')); });
 
   it.each([true, false])('requests a new run from the map and navigates only after success=%s', async (success) => {
     let finish!: (result: boolean) => void;

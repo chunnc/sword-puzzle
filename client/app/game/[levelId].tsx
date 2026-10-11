@@ -16,7 +16,6 @@ import { Notice } from '../../src/components/Notice';
 import { useSfx } from '../../src/audio/SfxProvider';
 import { BoardEngine } from '../../src/game/BoardEngine';
 import { skillTarget } from '../../src/game/skillTargets';
-import { getLevel } from '../../src/game/levels';
 import { tileId, CONTENT, SKILLS, realmForExp, type SkillId } from '../../src/game/domain';
 import { GoalKind, TileKind, type BoardActionPresenter, type BoardSnapshot, type CellPosition } from '../../src/game/types';
 import { useGameStore, type BoardActionResult } from '../../src/state/gameStore';
@@ -34,12 +33,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const playSfx = useSfx();
     const persisted = store.save.active?.levelId === levelId && store.save.retiredRunId !== store.save.active.runId ? store.save.active : null;
     const [board, setBoard] = useState<BoardSnapshot | null>(persisted);
-    const level = useMemo(() => { try {
-        return persisted?.level ?? board?.level ?? getLevel(levelId);
-    }
-    catch {
-        return null;
-    } }, [levelId, persisted?.level, board?.level]);
+    const level = useMemo(() => persisted?.level ?? board?.level ?? null, [persisted?.level, board?.level]);
     const [selected, setSelected] = useState<CellPosition | null>(null);
     const [targetSkill, setTargetSkill] = useState<SkillId | null>(null);
     const [targets, setTargets] = useState<CellPosition[]>([]);
@@ -161,6 +155,12 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const locked = !store.online || !store.foreground || store.recovering || store.authRequired || Boolean(store.save.pending || store.save.pendingFinish || store.save.pendingStart);
     const available = engine.availableSkills();
     const skill = content.skills.find(s => s.id === targetSkill);
+    const tutorial = !targetSkill ? board.level.mapDefinition?.tutorial : undefined;
+    const tutorialStep = tutorial && board.tutorialStep !== null && board.tutorialStep !== undefined ? tutorial.steps[board.tutorialStep] : undefined;
+    const tutorialMove = tutorialStep ? {
+        from: { x: tutorialStep.from.column - 1, y: level.board.height - tutorialStep.from.row },
+        to: { x: tutorialStep.to.column - 1, y: level.board.height - tutorialStep.to.row },
+    } : null;
     const targetMode = skillTarget(targetSkill);
     const required = targetMode === 'triple' ? 3 : targetMode === 'pair' || targetMode === 'chargedPair' ? 2 : 1;
     const preview: number[] = [];
@@ -322,7 +322,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const overlayOpen = help || leave || Boolean(result);
     const displayResult = result?.kind === 'won' && store.save.lastWin?.runId === result.runId
         ? { ...result, summary: store.save.lastWin } : result;
-    const cellSize = Math.min(Math.max(0, (viewport.width || width) - 28) / level.board.width, Math.max(0, height - 6) / level.board.height);
+    const cellSize = Math.min(Math.max(0, (viewport.width || width) - 28) / level.board.width, Math.max(0, height - 6 - (tutorialStep ? 40 : 0)) / level.board.height);
     const boardWidth = cellSize * level.board.width, boardHeight = cellSize * level.board.height;
     return (
       <ScreenFrame background={level.objectives.some(o => o.type === 'Boss') ? 'bgBoss' : 'bgGame'}>
@@ -332,8 +332,9 @@ function GameplaySession({ levelId }: { levelId: number }) {
             <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion} collectProgress={collectProgress}
                 duration={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects, effect.sourceActivation) : BOARD_CLEAR_MS} />
             <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setHeight(event.nativeEvent.layout.height)}>
+              {tutorialStep ? <Text accessibilityRole="text" style={styles.tutorialHint}>{tutorialStep.text}</Text> : null}
               <View style={{ width: boardWidth, height: boardHeight }}>
-                <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} showTargetingHint={false} locked={busy || overlayOpen || locked} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} onMotionStarted={onMotionStarted} onMotionFinished={onMotionFinished}
+                <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} tutorialMove={tutorialMove} showTargetingHint={false} locked={busy || overlayOpen || locked} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} onMotionStarted={onMotionStarted} onMotionFinished={onMotionFinished}
                   motionSession={spiritMotion} gridRef={gridRef} onGridLayout={measureFlightLayout} />
               </View>
             </View>
@@ -365,6 +366,7 @@ const styles = StyleSheet.create({
     scene: { flex: 1, minHeight: 0 },
     noticeLayer: { ...StyleSheet.absoluteFill, zIndex: 50 },
     boardSpace: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 6 },
+    tutorialHint: { alignSelf: 'center', color: colors.inkDeep, backgroundColor: colors.goldBright, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, fontSize: 13, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
     overlay: { ...StyleSheet.absoluteFill, zIndex: 30, backgroundColor: colors.veil, alignItems: 'center', justifyContent: 'center', padding: 12 },
     dialog: { width: '100%', maxWidth: 390, padding: 24, gap: 12 },
     dialogTitle: { fontSize: 22, fontWeight: '900', color: colors.ivory, textAlign: 'center' },

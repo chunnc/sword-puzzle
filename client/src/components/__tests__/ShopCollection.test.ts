@@ -52,7 +52,7 @@ describe('shop collection', () => {
     mockDimensions = { width: 390, height: 844, scale: 3, fontScale: 1 };
     mockState.save = emptySave();
     mockState.save.profile.coins = 1000;
-    mockState.save.profile.levels = Array.from({ length: 40 }, (_, i) => ({ levelId: i + 1, stars: 3 as const }));
+    mockState.save.profile.levels = Array.from({ length: 2 }, (_, i) => ({ levelId: i + 1, stars: 3 as const }));
     mockState.notice = '';
     mockState.purchase.mockImplementation(async (category, itemId) => {
       const item = (category === 'sword' ? SWORDS : SKILLS).find(item => item.id === itemId)!;

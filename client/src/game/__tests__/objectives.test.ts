@@ -1,34 +1,32 @@
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 import { BoardEngine } from '../BoardEngine';
-import { installContent, getLevelData, type GameContent, type ObjectiveDefinition } from '../domain';
+import { installContent, mapToLevel, validateMap, type GameContent, type ObjectiveDefinition } from '../domain';
 import { normalizeSnapshot } from '../save';
 import { pointToCell, cellBounds, displayIndices } from '../../components/boardVisuals';
-const seed = require('../../../../content/game-content.json');
+const seed = require('../../../../content/game-config.json');
+const maps = require('../../../../content/game-maps.json');
 const enemy = {
   id: 'boss',
   name: 'Boss',
   artKey: 'beast'
 };
 function fixture(objectives: ObjectiveDefinition[], width = 7, height = 7, holes: number[] = []) {
-  const content: GameContent = JSON.parse(JSON.stringify(seed));
-  content.version = 4;
-  const level = content.levels[0];
-  level.objectives = objectives;
-  level.board = {
-    width,
-    height,
-    activeCells: Array.from({
-      length: width * height
-    }, (_, i) => !holes.includes(i))
-  };
-  level.obstacles = {
-    rocks: 0,
-    seals: 0
-  };
-  installContent(content);
-  const snapshot = new BoardEngine(level).snapshot();
+  const content: GameContent = installContent(JSON.parse(JSON.stringify(seed)));
+  const raw = JSON.parse(JSON.stringify(maps[0]));
+  delete raw.tutorial;
+  raw.moves = 8;
+  raw.layout = Array.from({ length: height }, (_, row) => Array.from({ length: width }, (_, column) => holes.includes((height-1-row)*width+column) ? 0 : -1));
+  raw.objectives = [{ id: 'seed', type: 'Collect', tileKind: content.normalTileIds[0], target: 3 }];
+  const map = validateMap(raw, content), level = mapToLevel(map, 2468, 0, content);
+  const initial = new BoardEngine(level).snapshot();
+  const translated = objectives.map(objective => objective.type === 'Collect'
+    ? { ...objective, tileKind: content.normalTileIds[objective.tileKind] ?? objective.tileKind }
+    : objective);
+  level.objectives = translated;
+  level.mapDefinition!.objectives = translated;
+  const snapshot = { ...initial, level, objectiveProgress: Object.fromEntries(translated.map(o => [o.id, 0])) };
   snapshot.tiles = snapshot.tiles.map((t, i) => t ? {
-    kind: (i % width + 2 * Math.floor(i / width)) % 4,
+    kind: content.normalTileIds[(i % width + 2 * Math.floor(i / width)) % 4],
     chargeTier: 0,
     locked: false
   } : null);
@@ -58,7 +56,7 @@ it('one clear contributes to collection and boss damage independently', () => {
     enemy
   }]);
   for (let x = 0; x < 7; x++) snapshot.tiles[x] = {
-    kind: 0,
+    kind: 1,
     chargeTier: 0,
     locked: false
   };
@@ -90,7 +88,7 @@ it('killing the boss first does not finish an incomplete collection', () => {
     enemy
   }]);
   for (let x = 0; x < 7; x++) snapshot.tiles[x] = {
-    kind: 0,
+    kind: 1,
     chargeTier: 0,
     locked: false
   };
@@ -141,10 +139,10 @@ it('completes every objective with the final paid swap at zero moves', () => {
     enemy
   }]);
   snapshot.moves = 1;
-  snapshot.tiles[0]!.kind = 0;
-  snapshot.tiles[1]!.kind = 0;
-  snapshot.tiles[2]!.kind = 1;
-  snapshot.tiles[9]!.kind = 0;
+  snapshot.tiles[0]!.kind = 1;
+  snapshot.tiles[1]!.kind = 1;
+  snapshot.tiles[2]!.kind = 2;
+  snapshot.tiles[9]!.kind = 1;
   const b = new BoardEngine(level, snapshot);
   expect(b.lost).toBe(false);
   expect(b.trySwap(2, 1, 2, 0)).toBe(true);
@@ -169,7 +167,7 @@ it('tracks different collection kinds without sharing progress', () => {
     target: 100
   }]);
   for (let x = 0; x < 7; x++) snapshot.tiles[x] = {
-    kind: 0,
+    kind: 1,
     chargeTier: 0,
     locked: false
   };
@@ -221,7 +219,7 @@ it('does not form a match through a missing cell', () => {
     target: 100
   }], 5, 6, [2]);
   for (const i of [0, 1, 3, 4]) snapshot.tiles[i] = {
-    kind: 0,
+    kind: 1,
     chargeTier: 0,
     locked: false
   };
@@ -248,36 +246,6 @@ it('gravity refills each column segment without crossing a hole', () => {
   expect(after.tiles[12]).toBeNull();
   expect(after.tiles[17]).toEqual(before.tiles[17]);
   expect(falls.every((f: any) => f.index !== 12)).toBe(true);
-});
-it('uses move-dependent weighted spawning and restores the RNG', () => {
-  const {
-    level,
-    snapshot
-  } = fixture([{
-    id: 'collect',
-    type: 'Collect',
-    tileKind: 0,
-    target: 100
-  }]);
-  level.spawnPhases = [{
-    minMovesRemaining: 0,
-    weights: [1, 1, 1, 1000]
-  }, {
-    minMovesRemaining: 8,
-    weights: [1000, 1, 1, 1]
-  }];
-  snapshot.level = level;
-  const a = new BoardEngine(level, snapshot),
-    b = new BoardEngine(level, snapshot);
-  const draws = (engine: BoardEngine) => Array.from({
-    length: 1000
-  }, () => (engine as any).nextKind());
-  const early = draws(a);
-  expect(early.filter(x => x === 0).length).toBeGreaterThan(950);
-  expect(draws(b)).toEqual(early);
-  a.moves = 0;
-  const late = draws(a);
-  expect(late.filter(x => x === 3).length).toBeGreaterThan(950);
 });
 it('rejects incompatible catalogs, duplicated objectives and multiple enemies', () => {
   const c: GameContent = JSON.parse(JSON.stringify(seed));

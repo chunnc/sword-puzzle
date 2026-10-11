@@ -3,14 +3,13 @@ const game=require('../lib/domain/game'),runs=require('../lib/domain/runs');
 const content=game.validateContent(require('../../content/game-config.json'));
 const maps=require('../../content/game-maps.json').map(m=>game.validateMap(m,content));
 test('all map documents round trip and config wire payload excludes map data',()=>{
- assert.equal(maps.length,40);assert.equal(game.contentWire(content).levels,undefined);
+ assert.equal(maps.length,2);assert.equal(game.contentWire(content).levels,undefined);
  for(const map of maps)assert.deepEqual(game.mapFromDocument(game.mapToDocument(map),content),map);
 });
-test('a multi-Collect win requires complete progress for both objective IDs',()=>{
- const map=maps[2],report={outcome:'won',movesUsed:5,objectiveProgress:{main:30,secondary:30},extraMovesUsed:false};
- assert.equal(runs.parseRunReport(report,map).outcome,'won');
- assert.throws(()=>runs.parseRunReport({...report,objectiveProgress:{main:30,secondary:29}},map));
- assert.throws(()=>runs.parseRunReport({...report,objectiveProgress:{main:30}},map));
+test('the tutorial catalog contains the two ordered lessons with authored moves',()=>{
+ assert.equal(maps[0].tutorial.type,'match-three');assert.equal(maps[0].objectives[0].target,3);
+ assert.equal(maps[1].tutorial.type,'charged-lightning');assert.equal(maps[1].objectives[0].target,8);
+ assert.equal(maps[1].tutorial.steps.length,2);
 });
 test('profile migration and normalization do not need map definitions',()=>{
  const p=game.profileFromLegacy([{levelId:1,stars:3},{levelId:2,stars:0}],content);
@@ -21,7 +20,7 @@ test('starts count retries, abandoning leaves failure streak intact, and assista
  let stats=runs.emptyMapStats();stats=runs.startedStats(stats);assert.equal(stats.retryCount,0);
  stats.consecutiveFailures=3;stats=runs.abandonedStats(stats);stats=runs.startedStats(stats);
  assert.equal(stats.retryCount,1);assert.equal(stats.abandoned,1);assert.equal(stats.consecutiveFailures,3);
- assert.equal(runs.assistForFailures(maps[0],3),.1);assert.equal(runs.assistForFailures(maps[0],100),.3);
+ assert.equal(runs.assistForFailures(maps[0],3),0);assert.equal(runs.assistForFailures(maps[0],100),0);
 });
 test('server grades results from moves used, retains best stars, and handles final failure after extra moves',()=>{
  const map=maps[0],run={runId:'run_test_0001',seed:1,map,assistReduction:.3,attempt:1,loadout:game.emptyProfile().loadout,totalExp:0};
@@ -48,14 +47,13 @@ test('server grades strict percentage cutoffs and counts rewarded swaps against 
  const bonusResult=runs.completeRun(bonusRun,bonusReport,runs.startedStats(runs.emptyMapStats()),game.emptyProfile(),content,content,101);
  assert.equal(bonusResult.receipt.stars,1);
 });
-test('map revisions remain independent from config revisions and retain their own rule mode',()=>{
+test('map revisions remain independent from config revisions and reject classic rules',()=>{
   const map=game.versionMap(maps[0],content,42),config={...content,version:content.version+1};
   assert.equal(game.validateMap(map,config).mapVersion,42);
   assert.equal(game.mapToLevel(map,1,0,config).configVersion,config.version);
   assert.equal(game.mapToLevel(map,1,0,config).contentVersion,config.version);
-  const classic={...map,rulesMode:'classic',starThresholds:{threeStarMaxMovesUsed:2,twoStarMaxMovesUsed:4}};
-  delete classic.spawnPolicy.setupChance;
-  assert.equal(game.validateMap(classic,config).rulesMode,'classic');
+  const classic={...map,rulesMode:'classic'};
+  assert.throws(()=>game.validateMap(classic,config),/INVALID_MAP/);
 });
 test('reward credits use amounts already paid across revisions without resetting first-win eligibility',()=>{
   const firstMap=game.versionMap(maps[0],content);

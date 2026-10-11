@@ -101,12 +101,13 @@ function useBoardImages(): Record<TileKind, Record<Tile['chargeTier'], SkImage |
     [TileKind.SpiritOrb]: spirit, [TileKind.Rock]: { 0: rock, 4: rock, 5: rock } };
 }
 
-export function Board({ snapshot, selected, targets = [], preview = [], targetingHint, showTargetingHint = true, onCellPress, onSwipe, locked = false, visualEffect = null, reduceMotion = false, onMotionStarted, onMotionFinished, motionSession, gridRef, onGridLayout }: {
+export function Board({ snapshot, selected, targets = [], preview = [], targetingHint, tutorialMove, showTargetingHint = true, onCellPress, onSwipe, locked = false, visualEffect = null, reduceMotion = false, onMotionStarted, onMotionFinished, motionSession, gridRef, onGridLayout }: {
   snapshot: BoardSnapshot;
   selected: CellPosition | null;
   targets?: CellPosition[];
   preview?: number[];
   targetingHint?: string | null;
+  tutorialMove?: { from: CellPosition; to: CellPosition } | null;
   showTargetingHint?: boolean;
   onCellPress: (x: number, y: number) => void;
   onSwipe: (x1: number, y1: number, x2: number, y2: number) => void;
@@ -253,7 +254,8 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
             {indices.map(index => {
               const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
               const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
-              const highlighted = selected?.x === x && selected.y === y || targetNumber > 0 || preview.includes(index);
+              const tutorialCell = tutorialMove && (tutorialMove.from.x === x && tutorialMove.from.y === y || tutorialMove.to.x === x && tutorialMove.to.y === y);
+              const highlighted = selected?.x === x && selected.y === y || targetNumber > 0 || preview.includes(index) || !!tutorialCell;
               const targetLabel = targetNumber ? labels.targets[targetNumber - 1] : null;
               const cellMotion = frame.cells[index];
               return <Group key={`overlay-${index}`}>
@@ -275,6 +277,11 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
           const name = content.tiles.find(def => def.id === tile.kind)?.name ?? 'Đá chắn';
           return <Pressable key={index} accessibilityRole="button" accessibilityLabel={`${name}${tile.chargeTier ? `, cường hóa ${tile.chargeTier}` : ''}${tile.locked ? ', phong ấn' : ''}, hàng ${y + 1}, cột ${x + 1}`} accessibilityState={{ disabled: locked }} disabled={locked} onPress={sfxPress(() => onCellPress(x, y), !locked)} style={[styles.touchCell, { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }]} />;
         }) : null}
+        {side > geometry.width * 2 && tutorialHint && tutorialMove ? <Text pointerEvents="none" style={[
+          styles.tutorialArrow,
+          { left: side * ((tutorialMove.from.x + tutorialMove.to.x) / 2 + .5) - 10,
+            top: side * ((tutorialMove.from.y + tutorialMove.to.y) / 2 + .5) - 16 },
+        ]}>{tutorialMove.to.y < tutorialMove.from.y ? '↓' : tutorialMove.to.y > tutorialMove.from.y ? '↑' : tutorialMove.to.x > tutorialMove.from.x ? '→' : '←'}</Text> : null}
       </View>
     </GestureDetector>
     {showTargetingHint && targetingHint ? <Text style={styles.hint}>{targetingHint}</Text> : null}
@@ -330,4 +337,5 @@ const styles = StyleSheet.create({
   grid: { flex: 1 },
   touchCell: { position: 'absolute', borderRadius: 5 },
   hint: { position: 'absolute', top: 5, alignSelf: 'center', color: colors.inkDeep, backgroundColor: colors.goldBright, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, fontSize: 10, fontWeight: '800' },
+  tutorialArrow: { position: 'absolute', zIndex: 5, color: colors.inkDeep, backgroundColor: colors.goldBright, borderRadius: 12, width: 22, height: 22, lineHeight: 20, fontSize: 18, fontWeight: '900', textAlign: 'center' },
 });

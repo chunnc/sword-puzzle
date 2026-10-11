@@ -50,7 +50,7 @@ describe('server-backed journal v3', () => {
       ...emptySave(),
       ownerId: 'player',
       pending: {
-        contentVersion: 3,
+        contentVersion: 8,
         operation: {
           id: 'win_zero_123',
           kind: 'win' as const,

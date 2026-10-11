@@ -59,7 +59,7 @@ beforeEach(async () => {
   jest.resetModules();
   process.env.EXPO_PUBLIC_GAME_API_URL = 'http://localhost:5001/game';
   domain = require('../../game/domain');
-  domain.installContent(require('../../../../content/game-content.json'));
+  domain.installContent(require('../../../../content/game-config.json'));
   api = require('../../services/api');
   session = require('../../services/session');
   saveTools = require('../../game/save');
@@ -68,9 +68,9 @@ beforeEach(async () => {
   await storage.clear();
   await session.saveSession(guest);
   (api.fetchBootstrap as jest.Mock).mockResolvedValue({
-    contentVersion: 3,
+    contentVersion: 8,
     content: domain.CONTENT,
-    levelCount: 40,
+    levelCount: 2,
     rewardedAdsEnabled: false,
     minClientVersion: '1.2.0'
   });
@@ -499,7 +499,7 @@ it('reauthenticates the same registered UID without discarding a pending request
   await session.saveSession(registered);
   ready(p);
   const operation = { id: 'reauth_purchase1', kind: 'purchase' as const, category: 'skill' as const, itemId: 'ngu-kiem' };
-  store.setState({ session: registered, authRequired: true, save: { ...store.getState().save, pending: { contentVersion: 3, operation } } });
+  store.setState({ session: registered, authRequired: true, save: { ...store.getState().save, pending: { contentVersion: 8, operation } } });
   (api.loginAccount as jest.Mock).mockResolvedValue(registered);
   (api.fetchProfile as jest.Mock).mockResolvedValue({ session: registered, profile: p });
   const canonical = domain.applyOperation(p, operation).profile;
@@ -514,7 +514,7 @@ it('restores the pending journal after a cold boot with a revoked registered ses
   const registered = { ...guest, isGuest: false };
   const p = domain.profileFromLegacy([{ levelId: 1, stars: 3 }, { levelId: 2, stars: 3 }, { levelId: 3, stars: 3 }]);
   const operation = { id: 'cold_reauth_buy1', kind: 'purchase' as const, category: 'skill' as const, itemId: 'ngu-kiem' };
-  await saveTools.persistSave({ ...saveTools.emptySave(), ownerId: guest.uid, pending: { contentVersion: 3, operation } });
+  await saveTools.persistSave({ ...saveTools.emptySave(), ownerId: guest.uid, pending: { contentVersion: 8, operation } });
   require('expo-secure-store').getItemAsync.mockResolvedValue(JSON.stringify(registered));
   (api.fetchProfile as jest.Mock).mockRejectedValueOnce(new api.GameApiError('INVALID_SESSION', 401));
   await expect(store.getState().initialize()).rejects.toThrow();
@@ -640,7 +640,7 @@ it('grants rewarded extra moves to a lost run even when a skill is affordable', 
 it('startup requests one chapter without fetching map definitions or starting a new run', async () => {
   const content = modernReady();
   store.setState({initialized:false,bootstrapLoaded:false,online:false,save:{...saveTools.emptySave(),ownerId:guest.uid}});
-  (api.fetchBootstrap as jest.Mock).mockResolvedValue({contentVersion:content.version,content:domain.contentWire(content),levelCount:40,rewardedAdsEnabled:false,minClientVersion:'1.4.0'});
+  (api.fetchBootstrap as jest.Mock).mockResolvedValue({contentVersion:content.version,content:domain.contentWire(content),levelCount:2,rewardedAdsEnabled:false,minClientVersion:'1.8.0'});
   await store.getState().initialize();
   expect(store.getState().chapterId).toBe('chapter-1');
   expect(api.fetchChapterMaps).toHaveBeenCalledTimes(1);

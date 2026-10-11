@@ -6,7 +6,7 @@ Kiến trúc và hướng dẫn chạy prototype: [SYSTEM_ARCHITECTURE.md](SYSTE
 
 ![Ảnh preview gồm bản đồ, màn khám phá, trận boss và đột phá tu vi](assets/ui-preview.png)
 
-> **Bản nội dung 2:** Client Expo/React Native có 40 màn, bốn loại ô, ô cường hóa, tám kiếm thuật, tám bảo kiếm, cửa hàng offline và tu vi theo EXP. Catalog và domain trong content/ dùng chung cho client/server. Chỉ số hiện là cấu hình thử nghiệm.
+> **Catalog khởi đầu v8:** Client Expo/React Native bắt đầu với hai map hướng dẫn ghép ô, bốn loại ô, cường hóa, tám kiếm thuật, tám bảo kiếm và tu vi theo EXP. Map 1 dạy ghép 3 Kiếm; map 2 dạy tạo rồi kích hoạt ô Lôi cấp 4. Catalog sẽ được mở rộng sau.
 
 ## 1. Tầm nhìn
 
@@ -112,7 +112,7 @@ Các cảnh trước Chân Tiên có Sơ kỳ, Trung kỳ, Hậu kỳ, Viên mã
 
 ### Kiếm thuật và bảo kiếm
 
-Danh mục, chỉ số, giá và mốc mở bán nằm trong content/game-content.json. Mỗi người dùng một bảo kiếm và một skill; ô skill thứ hai mở tại 1.500 EXP. Nhất Kiếm và Thanh Phong miễn phí ban đầu.
+Danh mục, chỉ số, giá và mốc mở bán nằm trong content/game-config.json. Mỗi người dùng một bảo kiếm và một skill; ô skill thứ hai mở tại 1.500 EXP. Nhất Kiếm và Thanh Phong miễn phí ban đầu.
 
 Kiếm thuật gồm Nhất Kiếm, Ngự Kiếm, Hỏa Liên, Dẫn Lôi, Phá Chướng, Liên Kiếm, Hồi Linh, Vạn Kiếm. Không tiêu lượt; tối đa một cast giữa hai nước đổi thành công có tiêu lượt. Hủy chọn không tiêu khí. Chỉ được thi triển khi còn lượt. Khi hết lượt, xử lý hết hiệu ứng và combo của nước đổi cuối: hoàn thành mọi mục tiêu thì thắng, nếu còn mục tiêu chưa hoàn thành thì hiện dialog thua.
 
@@ -155,11 +155,9 @@ Bốn màn hình chính là **bản đồ**, **giải đố khám phá**, **đá
 
 ## 8. Nội dung và kiểm chứng
 
-Bản nội dung 2 đóng gói 40 màn: thu thập bốn loại ô, chiến đấu, phá phong ấn, phá đá và boss. Màn 15 là boss nội dung; đột phá theo EXP, không gắn cứng với màn. Cấu hình tĩnh là dữ liệu thử nghiệm; thuật toán tăng độ khó thiết kế sau.
+Catalog hiện có hai màn, mỗi màn có 8 lượt. Dùng dưới một nửa lượt gốc được 3 sao. Hai đường giải hướng dẫn thắng sau một và hai lượt tương ứng. Map tiếp theo sẽ tiếp tục các mục tiêu thu thập, chiến đấu và vật cản; thiết kế độ khó sẽ được bổ sung theo từng màn.
 
-40 màn toàn 3/2/1/0 sao có tổng 4.000/3.200/2.400/1.200 EXP. Có thể quay lại nâng sao để đạt cảnh giới cao hơn. Màn Tu Luyện hỗ trợ đến Chân Tiên; nội dung sau màn 40 bổ sung sau.
-
-Kiểm chứng luật ghép, cường hóa, trace tuần tự, tám skill/kiếm, EXP best stars, thắng 0 sao, mua offline, retry, xung đột hai thiết bị, migration và gộp tài khoản. Quan sát chơi thử để cân bằng chỉ số, độ dài màn, bộ trang bị và độ khó.
+Đột phá vẫn phụ thuộc EXP, không gắn cứng với màn. Có thể quay lại nâng sao để đạt cảnh giới cao hơn. Tám skill, tám bảo kiếm, cửa hàng và tài khoản giữ nguyên trong khi catalog map được tạo lại.
 
 ## 9. Ghi chú tạo ảnh preview
 

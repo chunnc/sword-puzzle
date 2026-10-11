@@ -3,8 +3,7 @@ import { BoardActionAnimation, BoardActionStart, BoardResolutionStep, BoardAnima
 export function newId(): string { return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 13)}_${Math.random().toString(36).slice(2, 13)}`; }
 const plain = (kind: number): Tile => ({ kind, chargeTier: 0, locked: false });
 const copy = (tile: Tile): Tile => ({ ...tile });
-const MAX_CHAIN = 20;
-const MAX_COMBO_CHAIN = 6;
+const MAX_CASCADE_WAVES = 4;
 const COMBO_SIZES: Record<string, [number, number, number]> = {
     easy: [.30, .40, .30],
     medium: [.45, .35, .20],
@@ -31,7 +30,8 @@ export class BoardEngine {
     private totalExpAtStart: number | undefined;
     private lastAnimation: BoardActionAnimation | null = null;
     private metrics = actionMetrics();
-    private get modernCombos(): boolean { const map = this.level.mapDefinition; return !!map && !map.legacy && (map.rulesMode ? map.rulesMode === 'modern' : this.content.version >= 6); }
+    tutorialStep: number | null | undefined;
+    private advanceTutorialAfterAction = false;
     get actionMetrics(): BoardActionMetrics { return { ...this.metrics, ...(this.metrics.setupMove ? { setupMove: [...this.metrics.setupMove] as [number, number, number, number] } : {}) }; }
     private resolution: Generator<BoardResolutionStep, void> | null = null;
     moves: number;
@@ -59,12 +59,14 @@ export class BoardEngine {
         this.randomState = level.seed >>> 0;
         this.moves = level.moves;
         this.objectiveProgress = Object.fromEntries(level.objectives.map(o => [o.id, 0]));
+        this.tutorialStep = level.mapDefinition?.tutorial ? 0 : undefined;
         this.runId = newId();
         this.loadout = context ? { ...context.loadout, skills: [...context.loadout.skills] } : emptyProfile().loadout;
         this.damageScale = realmForExp(context?.totalExp ?? 0, this.content).damageScale;
         this.totalExpAtStart = restore ? restore.totalExpAtStart : context?.totalExp ?? 0;
         if (restore && restore.contentVersion === this.content.version && restore.levelId === level.id && restore.tiles.length === this.width * this.height) {
             this.tiles = restore.tiles.map(t => t ? copy(t) : null);
+            if (this.level.mapDefinition?.tutorial) this.tutorialStep = restore.tutorialStep === undefined ? 0 : restore.tutorialStep;
             this.moves = restore.moves;
             this.objectiveProgress = { ...restore.objectiveProgress };
             this.swordQi = restore.swordQi;
@@ -81,8 +83,8 @@ export class BoardEngine {
             this.skillUsed = restore.skillUsed;
             return;
         }
-        if (level.mapDefinition && !level.mapDefinition.legacy) this.fillLayout();
-        else { this.fillInitial(); this.placeObstacles(); this.ensureMove(); }
+        if (!level.mapDefinition) throw new Error('MAP_REQUIRED');
+        this.fillLayout();
     }
     get won(): boolean { return this.level.objectives.every(o => this.objectiveProgress[o.id] >= o.target); }
     get contentDefinition(): GameContent { return this.content; }
@@ -96,7 +98,7 @@ export class BoardEngine {
     snapshot(): BoardSnapshot {
         if (this.tiles.some((t,i) => this.level.board.activeCells[i] && !t))
             throw new Error('UNSETTLED_BOARD');
-        return { contentVersion: this.content.version, configVersion: this.content.version, ...(this.level.mapVersion === undefined ? {} : { mapVersion: this.level.mapVersion }), ...(this.totalExpAtStart === undefined ? {} : { totalExpAtStart: this.totalExpAtStart }), level: this.level, runId: this.runId, levelId: this.level.id, moves: this.moves, objectiveProgress: { ...this.objectiveProgress }, swordQi: this.swordQi, score: this.score, drops: this.drops, ...(this.level.mapDefinition && !this.level.mapDefinition.legacy ? { directorPressure: this.directorPressure, reshuffles: this.reshuffles } : {}), randomState: this.randomState >>> 0, extraMovesUsed: this.extraMovesUsed, condensed: this.condensed, skillUsed: this.skillUsed, loadout: { ...this.loadout, skills: [...this.loadout.skills] }, damageScale: this.damageScale, tiles: this.tiles.map(t => t ? copy(t) : null) };
+        return { contentVersion: this.content.version, configVersion: this.content.version, ...(this.level.mapVersion === undefined ? {} : { mapVersion: this.level.mapVersion }), ...(this.totalExpAtStart === undefined ? {} : { totalExpAtStart: this.totalExpAtStart }), level: this.level, runId: this.runId, levelId: this.level.id, moves: this.moves, objectiveProgress: { ...this.objectiveProgress }, swordQi: this.swordQi, score: this.score, drops: this.drops, directorPressure: this.directorPressure, reshuffles: this.reshuffles, ...(this.level.mapDefinition!.tutorial ? { tutorialStep: this.tutorialStep ?? null } : {}), randomState: this.randomState >>> 0, extraMovesUsed: this.extraMovesUsed, condensed: this.condensed, skillUsed: this.skillUsed, loadout: { ...this.loadout, skills: [...this.loadout.skills] }, damageScale: this.damageScale, tiles: this.tiles.map(t => t ? copy(t) : null) };
     }
     cost(id: SkillId): number { return skillCost(id, this.loadout.sword, this.condensed, this.content); }
     availableSkills(): SkillId[] {
@@ -120,6 +122,7 @@ export class BoardEngine {
             [this.tiles[first], this.tiles[second]] = [this.tiles[second], this.tiles[first]];
             return null;
         }
+        this.beginTutorialSwap(a, b);
         this.moves--;
         this.skillUsed = false;
         const prepared = this.metrics.setupMove;
@@ -139,6 +142,8 @@ export class BoardEngine {
             return null;
         const indices = targets.map(this.indexOf);
         this.swordQi -= this.cost(id);
+        if (this.level.mapDefinition?.tutorial) this.tutorialStep = null;
+        this.advanceTutorialAfterAction = false;
         this.condensed = false;
         this.skillUsed = true;
         let initial: number[] | undefined;
@@ -203,6 +208,11 @@ export class BoardEngine {
         const next = this.resolution.next();
         if (!next.done) return next.value;
         this.resolution = null;
+        if (this.advanceTutorialAfterAction && this.tutorialStep !== null && this.tutorialStep !== undefined) {
+            const nextStep = this.tutorialStep + 1;
+            this.tutorialStep = nextStep < this.level.mapDefinition!.tutorial!.steps.length ? nextStep : null;
+        }
+        this.advanceTutorialAfterAction = false;
         if (!this.won && !this.lost) this.ensureMove();
         return null;
     }
@@ -370,7 +380,10 @@ export class BoardEngine {
             const falls = this.refill(chain);
             groups = this.findGroups();
             let settlement: BoardResolutionStep['settlement'];
-            if (this.modernCombos && (chain === 4 || !groups.length)) {
+            if (this.level.mapDefinition!.tutorial) {
+                if (groups.length) this.stabilize(new Set(falls.filter(f => f.spawned).map(f => f.index)));
+                groups = [];
+            } else if (chain === MAX_CASCADE_WAVES || !groups.length) {
                 const capped = groups.length > 0;
                 const reshufflesBefore = this.reshuffles;
                 if (capped || (!this.won && !this.lost && !this.legalMoves().length)) {
@@ -387,10 +400,22 @@ export class BoardEngine {
             initial = undefined;
             mutation = [];
             anchors = [];
-            if (!this.modernCombos) groups = this.findGroups();
-        } while (groups.length && chain < (this.modernCombos ? 4 : MAX_CHAIN));
+        } while (groups.length && chain < MAX_CASCADE_WAVES);
         if (groups.length)
             this.reshuffle();
+    }
+    private beginTutorialSwap(a: CellPosition, b: CellPosition): void {
+        this.advanceTutorialAfterAction = false;
+        const tutorial = this.level.mapDefinition?.tutorial;
+        if (!tutorial || this.tutorialStep === null || this.tutorialStep === undefined) return;
+        const step = tutorial.steps[this.tutorialStep];
+        if (!step) { this.tutorialStep = null; return; }
+        const from = { x: step.from.column - 1, y: this.height - step.from.row };
+        const to = { x: step.to.column - 1, y: this.height - step.to.row };
+        const matches = (a.x === from.x && a.y === from.y && b.x === to.x && b.y === to.y)
+            || (b.x === from.x && b.y === from.y && a.x === to.x && a.y === to.y);
+        if (matches) this.advanceTutorialAfterAction = true;
+        else this.tutorialStep = null;
     }
     private validTargets(id: SkillId, targets: CellPosition[]): boolean {
         if (!targets.length || !targets.every(p => Number.isInteger(p.x) && Number.isInteger(p.y) && this.inside(p)) || new Set(targets.map(this.indexOf)).size !== targets.length)
@@ -514,7 +539,8 @@ export class BoardEngine {
     }
     private refill(chain = 1): BoardAnimationFall[] {
         const map = this.level.mapDefinition;
-        if (!map || map.legacy) return this.refillOnce();
+        if (!map) throw new Error('MAP_REQUIRED');
+        if (map.tutorial) return this.refillTutorial();
         const spent = Math.max(1, this.movesUsed) / this.level.moves;
         const progress = this.level.objectives.reduce((sum,o) => sum + this.objectiveProgress[o.id] / o.target, 0) / this.level.objectives.length;
         const target = Math.max(.35, Math.min(1.2, progress / spent));
@@ -533,11 +559,9 @@ export class BoardEngine {
             const falls = this.refillOnce();
             const generated = new Set(falls.filter(f => f.spawned).map(f => f.index));
             const groups = this.findGroups().filter(g => g.some(i => generated.has(i)));
-            const comboScore = groups.reduce((sum,g) => sum + g.length - 2 + (g.length >= 4 ? 2 : 0), 0);
             const obstacleScore = groups.reduce((sum,g) => sum + g.filter(i => this.area(i, 1).some(j => before[j]?.kind === this.kind('rock') || before[j]?.locked)).length, 0);
-            const cascadePenalty = this.modernCombos ? (chain >= 4 ? 20 : Math.max(0, chain - 1) * 1.5) * groups.length : 0;
-            const historicalComboPenalty = !this.modernCombos ? pressure * (map.spawnPolicy.comboPressure ?? 0) * comboScore : 0;
-            candidates.push({ tiles: this.tiles, falls, weight: Math.exp(-Math.min(this.modernCombos ? 40 : 20, historicalComboPenalty + pressure * map.spawnPolicy.obstaclePressure * obstacleScore + cascadePenalty)) });
+            const cascadePenalty = (chain >= MAX_CASCADE_WAVES ? 20 : Math.max(0, chain - 1) * 1.5) * groups.length;
+            candidates.push({ tiles: this.tiles, falls, weight: Math.exp(-Math.min(40, pressure * map.spawnPolicy.obstaclePressure * obstacleScore + cascadePenalty)) });
         }
         let draw = this.nextIndex(1_000_000) / 1_000_000 * candidates.reduce((sum,c) => sum + c.weight, 0);
         const chosen = candidates.find(c => (draw -= c.weight) < 0) ?? candidates[candidates.length-1];
@@ -546,9 +570,25 @@ export class BoardEngine {
     }
     private refillChance(chain: number): number {
         const base = this.level.mapDefinition?.spawnPolicy.comboChance ?? 0;
-        if (this.modernCombos) return Math.min(1, base + (this.level.assistReduction ?? 0)) * ([0, 1, .5, .25, 0][chain] ?? 0);
-        if (chain >= MAX_COMBO_CHAIN) return 0;
-        return chain >= 2 ? Math.min(1, base * 1.5) : base;
+        return Math.min(1, base + (this.level.assistReduction ?? 0)) * ([0, 1, .5, .25, 0][chain] ?? 0);
+    }
+    private refillTutorial(): BoardAnimationFall[] {
+        const positions = this.refillPositions();
+        const spawned = positions.filter(position => position.spawned).map(position => position.index).sort((a,b) => a-b);
+        const sword = this.kind('sword');
+        const falls = this.applyRefill(positions, new Map(spawned.map(index => [index, sword])));
+        const fillOrder = [this.kind('sword'), this.kind('fire'), this.kind('spirit'), this.kind('lightning')];
+        for (const index of spawned) this.tiles[index] = null;
+        for (const index of spawned) {
+            for (const kind of fillOrder) {
+                this.tiles[index] = plain(kind);
+                if (!this.matchesAt(index)) break;
+                this.tiles[index] = null;
+            }
+            if (!this.tiles[index]) this.tiles[index] = plain(this.nextKind());
+        }
+        if (this.findGroups().length) this.stabilize(new Set(spawned));
+        return falls;
     }
     private seededRefill(before: (Tile|null)[], positions: RefillPosition[]): { tiles: (Tile|null)[]; falls: BoardAnimationFall[] } | null {
         const spawned = new Set(positions.filter(p => p.spawned).map(p => p.index));
@@ -755,21 +795,6 @@ export class BoardEngine {
         const remainingBaseMoves = Math.max(0, this.level.moves - this.movesUsed);
         return this.directorPressure * (1 - (this.level.assistReduction ?? 0)) * Math.min(1, remainingBaseMoves / (this.level.moves * .2));
     }
-    private fillInitial(): void {
-        for (let attempt = 0; attempt < 200; attempt++) {
-            this.tiles = [];
-            let failed = false;
-            for (let i = 0; i < this.width * this.height; i++) {
-                if (!this.level.board.activeCells[i]) { this.tiles.push(null); continue; }
-                let kind = this.nextKind(), tries = 0;
-                while ((i % this.width >= 2 && this.tiles[i-1]?.kind === kind && this.tiles[i-2]?.kind === kind || i >= this.width*2 && this.tiles[i-this.width]?.kind === kind && this.tiles[i-this.width*2]?.kind === kind) && tries++ < 100) kind = this.nextKind();
-                if (tries >= 100) { failed = true; break; }
-                this.tiles.push(plain(kind));
-            }
-            if (!failed && new Set(this.tiles.filter(Boolean).map(t => t!.kind)).size === 4) return;
-        }
-        throw new Error('NO_PLAYABLE_BOARD');
-    }
     private fillLayout(): void {
         const map = validateMap(this.level.mapDefinition, this.content);
         const cells = [...map.layout].reverse().flat();
@@ -788,28 +813,14 @@ export class BoardEngine {
         }
         throw new Error('NO_PLAYABLE_LAYOUT');
     }
-    private placeObstacles(): void {
-        const available = this.tiles.flatMap((t,i) => t && i >= this.width && i < this.width * (this.height-1) ? [i] : []);
-        this.shuffle(available);
-        for (const i of available.splice(0, this.level.obstacles.rocks)) this.tiles[i] = plain(this.kind('rock'));
-        const candidates = this.tiles.flatMap((t,i) => t && t.kind !== this.kind('rock') ? [i] : []);
-        this.shuffle(candidates);
-        for (const i of candidates.slice(0, this.level.obstacles.seals)) this.tiles[i]!.locked = true;
-    }
     private nextKind(initial = false): number {
         this.drops++;
-        const map = this.level.mapDefinition;
-        if (map && !map.legacy) {
-            const ids = this.content.normalTileIds!;
-            const targets = new Set(this.level.objectives.filter(o => o.type === 'Collect' && this.objectiveProgress[o.id] < o.target).map(o => o.type === 'Collect' ? o.tileKind : -1));
-            const weights = ids.map(id => map.spawnPolicy.weights[id] * (initial || !targets.has(id) ? 1 : Math.max(.1, 1 - map.spawnPolicy.collectionPressure * this.effectivePressure())));
-            let draw = this.nextIndex(1_000_000) / 1_000_000 * weights.reduce((a,b) => a+b, 0);
-            return (ids.find((_,i) => (draw -= weights[i]) < 0) ?? ids[ids.length-1]);
-        }
-        const phase = [...this.level.spawnPhases].reverse().find(p => this.moves >= p.minMovesRemaining)!;
-        let draw = this.nextIndex(phase.weights.reduce((a,b) => a+b,0));
-        for (let kind=0;kind<4;kind++) { draw-=phase.weights[kind]; if(draw<0)return this.kind((['sword','fire','lightning','spirit'] as TileKey[])[kind]); }
-        return this.kind('spirit');
+        const map = this.level.mapDefinition!;
+        const ids = this.content.normalTileIds!;
+        const targets = new Set(this.level.objectives.filter(o => o.type === 'Collect' && this.objectiveProgress[o.id] < o.target).map(o => o.type === 'Collect' ? o.tileKind : -1));
+        const weights = ids.map(id => map.spawnPolicy.weights[id] * (initial || !targets.has(id) ? 1 : Math.max(.1, 1 - map.spawnPolicy.collectionPressure * this.effectivePressure())));
+        let draw = this.nextIndex(1_000_000) / 1_000_000 * weights.reduce((a,b) => a+b, 0);
+        return ids.find((_,i) => (draw -= weights[i]) < 0) ?? ids[ids.length-1];
     }
     private nextIndex(max: number): number {
         let state = this.randomState >>> 0;

@@ -6,7 +6,6 @@ import { ART, Artwork } from '../src/assets';
 import { BottomNav, TopHud } from '../src/components/Chrome';
 import { ArtPanel, ScreenFrame } from '../src/components/Art';
 import { Notice } from '../src/components/Notice';
-import { LEVEL_COUNT, getLevel } from '../src/game/levels';
 import { CONTENT } from '../src/game/domain';
 import { navigateTab, type BottomNavId } from '../src/components/Navigation';
 import { getHighestUnlocked, getLevelStars, getLevelCompleted, useGameStore } from '../src/state/gameStore';
@@ -25,7 +24,7 @@ export default function MapScreen() {
   const selectChapter = useGameStore(state => state.selectChapter);
   const chapters = CONTENT.chapters ?? [];
   const chapter = chapters.find(ch => ch.id === chapterId);
-  const levelIds = CONTENT.layoutCodes ? maps.filter(map => map.chapterId === chapterId).map(map => map.id) : Array.from({ length: LEVEL_COUNT }, (_, index) => index + 1);
+  const levelIds = maps.filter(map => map.chapterId === chapterId).map(map => map.id);
   const save = useGameStore((state) => state.save);
   const notice = useGameStore((state) => state.notice);
   const setNotice = useGameStore((state) => state.setNotice);
@@ -45,7 +44,7 @@ export default function MapScreen() {
   useFocusEffect(useCallback(() => {
     focused.current = true;
     const state = useGameStore.getState();
-    if (CONTENT.layoutCodes && state.chapterId) void state.selectChapter(state.chapterId).catch(() => undefined);
+    if (state.chapterId) void state.selectChapter(state.chapterId).catch(() => undefined);
     return () => { focused.current=false;pendingNavigation.current=null; };
   }, []));
 
@@ -131,9 +130,9 @@ export default function MapScreen() {
           }}
         />
         <ArtPanel art="chapterCard" style={styles.chapter}>
-          <Text style={styles.chapterEyebrow}>TIÊN LỘ · {chapter ? chapter.lastLevelId-chapter.firstLevelId+1 : LEVEL_COUNT} MÀN</Text>
-          <Text style={styles.chapterName}>{(chapter?.name ?? (CONTENT.layoutCodes ? 'Tiên Lộ' : getLevel(unlocked).chapter)).toUpperCase()}</Text>
-          <Text style={styles.chapterStars}>{totalStars}/{(chapter ? chapter.lastLevelId-chapter.firstLevelId+1 : LEVEL_COUNT) * 3} ★</Text>
+          <Text style={styles.chapterEyebrow}>TIÊN LỘ · {chapter ? chapter.lastLevelId-chapter.firstLevelId+1 : maps.length} MÀN</Text>
+          <Text style={styles.chapterName}>{(chapter?.name ?? 'Vân Hải Tiên Sơn').toUpperCase()}</Text>
+          <Text style={styles.chapterStars}>{totalStars}/{(chapter ? chapter.lastLevelId-chapter.firstLevelId+1 : maps.length) * 3} ★</Text>
         </ArtPanel>
       </View>
       <BottomNav active="map" onSelect={nav} />

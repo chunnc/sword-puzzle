@@ -52,9 +52,7 @@ function renderBalanceReport(report) {
   };
   const profileDetail=r=>{
     const m=maps.get(r.id),gate=gateFor(r);
-    const starRules=!m?'':'mode' in m.starThresholds
-      ? `Ngân sách gốc ${m.moves} lượt · 3 sao &lt; ${m.starThresholds.threeStarBelowPercent}% (tối đa ${Math.ceil(m.moves*m.starThresholds.threeStarBelowPercent/100)-1}) · 2 sao &lt; ${m.starThresholds.twoStarBelowPercent}% (tối đa ${Math.ceil(m.moves*m.starThresholds.twoStarBelowPercent/100)-1}).`
-      : `Ngân sách ${m.moves} lượt · 3 sao ≤ ${m.starThresholds.threeStarMaxMovesUsed} · 2 sao ≤ ${m.starThresholds.twoStarMaxMovesUsed}.`;
+    const starRules=!m?'':`Ngân sách gốc ${m.moves} lượt · 3 sao &lt; ${m.starThresholds.threeStarBelowPercent}% (tối đa ${Math.ceil(m.moves*m.starThresholds.threeStarBelowPercent/100)-1}) · 2 sao &lt; ${m.starThresholds.twoStarBelowPercent}% (tối đa ${Math.ceil(m.moves*m.starThresholds.twoStarBelowPercent/100)-1}).`;
     return `<details class="profile-detail" id="profile-${r.id}-${escape(r.bot)}-${escape(r.power)}" ${attributes(r)}>
       <summary><span>${escape(mapLabel(r.id))}</span><span class="muted">${escape(r.bot)} / ${escape(powerNames[r.power]??r.power)}</span></summary>
       <div class="detail-body"><div><h3>Số lượt đổi ô khi thắng</h3>${histogram(r.movesHistogram,'Số ván thắng theo số lượt đổi ô')}

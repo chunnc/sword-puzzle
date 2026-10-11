@@ -15,11 +15,11 @@ invariants you must not break, and where to make changes. Deep references:
 
 - Genre: match-3 cultivation (tu tiên) game for iOS/Android.
 - Client: Expo SDK 57, React Native 0.86, React 19, TypeScript, expo-router,
-  Zustand, Reanimated/Skia. App version `1.3.0` (`client/package.json`,
+  Zustand, Reanimated/Skia. App version `1.8.0` (`client/package.json`,
   `client/app.config.ts`).
 - Backend: Firebase Functions v2 (Express) on `asia-southeast1`, Firebase Auth +
   Firestore via Admin SDK (`server/package.json`).
-- Content: versioned catalog (content v3), 40 seeded maps, 8 skills, 8 swords,
+- Content: versioned catalog (content v8), two tutorial maps, 8 skills, 8 swords,
   10 realms.
 - Monorepo root scripts (`package.json`): `api:build`, `api:test`, `api:serve`,
   `api:deploy`, `api:seed`.
@@ -85,7 +85,8 @@ sword-puzzle/
 │   └── package.json
 ├── content/
 │   ├── game-domain.ts          SOURCE of shared schema + pure rules
-│   └── game-content.json       seed catalog (40 levels)
+│   ├── game-config.json        content v8 global rules for two maps
+│   └── game-maps.json          authored tutorial maps
 ├── tools/
 │   ├── generate_game_content.mjs  copies game-domain.ts → client + server
 │   ├── seed_game_content.mjs      validate/publish catalog to Firestore
@@ -254,7 +255,7 @@ documents. Published documents are immutable.
 content/game-domain.ts ──(tools/generate_game_content.mjs)──▶
      ├── client/src/game/domain.ts
      └── server/src/domain/game.ts
-content/game-content.json ──(tools/seed_game_content.mjs)──▶ gameContent/{version}
+game-config.json + game-maps.json ──(tools/seed_game_content.mjs)──▶ gameContent/{version} + gameMaps/{mapId}
 ```
 
 - Edit **`content/game-domain.ts`** only; run the generator (`npm run start`,
@@ -375,7 +376,7 @@ All timestamps are Unix ms except Firestore TTL fields (`adIntents.ttlAt`,
 - Keep skill/sword effects and targeting in client code by ID; the catalog stores
   metadata only (no `SwordModifier`, `SkillEffect`, or target selection).
 - Objectives are AND-combined; at most one `Battle`/`Boss`; win is checked after
-  cascade.
+  the action resolves. Tutorial maps have no automatic cascade.
 - Operations must be idempotent and journaled before the network call; never
   re-credit a replayed receipt.
 - The store must reject gameplay/mutations through `available()` when
@@ -423,9 +424,10 @@ devices use the host's LAN IP.
 
 | Change | Touch |
 | --- | --- |
-| Add/edit a skill or sword | `content/game-domain.ts` (schema/IDs) + behavior in `client/src/game/BoardEngine.ts` + `skillTargets.ts` + seed `content/game-content.json` |
+| Add/edit a skill or sword | `content/game-config.json` + behavior in `client/src/game/BoardEngine.ts` + `skillTargets.ts` |
 | Add an objective type | `content/game-domain.ts` types/validation, engine progress logic, HUD (`components/hudPresentation.ts`), server rule reuse |
-| Edit levels / difficulty / rewards | `content/game-content.json`, then regenerate + reseed (bump version if published) |
+| Edit maps / difficulty | `content/game-maps.json`, then publish a new map revision |
+| Edit rewards or global progression | `content/game-config.json`, then publish a new content version |
 | Change pure profile rules | `content/game-domain.ts` (`applyOperation`, `mergeProfiles`, rewards) |
 | Add/modify an API route | `server/src/index.ts` (+ `domain/*` for logic) |
 | Change identity/session behavior | `server/src/identity.ts` + `client/src/services/{api,session,device}.ts` + `gameStore.ts` |

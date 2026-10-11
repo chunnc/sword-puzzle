@@ -3,6 +3,7 @@ const fs=require('node:fs'),path=require('node:path');
 const {Worker,isMainThread,parentPort,workerData}=require('node:worker_threads');
 const {play,seedFor,targets}=require('./simulate_maps.cjs');
 const source=require('../content/game-maps.json');
+const content=require('../content/game-config.json');
 const count=Number(process.env.CALIBRATION_SEEDS||150);
 if(!Number.isSafeInteger(count)||count<1)throw new Error('CALIBRATION_SEEDS must be a positive integer');
 function assess(map,results,strict=true) {
@@ -10,19 +11,19 @@ function assess(map,results,strict=true) {
   const win=won.length/results.length,median=moves.length?(moves[Math.floor((moves.length-1)/2)]+moves[Math.floor(moves.length/2)])/2:null;
   const collect=map.objectives.every(o=>o.type==='Collect');
   if(strict&&(win<band.win[0]||win>band.win[1]||collect&&(median<6||median>10)))return null;
-  const rate=n=>won.filter(r=>r.movesUsed<=n).length/results.length,t3=(band.three[0]+band.three[1])/2;
+  const rate=percent=>won.filter(r=>r.movesUsed*100<map.moves*percent).length/results.length,t3=(band.three[0]+band.three[1])/2;
   let stars=null;
-  for(let three=1;three<map.moves;three++)for(let two=three+1;two<=map.moves;two++) {
+  for(let three=10;three<100;three+=5)for(let two=three+5;two<=100;two+=5) {
     const rates=[1-win,win-rate(two),rate(two)-rate(three),rate(three)];
     if(strict&&(rates.some(r=>r===0)||rates[3]<band.three[0]||rates[3]>band.three[1]))continue;
     const loss=Math.abs(rate(three)-t3)+.001*Math.abs(two-(three+map.moves)/2);
     if(!stars||loss<stars.loss)stars={three,two,rates,loss};
   }
   if(!stars)return null;
-  return {win,median,starRates:stars.rates,thresholds:{threeStarMaxMovesUsed:stars.three,twoStarMaxMovesUsed:stars.two},
+  return {win,median,starRates:stars.rates,thresholds:{mode:'percentage',threeStarBelowPercent:stars.three,twoStarBelowPercent:stars.two},
     loss:Math.abs(win-(band.win[0]+band.win[1])/2)+(collect?.02*Math.abs((median??0)-8):0)+.001*Math.abs(map.moves-(collect?12:{easy:14,medium:16,hard:18,'very-hard':20}[map.difficulty]))+stars.loss*.1};
 }
-function sample(map,n=count){const probe=structuredClone(map);probe.starThresholds={threeStarMaxMovesUsed:1,twoStarMaxMovesUsed:map.moves-1};return Array.from({length:n},(_,i)=>play(probe,seedFor(i,'training')));}
+function sample(map,n=count){return Array.from({length:n},(_,i)=>play(map,seedFor(i,'training')));}
 function calibrate(original) {
   let best=null,evaluated=0;
   const consider=(map,results)=>{evaluated++;const report=assess(map,results);if(report&&(!best||report.loss<best.report.loss))best={map:structuredClone(map),report};};
@@ -64,8 +65,9 @@ function calibrate(original) {
 }
 async function main(){
   const args=process.argv.slice(2),at=args.indexOf('--maps'),ids=at<0?null:args[at+1].split(',').map(Number);
-  const selected=source.slice(0,10).filter(m=>!ids||ids.includes(m.id));
-  if(!selected.length||ids?.some(id=>!Number.isInteger(id)||id<1||id>10))throw new Error('--maps must select pilot IDs 1–10');
+  if(ids?.some(id=>!Number.isInteger(id)||id<1||id>source.length))throw new Error(`--maps must select IDs 1–${source.length}`);
+  const selected=source.filter(m=>!m.tutorial&&(!ids||ids.includes(m.id)));
+  if(!selected.length){console.log('Calibration skipped: the current catalog contains tutorial maps only.');return;}
   const {results,failures}=await new Promise((resolve,reject)=>{
     const queue=[...selected],active=new Set(),done=[],failures=[];
     const drain=()=>{while(queue.length&&active.size<4){const map=queue.shift();const worker=new Worker(__filename,{workerData:{map,count}});active.add(worker);
@@ -74,7 +76,7 @@ async function main(){
     }};drain();
   });
   const directory=path.join(__dirname,'../content/balance');
-  fs.writeFileSync(path.join(directory,'calibration-v6.json'),JSON.stringify({suite:'training',status:failures.length?'failed':'passed',trainingSeeds:count,coarseSeeds:Math.min(40,count),results,failures},null,2)+'\n');
+  fs.writeFileSync(path.join(directory,`calibration-v${content.version}.json`),JSON.stringify({suite:'training',status:failures.length?'failed':'passed',trainingSeeds:count,coarseSeeds:Math.min(40,count),results,failures},null,2)+'\n');
   if(args.includes('--apply'))fs.writeFileSync(path.join(__dirname,'../content/game-maps.json'),JSON.stringify(source.map(m=>results.find(r=>r.map.id===m.id)?.map??m),null,2)+'\n');
   if(failures.length)process.exitCode=1;
 }

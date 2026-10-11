@@ -4,12 +4,12 @@ import { assistForFailures, chapterForLevel, contentWire, getContentVersion, ins
 import { normalizeSnapshot } from '../save';
 const config = require('../../../../content/game-config.json');
 const sources = require('../../../../content/game-maps.json');
-const legacy = require('../../../../content/game-content.json');
+const legacy = require('../../../../content/game-config.json');
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
 let content: GameContent;
 beforeEach(() => { content = installContent(config); });
 afterEach(() => { installContent(legacy); });
-const map = (id = 1) => validateMap(sources[id-1], content);
+const map = (id = 1) => validateMap(sources.find((m:any) => m.id === id) ?? sources[0], content);
 it('round trips top-first matrices through Firestore row maps without nested arrays', () => {
   const m = map(); m.layout[0][0] = 0;
   const stored = mapToDocument(m);
@@ -20,7 +20,7 @@ it('round trips top-first matrices through Firestore row maps without nested arr
   expect(board.get(0, 6)).toBeNull();
 });
 it('preserves explicit starting tiles and seals across seeds and resumes RNG/director exactly', () => {
-  const m = map(6);
+  const m = map(2);
   for (const seed of [1, 4321, 987654]) {
     const engine = new BoardEngine(mapToLevel(m, seed, .2, content));
     m.layout.forEach((row,y) => row.forEach((id,x) => { if (id > 0) expect(engine.get(x, row.length-1-y)?.kind).toBe(id); }));
@@ -40,6 +40,7 @@ it('uses a sparse shuffled ID registry for initialization, effects and collectio
   const m=clone(sources[0]) as MapDefinition;
   m.layout=m.layout.map(row=>row.map(id=>id>0?ids[id]:id));
   m.objectives.forEach(o=>{if(o.type==='Collect')o.tileKind=ids[o.tileKind];});
+  m.tileRegistry=Object.fromEntries(Object.entries(m.tileRegistry!).map(([key,id])=>[key,ids[id as number]]));
   m.spawnPolicy.weights=Object.fromEntries(Object.entries(m.spawnPolicy.weights).map(([id,w])=>[ids[Number(id)],w]));
   const engine=new BoardEngine(mapToLevel(validateMap(m,content),54321,0,content));
   expect(tileId('fire',content)).toBe(123);
@@ -60,7 +61,7 @@ it.each(['ragged','unknown','fraction','negative','fixed-match','seal-void','poo
   expect(()=>validateMap(m,content)).toThrow('INVALID_MAP');
 });
 it('rejects a fixed dead board without silently shuffling authored pieces', () => {
-  const m=map();m.layout=Array.from({length:3},(_,y)=>Array.from({length:3},(_,x)=>(x+y)%4+1));m.initialSeals=[];
+  const m=map();delete m.tutorial;m.layout=Array.from({length:3},(_,y)=>Array.from({length:3},(_,x)=>(x+y)%4+1));m.initialSeals=[];
   expect(()=>new BoardEngine(mapToLevel(m,42,0,content))).toThrow('NO_PLAYABLE_LAYOUT');
 });
 it('rejects invalid combo chance and collect targets above the cap', () => {
@@ -71,32 +72,16 @@ it('rejects invalid combo chance and collect targets above the cap', () => {
   const high = map(); high.objectives.find(o => o.type === 'Collect')!.target = 31;
   expect(() => validateMap(high, content)).toThrow('INVALID_MAP');
 });
-it('keeps non-pilot rules and RNG equivalent after mapping legacy tile IDs', () => {
-  const oldContent=installContent(legacy);
-  for(const id of [11,16,18,21,40]) {
-    const old=new BoardEngine(oldContent.levels[id-1]);
-    content=installContent(config);
-    const modern=new BoardEngine(mapToLevel(map(id),sources[id-1].legacy.seed,0,content));
-    const compare=()=>{
-      const a=old.snapshot(),b=modern.snapshot();
-      expect(b.randomState).toBe(a.randomState);
-      expect(b.tiles.map(t=>t?{...t,kind:t.kind-1}:null)).toEqual(a.tiles);
-      expect(b.objectiveProgress).toEqual(a.objectiveProgress);
-    };
-    compare();
-    for(let turn=0;turn<3&&!old.won&&!old.lost;turn++){const move=old.legalMoves()[0];old.trySwap(...move);modern.trySwap(...move);compare();}
-    installContent(legacy);
-  }
-});
 it('bootstrap has metadata and no maps; percentage stars and capped retry support have explicit boundaries', () => {
   expect(contentWire(content)).not.toHaveProperty('levels');
   expect(content.levels).toEqual([]);
-  expect(chapterForLevel(11,content).id).toBe('chapter-2');
+  expect(chapterForLevel(2,content).id).toBe('chapter-1');
+  expect(() => chapterForLevel(3,content)).toThrow('INVALID_CHAPTER');
   const m=map();
   expect(mapStars(m,3)).toBe(3);
   expect(mapStars(m,4)).toBe(2);
   expect(mapStars(m,6)).toBe(1);
-  expect([0,2,3,5,7,99].map(n=>assistForFailures(m,n))).toEqual([0,0,.1,.2,.3,.3]);
+  expect([0,2,3,5,7,99].map(n=>assistForFailures(m,n))).toEqual([0,0,0,0,0,0]);
 });
 it.each([
   [8,3,4,5,6],
@@ -112,22 +97,10 @@ it.each([
   expect(mapStars(m,firstOne)).toBe(1);
   expect(mapStars(m,moves+3)).toBe(1); // Bonus moves count as moves used; denominator stays at the map budget.
 });
-it('validates v7 percentage rules for maps 1–10 and preserves absolute rules for v6 and maps 11–40', () => {
-  const current=map();
-  expect(mapFromDocument(mapToDocument(current),content)).toEqual(current);
-  const saved=normalizeSnapshot(new BoardEngine(mapToLevel(current,42,0,content)).snapshot())!;
-  expect(saved.level.mapDefinition?.starThresholds).toEqual(current.starThresholds);
-  expect(mapStars(saved.level.mapDefinition!,4)).toBe(2);
-  const invalid=clone(current);invalid.starThresholds={mode:'percentage',threeStarBelowPercent:51,twoStarBelowPercent:75};
+it('validates percentage stars and tutorial metadata in the v8 catalog',()=>{
+  for(const source of sources){const valid=mapFromDocument(mapToDocument(source),content);expect(valid.tutorial?.steps.length).toBeGreaterThan(0);expect(mapStars(valid,1)).toBe(3);}
+  const invalid=clone(map());invalid.starThresholds={mode:'percentage',threeStarBelowPercent:51,twoStarBelowPercent:75};
   expect(()=>validateMap(invalid,content)).toThrow('INVALID_MAP');
-  const eleventh=mapFromDocument(mapToDocument(sources[10]),content);
-  if('mode' in eleventh.starThresholds) throw new Error('Map 11 must keep absolute thresholds');
-  expect(mapStars(eleventh,eleventh.starThresholds.threeStarMaxMovesUsed)).toBe(3);
-  const previous=clone(sources[0]);previous.contentVersion=6;previous.starThresholds={threeStarMaxMovesUsed:6,twoStarMaxMovesUsed:7};
-  const oldConfig=clone(config);oldConfig.version=6;
-  const oldContent=validateContent(oldConfig),oldMap=validateMap(previous,oldContent);
-  expect(mapStars(oldMap,6)).toBe(3);
-  expect(mapStars(oldMap,7)).toBe(2);
 });
 it('keeps sword damage modifiers correct with registry IDs instead of legacy enum values', () => {
   const m=map(5),s=new BoardEngine(mapToLevel(m,54321,0,content)).snapshot();

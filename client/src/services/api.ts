@@ -134,7 +134,6 @@ async function authorized<T>(session: SessionData, method: string, path: string,
   };
 }
 export const fetchBootstrap = () => request<BootstrapResponse>('/v3/bootstrap');
-export const fetchContent = (version: number) => request<GameContentWire>(`/${version <= 3 ? 'v2' : 'v3'}/content/${version}`);
 export async function fetchChapterMaps(session: SessionData, chapterId: string) {
   return authorized<{ contentVersion: number; catalogRevision?: number; chapterId: string; maps: MapSummary[] }>(session, 'GET', `/v4/chapters/${encodeURIComponent(chapterId)}/maps`);
 }

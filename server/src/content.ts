@@ -22,11 +22,9 @@ export async function currentContent() {
 }
 export async function loadMap(version: number, levelId: number) {
   const content = await loadContent(version);
-  const snap = await getFirestore().collection('gameMaps').doc(`${version}_${levelId}`).get();
-  const resource = !snap.exists ? await getFirestore().collection('gameMaps').doc(String(levelId)).get() : null;
-  const entry = resource?.data()?.versions?.filter((m: any) => m.contentVersion === version).sort((a: any,b: any) => b.mapVersion-a.mapVersion)[0];
-  if (!snap.exists && !entry) throw new Error('MAP_NOT_FOUND');
-  const map = mapFromDocument(snap.exists ? snap.data() : entry, content);
+  const resource = await getFirestore().collection('gameMaps').doc(String(levelId)).get();
+  if (!resource.exists) throw new Error('MAP_NOT_FOUND');
+  const map = mapResourceFromDocument(resource.data(), content);
   if (map.id !== levelId) throw new Error('INVALID_MAP');
   return map;
 }
@@ -53,7 +51,7 @@ export async function latestChapterMaps(content: GameContent, chapterId: string)
       return summary;
     });
   }
-  // Transitional reader while numeric resources are being migrated.
+  // Resolve the chapter from its numeric resources if the indexed summary set is incomplete.
   return chapterMaps(content.version, chapterId);
 }
 export async function loadMapVersion(levelId: number, mapVersion: number, configVersion: number) {

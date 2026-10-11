@@ -7,7 +7,7 @@
     "api:serve": "npm --prefix server run serve",
     "api:deploy": "npm run api:build && firebase deploy --only functions:game-api,firestore:rules,firestore:indexes",
     "api:seed": "npm run api:build && node tools/seed_game_content.mjs",
-    "maps:migrate": "node tools/migrate_game_maps.mjs",
+    "maps:wipe": "node tools/wipe_map_data.mjs",
     "maps:simulate": "node tools/simulate_maps.cjs",
     "maps:calibrate": "node tools/calibrate_maps.cjs",
     "maps:test": "node --test tools/test_balance_report.cjs tools/test_content_cache.cjs tools/test_map_resources.cjs",

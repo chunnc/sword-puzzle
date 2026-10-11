@@ -17,7 +17,6 @@ const domain = require('./lib/domain/game');
 const source = JSON.parse(fs.readFileSync(path.join(root, 'content/game-config.json'), 'utf8'));
 const content = domain.validateContent(source);
 const expectedMaps = JSON.parse(fs.readFileSync(path.join(root, 'content/game-maps.json'), 'utf8'));
-const legacy = JSON.parse(fs.readFileSync(path.join(root, 'content/game-content.json'), 'utf8'));
 const check = (condition, message) => { if (!condition) throw new Error(message); };
 const { db, credential, request: cloudRequest } = await firebaseCliServices(project);
 let uid, installationId, cleanupApp;
@@ -33,17 +32,16 @@ async function http(route, body, token) {
   return { status: response.status, data };
 }
 try {
-  const [health, bootstrap, historical, current, v4, maps, indexResponse] = await Promise.all([
-    http('/health'), http('/v3/bootstrap'), http('/v2/content/3'),
+  const [health, bootstrap, current, v8, maps, indexResponse] = await Promise.all([
+    http('/health'), http('/v3/bootstrap'),
     db.doc('gameConfig/current').get(), db.doc(`gameContent/${content.version}`).get(),
     db.collection('gameMaps').get(),
     cloudRequest({ url: `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/collectionGroups/gameMaps/indexes` })
   ]);
   check(health.status === 200 && health.data.ok === true, 'Health check failed');
-  check(bootstrap.status === 200 && bootstrap.data.contentVersion === content.version && !('levels' in bootstrap.data.content), 'Bootstrap is not map-free content v4');
-  check(historical.status === 200 && isDeepStrictEqual(historical.data, legacy), 'Historical v3 API changed');
-  check(current.get('contentVersion') === content.version && current.get('minClientVersion') === '1.7.0', 'Current configuration pointer is incorrect');
-  check(v4.exists && isDeepStrictEqual(v4.data(), domain.contentWire(content)), 'Published global configuration differs');
+  check(bootstrap.status === 200 && bootstrap.data.contentVersion === content.version && !('levels' in bootstrap.data.content), 'Bootstrap should contain config without layouts');
+  check(current.get('contentVersion') === content.version && current.get('minClientVersion') === '1.8.0', 'Current configuration pointer is incorrect');
+  check(v8.exists && isDeepStrictEqual(v8.data(), domain.contentWire(content)), 'Published global configuration differs');
   const resources=maps.docs.filter(doc=>/^[1-9]\d*$/.test(doc.id));
   check(resources.length === expectedMaps.length, 'Published map count differs');
   const actualMaps = resources.map(doc => domain.mapResourceFromDocument(doc.data(), content)).sort((a,b) => a.id-b.id);
@@ -58,7 +56,7 @@ try {
     check(isDeepStrictEqual(before, after), 'An unrelated game configuration setting changed');
   }
   Object.assign(results, { health: true, contentVersion: content.version, catalogRevision:current.get('catalogRevision'), maps: resources.length, chapters: content.chapters.length,
-    indexReady: true, mapFreeBootstrap: true, historicalV3Preserved: true, configurationPreserved: true });
+    indexReady: true, mapFreeBootstrap: true, configurationPreserved: true });
   if (smoke) {
     installationId = randomBytes(16).toString('hex');
     const created = await http('/v2/auth/device-session', { installationId, secret: randomBytes(32).toString('hex') });
@@ -67,9 +65,7 @@ try {
     const token = created.data.idToken;
     const chapter = content.chapters[0];
     const list = await http(`/v4/chapters/${chapter.id}/maps`, undefined, token);
-    check(list.status === 200 && list.data.maps.length === 10 && list.data.maps.every((map,i) => map.id === i+1 && !('layout' in map)), 'Chapter query returned incorrect maps');
-    const locked = await http(`/v4/chapters/${content.chapters[1].id}/maps`, undefined, token);
-    check(locked.status === 403, 'Locked chapter access was accepted');
+    check(list.status === 200 && list.data.maps.length === 2 && list.data.maps.every((map,i) => map.id === i+1 && !('layout' in map)), 'Chapter query returned incorrect maps');
     const body = { runId: randomUUID(), levelId: 1, previousRunId: null };
     const started = await http('/v4/runs/start', body, token);
     check(started.status === 200 && started.data.run.map.id === 1 && Array.isArray(started.data.run.map.layout), 'Run start failed');
@@ -107,8 +103,6 @@ try {
     results.smokeDataDeleted = !!uid && !!installationId;
   } finally { await db.terminate(); }
 }
-fs.mkdirSync(path.join(root, '.balance-reports'), { recursive: true });
-fs.writeFileSync(path.join(root, '.balance-reports/deployment-verification.json'), JSON.stringify(results, null, 2) + '\n');
 console.log(JSON.stringify(results, null, 2));
 
 }

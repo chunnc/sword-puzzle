@@ -4,7 +4,7 @@ Game ghép 3 tu tiên cho iOS/Android. [GAME_CONCEPT.md](GAME_CONCEPT.md) mô t�
 
 ## Trạng thái hiện tại
 
-- `client/`: Expo SDK 57, React Native 0.86, TypeScript; 40 màn, bàn 7×7 với 4 ô, cường hóa và animation hàng đợi; EXP/10 cảnh giới, 8 skill, 8 bảo kiếm, cửa hàng xác nhận qua server, tài khoản khách và HTTPS.
+- `client/`: Expo SDK 57, React Native 0.86, TypeScript; catalog hiện có hai map hướng dẫn, engine ghép ô và animation hàng đợi; EXP/10 cảnh giới, 8 skill, 8 bảo kiếm, cửa hàng xác nhận qua server, tài khoản khách và HTTPS.
 - `server/`: Firebase Functions v2 với Auth sau API, profile/EXP/ví/túi đồ, giao dịch chống lặp, API quảng cáo và AdMob SSV.
 - `firestore.rules` và `storage.rules`: từ chối mọi truy cập trực tiếp từ mobile/web client.
 - UI tái sử dụng art hiện có, xuất thành WebP tối ưu bởi `tools/generate_ui_assets.py`. Chạy script sau khi chỉnh nguồn ảnh; cần Pillow 11+. `assets/ui-preview.png` chỉ là tài liệu tham chiếu, không được dùng làm sprite giao diện.
@@ -20,7 +20,7 @@ Yêu cầu Node.js 22.13+, Expo development build, Android Studio/Android SDK ch
 
 App cần internet và dữ liệu server trước khi mở game. Lần đầu tự tạo hồ sơ khách; các lần sau dùng lại session. Health check chỉ chạy lúc mở app và khi bấm Thử lại; mọi request client có timeout 12 giây, server có timeout chung 10 giây. API timeout (kể cả HTTP 504) hoặc lỗi mạng lập tức hiện dialog chặn thao tác; nút Thử lại chỉ đóng dialog sau khi kiểm tra kết nối và phục hồi hồ sơ/thao tác chờ hoàn tất. Quay lại app từ nền không tự ping server. Email/mật khẩu là tài khoản game; bản thử nghiệm chưa có xác minh email hoặc khôi phục mật khẩu.
 
-Client không chứa Firebase Auth/Firestore SDK. Token chỉ được dùng làm bearer token tới Game API; session lưu trong iOS Keychain/Android Keystore, còn profile, ví, trang bị và tiến trình được lưu trên server. Journal cục bộ v3 chỉ giữ bàn đang chơi và request chờ xác nhận, có bản dự phòng. Save offline v1/v2 bị bỏ qua. API trả 401 sẽ refresh token chung; nếu refresh bị từ chối, thử khôi phục cùng UID bằng khóa thiết bị rồi gửi lại request một lần. Đăng nhập là tùy chọn.
+Client không chứa Firebase Auth/Firestore SDK. Token chỉ được dùng làm bearer token tới Game API; session lưu trong iOS Keychain/Android Keystore, còn profile, ví, trang bị và tiến trình được lưu trên server. Journal cục bộ v4 giữ bàn đang chơi và request chờ xác nhận, có bản dự phòng. Save map trước content v8 bị bỏ qua; session đăng nhập lưu độc lập. API trả 401 sẽ refresh token chung; nếu refresh bị từ chối, thử khôi phục cùng UID bằng khóa thiết bị rồi gửi lại request một lần. Đăng nhập là tùy chọn.
 
 ## Chạy backend
 
@@ -43,7 +43,7 @@ API gọi Firebase Auth REST qua backend. Khi chạy Emulator Suite, API tự d�
 
 ## Kiểm thử
 
-- `npm --prefix client run typecheck` kiểm tra TypeScript; `npm --prefix client test` kiểm tra engine, nhiều objectives, bàn chữ nhật/ô khuyết, catalog, EXP, cửa hàng, journal và refresh token. Fixture Unity cũ được giữ cho kiểm thử save migration.
+- `npm --prefix client run typecheck` kiểm tra TypeScript; `npm --prefix client test` kiểm tra engine, map tutorial, catalog, EXP, cửa hàng, journal và refresh token.
 - `npm run api:test` chạy kiểm thử server hiện có.
 - `API_BASE_URL=http://127.0.0.1:5001/PROJECT_ID/asia-southeast1/gameApi npm --prefix server run test:integration` kiểm tra health/catalog, guest/email, EXP 0 sao, retry, objectives, catalog đổi phiên bản, mua cạnh tranh, đổi tài khoản không gộp dữ liệu và từ chối truy cập Firestore trực tiếp.
 - Trên thiết bị thật, kiểm tra vùng an toàn màn hình, vuốt/chọn ô, save sau khi đóng app, mất mạng → Retry → tiếp tục cùng bàn và rewarded ad test trên Android 9+ 3 GB RAM/iOS 16.4+.
@@ -51,22 +51,11 @@ API gọi Firebase Auth REST qua backend. Khi chạy Emulator Suite, API tự d�
 Trước deploy, cấu hình IAM tối thiểu cho tài khoản chạy Functions, giữ rules Firestore/Storage từ chối truy cập client, thiết lập TTL cho `authThrottle.expiresAt` và `adIntents.ttlAt`, rồi theo dõi lỗi 5xx, đồng bộ và SSV. Backend production và AdMob IDs thật chưa được cấu hình trong workspace.
 
 
-## Nội dung phiên bản 3 / client 1.3.0
+## Catalog map / client 1.8.0 / content v8
 
-Catalog server dùng content/game-content.json để seed Firestore. tools/generate_game_content.mjs chỉ chia sẻ schema/luật profile; không nhúng dữ liệu catalog vào client. Schema database: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
+Game API cấp cấu hình và tóm tắt chương; từng ván lấy một map đã ghim phiên bản. Catalog local hiện có hai màn hướng dẫn. Layout map được lưu riêng trong `game-maps.json`; cấu hình chung nằm trong `game-config.json`. Schema và versioning: [MAP_AUTHORING.md](content/MAP_AUTHORING.md), [MAP_VERSIONING.md](content/MAP_VERSIONING.md). Schema tài khoản và Firestore: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
 
-Map hỗ trợ nhiều objectives đồng thời (AND), tối đa một Battle/Boss, kích thước bàn và mặt nạ ô. Client giữ logic kiếm/skill theo ID. Server cung cấp metadata và trọng số sinh ô theo giai đoạn; không xử lý từng nước đi. 40 màn seed giữ nguyên độ khó, mỗi màn có một objective.
-
-Chạy integration bằng project demo, sau khi build backend:
-
-```sh
-npm run api:build
-JAVA_HOME=/opt/homebrew/opt/openjdk@21 PATH=/opt/homebrew/opt/openjdk@21/bin:$PATH firebase emulators:exec --project demo-kiem-khai --only functions,auth,firestore 'node tools/seed_game_content.mjs --apply --project demo-kiem-khai && API_BASE_URL=http://127.0.0.1:5001/demo-kiem-khai/asia-southeast1/gameApi npm --prefix server run test:integration'
-```
-
-Điều chỉnh JAVA_HOME/PATH theo OpenJDK 21 trên máy. iOS Simulator dùng 127.0.0.1; Android Emulator dùng 10.0.2.2 để kết nối API trên máy host. Thiết bị thật dùng địa chỉ LAN của máy chạy emulator.
-
-## Phiên thiết bị / client 1.3.0
+## Phiên thiết bị / client 1.8.0
 
 Mở game tự chơi khách, vẫn cần internet. Tạo tài khoản giữ tiến trình khách; đăng nhập tài khoản có sẵn dùng dữ liệu tài khoản đó, không gộp. Khách phải xác nhận nguy cơ mất tiến trình trước khi đổi tài khoản. Mỗi bản cài đặt chỉ dùng một UID; một tài khoản dùng được nhiều máy. Đăng xuất chỉ chuyển máy hiện tại sang khách mới.
 
@@ -74,19 +63,12 @@ Server cấp custom token Firebase có claims bản cài đặt và binding vers
 
 Kiểm thử simulator và fault injection: [ACCEPTANCE_GUEST.md](ACCEPTANCE_GUEST.md). Không bật `EXPO_PUBLIC_ACCEPTANCE_TEST` trong release.
 
-## Map theo chương / local client 1.7.0 / content v7
+## Map hướng dẫn / client 1.8.0 / content v8
 
-Cấu hình mới ở `content/game-config.json`; map riêng ở `content/game-maps.json`.
-Layout là ma trận ID (`0`: khuyết, `-1`: random thường, số dương: loại quân ban đầu).
-Firestore lưu từng hàng có `cells` trong `gameMaps/{version}_{id}`. Bootstrap không tải map;
-client chỉ lấy danh sách chương đang mở, cấu hình đầy đủ được cấp khi bắt đầu phiên.
+Catalog local được khởi tạo lại với hai map hướng dẫn trong `content/game-maps.json` và cấu hình
+chung ở `content/game-config.json`. Map 1 dạy ghép 3 Kiếm trong một nước; map 2 dạy tạo rồi
+kích hoạt ô Lôi cấp 4 trong hai nước. Hai map không sinh cascade tự động và đều đạt 3 sao theo
+đường giải hướng dẫn. Schema, versioning và cách seed được ghi ở [MAP_AUTHORING.md](content/MAP_AUTHORING.md).
 
-Phiên/retry do server quản lý; gameplay tiếp tục chạy trên client. Pilot độ khó và điều tiết
-spawn áp dụng màn 1–10; 11–40 và run v3–v6 giữ cách chấm sao cũ. Hướng dẫn schema, API,
-calibration, CI và migration: [MAP_AUTHORING.md](content/MAP_AUTHORING.md).
-
-Bản local v7 bổ sung chấm sao theo phần trăm lượt gốc cho map 1–10; gameplay v6 có retry assist sinh ô, tối đa 4 wave và thế chuẩn bị match 4/5.
-Validation local dùng `--source local`; chưa publish/deploy.
-
-Báo cáo production v5: [pilot-v5.md](content/balance/pilot-v5.md) — 90.000 mô phỏng, 1.000 seed
-cho mỗi màn/kiểu bot ở sức mạnh tham chiếu, cùng kiểm tra sức mạnh và chuỗi retry.
+Dọn catalog Firestore và dọn các fixture/cache/report map cũ là các thao tác độc lập. Bản local
+này chưa được publish lên Firestore.

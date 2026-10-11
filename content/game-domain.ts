@@ -42,20 +42,20 @@ export type ObjectiveProgress = Record<string, number>;
 export type TileKey = 'sword' | 'fire' | 'lightning' | 'spirit' | 'rock';
 export interface ChapterDefinition { id: string; name: string; order: number; firstLevelId: number; lastLevelId: number }
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'very-hard';
-export type StarThresholds = { twoStarMaxMovesUsed: number; threeStarMaxMovesUsed: number }
-  | { mode: 'percentage'; threeStarBelowPercent: number; twoStarBelowPercent: number };
+export type StarThresholds = { mode: 'percentage'; threeStarBelowPercent: number; twoStarBelowPercent: number };
+export interface TutorialPosition { row: number; column: number }
+export interface TutorialStep { from: TutorialPosition; to: TutorialPosition; text: string }
+export interface MapTutorial { type: 'match-three' | 'charged-lightning'; steps: TutorialStep[] }
 export interface MapDefinition {
-  // contentVersion on historical maps records their authoring config, not their map revision.
   mapVersion?: number;
-  rulesMode?: 'classic' | 'modern';
+  rulesMode?: 'modern';
   tileRegistry?: Record<TileKey, number>;
-  contentVersion: number; id: number; chapterId: string; orderInChapter: number; name: string;
+  contentVersion: number; id: number; chapterId: string; orderInChapter: number; name: string; tutorial?: MapTutorial;
   difficulty: Difficulty; layout: number[][]; initialSeals: { row: number; column: number }[];
   objectives: ObjectiveDefinition[]; moves: number; baseExp: number;
   starThresholds: StarThresholds;
-  spawnPolicy: { weights: Record<string, number>; collectionPressure: number; comboChance: number; comboPressure?: number; setupChance?: number; obstaclePressure: number; candidates: number };
+  spawnPolicy: { weights: Record<string, number>; collectionPressure: number; comboChance: number; setupChance: number; obstaclePressure: number; candidates: number };
   retryAssistPolicy: { thresholds: number[]; reductions: number[] };
-  legacy?: { seed: number; obstacles: { rocks: number; seals: number }; spawnPhases: LevelDefinition['spawnPhases'] };
 }
 export type MapSummary = Pick<MapDefinition, 'mapVersion' | 'contentVersion' | 'id' | 'chapterId' | 'orderInChapter' | 'name' | 'difficulty' | 'objectives'>;
 export interface MapResource { id: number; chapterId: string; orderInChapter: number; latestVersion: number; latestSummary: MapSummary; versions: ReturnType<typeof mapToDocument>[] }
@@ -82,17 +82,12 @@ export interface LevelDefinition {
     rocks: number;
     seals: number;
   };
-  spawnPhases: {
-    minMovesRemaining: number;
-    weights: [number, number, number, number];
-  }[];
 }
 export interface GameContent {
-  layoutCodes?: { void: 0; random: -1 };
-  normalTileIds?: number[];
-  chapters?: ChapterDefinition[];
-  // Historical reward metadata, without map layouts, for legacy profile migration.
-  levelBaseExp?: number[];
+  layoutCodes: { void: 0; random: -1 };
+  normalTileIds: number[];
+  chapters: ChapterDefinition[];
+  levelBaseExp: number[];
   version: number;
   levelCount: number;
   qiCap: number;
@@ -143,58 +138,32 @@ export function validateContent(raw: unknown): GameContent {
   const bad = () => {
     throw new Error('INVALID_CONTENT');
   };
-  if (!c || !integer(c.version, 3) || !integer(c.levelCount, 1, 1000) || !integer(c.qiCap, 1, 10000) || !Array.isArray(c.expRates) || c.expRates.length !== 4 || !c.expRates.every(x => integer(x, 0, 100)) || !c.rewards || !integer(c.rewards.firstWinCoins) || !integer(c.rewards.replayWinCoins) || !Array.isArray(c.rewards.starBonus) || c.rewards.starBonus.length !== 4 || !c.rewards.starBonus.every(x => integer(x))) return bad();
+  if (!c || !integer(c.version, 8) || !integer(c.levelCount, 1, 1000) || !integer(c.qiCap, 1, 10000) || !Array.isArray(c.expRates) || c.expRates.length !== 4 || !c.expRates.every(x => integer(x, 0, 100)) || !c.rewards || !integer(c.rewards.firstWinCoins) || !integer(c.rewards.replayWinCoins) || !Array.isArray(c.rewards.starBonus) || c.rewards.starBonus.length !== 4 || !c.rewards.starBonus.every(x => integer(x))) return bad();
   if (c.expRates.some((rate,i) => i > 0 && rate < c.expRates[i-1]) || c.rewards.starBonus.some((bonus,i) => i > 0 && bonus < c.rewards.starBonus[i-1])) return bad();
-  const modern = !!c.layoutCodes;
-  if (modern) {
-    if (c.version < 4) return bad();
-    if (c.layoutCodes!.void !== 0 || c.layoutCodes!.random !== -1 || !Array.isArray(c.chapters) || !c.chapters.length || !unique(c.chapters) || !Array.isArray(c.normalTileIds) || c.normalTileIds.length !== 4 || new Set(c.normalTileIds).size !== 4 || !Array.isArray(c.levelBaseExp) || c.levelBaseExp.length !== c.levelCount || !c.levelBaseExp.every(x => integer(x, 1))) return bad();
+  if (!c.layoutCodes || c.layoutCodes.void !== 0 || c.layoutCodes.random !== -1 || !Array.isArray(c.chapters) || !c.chapters.length || !unique(c.chapters) || !Array.isArray(c.normalTileIds) || c.normalTileIds.length !== 4 || new Set(c.normalTileIds).size !== 4 || !Array.isArray(c.levelBaseExp) || c.levelBaseExp.length !== c.levelCount || !c.levelBaseExp.every(x => integer(x, 1))) return bad();
     let next = 1;
     for (const [i, ch] of c.chapters.entries()) {
       if (!text(ch.id) || !/^[a-z0-9-]+$/.test(ch.id) || !text(ch.name) || ch.order !== i + 1 || ch.firstLevelId !== next || !integer(ch.lastLevelId, next, c.levelCount)) return bad();
       next = ch.lastLevelId + 1;
     }
-    if (next !== c.levelCount + 1 || c.levels?.length) return bad();
-    c.levels = [];
-  }
-  for (const list of [c.tiles, c.realms, c.skills, c.swords, ...(modern ? [] : [c.levels])]) if (!Array.isArray(list) || !list.length || list.some(x => !x || !text(String(x.id))) || !unique(list)) return bad();
-  if (modern) {
+  if (next !== c.levelCount + 1 || c.levels?.length) return bad();
+  c.levels = [];
+  for (const list of [c.tiles, c.realms, c.skills, c.swords]) if (!Array.isArray(list) || !list.length || list.some(x => !x || !text(String(x.id))) || !unique(list)) return bad();
+  {
     const keys: TileKey[] = ['sword', 'fire', 'lightning', 'spirit', 'rock'];
     if (c.tiles.length !== 5 || new Set(c.tiles.map(t => t.key)).size !== 5 || c.tiles.some(t => !integer(t.id, 1) || !keys.includes(t.key!) || !text(t.name) || !text(t.artKey) || !integer(t.damage) || !integer(t.qi) || t.role !== (t.key === 'rock' ? 'obstacle' : 'matchable')) || c.normalTileIds!.some(id => !c.tiles.some(t => t.id === id && t.role === 'matchable')) || c.tiles.find(t => t.key === 'spirit')!.damage !== 0) return bad();
-  } else if (c.tiles.length !== 4 || c.tiles.some((x, i) => x.id !== i || !text(x.name) || !integer(x.damage) || !integer(x.qi)) || c.tiles[3].damage !== 0) return bad();
-  if (c.skills.length !== 8 || c.swords.length !== 8 || c.skills.some(x => !skillIds.includes(x.id) || !integer(x.cost, 1, c.qiCap) || 'effect' in x || 'target' in x) || c.swords.some(x => !swordIds.includes(x.id) || 'modifiers' in x || !text(x.color))) return bad();
-  for (const x of [...c.skills, ...c.swords]) if (!text(x.name) || !text(x.description) || !text(x.artKey) || !integer(x.price) || !integer(x.unlock, 0, c.levelCount)) return bad();
-  if (c.realms[0].exp !== 0 || c.realms.some((x, i) => !text(x.id) || !text(x.name) || !integer(x.exp) || i > 0 && x.exp <= c.realms[i - 1].exp)) return bad();
-  if (!modern && c.levels.length !== c.levelCount) return bad();
-  for (const [i, l] of c.levels.entries()) {
-    if (l.id !== i + 1 || !text(l.chapter) || !integer(l.moves, 1, 1000) || !integer(l.seed, 1, 0xffffffff) || !integer(l.baseExp, 1) || !l.board || !integer(l.board.width, 3, 12) || !integer(l.board.height, 3, 12) || !Array.isArray(l.board.activeCells) || l.board.activeCells.length !== l.board.width * l.board.height || l.board.activeCells.some(x => typeof x !== 'boolean') || !l.board.activeCells.some(Boolean)) return bad();
-    if (!Array.isArray(l.objectives) || !l.objectives.length || !unique(l.objectives) || l.objectives.some(o => !text(o.id) || !/^[a-zA-Z0-9_-]{1,80}$/.test(o.id) || !integer(o.target, 1))) return bad();
-    if (l.objectives.filter(o => o.type === 'Battle' || o.type === 'Boss').length > 1) return bad();
-    if (!l.obstacles || !integer(l.obstacles.rocks) || !integer(l.obstacles.seals)) return bad();
-    const active = l.board.activeCells.filter(Boolean).length;
-    const rockCells = l.board.activeCells.filter((v, n) => v && n >= l.board.width && n < l.board.width * (l.board.height - 1)).length;
-    if (l.obstacles.rocks > rockCells || l.obstacles.rocks + l.obstacles.seals > active - 6) return bad();
-    for (const o of l.objectives) {
-      if (o.type === 'Collect') {
-        if (!integer(o.tileKind, 0, 3)) return bad();
-      } else if (o.type === 'Battle' || o.type === 'Boss') {
-        if (!o.enemy || !text(o.enemy.id) || !text(o.enemy.name) || !text(o.enemy.artKey)) return bad();
-      } else if (o.type === 'BreakRocks') {
-        if (o.target > l.obstacles.rocks) return bad();
-      } else if (o.type === 'BreakSeals') {
-        if (o.target > l.obstacles.seals) return bad();
-      } else return bad();
-    }
-    if (!Array.isArray(l.spawnPhases) || !l.spawnPhases.length || l.spawnPhases[0].minMovesRemaining !== 0 || l.spawnPhases.some((p, n) => !integer(p.minMovesRemaining, 0, l.moves) || n > 0 && p.minMovesRemaining <= l.spawnPhases[n - 1].minMovesRemaining || !Array.isArray(p.weights) || p.weights.length !== 4 || !p.weights.every(w => integer(w, 1, 10000)))) return bad();
   }
+  if (c.skills.length !== 8 || c.swords.length !== 8 || c.skills.some(x => !skillIds.includes(x.id) || !integer(x.cost, 1, c.qiCap) || 'effect' in x || 'target' in x) || c.swords.some(x => !swordIds.includes(x.id) || 'modifiers' in x || !text(x.color))) return bad();
+  for (const x of [...c.skills, ...c.swords]) if (!text(x.name) || !text(x.description) || !text(x.artKey) || !integer(x.price) || !integer(x.unlock, 0, 1000)) return bad();
+  if (c.realms[0].exp !== 0 || c.realms.some((x, i) => !text(x.id) || !text(x.name) || !integer(x.exp) || i > 0 && x.exp <= c.realms[i - 1].exp)) return bad();
   return JSON.parse(JSON.stringify(c)) as GameContent;
 }
 const tileKeys: TileKey[] = ['sword', 'fire', 'lightning', 'spirit', 'rock'];
 export function tileId(key: TileKey, c = requireContent()): number {
-  return c.layoutCodes ? c.tiles.find(t => t.key === key)!.id : tileKeys.indexOf(key);
+  return c.tiles.find(t => t.key === key)!.id;
 }
 export function tileKey(id: number, c = requireContent()): TileKey {
-  const key = c.layoutCodes ? c.tiles.find(t => t.id === id)?.key : tileKeys[id];
+  const key = c.tiles.find(t => t.id === id)?.key;
   if (!key) throw new Error('UNKNOWN_TILE');
   return key;
 }
@@ -207,14 +176,7 @@ export function chapterForLevel(id: number, c = requireContent()): ChapterDefini
 export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
   const m = JSON.parse(JSON.stringify(raw)) as MapDefinition;
   const bad = (): never => { throw new Error('INVALID_MAP'); };
-  const historicalV4 = c.version === 4 && m?.contentVersion === 4 && Number.isFinite((m.spawnPolicy as any)?.comboPressure);
-  if (historicalV4) {
-    m.spawnPolicy.comboChance ??= 0;
-    m.spawnPolicy.candidates ??= 4;
-  }
-  const versioned = m?.mapVersion !== undefined;
-  if (!m || !c.layoutCodes || !integer(m.contentVersion, 3) || (!versioned && m.contentVersion !== c.version) || !integer(m.id, 1, c.levelCount) || !text(m.name) || !['easy', 'medium', 'hard', 'very-hard'].includes(m.difficulty) || !integer(m.moves, 1, 1000) || !integer(m.baseExp, 1, 1000000) || (!versioned && m.baseExp !== c.levelBaseExp![m.id-1])) return bad();
-  if (versioned && (!integer(m.mapVersion, 1) || !['classic', 'modern'].includes(m.rulesMode!) || !m.tileRegistry || Object.keys(m.tileRegistry).length !== tileKeys.length || tileKeys.some(key => m.tileRegistry![key] !== tileId(key, c)))) return bad();
+  if (!m || !c.layoutCodes || !integer(m.contentVersion, 8) || !integer(m.mapVersion, 1) || m.rulesMode !== 'modern' || !m.tileRegistry || Object.keys(m.tileRegistry).length !== tileKeys.length || tileKeys.some(key => m.tileRegistry![key] !== tileId(key, c)) || !integer(m.id, 1, c.levelCount) || !text(m.name) || !['easy', 'medium', 'hard', 'very-hard'].includes(m.difficulty) || !integer(m.moves, 1, 1000) || !integer(m.baseExp, 1, 1000000)) return bad();
   const ch = chapterForLevel(m.id, c);
   if (m.chapterId !== ch.id || m.orderInChapter !== m.id - ch.firstLevelId + 1 || !Array.isArray(m.layout) || !integer(m.layout.length, 3, 12) || !Array.isArray(m.layout[0]) || !integer(m.layout[0].length, 3, 12)) return bad();
   const width = m.layout[0].length, rock = tileId('rock', c);
@@ -227,12 +189,12 @@ export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
     if (col >= 2 && m.layout[row][col-1] === id && m.layout[row][col-2] === id || row >= 2 && m.layout[row-1][col] === id && m.layout[row-2][col] === id) return bad();
   }
   if (!Array.isArray(m.objectives) || !m.objectives.length || !unique(m.objectives) || m.objectives.filter(o => o.type === 'Battle' || o.type === 'Boss').length > 1) return bad();
-  const rocks = m.legacy?.obstacles.rocks ?? m.layout.flat().filter(id => id === rock).length;
-  const seals = m.legacy?.obstacles.seals ?? m.initialSeals.length;
+  const rocks = m.layout.flat().filter(id => id === rock).length;
+  const seals = m.initialSeals.length;
   for (const o of m.objectives) {
     if (!text(o.id) || !/^[a-zA-Z0-9_-]{1,80}$/.test(o.id) || !integer(o.target, 1)) return bad();
     if (o.type === 'Collect') {
-      if (!c.normalTileIds!.includes(o.tileKind) || !(m.contentVersion <= 4 && c.version === 4) && o.target > 30) return bad();
+      if (!c.normalTileIds!.includes(o.tileKind) || o.target > 30) return bad();
     }
     else if (o.type === 'Battle' || o.type === 'Boss') { if (!o.enemy || !text(o.enemy.id) || !text(o.enemy.name) || !text(o.enemy.artKey)) return bad(); }
     else if (o.type === 'BreakRocks') { if (o.target > rocks) return bad(); }
@@ -241,16 +203,13 @@ export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
   }
   const s = m.starThresholds, p = m.spawnPolicy, a = m.retryAssistPolicy;
   if (!s || typeof s !== 'object' || Array.isArray(s)) return bad();
-  if (versioned && 'mode' in s) {
-    if (s.mode !== 'percentage' || !integer(s.threeStarBelowPercent, 1, 99) || !integer(s.twoStarBelowPercent, s.threeStarBelowPercent+1, 100)) return bad();
-  } else if (!versioned && c.version >= 7 && m.id <= 10) {
-    if (!('mode' in s) || s.mode !== 'percentage' || s.threeStarBelowPercent !== 50 || s.twoStarBelowPercent !== 75) return bad();
-  } else if ('mode' in s || !integer(s.threeStarMaxMovesUsed, 1, m.moves-1) || !integer(s.twoStarMaxMovesUsed, s.threeStarMaxMovesUsed+1, m.moves)) return bad();
+  if (!('mode' in s) || s.mode !== 'percentage' || !integer(s.threeStarBelowPercent, 1, 99) || !integer(s.twoStarBelowPercent, s.threeStarBelowPercent+1, 100)) return bad();
   if (!p || !p.weights || Object.keys(p.weights).length !== c.normalTileIds!.length || c.normalTileIds!.some(id => !integer(p.weights[id], 1, 10000)) || !integer(p.candidates, 1, 8) || !Number.isFinite(p.comboChance) || p.comboChance < 0 || p.comboChance > 1 || [p.collectionPressure, p.obstaclePressure].some(v => !Number.isFinite(v) || v < 0 || v > .9)) return bad();
-  if (((versioned ? m.rulesMode === 'modern' : c.version >= 6) || p.setupChance !== undefined) && (!Number.isFinite(p.setupChance) || p.setupChance! < 0 || p.setupChance! > 1)) return bad();
-  if (p.comboPressure !== undefined && (!historicalV4 || !Number.isFinite(p.comboPressure) || p.comboPressure < 0 || p.comboPressure > .9)) return bad();
+  if (!Number.isFinite(p.setupChance) || p.setupChance! < 0 || p.setupChance! > 1) return bad();
   if (!a || !Array.isArray(a.thresholds) || !Array.isArray(a.reductions) || a.thresholds.length !== a.reductions.length || a.thresholds.some((n,i) => !integer(n, 1) || i > 0 && n <= a.thresholds[i-1]) || a.reductions.some((n,i) => !Number.isFinite(n) || n < 0 || n > .3 || i > 0 && n < a.reductions[i-1])) return bad();
-  if (m.legacy && (!integer(m.legacy.seed, 1, 0xffffffff) || !integer(rocks) || !integer(seals) || rocks + seals > m.layout.flat().filter(Boolean).length - 6 || m.layout.flat().some(id => id !== 0 && id !== -1) || m.initialSeals.length || !Array.isArray(m.legacy.spawnPhases) || !m.legacy.spawnPhases.length || m.legacy.spawnPhases[0].minMovesRemaining !== 0 || m.legacy.spawnPhases.some((phase,i) => !integer(phase.minMovesRemaining, 0, m.moves) || i > 0 && phase.minMovesRemaining <= m.legacy!.spawnPhases[i-1].minMovesRemaining || phase.weights.length !== 4 || !phase.weights.every(w => integer(w, 1, 10000))))) return bad();
+  if (m.tutorial) {
+    if (!['match-three', 'charged-lightning'].includes(m.tutorial.type) || !Array.isArray(m.tutorial.steps) || !m.tutorial.steps.length || m.tutorial.steps.some(step => !step || !text(step.text) || !step.from || !step.to || !integer(step.from.row, 1, m.layout.length) || !integer(step.to.row, 1, m.layout.length) || !integer(step.from.column, 1, width) || !integer(step.to.column, 1, width) || Math.abs(step.from.row-step.to.row)+Math.abs(step.from.column-step.to.column)!==1)) return bad();
+  }
   return m;
 }
 export function mapToDocument(map: MapDefinition) {
@@ -263,7 +222,7 @@ export function mapFromDocument(raw: any, c = requireContent()): MapDefinition {
   return validateMap({ ...metadata, layout: layoutRows.map(row => row?.cells) }, c);
 }
 export function versionMap(map: MapDefinition, c: GameContent, mapVersion = map.mapVersion ?? map.contentVersion): MapDefinition {
-  return validateMap({ ...map, mapVersion, rulesMode: map.rulesMode ?? (map.contentVersion >= 6 ? 'modern' : 'classic'),
+  return validateMap({ ...map, mapVersion, rulesMode: 'modern',
     tileRegistry: map.tileRegistry ?? Object.fromEntries(tileKeys.map(key => [key, tileId(key, c)])) }, c);
 }
 export function mapResourceFromDocument(raw: any, c: GameContent, version = raw?.latestVersion): MapDefinition {
@@ -286,16 +245,12 @@ export function mapToLevel(m: MapDefinition, seed: number, assistReduction = 0, 
   return { id: m.id, contentVersion: c.version, ...(m.mapVersion === undefined ? {} : { mapVersion: m.mapVersion, configVersion: c.version }), mapDefinition: m, assistReduction, seed,
     chapter: chapterForLevel(m.id, c).name, moves: m.moves, baseExp: m.baseExp,
     board: { width, height, activeCells: [...m.layout].reverse().flat().map(id => id !== 0) },
-    objectives: m.objectives, obstacles: m.legacy?.obstacles ?? { rocks: m.layout.flat().filter(id => id === tileId('rock',c)).length, seals: m.initialSeals.length },
-    spawnPhases: m.legacy?.spawnPhases ?? [{ minMovesRemaining: 0, weights: [1,1,1,1] }] };
+    objectives: m.objectives, obstacles: { rocks: m.layout.flat().filter(id => id === tileId('rock',c)).length, seals: m.initialSeals.length } };
 }
 export function mapStars(map: MapDefinition, movesUsed: number): Stars {
   const thresholds = map.starThresholds;
-  if ('mode' in thresholds) {
-    if (movesUsed * 100 < map.moves * thresholds.threeStarBelowPercent) return 3;
-    return movesUsed * 100 < map.moves * thresholds.twoStarBelowPercent ? 2 : 1;
-  }
-  return movesUsed <= thresholds.threeStarMaxMovesUsed ? 3 : movesUsed <= thresholds.twoStarMaxMovesUsed ? 2 : 1;
+  if (movesUsed * 100 < map.moves * thresholds.threeStarBelowPercent) return 3;
+  return movesUsed * 100 < map.moves * thresholds.twoStarBelowPercent ? 2 : 1;
 }
 export function assistForFailures(map: MapDefinition, failures: number): number {
   let reduction = 0;
@@ -303,14 +258,13 @@ export function assistForFailures(map: MapDefinition, failures: number): number 
   return reduction;
 }
 export function contentWire(c: GameContent) {
-  if (!c.layoutCodes) return c;
   const { levels, ...config } = c;
   return config;
 }
 const contents = new Map<number, GameContent>();
 export function registerContent(raw: unknown): GameContent {
   const c = validateContent(raw);
-  if (c.layoutCodes) c.levels = contents.get(c.version)?.levels ?? [];
+  c.levels = contents.get(c.version)?.levels ?? [];
   contents.set(c.version, c);
   return c;
 }

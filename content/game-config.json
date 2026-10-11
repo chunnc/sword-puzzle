@@ -1,6 +1,6 @@
 {
-  "version": 7,
-  "levelCount": 40,
+  "version": 8,
+  "levelCount": 2,
   "qiCap": 100,
   "expRates": [
     30,
@@ -277,44 +277,6 @@
   ],
   "levelBaseExp": [
     100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
-    100,
     100
   ],
   "chapters": [
@@ -323,28 +285,7 @@
       "name": "Vân Hải Tiên Sơn",
       "order": 1,
       "firstLevelId": 1,
-      "lastLevelId": 10
-    },
-    {
-      "id": "chapter-2",
-      "name": "Huyền Kiếm Bí Cảnh",
-      "order": 2,
-      "firstLevelId": 11,
-      "lastLevelId": 20
-    },
-    {
-      "id": "chapter-3",
-      "name": "Lôi Hỏa Thiên Môn",
-      "order": 3,
-      "firstLevelId": 21,
-      "lastLevelId": 30
-    },
-    {
-      "id": "chapter-4",
-      "name": "Tinh Hà Kiếm Vực",
-      "order": 4,
-      "firstLevelId": 31,
-      "lastLevelId": 40
+      "lastLevelId": 2
     }
   ]
 }

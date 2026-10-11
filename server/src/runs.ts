@@ -2,8 +2,8 @@ import { randomBytes } from 'node:crypto';
 import { Router, type RequestHandler } from 'express';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import { ApiError, type AuthenticatedRequest } from './identity';
-import { chapterMaps, latestChapterMaps, currentContent, loadContent } from './content';
-import { contentWire, highestUnlocked, mapFromDocument, mapResourceFromDocument, mapToDocument, versionMap, type GameContent } from './domain/game';
+import { latestChapterMaps, currentContent, loadContent } from './content';
+import { contentWire, highestUnlocked, mapFromDocument, mapResourceFromDocument, mapToDocument, type GameContent } from './domain/game';
 import { profileFields, profileFromDocument } from './domain/profile';
 import { abandonedStats, assistForFailures, completeRun, emptyMapStats, parseRunReport, startedStats, type MapStats, type StoredRun } from './domain/runs';
 
@@ -14,7 +14,7 @@ export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, ass
       const { config, content } = await currentContent();
       if (!content.layoutCodes) throw new ApiError(503, 'CONTENT_NOT_CONFIGURED');
       res.set('Cache-Control', 'no-store').json({ contentVersion: content.version, catalogRevision: config.catalogRevision ?? 0, content: contentWire(content), levelCount: content.levelCount,
-        rewardedAdsEnabled: config.rewardedAdsEnabled === true, minClientVersion: config.minClientVersion ?? '1.4.0' });
+        rewardedAdsEnabled: config.rewardedAdsEnabled === true, minClientVersion: config.minClientVersion ?? '1.8.0' });
     } catch (error) { next(error); }
   });
   router.get('/v4/chapters/:chapterId/maps', requireAuth, async (req: AuthenticatedRequest, res, next) => {
@@ -25,19 +25,6 @@ export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, ass
       const player = await db.collection('players').doc(req.playerId!).get();
       if (chapter.firstLevelId > highestUnlocked(profileFromDocument(player.data(), content).levels, content)) throw new ApiError(403, 'CHAPTER_LOCKED');
       res.set('Cache-Control', 'no-store').json({ contentVersion: content.version, catalogRevision: config.catalogRevision ?? 0, chapterId, maps: await latestChapterMaps(content, chapterId) });
-    } catch (error) { next(error); }
-  });
-  router.get('/v3/content/:version', async (req, res, next) => {
-    try { res.json(contentWire(await loadContent(Number(req.params.version)))); } catch (error) { next(error); }
-  });
-  router.get('/v3/chapters/:chapterId/maps', requireAuth, async (req: AuthenticatedRequest, res, next) => {
-    try {
-      const version = Number(req.query.contentVersion), chapterId = String(req.params.chapterId);
-      const content = await loadContent(version), chapter = content.chapters?.find(c => c.id === chapterId);
-      if (!chapter) throw new ApiError(404, 'INVALID_CHAPTER');
-      const player = await db.collection('players').doc(req.playerId!).get();
-      if (chapter.firstLevelId > highestUnlocked(profileFromDocument(player.data(), content).levels, content)) throw new ApiError(403, 'CHAPTER_LOCKED');
-      res.json({ contentVersion: version, chapterId, maps: await chapterMaps(version, chapterId) });
     } catch (error) { next(error); }
   });
   router.post(['/v3/runs/start', '/v4/runs/start'], requireAuth, async (req: AuthenticatedRequest, res, next) => {
@@ -68,19 +55,8 @@ export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, ass
         if (!serverSelected && contentVersion !== content.version) throw new ApiError(409, 'CONTENT_MISMATCH');
         if (levelId < 1 || levelId > content.levelCount) throw new ApiError(400, 'INVALID_RUN');
         const resource = await tx.get(db.collection('gameMaps').doc(String(levelId)));
-        let map;
-        if (resource.exists) {
-          if (serverSelected) map = mapResourceFromDocument(resource.data(), content);
-          else {
-            const entry = resource.data()!.versions.filter((m: any) => m.contentVersion === content.version).sort((a: any,b: any) => b.mapVersion-a.mapVersion)[0];
-            if (!entry) throw new ApiError(404, 'MAP_NOT_FOUND');
-            map = mapFromDocument(entry, content);
-          }
-        } else {
-          const legacy = await tx.get(db.collection('gameMaps').doc(`${content.version}_${levelId}`));
-          if (!legacy.exists) throw new ApiError(404, 'MAP_NOT_FOUND');
-          map = versionMap(mapFromDocument(legacy.data(), content), content);
-        }
+        if (!resource.exists) throw new ApiError(404, 'MAP_NOT_FOUND');
+        const map = mapResourceFromDocument(resource.data(), content);
         if (map.id !== levelId) throw new Error('INVALID_MAP_RESOURCE');
         const installation = await tx.get(installationRef);
         const supersededRunId = installation.data()?.activeRunId ?? previousRunId;
@@ -149,9 +125,7 @@ export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, ass
 }
 function startResponse(run: StoredRun, content: GameContent) {
   const { runId, seed, assistReduction, attempt, loadout, totalExp } = run;
-  // A committed legacy start may be recovered by an upgraded client. Materialize
-  // revision metadata without changing its actual layout, rules, seed or context.
-  const map = run.map.mapVersion === undefined ? versionMap(run.map, content, run.mapVersion ?? run.map.contentVersion) : run.map;
+  const map = run.map;
   return { run: { runId, mapVersion: run.mapVersion ?? map.mapVersion ?? map.contentVersion, configVersion: run.configVersion ?? content.version,
     seed, map, assistReduction, attempt, loadout, totalExp }, config: contentWire(content) };
 }

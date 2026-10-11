@@ -1,10 +1,11 @@
-# Firestore schema — content v3
+# Firestore schema — content v8
 
 Client chỉ gọi Game API. Mọi truy cập Firestore trực tiếp bị rules từ chối.
 
 ```text
 gameConfig/current
 gameContent/{contentVersion}
+gameMaps/{mapId}
 installations/{installationId}
 installations/{installationId}/operations/{operationId}
 players/{uid}
@@ -17,18 +18,18 @@ authThrottle/{keyHash}
 ## gameConfig/current
 
 ```json
-{"contentVersion":3,"minClientVersion":"1.2.0","rewardedAdsEnabled":false}
+{"contentVersion":8,"minClientVersion":"1.8.0","rewardedAdsEnabled":false}
 ```
 
 ## gameContent/{contentVersion}
 
-Document bất biến. Schema TypeScript đầy đủ: `GameContent`, `LevelDefinition`, `ObjectiveDefinition`, `SkillDefinition`, `SwordDefinition` trong [content/game-domain.ts](content/game-domain.ts). Dữ liệu 40 màn ban đầu: [content/game-content.json](content/game-content.json).
+Document bất biến. Schema TypeScript đầy đủ: `GameContent`, `LevelDefinition`, `ObjectiveDefinition`, `SkillDefinition`, `SwordDefinition` trong [content/game-domain.ts](content/game-domain.ts). Catalog local hiện có hai map hướng dẫn.
 
 - version, levelCount, qiCap, expRates (0/1/2/3 sao), rewards (firstWinCoins, replayWinCoins, starBonus).
 - tiles: id/name/damage/qi; realms: id/name/exp.
 - swords: id/name/description/artKey/color/unlock/price.
 - skills: id/name/description/artKey/unlock/price/cost.
-- levels: id/chapter/moves/seed/baseExp/board/objectives/obstacles/spawnPhases.
+- chapters, levelCount and levelBaseExp provide progression metadata; layouts live in numeric `gameMaps/{mapId}` resources.
 
 Không lưu SwordModifier, SkillEffect hoặc cách chọn mục tiêu. Client triển khai hành vi theo ID.
 
@@ -38,14 +39,14 @@ Ví dụ nhiều objectives (mọi mục tiêu phải hoàn thành):
 
 ```json
 [
-  {"id":"collect-swords","type":"Collect","tileKind":0,"target":18},
+  {"id":"collect-swords","type":"Collect","tileKind":1,"target":18},
   {"id":"defeat-boss","type":"Boss","target":360,"enemy":{"id":"boss-01","name":"Yêu Vương","artKey":"beast"}}
 ]
 ```
 
 Có ít nhất một objective, ID duy nhất, tối đa một Battle/Boss. Các loại khác: BreakRocks, BreakSeals. `target` của Battle/Boss là HP; các loại còn lại là số lượng cần đạt.
 
-`spawnPhases` bắt đầu từ minMovesRemaining=0, sắp tăng; weights là bốn số nguyên dương theo Kiếm/Hỏa/Lôi/Tụ Linh Châu. Chọn ngưỡng lớn nhất ≤ số lượt còn lại. Seed dùng `[1,1,1,1]`.
+`spawnPolicy` lưu trọng số sinh 4 loại ô thường, xác suất sinh combo/setup và các pressure. Tutorial maps đặt mọi xác suất/pressure về 0, dùng refill xác định và không chạy cascade tự động.
 
 ## players/{uid}
 
@@ -95,16 +96,17 @@ ID ngẫu nhiên 128 bit dạng hex; mỗi document chỉ có một `playerUid` 
 
 Subcollection `operations` lưu `kind`, `targetUid`, `bindingVersion`, `createdAt`. Receipt không lưu mật khẩu, token hay khóa thiết bị. Operation đã bị một lần đổi liên kết mới thay thế không được replay để khôi phục binding cũ. `registration: {id, email}` tạm thời bảo vệ bước liên kết Firebase Auth/Firestore; nếu bị gián đoạn có thể hoàn tất bằng xác thực đúng email/mật khẩu.
 
-## Historical content v4 / composite map collection
+## Content v8 và map revision
 
-`gameContent/{version}` không còn chứa `levels`; giữ `layoutCodes`, `normalTileIds`, registry
-`tiles`, `chapters`, `levelBaseExp` và luật chung. Map nằm ở `gameMaps/{version}_{levelId}`,
-có `chapterId`, `orderInChapter` và `layoutRows: [{cells: number[]}]` (thứ tự từ trên xuống).
-API chuyển `layoutRows` thành `layout: number[][]`. `0` là khuyết, `-1` là random thường,
-số dương tham chiếu registry. Registry mới dùng 1/2/3/4/5 cho Kiếm/Hỏa/Lôi/Linh Châu/Đá;
-v3 tiếp tục dùng ID cũ. `initialSeals` chứa `{row,column}` zero-based từ trên xuống.
+`gameContent/{version}` không chứa layouts; giữ `layoutCodes`, `normalTileIds`, registry
+`tiles`, `chapters`, `levelBaseExp` và luật chung. `gameMaps/{mapId}` dùng ID số và giữ
+`latestVersion`, `latestSummary`, chapter/order cùng danh sách map revision bất biến. Mỗi
+revision lưu `layoutRows: [{cells: number[]}]` theo thứ tự từ trên xuống. API chuyển chúng
+thành `layout: number[][]`. `0` là khuyết, `-1` sinh ô thường, số dương tham chiếu registry.
+Registry v8 dùng 1/2/3/4/5 cho Kiếm/Hỏa/Lôi/Linh Châu/Đá. `initialSeals` dùng `{row,column}`
+zero-based từ trên xuống. Tutorial metadata giữ các bước và lời nhắc của map hướng dẫn.
 
-`players/{uid}/runs/{runId}` giữ map phiên bản cố định (cũng mã hóa `layoutRows`), seed,
+`players/{uid}/runs/{runId}` giữ map revision cố định (cũng mã hóa `layoutRows`), seed,
 loadout/EXP, mức hỗ trợ, installation, attempt, status, report và receipt kết quả.
 `players/{uid}/mapStats/{levelId}` giữ attemptsStarted/retryCount/wins/losses/abandoned,
 consecutiveFailures/bestStars/bestMovesUsed/firstWinAt (lần thắng đầu được ghi từ khi bật tính năng).
