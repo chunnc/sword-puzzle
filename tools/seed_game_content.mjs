@@ -6,8 +6,8 @@ import { isDeepStrictEqual } from 'node:util';
 import { firebaseCliServices } from './firebase_cli_credentials.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const require = createRequire(path.join(root, 'server/package.json'));
-const { validateContent, versionMap, contentWire } = require('./lib/domain/game');
+const require = createRequire(import.meta.url);
+const { validateContent, versionMap, contentWire } = require('./game-runtime.cjs');
 const { publishMapResource } = require('../tools/map_resources.cjs');
 const read = name => JSON.parse(fs.readFileSync(path.join(root, 'content', name), 'utf8'));
 const content = validateContent(read('game-config.json'));
