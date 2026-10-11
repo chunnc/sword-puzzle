@@ -13,7 +13,7 @@ export function GameplayLeaveDialog({ busy, compact, onContinue, onBack }: {
     <InventoryDialogPanel testID="game-leave-panel">
       <View style={[styles.content, compact && styles.compactContent]} onLayout={event => setPanelWidth(event.nativeEvent.layout.width)}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.2} style={styles.title}>Rời màn chơi?</Text>
-        <Text maxFontSizeMultiplier={1.2} style={styles.body}>Tiến trình màn này đã được lưu. Bạn có thể chơi tiếp khi quay lại.</Text>
+        <Text maxFontSizeMultiplier={1.2} style={styles.body}>Lượt chơi này sẽ kết thúc. Khi vào lại, bạn sẽ bắt đầu lượt mới với bản đồ mới nhất.</Text>
         <View testID="game-leave-actions" style={styles.actions}>
           <GameplayDialogButton title="Tiếp tục" art="buttonPrimary" width={buttonWidth} disabled={busy} onPress={onContinue} />
           <GameplayDialogButton title="Về Tiên Lộ" art="buttonSecondary" width={buttonWidth} disabled={busy} onPress={onBack} />

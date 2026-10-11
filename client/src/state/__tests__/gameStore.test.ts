@@ -557,28 +557,28 @@ function modernReady() {
   const content = domain.installContent(require('../../../../content/game-config.json'));
   ready();
   const maps = require('../../../../content/game-maps.json');
-  (api.fetchChapterMaps as jest.Mock).mockImplementation(async (_session, chapterId, version) => ({
-    session: guest, value: { chapterId, contentVersion: version, maps: maps.filter((m: any) => m.chapterId === chapterId).map(domain.mapSummary) }
+  (api.fetchChapterMaps as jest.Mock).mockImplementation(async (_session, chapterId) => ({
+    session: guest, value: { chapterId, contentVersion: content.version, maps: maps.filter((m: any) => m.chapterId === chapterId).map(domain.mapSummary) }
   }));
-  (api.startRun as jest.Mock).mockImplementation(async (_session, input) => ({ session: guest, value: { run: {
-    runId: input.runId, map: maps[input.levelId-1], seed: 123456, assistReduction: .1, attempt: 1,
+  (api.startRun as jest.Mock).mockImplementation(async (_session, input) => ({ session: guest, value: { config:domain.contentWire(content), run: {
+    runId: input.runId, configVersion:content.version,mapVersion:content.version,map: domain.versionMap(maps[input.levelId-1],content), seed: 123456, assistReduction: .1, attempt: 1,
     loadout: domain.emptyProfile().loadout, totalExp: 0
   } } }));
   return content;
 }
-it('loads only the requested chapter and uses the same cached catalog after an account switch', async () => {
+it('loads only unlocked chapters and refreshes summaries on each entry', async () => {
   modernReady();
   await store.getState().selectChapter('chapter-1');
   expect(store.getState().chapterMaps.map(m => m.id)).toEqual([1,2,3,4,5,6,7,8,9,10]);
   await store.getState().selectChapter('chapter-2');
   expect(api.fetchChapterMaps).toHaveBeenCalledTimes(1); // locked chapter
   await store.getState().selectChapter('chapter-1');
-  expect(api.fetchChapterMaps).toHaveBeenCalledTimes(1);
+  expect(api.fetchChapterMaps).toHaveBeenCalledTimes(2);
   const profile = domain.emptyProfile(); profile.levels = Array.from({length:10},(_,i)=>({levelId:i+1,stars:1}));
   store.setState({save:{...store.getState().save,profile}});
   await store.getState().selectChapter('chapter-2');
   expect(store.getState().chapterMaps[0].id).toBe(11);
-  expect(api.fetchChapterMaps).toHaveBeenCalledTimes(2);
+  expect(api.fetchChapterMaps).toHaveBeenCalledTimes(3);
 });
 it('persists a start request before sending and reuses its ID after an uncertain timeout', async () => {
   modernReady();
@@ -595,7 +595,8 @@ it('persists a start request before sending and reuses its ID after an uncertain
   expect(store.getState().save.active?.runId).toBe(pending.runId);
   expect(store.getState().save.pendingStart).toBeUndefined();
   await store.getState().startLevel(1);
-  expect(api.startRun).toHaveBeenCalledTimes(2); // resume
+  expect(api.startRun).toHaveBeenCalledTimes(3); // explicit entry is a new attempt
+  expect(store.getState().save.active?.runId).not.toBe(pending.runId);
 });
 it('defers a loss report until leaving/retrying, and retries a failed finish with the same run', async () => {
   modernReady(); await store.getState().startLevel(1);
@@ -655,4 +656,57 @@ it('clears a superseded run receipt rather than blocking recovery forever', asyn
   expect(store.getState().save.pendingFinish).toBeUndefined();
   expect(store.getState().save.active).toBeNull();
   expect(store.getState().notice).toContain('bắt đầu ván mới');
+});
+it('uses server-selected config instead of bootstrap and keeps it when backgrounded',async()=>{
+  const config=modernReady();
+  const selected={...config,version:config.version+1,qiCap:200};
+  (api.startRun as jest.Mock).mockImplementation(async(_session,input)=>({session:guest,value:{config:domain.contentWire(selected),run:{
+    runId:input.runId,mapVersion:44,configVersion:selected.version,map:domain.versionMap(require('../../../../content/game-maps.json')[0],selected,44),
+    seed:11,assistReduction:0,attempt:1,loadout:domain.emptyProfile().loadout,totalExp:1500
+  }}}));
+  expect(await store.getState().startLevel(1)).toBe(true);
+  const active=store.getState().save.active!;
+  expect(active).toMatchObject({mapVersion:44,configVersion:selected.version,totalExpAtStart:1500});
+  expect((api.startRun as jest.Mock).mock.calls[0][1]).not.toHaveProperty('contentVersion');
+  store.getState().setForeground(false);store.getState().setForeground(true);
+  expect(store.getState().save.active).toEqual(active);expect(api.startRun).toHaveBeenCalledTimes(1);
+});
+it('journals abandonment before leaving and settles it before starting latest',async()=>{
+  modernReady();await store.getState().startLevel(1);
+  const id=store.getState().save.active!.runId;
+  (api.finishRun as jest.Mock).mockRejectedValueOnce(new api.GameApiError('TIMEOUT'));
+  expect(await store.getState().leaveLevel()).toBe(true);
+  expect(store.getState().save).toMatchObject({retiredRunId:id,pendingFinish:{runId:id,report:{outcome:'abandoned'}}});
+  expect((await saveTools.loadSave(guest.uid)).retiredRunId).toBe(id);
+  (api.finishRun as jest.Mock).mockResolvedValue({session:guest,value:{profile:domain.emptyProfile(),stars:0}});
+  store.setState({online:true,connectionFailed:false});
+  expect(await store.getState().startLevel(1)).toBe(true);
+  expect(store.getState().save.active!.runId).not.toBe(id);expect(store.getState().save.retiredRunId).toBeUndefined();
+  expect((api.finishRun as jest.Mock).mock.calls.map(call=>call[1])).toEqual([id,id]);
+});
+it('manual healthy recovery drains an uncertain start without creating another attempt',async()=>{
+  modernReady();const actual=(api.startRun as jest.Mock).getMockImplementation()!;
+  (api.startRun as jest.Mock).mockRejectedValueOnce(new api.GameApiError('TIMEOUT'));
+  await store.getState().startLevel(1);const id=store.getState().save.pendingStart!.runId;
+  (api.startRun as jest.Mock).mockImplementation(actual);store.setState({online:true,connectionFailed:false});
+  await store.getState().checkConnection();expect(store.getState().save.active!.runId).toBe(id);
+  expect(api.startRun).toHaveBeenCalledTimes(2);
+});
+it('refreshes expanded catalog metadata without changing gameplay pins or dropping newer progress',async()=>{
+  const config=modernReady();await store.getState().startLevel(1);
+  const active=store.getState().save.active!;
+  const expanded={...config,version:config.version+1,levelCount:41,levelBaseExp:[...config.levelBaseExp!,100],
+    chapters:config.chapters!.map((ch,i)=>i===3?{...ch,lastLevelId:41}:ch)};
+  const maps=require('../../../../content/game-maps.json').filter((m:any)=>m.chapterId==='chapter-4');
+  maps.push({...maps[maps.length-1],id:41,orderInChapter:11,name:'Màn 41'});
+  const profile={...domain.emptyProfile(),totalExp:2460,levels:Array.from({length:41},(_,i)=>({levelId:i+1,stars:1 as const}))};
+  store.setState({save:{...store.getState().save,profile:{...profile,levels:profile.levels.slice(0,40)}}});
+  (api.fetchContent as jest.Mock).mockResolvedValue(domain.contentWire(expanded));
+  (api.fetchChapterMaps as jest.Mock).mockResolvedValue({session:guest,value:{contentVersion:expanded.version,chapterId:'chapter-4',maps:maps.map(domain.mapSummary)}});
+  await store.getState().selectChapter('chapter-4');
+  expect(store.getState().chapterMaps).toHaveLength(11);expect(store.getState().save.active).toEqual(active);
+  expect(store.getState().save.active!.configVersion).toBe(config.version);
+  (api.finishRun as jest.Mock).mockResolvedValue({session:guest,value:{profile,profileConfig:domain.contentWire(expanded),stars:0}});
+  expect(await store.getState().finishLevel('abandoned')).toBe(true);
+  expect(store.getState().save.profile.levels).toHaveLength(41);
 });

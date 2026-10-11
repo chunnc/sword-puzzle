@@ -1,12 +1,19 @@
 import { createHash } from 'node:crypto';
-import { applyOperation, mergeProfiles, normalizeLevels, normalizeProfile, parseOperation, profileFromLegacy, realmForExp, highestUnlocked, type PlayerProfile, type PlayerOperation, type SyncResponse, type OperationReward, type GameContent, requireContent } from './game';
+import { applyOperation, expForStars, starBonus, mergeProfiles, normalizeLevels, normalizeProfile, parseOperation, profileFromLegacy, realmForExp, highestUnlocked, type PlayerProfile, type PlayerOperation, type SyncResponse, type OperationReward, type GameContent, requireContent } from './game';
 export function profileFromDocument(data: Record<string, any> | undefined, content = requireContent()): PlayerProfile {
+    // Frozen v3–v7 reward baseline. Never reprice an existing wallet on a config change.
+    const historical: GameContent = { ...content, levelBaseExp: Array(content.levelCount).fill(100), expRates: [30,60,80,100],
+        rewards: { firstWinCoins: 100, replayWinCoins: 10, starBonus: [0,0,25,50] } };
     const existing = normalizeProfile(data?.profileV2, content);
-    if (existing)
+    if (existing) {
+        existing.rewardCredits ??= Object.fromEntries(existing.levels.map(l => [l.levelId, { exp: expForStars(l.stars, 100, historical), starBonus: starBonus(l.stars, historical) }]));
         return existing;
+    }
     const stars = data?.stars && typeof data.stars === 'object' ? data.stars : {};
     const levels = normalizeLevels(Object.entries(stars).map(([levelId, stars]) => ({ levelId: Number(levelId), stars })), content);
-    return profileFromLegacy(levels, content);
+    const migrated = profileFromLegacy(levels, historical);
+    migrated.rewardCredits = Object.fromEntries(levels.map(l => [l.levelId, { exp: expForStars(l.stars, 100, historical), starBonus: starBonus(l.stars, historical) }]));
+    return migrated;
 }
 export function profileFields(profile: PlayerProfile, previousStars: Record<string, number> = {}, content = requireContent()) {
     return { profileV2: profile, stars: { ...previousStars, ...Object.fromEntries(profile.levels.map(x => [String(x.levelId), x.stars])) }, highestUnlocked: highestUnlocked(profile.levels, content), realm: realmForExp(profile.totalExp, content).id, updatedAt: Date.now() };
@@ -60,7 +67,7 @@ export function processOperations(profile: PlayerProfile, operations: PlayerOper
             realmBefore: realmForExp(next.totalExp, profileContent).index,
             realmAfter: realmForExp(result.profile.totalExp, profileContent).index
         } : undefined;
-        const receipt: OperationReceipt = { hash, contentVersion: content.version, accepted: !result.error, ...(result.error ? { reason: result.error } : {}), ...(reward ? { reward } : {}) };
+        const receipt: OperationReceipt = { hash, contentVersion: content.version, ...(op.kind === 'win' ? { levelId: op.levelId } : {}), accepted: !result.error, ...(result.error ? { reason: result.error } : {}), ...(reward ? { reward } : {}) };
         if (reward) rewards.push(reward);
         newReceipts.set(op.id, receipt);
         if (result.error)

@@ -48,3 +48,25 @@ test('server grades strict percentage cutoffs and counts rewarded swaps against 
  const bonusResult=runs.completeRun(bonusRun,bonusReport,runs.startedStats(runs.emptyMapStats()),game.emptyProfile(),content,content,101);
  assert.equal(bonusResult.receipt.stars,1);
 });
+test('map revisions remain independent from config revisions and retain their own rule mode',()=>{
+  const map=game.versionMap(maps[0],content,42),config={...content,version:content.version+1};
+  assert.equal(game.validateMap(map,config).mapVersion,42);
+  assert.equal(game.mapToLevel(map,1,0,config).configVersion,config.version);
+  assert.equal(game.mapToLevel(map,1,0,config).contentVersion,config.version);
+  const classic={...map,rulesMode:'classic',starThresholds:{threeStarMaxMovesUsed:2,twoStarMaxMovesUsed:4}};
+  delete classic.spawnPolicy.setupChance;
+  assert.equal(game.validateMap(classic,config).rulesMode,'classic');
+});
+test('reward credits use amounts already paid across revisions without resetting first-win eligibility',()=>{
+  const firstMap=game.versionMap(maps[0],content);
+  const context={...content,levels:[game.mapToLevel(firstMap,1,0,content)]};
+  const profile=game.applyOperation(game.emptyProfile(),{id:'reward_old',kind:'win',levelId:1,stars:2,objectiveProgress:{main:30}},context).profile;
+  assert.equal(profile.totalExp,80);
+  const nextMap={...firstMap,mapVersion:firstMap.mapVersion+1,baseExp:200};
+  const next={...content,version:content.version+1,levels:[game.mapToLevel(nextMap,2,0,content)]};
+  const improved=game.applyOperation(profile,{id:'reward_new',kind:'win',levelId:1,stars:3,objectiveProgress:{main:30}},next).profile;
+  assert.equal(improved.totalExp,200);assert.equal(improved.coins-profile.coins,35);
+  const replay=game.applyOperation(improved,{id:'reward_replay',kind:'win',levelId:1,stars:3,objectiveProgress:{main:30}},next).profile;
+  assert.equal(replay.totalExp,200);assert.equal(replay.coins-improved.coins,10);
+  assert.deepEqual(game.normalizeProfile(replay,content).rewardCredits,replay.rewardCredits);
+});

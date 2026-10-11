@@ -53,6 +53,13 @@ it('refreshes any 401 and persists the rotated token before replay', async () =>
   expect(fetchMock.mock.calls[2][1].headers.get('Authorization')).toBe('Bearer new');
   expect(session.getCurrentSession()?.refreshToken).toBe('refresh-new');
 });
+it('never transmits map/config versions from migrated start or finish journals',async()=>{
+  fetchMock.mockResolvedValue(response({}));
+  await api.startRun(initial,{runId:'versionless_run',levelId:1,previousRunId:null,contentVersion:7,mapVersion:42,configVersion:8} as any);
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({runId:'versionless_run',levelId:1,previousRunId:null});
+  await api.finishRun(initial,'versionless_run',{outcome:'lost',movesUsed:8,objectiveProgress:{main:0},extraMovesUsed:false,mapVersion:42,configVersion:8} as any);
+  expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({outcome:'lost',movesUsed:8,objectiveProgress:{main:0},extraMovesUsed:false});
+});
 it('deduplicates concurrent refreshes', async () => {
   let finish!: (r: unknown) => void;
   fetchMock.mockImplementation((url, options) => url.endsWith('/refresh') ? new Promise(resolve => {

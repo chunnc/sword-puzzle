@@ -25,6 +25,9 @@ export interface CellPosition {
     y: number;
 }
 export interface BoardSnapshot {
+    configVersion?: number;
+    mapVersion?: number;
+    totalExpAtStart?: number;
     directorPressure?: number;
     reshuffles?: number;
     contentVersion: number;
@@ -115,7 +118,8 @@ export interface WinSummary {
     realmAfter: number;
 }
 export interface SaveData {
-    pendingStart?: { runId: string; levelId: number; contentVersion: number; previousRunId: string | null };
+    pendingStart?: { runId: string; levelId: number; contentVersion?: number; previousRunId: string | null };
+    retiredRunId?: string;
     pendingFinish?: { runId: string; levelId: number; contentVersion: number; report: RunReport };
     schemaVersion: 3;
     ownerId: string | null;

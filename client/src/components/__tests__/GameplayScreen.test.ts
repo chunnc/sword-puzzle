@@ -61,7 +61,7 @@ jest.mock('../Art', () => {
 const mockParams = { levelId: '15' };
 let mockReduceMotion = true;
 const mockRouter = { push: jest.fn(), replace: jest.fn() };
-const mockState = { save: emptySave(), notice: '', online: true, foreground: true, initialized: true, recovering: false, authRequired: false, adsEnabled: false, session: null, setNotice: jest.fn(), swap: jest.fn(), castSkill: jest.fn(), startLevel: jest.fn(), requestExtraMoves: jest.fn() };
+const mockState = { save: emptySave(), notice: '', online: true, foreground: true, initialized: true, recovering: false, authRequired: false, adsEnabled: false, session: null, setNotice: jest.fn(), swap: jest.fn(), castSkill: jest.fn(), startLevel: jest.fn(), leaveLevel:jest.fn(), requestExtraMoves: jest.fn() };
 
 describe('gameplay presentation and exit behavior', () => {
   let renderer: ReactTestRenderer, hardwareBack: () => boolean;
@@ -112,6 +112,7 @@ describe('gameplay presentation and exit behavior', () => {
     jest.clearAllMocks(); mockReduceMotion = true; mockParams.levelId = '15'; mockState.save = emptySave();
     mockState.save.active = new BoardEngine(getLevel(15)).snapshot(); mockState.save.active.swordQi = 100;
     mockState.startLevel.mockResolvedValue(true);
+    mockState.leaveLevel.mockResolvedValue(true);
     mockState.adsEnabled = false; mockState.requestExtraMoves.mockResolvedValue(false);
     jest.spyOn(Native, 'useWindowDimensions').mockReturnValue({ width: 320, height: 568, scale: 3, fontScale: 1 });
     jest.spyOn(Native.BackHandler, 'addEventListener').mockImplementation((_event, handler) => { hardwareBack = handler as () => boolean; return { remove: removeBack }; });
@@ -199,6 +200,8 @@ describe('gameplay presentation and exit behavior', () => {
   it('shows locked and empty second sockets without changing run equipment', () => {
     mount(); expect(button('Ô kỹ năng 2 bị khóa, mở tại 1500 EXP').props.disabled).toBe(true);
     act(() => { renderer.unmount(); }); mockState.save.profile.totalExp = 1600; mount();
+    expect(button('Ô kỹ năng 2 bị khóa, mở tại 1500 EXP').props.disabled).toBe(true);
+    act(() => { renderer.unmount(); }); mockState.save.active!.totalExpAtStart=1600; mount();
     expect(button('Ô kỹ năng 2 trống').props.disabled).toBe(true);
     expect(mockState.save.active!.loadout.skills).toEqual(['nhat-kiem']);
   });
@@ -303,7 +306,7 @@ describe('gameplay presentation and exit behavior', () => {
     expect(mockState.castSkill).not.toHaveBeenCalled();
   });
 
-  it('cancels exit with targets intact and confirms without altering the saved run', () => {
+  it('cancels exit with targets intact and confirms through durable run retirement', async () => {
     mount(); act(() => { button('Nhất Kiếm, 60 kiếm khí').props.onPress(); });
     act(() => { board().props.onCellPress(0, 0); });
     const saved = JSON.stringify(mockState.save.active);
@@ -324,8 +327,8 @@ describe('gameplay presentation and exit behavior', () => {
     act(() => { button('Tiếp tục').props.onPress(); });
     expect(board().props.targets).toEqual([{ x: 0, y: 0 }]);
     act(() => { button('Rời màn chơi').props.onPress(); });
-    act(() => { button('Về Tiên Lộ').props.onPress(); });
-    expect(mockRouter.replace).toHaveBeenCalledWith('/map'); expect(JSON.stringify(mockState.save.active)).toBe(saved); expect(mockState.startLevel).not.toHaveBeenCalled();
+    await act(async () => { button('Về Tiên Lộ').props.onPress(); });
+    expect(mockRouter.replace).toHaveBeenCalledWith('/map'); expect(mockState.leaveLevel).toHaveBeenCalledTimes(1); expect(mockState.startLevel).not.toHaveBeenCalled();
   });
 
   it('handles Android back, dismisses the foremost overlay and removes its listener', () => {
@@ -490,7 +493,7 @@ describe('gameplay presentation and exit behavior', () => {
 
   it('returns directly to the map on ready Android Back or at the last level', async () => {
     await winRun();
-    act(() => { popup().props.onReady(); hardwareBack(); });
+    await act(async () => { popup().props.onReady(); hardwareBack(); });
     expect(mockRouter.replace).toHaveBeenCalledWith('/map');
     expect(view('game-leave-confirmation')).toBeUndefined();
     act(() => { renderer.unmount(); }); jest.clearAllMocks();

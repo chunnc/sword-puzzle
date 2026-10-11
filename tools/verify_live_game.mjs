@@ -16,7 +16,7 @@ const base = `https://asia-southeast1-${project}.cloudfunctions.net/gameApi`;
 const domain = require('./lib/domain/game');
 const source = JSON.parse(fs.readFileSync(path.join(root, 'content/game-config.json'), 'utf8'));
 const content = domain.validateContent(source);
-const expectedMaps = JSON.parse(fs.readFileSync(path.join(root, 'content/game-maps.json'), 'utf8')).map(m => domain.validateMap(m, content));
+const expectedMaps = JSON.parse(fs.readFileSync(path.join(root, 'content/game-maps.json'), 'utf8'));
 const legacy = JSON.parse(fs.readFileSync(path.join(root, 'content/game-content.json'), 'utf8'));
 const check = (condition, message) => { if (!condition) throw new Error(message); };
 const { db, credential, request: cloudRequest } = await firebaseCliServices(project);
@@ -36,7 +36,7 @@ try {
   const [health, bootstrap, historical, current, v4, maps, indexResponse] = await Promise.all([
     http('/health'), http('/v3/bootstrap'), http('/v2/content/3'),
     db.doc('gameConfig/current').get(), db.doc(`gameContent/${content.version}`).get(),
-    db.collection('gameMaps').where('contentVersion', '==', content.version).get(),
+    db.collection('gameMaps').get(),
     cloudRequest({ url: `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/collectionGroups/gameMaps/indexes` })
   ]);
   check(health.status === 200 && health.data.ok === true, 'Health check failed');
@@ -44,18 +44,20 @@ try {
   check(historical.status === 200 && isDeepStrictEqual(historical.data, legacy), 'Historical v3 API changed');
   check(current.get('contentVersion') === content.version && current.get('minClientVersion') === '1.7.0', 'Current configuration pointer is incorrect');
   check(v4.exists && isDeepStrictEqual(v4.data(), domain.contentWire(content)), 'Published global configuration differs');
-  check(maps.size === expectedMaps.length, 'Published map count differs');
-  const actualMaps = maps.docs.map(doc => domain.mapFromDocument(doc.data(), content)).sort((a,b) => a.id-b.id);
-  check(isDeepStrictEqual(actualMaps, expectedMaps), 'Published maps differ from the authoring catalog');
-  check(maps.docs.every(doc => !('layout' in doc.data()) && Array.isArray(doc.get('layoutRows'))), 'Firestore layout encoding is incorrect');
-  check((indexResponse.data.indexes ?? []).some(index => index.state === 'READY' && index.fields.filter(f => f.fieldPath !== '__name__').map(f => f.fieldPath).join(',') === 'contentVersion,chapterId,orderInChapter'), 'Chapter index is not READY');
+  const resources=maps.docs.filter(doc=>/^[1-9]\d*$/.test(doc.id));
+  check(resources.length === expectedMaps.length, 'Published map count differs');
+  const actualMaps = resources.map(doc => domain.mapResourceFromDocument(doc.data(), content)).sort((a,b) => a.id-b.id);
+  const comparable = map => { const { contentVersion, ...payload } = map; return payload; };
+  check(isDeepStrictEqual(actualMaps.map(comparable), expectedMaps.map((map,i)=>comparable(domain.versionMap(map,content,actualMaps[i].mapVersion)))), 'Latest published maps differ from the authoring catalog');
+  check(resources.every(doc => doc.get('versions').every(map=>!('layout' in map)&&Array.isArray(map.layoutRows))), 'Firestore layout encoding is incorrect');
+  check((indexResponse.data.indexes ?? []).some(index => index.state === 'READY' && index.fields.filter(f => f.fieldPath !== '__name__').map(f => f.fieldPath).join(',') === 'chapterId,orderInChapter'), 'Chapter index is not READY');
   const beforePath = path.join(root, '.balance-reports/deploy-preflight.json');
   if (fs.existsSync(beforePath)) {
-    const { contentVersion, minClientVersion, ...before } = JSON.parse(fs.readFileSync(beforePath, 'utf8')).previousConfig;
-    const { contentVersion: version, minClientVersion: minimum, ...after } = current.data();
+    const { contentVersion, minClientVersion, catalogRevision, ...before } = JSON.parse(fs.readFileSync(beforePath, 'utf8')).previousConfig;
+    const { contentVersion: version, minClientVersion: minimum, catalogRevision: revision, ...after } = current.data();
     check(isDeepStrictEqual(before, after), 'An unrelated game configuration setting changed');
   }
-  Object.assign(results, { health: true, contentVersion: content.version, maps: maps.size, chapters: content.chapters.length,
+  Object.assign(results, { health: true, contentVersion: content.version, catalogRevision:current.get('catalogRevision'), maps: resources.length, chapters: content.chapters.length,
     indexReady: true, mapFreeBootstrap: true, historicalV3Preserved: true, configurationPreserved: true });
   if (smoke) {
     installationId = randomBytes(16).toString('hex');
@@ -64,19 +66,19 @@ try {
     check(created.status === 200 && uid && created.data.idToken, 'Smoke guest creation failed');
     const token = created.data.idToken;
     const chapter = content.chapters[0];
-    const list = await http(`/v3/chapters/${chapter.id}/maps?contentVersion=${content.version}`, undefined, token);
+    const list = await http(`/v4/chapters/${chapter.id}/maps`, undefined, token);
     check(list.status === 200 && list.data.maps.length === 10 && list.data.maps.every((map,i) => map.id === i+1 && !('layout' in map)), 'Chapter query returned incorrect maps');
-    const locked = await http(`/v3/chapters/${content.chapters[1].id}/maps?contentVersion=${content.version}`, undefined, token);
+    const locked = await http(`/v4/chapters/${content.chapters[1].id}/maps`, undefined, token);
     check(locked.status === 403, 'Locked chapter access was accepted');
-    const body = { runId: randomUUID(), levelId: 1, contentVersion: content.version, previousRunId: null };
-    const started = await http('/v3/runs/start', body, token);
+    const body = { runId: randomUUID(), levelId: 1, previousRunId: null };
+    const started = await http('/v4/runs/start', body, token);
     check(started.status === 200 && started.data.run.map.id === 1 && Array.isArray(started.data.run.map.layout), 'Run start failed');
-    const repeated = await http('/v3/runs/start', body, token);
+    const repeated = await http('/v4/runs/start', body, token);
     check(repeated.status === 200 && isDeepStrictEqual(started.data, repeated.data), 'Repeated start changed the run');
     const report = { outcome: 'abandoned', movesUsed: 0, objectiveProgress: Object.fromEntries(started.data.run.map.objectives.map(o => [o.id,0])), extraMovesUsed: false };
-    const finished = await http(`/v3/runs/${body.runId}/finish`, report, token);
+    const finished = await http(`/v4/runs/${body.runId}/finish`, report, token);
     check(finished.status === 200 && finished.data.stars === 0, 'Run abandonment failed');
-    const finishAgain = await http(`/v3/runs/${body.runId}/finish`, report, token);
+    const finishAgain = await http(`/v4/runs/${body.runId}/finish`, report, token);
     check(finishAgain.status === 200 && isDeepStrictEqual(finished.data, finishAgain.data), 'Repeated finish changed the receipt');
     const stats = await db.doc(`players/${uid}/mapStats/1`).get();
     check(stats.get('attemptsStarted') === 1 && stats.get('retryCount') === 0 && stats.get('abandoned') === 1 && stats.get('consecutiveFailures') === 0, 'Smoke retry statistics are incorrect');

@@ -47,6 +47,6 @@ export function completeRun(run: RunDefinition, report: RunReport, stats: MapSta
       realmBefore: realmForExp(profile.totalExp, profileContent).index, realmAfter: realmForExp(nextProfile.totalExp, profileContent).index };
   } else if (report.outcome === 'lost') { nextStats.losses++; nextStats.consecutiveFailures++; }
   else nextStats.abandoned++;
-  return { profile: nextProfile, stats: nextStats, receipt: { stars, ...(reward ? { reward } : {}) } };
+  return { profile: nextProfile, stats: nextStats, receipt: { levelId: run.map.id, mapVersion: run.mapVersion ?? run.map.mapVersion ?? run.map.contentVersion, configVersion: run.configVersion ?? content.version, stars, ...(reward ? { reward } : {}) } };
 }
 export { assistForFailures };
