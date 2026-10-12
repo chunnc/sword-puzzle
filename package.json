@@ -13,7 +13,7 @@
     "maps:generate": "node tools/generate_map.cjs",
     "maps:balance": "node tools/balance_generated_map.cjs",
     "maps:publish": "node tools/publish_generated_map.mjs",
-    "maps:test": "node --test tools/test_balance_report.cjs tools/test_content_cache.cjs tools/test_map_resources.cjs",
+    "maps:test": "node --test tools/test_balance_report.cjs tools/test_content_cache.cjs tools/test_map_resources.cjs tools/test_simulator_model.cjs",
     "maps:check": "node tools/simulate_maps.cjs --seeds 100 --check --output .balance-reports/ci.json",
     "maps:release": "node tools/simulate_maps.cjs --seeds 1000 --powers minimum,expected,strong --retry-seeds 100 --check --output .balance-reports/release.json",
     "api:test:maps": "npm --prefix server run build && MAP_EMULATOR_TEST=1 node --test server/test/integration/maps.cjs",

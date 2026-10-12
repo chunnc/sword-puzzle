@@ -1,4 +1,4 @@
-// Calibration and verification use the production engine and the existing normal bot.
+// Calibration and verification use the production engine and humanized bots.
 const { play, summarize, installSnapshot } = require('./simulate_maps.cjs');
 const { mapStars, assistForFailures, contentWire } = require('./game-runtime.cjs');
 const { hash, engineHash, gameplaySeed, inBand } = require('./map_generation.cjs');
@@ -118,6 +118,7 @@ function attemptStats(firstAttempts, count, maxAttempts) {
 }
 function simulateToThreeStars(map, request) {
   const firstWins = [], firstThrees = [], assistCounts = {};
+  let suboptimalChoices=0;
   for (let sequence = 0; sequence < request.retrySeeds; sequence++) {
     let consecutiveFailures = 0, firstWin = null, firstThree = null;
     for (let attempt = 0; attempt < request.retryAttempts; attempt++) {
@@ -125,6 +126,7 @@ function simulateToThreeStars(map, request) {
       assistCounts[assist] = (assistCounts[assist] ?? 0) + 1;
       const result = play(map, gameplaySeed(sequence * request.retryAttempts + attempt, 'retry', request.seed),
         'normal', 'expected', assist, false, { totalExp: request.totalExp });
+      suboptimalChoices+=result.suboptimalChoices??0;
       if (result.stalled || result.maxChain > 4) throw new Error('RETRY_PLAYABILITY_FAILURE');
       if (result.won) {
         firstWin ??= attempt + 1;
@@ -134,7 +136,8 @@ function simulateToThreeStars(map, request) {
     }
     firstWins.push(firstWin); firstThrees.push(firstThree);
   }
-  return { bot: 'normal', totalExp: request.totalExp, assistance: 'consecutive-losses; reset after any win', assistCounts,
+  return { bot: 'normal', totalExp: request.totalExp, botModel: require('./simulate_maps.cjs').BOT_MODEL,
+    suboptimalChoices, assistance: 'consecutive-losses; reset after any win', assistCounts,
     firstWin: attemptStats(firstWins, request.retrySeeds, request.retryAttempts),
     firstThreeStars: attemptStats(firstThrees, request.retrySeeds, request.retryAttempts) };
 }
@@ -151,8 +154,9 @@ function verify(map, config, request, training = null, search = null) {
     samples(map, Math.min(100, request.validationSeeds), 'diagnostic', request, 'normal', power)), bot: 'normal', power }));
   return { format: 1, status: failures.length ? 'failed' : 'passed', failures,
     hashes: { map: hash(map), config: hash(contentWire(config)), engine: engineHash() },
-    bands: request.bands, powerModel: { expectedTotalExp: request.totalExp, minimumTotalExp: 0, strongTotalExp: (map.id - 1) * 100 + 1500,
-      loadout: { sword: 'thanh-phong', skills: ['nhat-kiem'] }, extraMoves: false },
+    bands: request.bands, botModel: require('./simulate_maps.cjs').BOT_MODEL,
+    powerModel: { expectedTotalExp: request.totalExp, minimumTotalExp: 0, strongTotalExp: (map.id - 1) * 100 + 1500,
+      loadout: { sword: null, skills: [] }, extraMoves: false },
     seedSuites: { generationSeed: request.seed, training: request.trainingSeeds, validation: request.validationSeeds,
       retrySequences: request.retrySeeds, maxRetryAttempts: request.retryAttempts, selection: 'training-only; one frozen validation pass' },
     training, search, validation, retries, diagnostics };

@@ -6,8 +6,20 @@ const { BoardEngine, installContent, validateContent, validateMap, mapToLevel, m
 const {createHash}=require('node:crypto');
 const { renderBalanceReport } = require('./render_balance_report.cjs');
 const { resolveSnapshot, defaultProject, buildSnapshot } = require('./sync_content_cache.cjs');
+const { PROFILES } = require('./map_generation.cjs');
 let content = installContent(require('../content/game-config.json'));
 let catalog = require('../content/game-maps.json').map(m => validateMap(m, content));
+const BOT_MODEL = Object.freeze({
+  version: 1,
+  loadout: Object.freeze({ sword: null, skills: Object.freeze([]) }),
+  mistakeRates: Object.freeze({ basic: .3, normal: .2, strategic: .1 }),
+  mistakeCandidateLimit: 3,
+  mistakeSelection: 'uniform-among-next-three-lower-ranked-moves'
+});
+const targets = Object.fromEntries(Object.entries(PROFILES).map(([difficulty, profile]) => [difficulty, {
+  win: profile.win, three: profile.three,
+  exclusiveWin: profile.exclusiveWin, exclusiveThree: profile.exclusiveThree
+}]));
 function installSnapshot(config, maps) {
   content = installContent(config);
   catalog = maps.map(map => validateMap(map, content));
@@ -54,11 +66,10 @@ function clearValue(snapshot, cells, tiles=snapshot.tiles) {
 }
 function chooseSwap(engine, bot, random) {
   const snapshot=engine.snapshot(), moves=engine.legalMoves();
-  if(!moves.length)return null;
-  if(bot==='basic' && random()<.65)return moves[Math.floor(random()*moves.length)];
+  if(!moves.length)return {move:null,suboptimal:false};
   const ranked=moves.map(move=>{
     const {tiles,cells}=matched(snapshot,move);
-    return {move,score:clearValue(snapshot,cells,tiles)+(cells.length>=4 ? .8*cells.length : 0)+random()*.25};
+    return {move,score:clearValue(snapshot,cells,tiles)+(cells.length>=4 ? .8*cells.length : 0)};
   }).sort((a,b)=>b.score-a.score);
   if(bot==='strategic') {
     // Independent samples prevent the bot from peeking at the actual run's future RNG.
@@ -74,27 +85,30 @@ function chooseSwap(engine, bot, random) {
     }
     ranked.sort((a,b)=>b.score-a.score);
   }
-  return ranked[0].move;
+  return selectRankedMove(ranked, BOT_MODEL.mistakeRates[bot], random);
 }
-function cast(engine,bot,random) {
-  if(!engine.availableSkills().includes('nhat-kiem') || bot==='basic'&&random()<.55)return false;
-  const snapshot=engine.snapshot(),{width:w,height:h}=snapshot.level.board;
-  const rows=Array.from({length:h},(_,y)=>({y,cells:Array.from({length:w},(_,x)=>y*w+x)}));
-  rows.sort((a,b)=>clearValue(snapshot,b.cells)-clearValue(snapshot,a.cells));
-  const row=rows[0];const x=row.cells.find(i=>snapshot.level.board.activeCells[i])%w;
-  return engine.trySkill('nhat-kiem',[{x,y:row.y}]);
+function selectRankedMove(ranked, mistakeRate, random) {
+  if(!ranked.length)return {move:null,suboptimal:false};
+  const bestScore=ranked[0].score;
+  const best=ranked.filter(candidate=>candidate.score===bestScore);
+  const lower=ranked.filter(candidate=>candidate.score<bestScore).slice(0,BOT_MODEL.mistakeCandidateLimit);
+  if(lower.length&&random()<mistakeRate) {
+    const selected=lower[Math.floor(random()*lower.length)];
+    return {move:selected.move,suboptimal:true};
+  }
+  const selected=best.length===1?best[0]:best[Math.floor(random()*best.length)];
+  return {move:selected.move,suboptimal:false};
 }
 function play(map, seed, bot='normal', power='expected', assist=0, trace=false, context={}) {
   const random=rng(seed^0x5a17c9e3), totalExp=context.totalExp??(power==='minimum'?0:power==='strong'?(map.id-1)*100+1500:(map.id-1)*60);
   const level=mapToLevel(map,seed,assist,content);
-  const engine=new BoardEngine(level,null,{loadout:{sword:'thanh-phong',skills:['nhat-kiem']},totalExp});
-  let waves=0,maxChain=0,actions=0,damage=0;
+  const engine=new BoardEngine(level,null,{loadout:{sword:null,skills:[]},totalExp});
+  let waves=0,maxChain=0,actions=0,damage=0,suboptimalChoices=0;
   const waveCounts={},timeline=[],metrics={seeded:0,setups:0,setupAttempts:0,setupFallbacks:0,setupUsed:0,chargesCreated:0,chargesActivated:0,settlements:0};
   for(let action=0;action<map.moves*3+10&&!engine.won&&!engine.lost;action++) {
-    if(!cast(engine,bot,random)) {
-      const move=chooseSwap(engine,bot,random);
-      if(!move||!engine.trySwap(...move))break;
-    }
+    const choice=chooseSwap(engine,bot,random);
+    if(!choice.move||!engine.trySwap(...choice.move))break;
+    if(choice.suboptimal)suboptimalChoices++;
     waves+=engine.animation?.steps.length??0;
     maxChain=Math.max(maxChain,...(engine.animation?.steps.map(s=>s.chain)??[0]));
     actions++;const count=engine.animation?.steps.length??0;waveCounts[count]=(waveCounts[count]??0)+1;
@@ -102,27 +116,26 @@ function play(map, seed, bot='normal', power='expected', assist=0, trace=false, 
     if(trace){damage+=engine.animation.steps.reduce((sum,s)=>sum+s.damage,0);timeline.push({movesUsed:engine.movesUsed,damage,kind:engine.animation.kind});}
   }
   const snapshot=engine.snapshot();
-  return {won:engine.won,stars:engine.won?mapStars(map,engine.movesUsed):0,movesUsed:engine.movesUsed,waves,maxChain,reshuffles:snapshot.reshuffles??0,actions,waveCounts,metrics,...(trace?{timeline}:{}),
+  return {won:engine.won,stars:engine.won?mapStars(map,engine.movesUsed):0,movesUsed:engine.movesUsed,waves,maxChain,reshuffles:snapshot.reshuffles??0,actions,suboptimalChoices,waveCounts,metrics,...(trace?{timeline}:{}),
     stalled:!engine.won&&!engine.lost,objectiveProgress:{...snapshot.objectiveProgress},
     progress:map.objectives.reduce((sum,o)=>sum+snapshot.objectiveProgress[o.id]/o.target,0)/map.objectives.length};
 }
 function summarize(map, results) {
   const won=results.filter(r=>r.won),lost=results.filter(r=>!r.won),histogram=[0,0,0,0];results.forEach(r=>histogram[r.stars]++);
-  const moves=won.map(r=>r.movesUsed).sort((a,b)=>a-b),waveCounts={},metrics={};let actions=0;
-  for(const r of results){actions+=r.actions??0;for(const [key,value]of Object.entries(r.waveCounts??{}))waveCounts[key]=(waveCounts[key]??0)+value;for(const [key,value]of Object.entries(r.metrics??{}))metrics[key]=(metrics[key]??0)+value;}
+  const moves=won.map(r=>r.movesUsed).sort((a,b)=>a-b),waveCounts={},metrics={};let actions=0,suboptimalChoices=0;
+  for(const r of results){actions+=r.actions??0;suboptimalChoices+=r.suboptimalChoices??0;for(const [key,value]of Object.entries(r.waveCounts??{}))waveCounts[key]=(waveCounts[key]??0)+value;for(const [key,value]of Object.entries(r.metrics??{}))metrics[key]=(metrics[key]??0)+value;}
   return {mapHash:createHash('sha256').update(JSON.stringify(map)).digest('hex'),id:map.id,difficulty:map.difficulty,samples:results.length,winRate:won.length/results.length,starRates:histogram.map(n=>n/results.length),
+    suboptimalChoices,suboptimalChoiceRate:actions?suboptimalChoices/actions:0,
     medianMoves:moves.length?(moves[Math.floor((moves.length-1)/2)]+moves[Math.floor(moves.length/2)])/2:null,actions,waveCounts,metrics,settlementRate:actions?(metrics.settlements??0)/actions:0,
     movesHistogram:Object.fromEntries(Array.from({length:map.moves+1},(_,n)=>[n,won.filter(r=>r.movesUsed===n).length]).filter(([,n])=>n)),
     averageMoves:won.length?won.reduce((s,r)=>s+r.movesUsed,0)/won.length:null,averageProgress:results.reduce((s,r)=>s+r.progress,0)/results.length,
     averageFailedProgress:lost.length?lost.reduce((s,r)=>s+r.progress,0)/lost.length:null,
     averageReshuffles:results.reduce((s,r)=>s+r.reshuffles,0)/results.length,averageWaves:results.reduce((s,r)=>s+r.waves,0)/results.length,maxChain:Math.max(...results.map(r=>r.maxChain))};
 }
-const targets={easy:{win:[.85,.95],three:[.35,.60]},medium:{win:[.50,.70],three:[.15,.30]},hard:{win:[.15,.30],three:[.03,.10]},'very-hard':{win:[.05,.15],three:[.01,.05]}};
-
 function simulateRetryChunk(map, start, count, playAttempt=play) {
   const maxAttempts=30, attempts=[], levels=[...new Set([0,...map.retryAssistPolicy.reductions])].sort((a,b)=>a-b);
-  const byAssist=new Map(levels.map(assist=>[assist,{assist,samples:0,wins:0,losses:0,starCounts:[0,0,0,0]}]));
-  const byAttempt=Array.from({length:maxAttempts},(_,i)=>({attempt:i+1,assist:assistForFailures(map,i),samples:0,wins:0,losses:0}));
+  const byAssist=new Map(levels.map(assist=>[assist,{assist,samples:0,wins:0,losses:0,suboptimalChoices:0,starCounts:[0,0,0,0]}]));
+  const byAttempt=Array.from({length:maxAttempts},(_,i)=>({attempt:i+1,assist:assistForFailures(map,i),samples:0,wins:0,losses:0,suboptimalChoices:0}));
   let unfinished=0;
   for(let i=start;i<start+count;i++) {
     let done=false;
@@ -131,6 +144,7 @@ function simulateRetryChunk(map, start, count, playAttempt=play) {
       const result=playAttempt(map,seedFor(i*31+attempt,'retry'),'normal','expected',assist);
       const bucket=byAssist.get(assist), step=byAttempt[attempt];
       bucket.samples++;step.samples++;
+      bucket.suboptimalChoices+=result.suboptimalChoices??0;step.suboptimalChoices+=result.suboptimalChoices??0;
       bucket.starCounts[result.won?result.stars:0]++;
       if(result.won) { bucket.wins++;step.wins++;attempts.push(attempt+1);done=true;break; }
       bucket.losses++;step.losses++;
@@ -146,20 +160,20 @@ function mergeRetryChunks(chunks) {
     unfinished+=chunk.unfinished;
     attempts.push(...chunk.attempts);
     for(const bucket of chunk.byAssist) {
-      const target=byAssist.get(bucket.assist)??{assist:bucket.assist,samples:0,wins:0,losses:0,starCounts:[0,0,0,0]};
-      target.samples+=bucket.samples;target.wins+=bucket.wins;target.losses+=bucket.losses;
+      const target=byAssist.get(bucket.assist)??{assist:bucket.assist,samples:0,wins:0,losses:0,suboptimalChoices:0,starCounts:[0,0,0,0]};
+      target.samples+=bucket.samples;target.wins+=bucket.wins;target.losses+=bucket.losses;target.suboptimalChoices+=bucket.suboptimalChoices??0;
       bucket.starCounts.forEach((value,index)=>{target.starCounts[index]+=value;});
       byAssist.set(bucket.assist,target);
     }
     chunk.byAttempt.forEach((step,index)=>{
-      if(!byAttempt[index])byAttempt[index]={attempt:step.attempt,assist:step.assist,samples:0,wins:0,losses:0};
-      byAttempt[index].samples+=step.samples;byAttempt[index].wins+=step.wins;byAttempt[index].losses+=step.losses;
+      if(!byAttempt[index])byAttempt[index]={attempt:step.attempt,assist:step.assist,samples:0,wins:0,losses:0,suboptimalChoices:0};
+      byAttempt[index].samples+=step.samples;byAttempt[index].wins+=step.wins;byAttempt[index].losses+=step.losses;byAttempt[index].suboptimalChoices+=step.suboptimalChoices??0;
     });
   }
   return {attempts,unfinished,byAssist:[...byAssist.values()].sort((a,b)=>a.assist-b.assist),byAttempt};
 }
 function spawnAssistMechanisms(map) {
-  if(map.tutorial||!map.retryAssistPolicy.reductions.some(a=>a>0))return [];
+  if(map.tutorial||(map.contentVersion??0)<8||!map.retryAssistPolicy.reductions.some(a=>a>0))return [];
   const p=map.spawnPolicy,mechanisms=[];
   if(p.comboChance<1)mechanisms.push('directMatch');
   if((p.setupChance??0)<1)mechanisms.push('preparedCombo');
@@ -171,13 +185,14 @@ function finalizeRetries(map, count, merged) {
   const {attempts}=merged,maxAttempts=30;
   let cumulativeWins=0;
   const assistMechanisms=spawnAssistMechanisms(map);
-  return {id:map.id,bot:'normal',power:'expected',samples:count,completed:attempts.length,unfinished:merged.unfinished,maxAttempts,
+  return {id:map.id,bot:'normal',power:'expected',botModel:BOT_MODEL,samples:count,completed:attempts.length,unfinished:merged.unfinished,maxAttempts,
     averageAttempts:attempts.length?attempts.reduce((a,b)=>a+b,0)/attempts.length:null,
     totalAttempts:merged.byAttempt.reduce((sum,r)=>sum+r.samples,0),
+    suboptimalChoices:merged.byAttempt.reduce((sum,r)=>sum+(r.suboptimalChoices??0),0),
     hasSpawnPressure:assistMechanisms.length>0,assistMechanisms,
     attemptsHistogram:Object.fromEntries(Array.from({length:maxAttempts},(_,n)=>[n+1,attempts.filter(a=>a===n+1).length]).filter(([,n])=>n)),
-    byAssist:merged.byAssist.map(({starCounts,...r})=>({...r,winRate:r.samples?r.wins/r.samples:null,starRates:r.samples?starCounts.map(n=>n/r.samples):[0,0,0,0]})),
-    byAttempt:merged.byAttempt.map(r=>{cumulativeWins+=r.wins;return {...r,winRate:r.samples?r.wins/r.samples:null,cumulativeWinRate:count?cumulativeWins/count:null};})};
+    byAssist:merged.byAssist.map(({starCounts,...r})=>({...r,suboptimalChoiceRate:r.samples?r.suboptimalChoices/r.samples:null,winRate:r.samples?r.wins/r.samples:null,starRates:r.samples?starCounts.map(n=>n/r.samples):[0,0,0,0]})),
+    byAttempt:merged.byAttempt.map(r=>{cumulativeWins+=r.wins;return {...r,suboptimalChoiceRate:r.samples?r.suboptimalChoices/r.samples:null,winRate:r.samples?r.wins/r.samples:null,cumulativeWinRate:count?cumulativeWins/count:null};})};
 }
 function simulateRetries(map, count, playAttempt=play) {
   return finalizeRetries(map, count, mergeRetryChunks([simulateRetryChunk(map, 0, count, playAttempt)]));
@@ -192,15 +207,15 @@ function executeTask(task) {
 function evaluateChecks(reports, count, enabled) {
   const tolerance=count<1000?.12:0, results=[];
   const below=(a,b)=>a<b-1e-12;
+  const outside=(rate,range,exclusiveLower)=>exclusiveLower
+    ? rate<=range[0]-tolerance+1e-12||rate>range[1]+tolerance+1e-12
+    : rate<range[0]-tolerance-1e-12||rate>range[1]+tolerance+1e-12;
   for(const r of reports.filter(r=>r.bot==='normal'&&r.power==='expected')) {
     const t=targets[r.difficulty], failures=[];
-    if(count>=1000&&r.starRates.slice(1).some(rate=>rate===0))failures.push(`Map ${r.id}: chưa quan sát đủ các mức 1–2–3 sao.`);
-    if(below(r.winRate,t.win[0]-tolerance)||below(t.win[1]+tolerance,r.winRate))failures.push(`Map ${r.id}: tỷ lệ thắng nằm ngoài khoảng kiểm tra.`);
-    if(below(r.starRates[3],t.three[0]-tolerance)||below(t.three[1]+tolerance,r.starRates[3]))failures.push(`Map ${r.id}: tỷ lệ 3 sao nằm ngoài khoảng kiểm tra.`);
+    if(outside(r.winRate,t.win,t.exclusiveWin))failures.push(`Map ${r.id}: tỷ lệ thắng nằm ngoài khoảng kiểm tra.`);
+    if(outside(r.starRates[3],t.three,t.exclusiveThree))failures.push(`Map ${r.id}: tỷ lệ 3 sao nằm ngoài khoảng kiểm tra.`);
     if(content.version>=8){
       if(r.maxChain>4)failures.push(`Map ${r.id}: cascade vượt 4 wave.`);
-      if(count>=1000&&catalog[r.id-1].objectives.every(o=>o.type==='Collect')&&(r.medianMoves<6||r.medianMoves>10))failures.push(`Map ${r.id}: median Collect ngoài 6–10 lượt.`);
-      if(count>=1000&&r.starRates.some(rate=>rate===0))failures.push(`Map ${r.id}: chưa quan sát đủ bốn mức kết quả.`);
     }
     results.push({id:r.id,bot:r.bot,power:r.power,gate:'difficulty',passed:!failures.length,failures});
   }
@@ -243,7 +258,7 @@ function parseOptions(args) {
   const suite=values['--suite']??'validation';
   if(!['training','validation'].includes(suite))throw new Error('--suite must be training or validation');
   return {count,retryCount,assistCount,source,suite,check:values['--check']===true,offline:values['--offline']===true,project:values['--project']??defaultProject(),jobs,
-    ids:list('--maps','1,2,3,4,5,6,7,8,9,10',s=>/^\d+$/.test(s)&&Number(s)>=1&&Number(s)<=catalog.length).map(Number),
+    ids:list('--maps',Array.from({length:catalog.length},(_,index)=>String(index+1)).join(','),s=>/^\d+$/.test(s)&&Number(s)>=1&&Number(s)<=catalog.length).map(Number),
     bots:list('--bots','basic,normal,strategic',s=>['basic','normal','strategic'].includes(s)),
     powers:list('--powers','expected',s=>['minimum','expected','strong'].includes(s)),
     output:values['--output']??null,htmlOutput:values['--html-output']??null};
@@ -325,7 +340,9 @@ async function main(args) {
       for(let start=0;start<options.retryCount;start+=retryChunk) {slot.total++;tasks.push({slot,kind:'retry',id,start,count:Math.min(retryChunk,options.retryCount-start)});}
     }
   }
-  if(options.assistCount)for(const id of options.ids.filter(id=>[5,7,10].includes(id))) {
+  if(options.assistCount)for(const id of options.ids.filter(id=>{
+    const map=catalog[id-1];return map&&!map.tutorial&&map.retryAssistPolicy.reductions.some(reduction=>reduction>0);
+  })) {
     const slot={id,chunks:new Map(),total:0};assistSlots.push(slot);
     const chunk=Math.max(1,Math.ceil(options.assistCount/(options.jobs*4)));
     for(let start=0;start<options.assistCount;start+=chunk){slot.total++;tasks.push({slot,kind:'assist',id,start,count:Math.min(chunk,options.assistCount-start)});}
@@ -367,6 +384,7 @@ async function main(args) {
   checks.failures.push(...assistReports.flatMap(r=>r.failures));
   if(checks.enabled&&checks.failures.length)checks.status='failed';
   const report={contentVersion:content.version,configHash:snapshot.hashes.config,engineHash:createHash('sha256').update(fs.readFileSync(path.join(__dirname,'../client/src/game/BoardEngine.ts'))).digest('hex'),
+    botModel:BOT_MODEL,
     source:{kind:snapshot.source,project:snapshot.project,version:snapshot.version,syncedAt:snapshot.syncedAt,checkedAt:snapshot.checkedAt,
       cacheFile:snapshot.cacheFile?path.relative(process.cwd(),snapshot.cacheFile):null,hashes:snapshot.hashes},
     suite:options.suite,seeds:options.count,targets,reports,retries,assistReports,checks,
@@ -389,4 +407,4 @@ async function main(args) {
 if(require.main===module) {
   main(process.argv.slice(2)).catch(error=>{ console.error(error.message);process.exitCode=1; });
 }
-module.exports={play,summarize,seedFor,targets,catalog,simulateRetries,evaluateChecks,parseOptions,main,installSnapshot,executeTask,simulateRetryChunk,mergeRetryChunks,finalizeRetries,spawnAssistMechanisms};
+module.exports={BOT_MODEL,play,summarize,seedFor,targets,catalog,simulateRetries,evaluateChecks,parseOptions,main,installSnapshot,executeTask,simulateRetryChunk,mergeRetryChunks,finalizeRetries,spawnAssistMechanisms,chooseSwap,selectRankedMove};

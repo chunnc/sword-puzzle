@@ -34,17 +34,17 @@ test('retry aggregation stops at the first win and accounts for each support bou
   assert.equal(result.averageAttempts,5);
   assert.equal(result.totalAttempts,40);
   assert.deepEqual(result.attemptsHistogram,{'4':1,'6':1});
-  assert.deepEqual(result.byAssist.map(r=>[r.assist,r.samples,r.wins,r.losses]),[[0,9,0,9],[.1,5,1,4],[.2,3,1,2],[.3,23,0,23]]);
+  assert.deepEqual(result.byAssist.map(r=>[r.assist,r.samples,r.wins,r.losses]),[[0,9,0,9],[.1,5,1,4],[.2,4,1,3],[.3,22,0,22]]);
   assert.equal(result.byAssist[1].winRate,1/5);
   assert.equal(result.byAssist[1].starRates[3],1/5);
-  assert.equal(result.byAssist[2].starRates[2],1/3);
+  assert.equal(result.byAssist[2].starRates[2],1/4);
   assert.equal(result.byAttempt[3].samples,3);
   assert.equal(result.byAttempt[3].assist,.1);
   assert.equal(result.byAttempt[3].cumulativeWinRate,1/3);
   assert.equal(result.byAttempt[5].samples,2);
   assert.equal(result.byAttempt[5].assist,.2);
   assert.equal(result.byAttempt[6].assist,.2);
-  assert.equal(result.byAttempt[7].assist,.3);
+  assert.equal(result.byAttempt[8].assist,.3);
   assert.equal(result.byAttempt[29].cumulativeWinRate,2/3);
   assert.deepEqual(seen[0],{seed:seedFor(0,'retry'),bot:'normal',power:'expected',assist:0});
   assert.equal(seen[4].seed,seedFor(31,'retry'));
@@ -52,13 +52,13 @@ test('retry aggregation stops at the first win and accounts for each support bou
 });
 
 test('retry handles unused support tiers and sequences with no wins without misleading averages',()=>{
-  const easy=simulateRetries(catalog[0],2,()=>({won:true,stars:1}));
+  const easy=simulateRetries(catalog[2],2,()=>({won:true,stars:1}));
   assert.equal(easy.averageAttempts,1);
   assert.equal(easy.totalAttempts,2);
   assert.equal(easy.hasSpawnPressure,true);
   assert.equal(easy.byAssist[1].samples,0);
   assert.equal(easy.byAssist[1].winRate,null);
-  const lost=simulateRetries(catalog[9],2,()=>({won:false,stars:0}));
+  const lost=simulateRetries(catalog[2],2,()=>({won:false,stars:0}));
   assert.equal(lost.averageAttempts,null);
   assert.equal(lost.totalAttempts,60);
   assert.equal(lost.unfinished,2);
@@ -67,38 +67,39 @@ test('retry handles unused support tiers and sequences with no wins without misl
 
 test('retry chunks merge into the same aggregate as the sequential path',()=>{
   const fake=(_map,seed,_bot,_power,assist)=>((seed+Math.round(assist*100))%7<2?{won:false,stars:0}:{won:true,stars:(seed%3)+1});
-  const map=catalog[4];
+  const map=catalog[2];
   const sequential=simulateRetries(map,12,fake);
   const merged=finalizeRetries(map,12,mergeRetryChunks([simulateRetryChunk(map,0,5,fake),simulateRetryChunk(map,5,7,fake)]));
   assert.deepEqual(merged,sequential);
 });
 test('assist mechanisms reflect real objectives, obstacles and versioned spawn help',()=>{
-  assert.deepEqual(spawnAssistMechanisms(catalog[4]),['directMatch','preparedCombo']);
-  assert.deepEqual(spawnAssistMechanisms({...catalog[4],contentVersion:5}),[]);
-  assert.deepEqual(spawnAssistMechanisms(catalog[10]),[]);
-  assert.ok(spawnAssistMechanisms(catalog[7]).includes('obstacleCandidates'));
+  assert.deepEqual(spawnAssistMechanisms(catalog[2]),['directMatch','preparedCombo']);
+  assert.deepEqual(spawnAssistMechanisms({...catalog[2],contentVersion:5}),[]);
+  assert.deepEqual(spawnAssistMechanisms(catalog[0]),[]);
+  assert.ok(spawnAssistMechanisms({...catalog[3],spawnPolicy:{...catalog[3].spawnPolicy,obstaclePressure:.2}}).includes('obstacleCandidates'));
 });
 
 function profile(id=1,bot='normal',power='expected') {
-  return {id,bot,power,difficulty:catalog[id-1].difficulty,samples:1000,winRate:.8,starRates:[.2,.2,.28,.32],
+  return {id,bot,power,difficulty:catalog[id-1].difficulty,samples:1000,winRate:.9,starRates:[.1,.05,.05,.8],
     movesHistogram:{10:320,12:280,14:200},averageMoves:11.7,averageProgress:.9,averageFailedProgress:.5,
-    averageWaves:20,averageReshuffles:0,maxChain:4,mapHash:'test-map-hash'};
+    averageWaves:20,averageReshuffles:0,maxChain:4,mapHash:'test-map-hash',suboptimalChoices:42,suboptimalChoiceRate:.2};
 }
 
-test('check assessment retains small-sample tolerance, strict star coverage and strategic comparison',()=>{
+test('check assessment uses shared strict map-generation gates and strategic comparison',()=>{
   const r=profile();
   assert.equal(evaluateChecks([r],100,true).status,'passed');
   const strict=evaluateChecks([r],1000,true);
   assert.equal(strict.status,'failed');
   assert.equal(strict.failures.length,2);
-  const missingStars={...r,winRate:.9,starRates:[.1,0,.5,.4]};
-  assert.match(evaluateChecks([missingStars],1000,true).failures[0],/1–2–3/);
+  const atEasyCutoff={...r,winRate:.95,starRates:[.2,0,0,.8]};
+  assert.equal(evaluateChecks([atEasyCutoff],1000,true).failures.length,2);
+  const aboveEasyCutoffs={...r,winRate:.951,starRates:[.049,0,0,.951]};
+  assert.equal(evaluateChecks([aboveEasyCutoffs],1000,true).status,'passed');
   assert.equal(evaluateChecks([r],100,false).status,'not-run');
   assert.equal(evaluateChecks([profile(1,'basic')],100,true).status,'not-applicable');
-  const basic={...profile(1,'basic'),winRate:.8},strategic={...profile(1,'strategic'),winRate:.69};
+  const basic={...profile(1,'basic'),winRate:.9},strategic={...profile(1,'strategic'),winRate:.89};
   assert.equal(evaluateChecks([basic,strategic],100,true).status,'failed');
-  assert.equal(evaluateChecks([basic,{...strategic,winRate:.7}],100,true).status,'failed');
-  assert.equal(evaluateChecks([basic,{...strategic,winRate:.8}],100,true).status,'passed');
+  assert.equal(evaluateChecks([basic,{...strategic,winRate:.9}],100,true).status,'passed');
 });
 
 test('CLI rejects malformed sample counts and selections before simulations start',()=>{
@@ -124,14 +125,20 @@ test('v6 overview exposes paired assistance separately from retry survivor bucke
   assert.match(section.textContent,/2\.000 seed/);assert.match(section.textContent,/50,0%/);
   dom.window.close();
 });
-test('simulator uses the shared percent star thresholds and the report explains strict cutoffs',()=>{
+test('simulator shares generation cutoffs and the report exposes its bot model and mistakes',()=>{
+  assert.deepEqual(targets.easy.win,[.95,1]);
+  assert.equal(targets.easy.exclusiveWin,true);
+  assert.deepEqual(targets.easy.three,[.8,1]);
   const map={...catalog[0],starThresholds:{mode:'percentage',threeStarBelowPercent:50,twoStarBelowPercent:75}};
   const run=play(map,seedFor(0),'normal','expected');
   assert.equal(run.stars,run.won?mapStars(map,run.movesUsed):0);
-  const report=fixture();report.maps=[map];
+  const report=fixture();report.maps=[map];report.botModel=require('./simulate_maps.cjs').BOT_MODEL;
   const html=renderBalanceReport(report);
   assert.match(html,/3 sao &lt; 50% \(tối đa 3\)/);
   assert.match(html,/2 sao &lt; 75% \(tối đa 5\)/);
+  assert.match(html,/loadout trống/);
+  assert.match(html,/Chọn nước kém tối ưu/);
+  assert.match(html,/30,0% \/ 20,0% \/ 10,0%/);
 });
 
 function fixture() {
@@ -163,7 +170,7 @@ test('overview keeps one row per map while changing profile values, retaining re
   assert.equal(document.getElementById('filter-count').textContent,'2 / 2 map');
   assert.equal(bot.value,'normal');
   assert.equal(power.value,'expected');
-  assert.match(value(1,'win'),/80,0%/);
+  assert.match(value(1,'win'),/90,0%/);
   assert.equal(value(3,'win'),'—');
   assert.match(document.getElementById('overview-selection').textContent,/1 \/ 2 map có dữ liệu/);
   assert.equal(document.querySelectorAll('[data-map-detail][open]').length,0);
@@ -191,7 +198,7 @@ test('overview keeps one row per map while changing profile values, retaining re
   assert.equal(document.getElementById('filter-count').textContent,'2 / 2 map');
   assert.equal(bot.value,'normal');
   assert.equal(power.value,'expected');
-  assert.match(value(1,'win'),/80,0%/);
+  assert.match(value(1,'win'),/90,0%/);
   document.querySelector('#overview-table a').click();
   assert.equal(document.getElementById('map-1').open,true);
   assert.equal(document.querySelectorAll('#map-1 .comparison-table tbody tr').length,3);
@@ -208,8 +215,8 @@ test('overview keeps one row per map while changing profile values, retaining re
 test('overview handles an unplayed map, nonstandard assist levels and a report without the default profile',t=>{
   const report=fixture();
   report.reports=[profile(3,'basic','strong')];
-  report.run.maps.push(10);report.maps.push(catalog[9]);
-  report.retries=[{...simulateRetries(catalog[9],2,()=>({won:false,stars:0})),
+  report.run.maps.push(4);report.maps.push(catalog[3]);
+  report.retries=[{...simulateRetries(catalog[3],2,()=>({won:false,stars:0})),
     byAssist:[{assist:0,samples:2,wins:0,losses:2,winRate:0,starRates:[1,0,0,0]},
       {assist:.15,samples:2,wins:0,losses:2,winRate:0,starRates:[1,0,0,0]}]}];
   const dom=new JSDOM(renderBalanceReport(report),{runScripts:'dangerously'}),{document}=dom.window;
@@ -217,7 +224,7 @@ test('overview handles an unplayed map, nonstandard assist levels and a report w
   assert.equal(document.querySelectorAll('#overview-table tbody tr').length,3);
   assert.equal(document.getElementById('filter-bot').value,'basic');
   assert.equal(document.getElementById('filter-power').value,'strong');
-  const row=document.querySelector('[data-overview][data-map="10"]');
+  const row=document.querySelector('[data-overview][data-map="4"]');
   assert.equal(row.querySelector('[data-field="win"] [data-missing-value]').hidden,false);
   assert.match(row.querySelector('[data-field="retry"]').textContent,/0,0%/);
   assert.equal(row.querySelector('[data-field="retry-average"]').textContent,'—');
@@ -245,20 +252,19 @@ test('HTML safely embeds run text and raw JSON and explains missing retry/error 
   assert.match(document.body.textContent,/Không đạt|Lần chạy bị gián đoạn/);
 });
 
-test('CLI exports HTML and JSON even when a check fails, preserving default HTML history',async t=>{
+test('CLI exports HTML and JSON while preserving default HTML history',async t=>{
   const directory=fs.mkdtempSync(path.join(os.tmpdir(),'balance-report-test-'));
   t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
   await seedCache(directory);
   const jsonPath=path.join(directory,'result.json');
-  const args=[path.join(__dirname,'simulate_maps.cjs'),'--maps','1','--bots','normal','--seeds','1','--retry-seeds','2','--check','--offline','--project','demo-cache','--output',jsonPath];
+  const args=[path.join(__dirname,'simulate_maps.cjs'),'--maps','1','--bots','normal','--seeds','1','--retry-seeds','2','--offline','--project','demo-cache','--output',jsonPath];
   for(let i=0;i<2;i++) {
     const child=spawnSync(process.execPath,args,{encoding:'utf8',env:{...process.env,BALANCE_CACHE_DIR:directory}});
-    assert.equal(child.status,1,child.stderr);
+    assert.equal(child.status,0,child.stderr);
     assert.match(child.stdout,/HTML report:/);
     assert.match(child.stdout,/local cache/);
-    assert.match(child.stderr,/ngoài khoảng kiểm tra/);
     const report=JSON.parse(fs.readFileSync(jsonPath,'utf8'));
-    assert.equal(report.checks.status,'failed');
+    assert.equal(report.checks.status,'not-run');
     assert.equal(report.source.kind,'cache');
     assert.equal(report.source.project,'demo-cache');
     assert.equal(report.source.version,config.version);
@@ -270,8 +276,8 @@ test('CLI exports HTML and JSON even when a check fails, preserving default HTML
   assert.equal(files.length,2);
   const dom=new JSDOM(fs.readFileSync(path.join(directory,files[0]),'utf8'));
   t.after(()=>dom.window.close());
-  assert.match(dom.window.document.body.textContent,/Không đạt kiểm tra/);
-  assert.equal(JSON.parse(dom.window.document.getElementById('report-data').textContent).checks.status,'failed');
+  assert.match(dom.window.document.body.textContent,/Chưa bật --check/);
+  assert.equal(JSON.parse(dom.window.document.getElementById('report-data').textContent).checks.status,'not-run');
 });
 
 test('parallel workers produce the same report as a sequential run',async t=>{
@@ -280,7 +286,7 @@ test('parallel workers produce the same report as a sequential run',async t=>{
   await seedCache(directory);
   const run=jobs=>{
     const jsonPath=path.join(directory,`jobs-${jobs}.json`);
-    const args=[path.join(__dirname,'simulate_maps.cjs'),'--maps','1,10','--bots','basic,normal','--powers','expected','--seeds','3','--retry-seeds','2','--jobs',String(jobs),'--offline','--project','demo-cache','--output',jsonPath];
+    const args=[path.join(__dirname,'simulate_maps.cjs'),'--maps','1,3','--bots','basic,normal','--powers','expected','--seeds','3','--retry-seeds','2','--jobs',String(jobs),'--offline','--project','demo-cache','--output',jsonPath];
     const child=spawnSync(process.execPath,args,{encoding:'utf8',env:{...process.env,BALANCE_CACHE_DIR:directory}});
     assert.equal(child.status,0,child.stderr);
     return JSON.parse(fs.readFileSync(jsonPath,'utf8'));

@@ -48,10 +48,12 @@ Read [references/commands.md](references/commands.md) for CLI options and artifa
 | hard | 25–40% | 5–15% |
 | very-hard | 10–20% | 2–6% |
 
-These gates use the normal bot, `thanh-phong` sword, `nhat-kiem` skill and a
-recorded reference EXP of `(index-1)*60`, unless `--total-exp` overrides it.
-Minimum/strong-power runs are diagnostics. Describe measurements as bot estimates,
-not guaranteed human win rates. No extra moves are purchased.
+These gates use the normal bot with no sword, skills, or passive skills and a
+recorded reference EXP of `(index-1)*60`, unless `--total-exp` overrides it. The
+basic, normal and strategic bots make a suboptimal choice 30%, 20% and 10% of the
+time, sampling uniformly from up to the next three lower-ranked moves. Minimum and
+strong EXP runs are diagnostics. Describe measurements as bot estimates, not
+guaranteed human win rates. No extra moves are purchased.
 
 ## Generation workflow
 

@@ -61,9 +61,11 @@ npm run maps:generate -- --help
 
 Normal first-attempt defaults: easy win >95%, three >80%; medium win >80%, three
 45–55%; hard win 25–40%, three 5–15%; very-hard win 10–20%, three 2–6%.
-The normal bot's reference loadout is `thanh-phong`/`nhat-kiem`. Power diagnostics
-use EXP 0 and `(INDEX-1)*100+1500`. Retry sequences keep reference EXP fixed to
-isolate seed/spawn assistance; real players may additionally improve play/equipment.
+All bots use an empty loadout and no passive skills. They choose a lower-ranked move
+30% (basic), 20% (normal), and 10% (strategic) of the time, uniformly from up to
+the next three lower-ranked moves. Reports include the model version and observed
+suboptimal choices. Power diagnostics use EXP 0 and `(INDEX-1)*100+1500`. Retry
+sequences keep reference EXP fixed to isolate seed/spawn assistance.
 
 ## Revalidate a frozen map
 

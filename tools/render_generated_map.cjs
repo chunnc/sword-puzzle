@@ -1,5 +1,5 @@
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const percent = value => `${(value * 100).toFixed(1)}%`;
+const percent = value => Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : '—';
 function renderGeneratedMap(map, config, seed, report) {
   const tileNames = Object.fromEntries(config.tiles.map(tile => [tile.id, tile.name]));
   const objectives = map.objectives.map(o => o.type === 'Collect' ? `${tileNames[o.tileKind]}: ${o.target}` : `${o.enemy.name}: ${o.target} HP`).join(' · ');
@@ -11,10 +11,11 @@ function renderGeneratedMap(map, config, seed, report) {
 <p class="muted">Seed sinh map: ${seed.generation.seed}; hình: ${escape(seed.generation.shape.family)}. □ = ô khuyết, ? = ô ngẫu nhiên. Hàng trên là hàng đầu của layout.</p>
 <div class="board">${map.layout.flat().map(cell => `<div class="cell ${cell === 0 ? 'hole' : ''}">${cell === 0 ? '□' : cell === -1 ? '?' : escape(tileNames[cell])}</div>`).join('')}</div>
 <h2>Validation: ${escape(report.status)}</h2><p>${summary.samples} ván · thắng ${percent(summary.winRate)} · 3 sao ${percent(summary.starRates[3])} · median lượt thắng ${summary.medianMoves ?? '—'}</p>
+<p>${summary.suboptimalChoices ?? 0} lựa chọn kém tối ưu (${percent(summary.suboptimalChoiceRate)}).</p>
 <p>3 sao: dùng dưới ${map.starThresholds.threeStarBelowPercent}% lượt; 2 sao: dùng dưới ${map.starThresholds.twoStarBelowPercent}% lượt.</p>
 ${report.failures.length ? `<ul>${report.failures.map(f => `<li>${escape(f)}</li>`).join('')}</ul>` : ''}
 ${retry('Đến lần thắng đầu', report.retries.firstWin)}${retry('Đến lần đạt 3 sao đầu', report.retries.firstThreeStars)}
-<p class="muted">Bot normal, EXP tham chiếu ${report.powerModel.expectedTotalExp}, không mua thêm lượt. Quantile chưa đạt được báo là censored, không loại các chuỗi chưa hoàn thành khỏi mẫu.</p>
+<p class="muted">Bot normal v${report.botModel?.version ?? '—'} dùng loadout trống; xác suất chọn nước kém tối ưu basic / normal / strategic: ${Object.values(report.botModel?.mistakeRates ?? {}).map(percent).join(' / ')}. Nước kém tối ưu đo được trong retry: ${report.retries.suboptimalChoices ?? 0}. EXP tham chiếu ${report.powerModel.expectedTotalExp}; không mua thêm lượt. Quantile chưa đạt được báo là censored, không loại các chuỗi chưa hoàn thành khỏi mẫu.</p>
 <p class="muted">Map hash: <code>${report.hashes.map}</code></p></html>\n`;
 }
 module.exports = { renderGeneratedMap };

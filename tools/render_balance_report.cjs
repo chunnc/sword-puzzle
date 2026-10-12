@@ -20,6 +20,7 @@ function band(rate,range,tolerance=0) {
 
 function renderBalanceReport(report) {
   const run=report.run??{},checks=report.checks??{status:'not-run',tolerance:0,results:[],failures:[]};
+  const botModel=report.botModel??null;
   const source=report.source??null;
   const sourceLabels={server:['Server (vừa đồng bộ)','good'],cache:['Cache local','neutral'],local:['Authoring local (chưa publish)','quiet'],authoring:['Dữ liệu authoring','quiet']};
   const [sourceLabel,sourceKind]=source?[...(sourceLabels[source.kind]??[source.kind??'—','neutral'])]:[null,null];
@@ -48,6 +49,7 @@ function renderBalanceReport(report) {
       <td>${escape(powerNames[r.power]??r.power)}</td><td class="numeric">${number(r.samples)}</td>
       <td class="rate-cell">${band(r.winRate,target?.win,checks.tolerance)}</td><td class="numeric">${percent(r.starRates[0])}</td><td class="numeric">${percent(r.starRates[1])}</td><td class="numeric">${percent(r.starRates[2])}</td>
       <td class="rate-cell">${band(r.starRates[3],target?.three,checks.tolerance)}</td><td class="numeric">${number(r.averageMoves,2)}</td>
+      <td class="numeric">${number(r.suboptimalChoices)}<small>${percent(r.suboptimalChoiceRate)}</small></td>
       <td>${badge(label,gate?(gate.passed?'good':'bad'):'neutral')}</td></tr>`;
   };
   const profileDetail=r=>{
@@ -60,7 +62,7 @@ function renderBalanceReport(report) {
       <div><h3>Diễn biến ván chơi</h3><dl class="metrics"><dt>Median lượt đổi ô khi thắng</dt><dd>${number(r.medianMoves,1)}</dd><dt>Settlement / hành động</dt><dd>${percent(r.settlementRate)}</dd>
       <dt>Thế chuẩn bị tạo / dùng</dt><dd>${number(r.metrics?.setups)} / ${number(r.metrics?.setupUsed)}</dd><dt>Charge tạo / kích hoạt</dt><dd>${number(r.metrics?.chargesCreated)} / ${number(r.metrics?.chargesActivated)}</dd>
       <dt>Tiến độ nhiệm vụ trung bình</dt><dd>${percent(r.averageProgress)}</dd>
-      <dt>Tiến độ khi thua</dt><dd>${percent(r.averageFailedProgress)}</dd><dt>Đợt giải quyết trung bình / ván</dt><dd>${number(r.averageWaves,2)}</dd>
+      <dt>Tiến độ khi thua</dt><dd>${percent(r.averageFailedProgress)}</dd><dt>Chọn nước kém tối ưu</dt><dd>${number(r.suboptimalChoices)} (${percent(r.suboptimalChoiceRate)})</dd><dt>Đợt giải quyết trung bình / ván</dt><dd>${number(r.averageWaves,2)}</dd>
       <dt>Chain lớn nhất</dt><dd>${number(r.maxChain)}</dd><dt>Xáo bàn trung bình / ván</dt><dd>${number(r.averageReshuffles,2)}</dd></dl>
       <p class="muted">Các đợt giải quyết bao gồm cả đổi ô và kỹ năng.</p>
       ${r.waveCounts?`<h3>Wave / hành động</h3>${histogram(r.waveCounts,'Phân bố wave trên mỗi hành động')}`:''}
@@ -70,16 +72,16 @@ function renderBalanceReport(report) {
   };
   const retryDetail=r=>`<details class="profile-detail" id="retry-${escape(r.id)}">
     <summary><span>${escape(mapLabel(r.id))} · hỗ trợ sau chuỗi thua</span>${badge(r.hasSpawnPressure?'Có áp lực sinh ô':'Không có áp lực sinh ô',r.hasSpawnPressure?'neutral':'quiet')}</summary>
-    <div class="retry-body"><p>Bot <strong>${escape(r.bot)}</strong> / sức mạnh <strong>${escape(powerNames[r.power]??r.power)}</strong>. Mỗi chuỗi dừng khi thắng hoặc sau ${r.maxAttempts} lần chơi.</p>
+    <div class="retry-body"><p>Bot <strong>${escape(r.bot)}</strong> / sức mạnh <strong>${escape(powerNames[r.power]??r.power)}</strong>. Mỗi chuỗi dừng khi thắng hoặc sau ${r.maxAttempts} lần chơi. Có ${number(r.suboptimalChoices)} lựa chọn kém tối ưu trên ${number(r.totalAttempts)} lần chơi.</p>
     ${!r.hasSpawnPressure?'<p class="notice">Map này không có áp lực sinh ô đang được hỗ trợ. Retry thay đổi seed; giảm áp lực không làm thay đổi luật sinh ô.</p>':''}
-    <h3>Tỷ lệ thắng theo mức hỗ trợ</h3><div class="table-wrap"><table><thead><tr><th>Giảm áp lực</th><th>Số lần chơi</th><th>Thắng</th><th>Thua</th><th>Tỷ lệ thắng</th><th>3 sao</th></tr></thead><tbody>
+    <h3>Tỷ lệ thắng theo mức hỗ trợ</h3><div class="table-wrap"><table><thead><tr><th>Giảm áp lực</th><th>Số lần chơi</th><th>Thắng</th><th>Thua</th><th>Tỷ lệ thắng</th><th>3 sao</th><th>Nước kém tối ưu</th></tr></thead><tbody>
     ${(r.byAssist??[]).map(b=>`<tr><th scope="row">${percent(b.assist)}</th><td class="numeric">${number(b.samples)}</td><td class="numeric">${number(b.wins)}</td><td class="numeric">${number(b.losses)}</td>
-    <td class="numeric">${percent(b.winRate)}</td><td class="numeric">${b.samples?percent(b.starRates[3]):'—'}</td></tr>`).join('')}</tbody></table></div>
+    <td class="numeric">${percent(b.winRate)}</td><td class="numeric">${b.samples?percent(b.starRates[3]):'—'}</td><td class="numeric">${number(b.suboptimalChoices)} (${percent(b.suboptimalChoiceRate)})</td></tr>`).join('')}</tbody></table></div>
     <p class="muted">Tính trên những lần chơi thực sự đến mức hỗ trợ này. Mức 0% gồm cả lần chơi đầu. Giảm áp lực 30% không có nghĩa là tăng tỷ lệ thắng 30 điểm phần trăm; đây chưa phải so sánh bật/tắt hỗ trợ trên cùng bộ seed.</p>
     <div class="detail-body"><div><h3>Thắng ở lần chơi thứ mấy?</h3>${histogram(r.attemptsHistogram,'Số chuỗi thắng theo lần chơi')}
     <p class="muted">Trung bình tính trên ${number(r.completed)} chuỗi đã thắng; ${number(r.unfinished)} chuỗi còn lại dừng ở ${r.maxAttempts} lần.</p></div>
-    <div><h3>Diễn biến từng lần chơi</h3><div class="table-wrap attempt-table"><table><thead><tr><th>Lần</th><th>Hỗ trợ</th><th>Đã chơi</th><th>Thắng</th><th>Tỷ lệ thắng</th><th>Đã vượt màn¹</th></tr></thead><tbody>
-    ${(r.byAttempt??[]).filter(b=>b.samples).map(b=>`<tr><th scope="row">${b.attempt}</th><td>${percent(b.assist)}</td><td class="numeric">${number(b.samples)}</td><td class="numeric">${number(b.wins)}</td><td class="numeric">${percent(b.winRate)}</td><td class="numeric">${percent(b.cumulativeWinRate)}</td></tr>`).join('')}</tbody></table></div>
+    <div><h3>Diễn biến từng lần chơi</h3><div class="table-wrap attempt-table"><table><thead><tr><th>Lần</th><th>Hỗ trợ</th><th>Đã chơi</th><th>Thắng</th><th>Tỷ lệ thắng</th><th>Nước kém tối ưu</th><th>Đã vượt màn¹</th></tr></thead><tbody>
+    ${(r.byAttempt??[]).filter(b=>b.samples).map(b=>`<tr><th scope="row">${b.attempt}</th><td>${percent(b.assist)}</td><td class="numeric">${number(b.samples)}</td><td class="numeric">${number(b.wins)}</td><td class="numeric">${percent(b.winRate)}</td><td class="numeric">${number(b.suboptimalChoices)} (${percent(b.suboptimalChoiceRate)})</td><td class="numeric">${percent(b.cumulativeWinRate)}</td></tr>`).join('')}</tbody></table></div>
     <p class="muted">¹ Tỷ lệ tích lũy trên toàn bộ ${number(r.samples)} chuỗi của map.</p></div></div></div></details>`;
   const profileValues=(entries,render,missing='—')=>entries.map(r=>`<div data-profile-value data-bot="${escape(r.bot)}" data-power="${escape(r.power)}"${r.bot===defaultBot&&r.power===defaultPower?'':' hidden'}>${render(r)}</div>`).join('')+
     `<div data-missing-value${entries.some(r=>r.bot===defaultBot&&r.power===defaultPower)?' hidden':''}>${missing}</div>`;
@@ -106,7 +108,7 @@ function renderBalanceReport(report) {
   const mapDetails=mapIds.map(id=>{
     const entries=profiles.filter(r=>r.id===id),retry=retries.find(r=>r.id===id);
     return `<details class="profile-detail map-detail" id="map-${escape(id)}" data-map-detail data-map="${escape(id)}"><summary><span>${escape(mapLabel(id))}</span><span class="muted">${number(entries.length)} profile${retry?' · có retry':''}</span></summary>
-      <div class="map-body"><h3>So sánh bot và sức mạnh</h3>${entries.length?`<div class="table-wrap"><table class="comparison-table"><thead><tr><th>Bot</th><th>Sức mạnh</th><th>Số mẫu</th><th>Thắng / mục tiêu</th><th>Thua</th><th>1 sao</th><th>2 sao</th><th>3 sao / mục tiêu</th><th>Lượt TB khi thắng</th><th>Đánh giá</th></tr></thead><tbody>${entries.map(comparisonRow).join('')}</tbody></table></div>
+      <div class="map-body"><h3>So sánh bot và sức mạnh</h3>${entries.length?`<div class="table-wrap"><table class="comparison-table"><thead><tr><th>Bot</th><th>Sức mạnh</th><th>Số mẫu</th><th>Thắng / mục tiêu</th><th>Thua</th><th>1 sao</th><th>2 sao</th><th>3 sao / mục tiêu</th><th>Lượt TB khi thắng</th><th>Nước kém tối ưu</th><th>Đánh giá</th></tr></thead><tbody>${entries.map(comparisonRow).join('')}</tbody></table></div>
       <h3 class="detail-heading">Phân bố lượt và diễn biến</h3>${entries.map(profileDetail).join('')}`:'<p class="muted">Chưa có dữ liệu lần chơi đầu cho map này.</p>'}
       <h3 class="detail-heading">Retry và hỗ trợ sau chuỗi thua</h3>${retry?retryDetail(retry):'<p class="muted">Chưa chạy retry cho map này.</p>'}</div></details>`;
   }).join('');
@@ -146,7 +148,7 @@ ${!retries.length?'<p class="notice"><strong>Chưa chạy retry.</strong> Thêm 
 ${report.assistReports?.length?`<section id="paired-assist"><div class="section-heading"><h2>Assist trên cùng bộ seed</h2><p>Normal / dự kiến · ${number(report.assistReports[0].rates[0].samples)} seed mỗi mức</p></div><div class="panel table-wrap"><table><thead><tr><th>Map</th><th>Không assist</th><th>10%</th><th>20%</th><th>30%</th><th>Gate</th></tr></thead><tbody>${report.assistReports.map(r=>`<tr><th>${escape(r.id)}</th>${r.rates.map(rate=>`<td>${percent(rate.winRate)}</td>`).join('')}<td>${badge(r.passed?'Đạt':'Không đạt',r.passed?'good':'bad')}</td></tr>`).join('')}</tbody></table></div></section>`:''}
 <section><div class="section-heading"><h2>Chi tiết từng map</h2><p>Mở map để so sánh tất cả bot, sức mạnh và retry.</p></div>${mapDetails}</section>
 <section><div class="section-heading"><h2>Khoảng mục tiêu độ khó</h2></div><div class="panel target-table"><table><thead><tr><th>Độ khó</th><th>Thắng</th><th>3 sao</th></tr></thead><tbody>${Object.entries(report.targets).map(([name,t])=>`<tr><th scope="row">${escape(difficultyNames[name]??name)}</th><td>${percent(t.win[0])}–${percent(t.win[1])}</td><td>${percent(t.three[0])}–${percent(t.three[1])}</td></tr>`).join('')}</tbody></table></div></section>
-<footer><p>Report tự chứa, xem được offline. Bot dùng engine thật với kiếm thanh-phong và kỹ năng nhat-kiem. Thống kê mô phỏng dùng để đối chiếu cân bằng map.</p>${source?`<p>Nguồn dữ liệu: ${escape(sourceLabel)} · project <code>${escape(source.project)}</code> · content v${escape(source.version)} · snapshot <code>${escape(source.hashes?.snapshot??'—')}</code>${source.cacheFile?` · cache <code>${escape(source.cacheFile)}</code>`:''}</p>`:''}<p>Run ${escape(run.id??'—')} · Config hash <code>${escape(report.configHash??'—')}</code></p></footer>
+<footer><p>Report tự chứa, xem được offline. Bot dùng engine thật với loadout trống${botModel?` (mô hình v${escape(botModel.version)}; chọn nước kém tối ưu basic / normal / strategic: ${Object.values(botModel.mistakeRates).map(rate=>percent(rate)).join(' / ')}; mỗi lần chọn sai rút đều tối đa ${number(botModel.mistakeCandidateLimit)} nước điểm thấp hơn gần nhất)`:''}. Thống kê mô phỏng dùng để đối chiếu cân bằng map.</p>${source?`<p>Nguồn dữ liệu: ${escape(sourceLabel)} · project <code>${escape(source.project)}</code> · content v${escape(source.version)} · snapshot <code>${escape(source.hashes?.snapshot??'—')}</code>${source.cacheFile?` · cache <code>${escape(source.cacheFile)}</code>`:''}</p>`:''}<p>Run ${escape(run.id??'—')} · Config hash <code>${escape(report.configHash??'—')}</code></p></footer>
 </main><script id="report-data" type="application/json">${serialize}</script>
 <script>
 const mapFilter=document.getElementById('filter-map'),botFilter=document.getElementById('filter-bot'),powerFilter=document.getElementById('filter-power');
