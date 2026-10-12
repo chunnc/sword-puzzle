@@ -1,13 +1,13 @@
 {
   "id": 3,
-  "mapVersion": 2,
+  "mapVersion": 3,
   "contentVersion": 11,
   "levelCount": 4,
-  "catalogRevision": 7,
+  "catalogRevision": 9,
   "changed": true,
   "dryRun": false,
-  "authoredMapHash": "6af25a5f0aacd268eea29a0adb488a54b2394f2e24c5fe031cda3ccb2d94cf9e",
-  "reportHash": "75975a4580969d9b94e05901a74f08a79ce1883291654015ab8a5b917d8a7d8c",
-  "resourceHash": "4da328fad88d00196d53b8668d0ee013376afac6babdffebb100b05d863ac9c6",
+  "authoredMapHash": "127cc21adef79e4aa0bf7d4b127a60c72939f82db485f65c7ab2578008a93c3b",
+  "reportHash": "7e54959dfed379abe70f671ceb281319354eb12ae79b1fcb0ed7fb8451ec865b",
+  "resourceHash": "9de5828267a921a0837ef4293dbac39521566fd0cf4e552d8ab185160112d907",
   "project": "sword-puzzle"
 }

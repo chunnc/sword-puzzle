@@ -231,31 +231,7 @@
     "layout": [
       [
         0,
-        -1,
-        -1,
-        -1,
-        -1,
-        0
-      ],
-      [
         0,
-        -1,
-        -1,
-        -1,
-        -1,
-        0
-      ],
-      [
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
-        0
-      ],
-      [
-        -1,
-        -1,
         -1,
         -1,
         -1,
@@ -265,12 +241,36 @@
         -1,
         -1,
         -1,
-        -1,
+        0,
         -1,
         -1
       ],
       [
+        -1,
+        -1,
+        -1,
         0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
         -1,
         -1,
         -1,
@@ -292,21 +292,21 @@
         "id": "collect-sword",
         "type": "Collect",
         "tileKind": 1,
-        "target": 16
+        "target": 12
       },
       {
         "id": "collect-fire",
         "type": "Collect",
         "tileKind": 2,
-        "target": 16
+        "target": 12
       }
     ],
-    "moves": 12,
+    "moves": 19,
     "baseExp": 100,
     "starThresholds": {
       "mode": "percentage",
-      "threeStarBelowPercent": 84,
-      "twoStarBelowPercent": 92
+      "threeStarBelowPercent": 58,
+      "twoStarBelowPercent": 79
     },
     "spawnPolicy": {
       "weights": {
@@ -333,7 +333,7 @@
         0.3
       ]
     },
-    "mapVersion": 2,
+    "mapVersion": 3,
     "rulesMode": "modern",
     "tileRegistry": {
       "sword": 1,

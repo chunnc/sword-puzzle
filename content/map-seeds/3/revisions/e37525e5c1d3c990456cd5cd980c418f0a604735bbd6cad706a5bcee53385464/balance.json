@@ -1,0 +1,408 @@
+{
+  "format": 1,
+  "status": "passed",
+  "failures": [],
+  "hashes": {
+    "map": "6af25a5f0aacd268eea29a0adb488a54b2394f2e24c5fe031cda3ccb2d94cf9e",
+    "config": "b2f05aec438cce3c7e18ddf1147311aeb6399d833a37a64f8a081d91c100b8ea",
+    "engine": "1b289ae4798972da9ba8d273709c01e6da1c2ceeb6f1f10bb1bb63efbf7158af"
+  },
+  "bands": {
+    "win": [
+      0.95,
+      1
+    ],
+    "three": [
+      0.8,
+      1
+    ],
+    "exclusiveWin": true,
+    "exclusiveThree": true
+  },
+  "botModel": {
+    "version": 1,
+    "loadout": {
+      "sword": null,
+      "skills": []
+    },
+    "mistakeRates": {
+      "basic": 0.3,
+      "normal": 0.2,
+      "strategic": 0.1
+    },
+    "mistakeCandidateLimit": 3,
+    "mistakeSelection": "uniform-among-next-three-lower-ranked-moves"
+  },
+  "authoringPolicy": {
+    "version": 1,
+    "winRateEnforced": true
+  },
+  "powerModel": {
+    "expectedTotalExp": 120,
+    "minimumTotalExp": 0,
+    "strongTotalExp": 1700,
+    "loadout": {
+      "sword": null,
+      "skills": []
+    },
+    "extraMoves": false
+  },
+  "seedSuites": {
+    "generationSeed": 568205760,
+    "training": 150,
+    "validation": 1000,
+    "retrySequences": 100,
+    "maxRetryAttempts": 100,
+    "selection": "training-only; one frozen validation pass"
+  },
+  "training": null,
+  "search": null,
+  "validation": {
+    "passed": true,
+    "failures": [],
+    "loss": null,
+    "summary": {
+      "mapHash": "6af25a5f0aacd268eea29a0adb488a54b2394f2e24c5fe031cda3ccb2d94cf9e",
+      "id": 3,
+      "difficulty": "easy",
+      "samples": 1000,
+      "winRate": 0.964,
+      "starRates": [
+        0.036,
+        0.041,
+        0.072,
+        0.851
+      ],
+      "suboptimalChoices": 1636,
+      "suboptimalChoiceRate": 0.20245019180794457,
+      "medianMoves": 8,
+      "actions": 8081,
+      "waveCounts": {
+        "1": 3054,
+        "2": 3065,
+        "3": 1322,
+        "4": 640
+      },
+      "metrics": {
+        "seeded": 1482,
+        "setups": 1965,
+        "setupAttempts": 2517,
+        "setupFallbacks": 552,
+        "setupUsed": 594,
+        "chargesCreated": 5598,
+        "chargesActivated": 3533,
+        "settlements": 198
+      },
+      "settlementRate": 0.024501918079445614,
+      "movesHistogram": {
+        "3": 7,
+        "4": 26,
+        "5": 79,
+        "6": 124,
+        "7": 180,
+        "8": 188,
+        "9": 133,
+        "10": 114,
+        "11": 72,
+        "12": 41
+      },
+      "averageMoves": 7.9346473029045645,
+      "averageProgress": 1.27025,
+      "averageFailedProgress": 1.1901041666666667,
+      "averageReshuffles": 0.002,
+      "averageWaves": 15.71,
+      "maxChain": 4,
+      "bot": "normal",
+      "power": "expected",
+      "totalExp": 120,
+      "reshuffleRate": 0.00024749412201460216
+    }
+  },
+  "retries": {
+    "bot": "normal",
+    "totalExp": 120,
+    "botModel": {
+      "version": 1,
+      "loadout": {
+        "sword": null,
+        "skills": []
+      },
+      "mistakeRates": {
+        "basic": 0.3,
+        "normal": 0.2,
+        "strategic": 0.1
+      },
+      "mistakeCandidateLimit": 3,
+      "mistakeSelection": "uniform-among-next-three-lower-ranked-moves"
+    },
+    "suboptimalChoices": 210,
+    "assistance": "consecutive-losses; reset after any win",
+    "assistCounts": {
+      "0": 116
+    },
+    "firstWin": {
+      "samples": 100,
+      "completed": 100,
+      "unfinished": 0,
+      "maxAttempts": 100,
+      "medianAttempts": 1,
+      "medianRetries": 0,
+      "p90Attempts": 1,
+      "meanCompletedAttempts": 1.02,
+      "byAttempt": [
+        {
+          "attempt": 1,
+          "retries": 0,
+          "cumulativeRate": 0.98
+        },
+        {
+          "attempt": 2,
+          "retries": 1,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 3,
+          "retries": 2,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 5,
+          "retries": 4,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 10,
+          "retries": 9,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 20,
+          "retries": 19,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 30,
+          "retries": 29,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 50,
+          "retries": 49,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 100,
+          "retries": 99,
+          "cumulativeRate": 1
+        }
+      ]
+    },
+    "firstThreeStars": {
+      "samples": 100,
+      "completed": 100,
+      "unfinished": 0,
+      "maxAttempts": 100,
+      "medianAttempts": 1,
+      "medianRetries": 0,
+      "p90Attempts": 2,
+      "meanCompletedAttempts": 1.16,
+      "byAttempt": [
+        {
+          "attempt": 1,
+          "retries": 0,
+          "cumulativeRate": 0.87
+        },
+        {
+          "attempt": 2,
+          "retries": 1,
+          "cumulativeRate": 0.97
+        },
+        {
+          "attempt": 3,
+          "retries": 2,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 5,
+          "retries": 4,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 10,
+          "retries": 9,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 20,
+          "retries": 19,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 30,
+          "retries": 29,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 50,
+          "retries": 49,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 100,
+          "retries": 99,
+          "cumulativeRate": 1
+        }
+      ]
+    }
+  },
+  "diagnostics": [
+    {
+      "mapHash": "6af25a5f0aacd268eea29a0adb488a54b2394f2e24c5fe031cda3ccb2d94cf9e",
+      "id": 3,
+      "difficulty": "easy",
+      "samples": 100,
+      "winRate": 0.95,
+      "starRates": [
+        0.05,
+        0.08,
+        0.03,
+        0.84
+      ],
+      "suboptimalChoices": 179,
+      "suboptimalChoiceRate": 0.2174969623329283,
+      "medianMoves": 8,
+      "actions": 823,
+      "waveCounts": {
+        "1": 328,
+        "2": 303,
+        "3": 129,
+        "4": 63
+      },
+      "metrics": {
+        "seeded": 162,
+        "setups": 221,
+        "setupAttempts": 262,
+        "setupFallbacks": 41,
+        "setupUsed": 79,
+        "chargesCreated": 554,
+        "chargesActivated": 336,
+        "settlements": 20
+      },
+      "settlementRate": 0.024301336573511544,
+      "movesHistogram": {
+        "4": 3,
+        "5": 9,
+        "6": 12,
+        "7": 18,
+        "8": 13,
+        "9": 15,
+        "10": 14,
+        "11": 3,
+        "12": 8
+      },
+      "averageMoves": 8.031578947368422,
+      "averageProgress": 1.275625,
+      "averageFailedProgress": 1.01875,
+      "averageReshuffles": 0,
+      "averageWaves": 15.73,
+      "maxChain": 4,
+      "bot": "normal",
+      "power": "minimum"
+    },
+    {
+      "mapHash": "6af25a5f0aacd268eea29a0adb488a54b2394f2e24c5fe031cda3ccb2d94cf9e",
+      "id": 3,
+      "difficulty": "easy",
+      "samples": 100,
+      "winRate": 0.95,
+      "starRates": [
+        0.05,
+        0.08,
+        0.03,
+        0.84
+      ],
+      "suboptimalChoices": 179,
+      "suboptimalChoiceRate": 0.2174969623329283,
+      "medianMoves": 8,
+      "actions": 823,
+      "waveCounts": {
+        "1": 328,
+        "2": 303,
+        "3": 129,
+        "4": 63
+      },
+      "metrics": {
+        "seeded": 162,
+        "setups": 221,
+        "setupAttempts": 262,
+        "setupFallbacks": 41,
+        "setupUsed": 79,
+        "chargesCreated": 554,
+        "chargesActivated": 336,
+        "settlements": 20
+      },
+      "settlementRate": 0.024301336573511544,
+      "movesHistogram": {
+        "4": 3,
+        "5": 9,
+        "6": 12,
+        "7": 18,
+        "8": 13,
+        "9": 15,
+        "10": 14,
+        "11": 3,
+        "12": 8
+      },
+      "averageMoves": 8.031578947368422,
+      "averageProgress": 1.275625,
+      "averageFailedProgress": 1.01875,
+      "averageReshuffles": 0,
+      "averageWaves": 15.73,
+      "maxChain": 4,
+      "bot": "normal",
+      "power": "strong"
+    }
+  ],
+  "revalidation": {
+    "previousReportHash": "75975a4580969d9b94e05901a74f08a79ce1883291654015ab8a5b917d8a7d8c",
+    "request": {
+      "difficulty": "easy",
+      "objective": "collect",
+      "index": 3,
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "minMoves": 6,
+      "maxMoves": 24,
+      "tiles": [
+        "sword",
+        "fire"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "seed": 568205760,
+      "totalExp": 120,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": null,
+      "replace": true,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    }
+  }
+}
