@@ -53,18 +53,26 @@ only. Publishing to a shared project is a separate operation.
 
 ## Generated maps after the tutorials
 
-Use `npm run maps:generate -- --difficulty medium --objective collect` or
-`--objective boss`. The generator adds the next contiguous local ID, defaults to
-the last chapter, and produces a seed/config/report/preview bundle under
-`content/map-seeds/INDEX/`. Maps are bounded to 7 columns × 8 rows, contain 12–40%
-holes, and use random normal cells rather than a single fixed opening for every run.
+Use `npm run maps:generate -- --difficulty medium --objective collect`,
+`--objective boss`, `--objective break-rocks`, or `--objective break-seals`. Rock and
+seal maps generate connected obstacle cells and keep placement and target count in
+sync. The generator
+adds the next contiguous local ID, defaults to the last chapter, and produces a
+seed/config/report/preview bundle under `content/map-seeds/INDEX/`. Maps are bounded
+to 7 columns × 8 rows, contain 12–40% holes, and use random normal cells rather than
+a single fixed opening for every run.
 
-The generation profiles are easy win >95% / three-star >80%; medium win >80% /
-three-star 45–55%; hard win 25–40% / three-star 5–15%; very-hard win 10–20% /
-three-star 2–6%. Training fits targets, move budget, spawn policy and percentage
-star cutoffs; a frozen candidate must pass at least 1000 independent validation
-seeds. Generation and `maps:balance INDEX` also measure first-win and first-three-star
-retry sequences with the server's consecutive-failure reset semantics.
+Generation uses the P80/P50/P10/P4 successful-move quantile for easy/medium/hard/
+very-hard as the 3-star move reference, derives a total budget near 60% of that
+quantile, and places the 2-star cutoff near 80% of total moves. It never generates
+more than 30 moves. The 3-star acceptance bands are easy >80%, medium 45–55%, hard
+5–15%, and very-hard 2–6%; first-attempt win rate is reported as a diagnostic.
+Training searches targets, chance and obstacle pressure, then a frozen candidate
+must pass at least 1000 independent validation seeds. Obstacle pressure compares
+0 as a control and saves rock/seal maps at 0.15 or 0.30; it discourages chains near
+obstacles and weakens with retry assistance. Generation and
+`maps:balance INDEX` also measure first-win and first-three-star retry sequences
+with the server's consecutive-failure reset semantics.
 
 Once the initial catalog is configured, `npm run maps:publish -- INDEX` publishes
 that single generated map. It allocates immutable map revisions, appends one level

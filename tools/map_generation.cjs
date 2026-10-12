@@ -135,6 +135,66 @@ function generateLayouts(seed, count, catalog) {
   if (layouts.length < count) throw new Error(`Only ${layouts.length}/${count} distinct playable shapes found; change the generation seed or reduce --layouts`);
   return layouts;
 }
+function addRockObstacles(layouts, seed, rockId, fixedCount = null) {
+  return layouts.map((shape, shapeIndex) => {
+    const layout = shape.layout.map(row => [...row]);
+    const available = layout.flatMap((row, y) => row.flatMap((cell, x) => cell === -1 ? [y * row.length + x] : []));
+    const count = fixedCount ?? 2 + shapeIndex % 5;
+    if (!Number.isSafeInteger(count) || count < 1 || count > available.length) throw new Error('ROCK_TARGET_EXCEEDS_LAYOUT');
+    const random = randomFor((seed ^ Math.imul(shapeIndex + 1, 0x9e3779b1)) >>> 0 || 1);
+    const height = layout.length, width = layout[0].length;
+    const selected = new Set([available[Math.floor(random() * available.length)]]);
+    while (selected.size < count) {
+      const frontier = new Set();
+      for (const index of selected) {
+        const x = index % width, y = Math.floor(index / width);
+        for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height || layout[ny][nx] !== -1) continue;
+          const next = ny * width + nx;
+          if (!selected.has(next)) frontier.add(next);
+        }
+      }
+      const cells = [...frontier];
+      if (!cells.length) throw new Error('ROCK_CLUSTER_CANNOT_GROW');
+      selected.add(cells[Math.floor(random() * cells.length)]);
+    }
+    const rockCells = [...selected].sort((a, b) => a - b).map(index => {
+      const row = Math.floor(index / width), column = index % width;
+      layout[row][column] = rockId;
+      return { row, column };
+    });
+    return { ...shape, layout, rockCount: count, rockCells };
+  });
+}
+function addSealObstacles(layouts, seed, fixedCount = null) {
+  return layouts.map((shape, shapeIndex) => {
+    const available = shape.layout.flatMap((row, y) => row.flatMap((cell, x) => cell === -1 ? [{ row: y, column: x }] : []));
+    const count = fixedCount ?? 2 + shapeIndex % 5;
+    if (!Number.isSafeInteger(count) || count < 1 || count > available.length) throw new Error('SEAL_TARGET_EXCEEDS_LAYOUT');
+    const random = randomFor((seed ^ Math.imul(shapeIndex + 1, 0x85ebca6b)) >>> 0 || 1);
+    const width = shape.layout[0].length, height = shape.layout.length;
+    const key = ({ row, column }) => row * width + column;
+    const first = available[Math.floor(random() * available.length)];
+    const selected = new Map([[key(first), first]]);
+    while (selected.size < count) {
+      const frontier = new Map();
+      for (const position of selected.values()) {
+        for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+          const column = position.column + dx, row = position.row + dy;
+          if (column < 0 || column >= width || row < 0 || row >= height || shape.layout[row][column] !== -1) continue;
+          const next = { row, column };
+          if (!selected.has(key(next))) frontier.set(key(next), next);
+        }
+      }
+      const cells = [...frontier.values()];
+      if (!cells.length) throw new Error('SEAL_CLUSTER_CANNOT_GROW');
+      const next = cells[Math.floor(random() * cells.length)];
+      selected.set(key(next), next);
+    }
+    const sealCells = [...selected.values()].sort((a, b) => key(a) - key(b));
+    return { ...shape, sealCount: count, sealCells };
+  });
+}
 function artifactDir(index) { return path.join(ROOT, 'content', 'map-seeds', String(index)); }
 function loadArtifact(index, { checkEngine = true } = {}) {
   const directory = artifactDir(index), seed = readJSON(path.join(directory, 'seed.json'));
@@ -156,4 +216,5 @@ function withAuthoringLock(callback) {
   finally { fs.closeSync(descriptor); fs.unlinkSync(file); }
 }
 module.exports = { ROOT, PROFILES, hash, readJSON, writeJSON, engineHash, positiveInteger, band, parseArgs,
-  randomFor, gameplaySeed, inBand, shapeKey, shapeChecks, generateLayouts, artifactDir, loadArtifact, withAuthoringLock };
+  randomFor, gameplaySeed, inBand, shapeKey, shapeChecks, generateLayouts, addRockObstacles, addSealObstacles,
+  artifactDir, loadArtifact, withAuthoringLock };

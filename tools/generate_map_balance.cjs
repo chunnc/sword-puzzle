@@ -3,7 +3,12 @@ const { play, summarize, installSnapshot } = require('./simulate_maps.cjs');
 const { mapStars, assistForFailures, contentWire } = require('./game-runtime.cjs');
 const { hash, engineHash, gameplaySeed, inBand } = require('./map_generation.cjs');
 
-const midpoint = range => (range[0] + range[1]) / 2;
+const CHANCE_POLICIES = [
+  { comboChance: .05, setupChance: .15 },
+  { comboChance: .1, setupChance: .25 },
+  { comboChance: .15, setupChance: .35 }
+];
+const MAX_BUDGET_REFINEMENTS = 8;
 function samples(map, count, suite, request, bot = 'normal', power = 'expected') {
   return Array.from({ length: count }, (_, i) => {
     const result = play(map, gameplaySeed(i, suite, request.seed), bot, power, 0, false,
@@ -12,74 +17,125 @@ function samples(map, count, suite, request, bot = 'normal', power = 'expected')
     return result;
   });
 }
-function chooseStars(map, results, bands) {
-  const win = results.filter(result => result.won).length / results.length;
-  const rates = Array.from({ length: 101 }, (_, threshold) => results.filter(result => result.won && result.movesUsed * 100 < map.moves * threshold).length / results.length);
-  const rate = threshold => rates[threshold];
-  let best = null;
-  for (let three = 1; three < 100; three++) {
-    const threeRate = rate(three);
-    const feasible = inBand(threeRate, bands.three, bands.exclusiveThree);
-    for (let two = three + 1; two <= 100; two++) {
-      const loss = Math.abs(threeRate - midpoint(bands.three)) + .1 * Math.abs(rate(two) - (win + threeRate) / 2);
-      if (!best || feasible && !best.feasible || feasible === best.feasible && loss < best.loss) {
-        best = { loss, feasible, thresholds: { mode: 'percentage', threeStarBelowPercent: three, twoStarBelowPercent: two } };
-      }
-    }
-  }
-  return best.thresholds;
+function moveCutoffs(moves) {
+  const three = Math.min(moves - 2, Math.round(.6 * moves));
+  const two = Math.min(moves - 1, Math.max(three + 1, Math.round(.8 * moves)));
+  if (three < 1 || two <= three) return null;
+  const threshold = maxMoves => Math.floor(maxMoves * 100 / moves) + 1;
+  const result = { three, two, thresholds: { mode: 'percentage',
+    threeStarBelowPercent: threshold(three), twoStarBelowPercent: threshold(two) } };
+  return result.thresholds.threeStarBelowPercent < result.thresholds.twoStarBelowPercent
+    && result.thresholds.twoStarBelowPercent <= 100 ? result : null;
 }
-function assess(map, results, request, tuneStars = false) {
-  if (tuneStars) map.starThresholds = chooseStars(map, results, request.bands);
+function assess(map, results, request) {
   const rated = results.map(result => ({ ...result, stars: result.won ? mapStars(map, result.movesUsed) : 0 }));
   const summary = summarize(map, rated), failures = [];
-  if (!inBand(summary.winRate, request.bands.win, request.bands.exclusiveWin)) failures.push('First-attempt win rate outside requested band');
+  if (request.winRateEnforced !== false && !inBand(summary.winRate, request.bands.win, request.bands.exclusiveWin)) {
+    failures.push('First-attempt win rate outside requested band');
+  }
   if (!inBand(summary.starRates[3], request.bands.three, request.bands.exclusiveThree)) failures.push('First-attempt three-star rate outside requested band');
   if (rated.some(result => result.stalled) || summary.maxChain > 4) failures.push('Engine playability/cascade gate failed');
   const reshuffleRate = summary.actions ? rated.reduce((sum, result) => sum + result.reshuffles, 0) / summary.actions : 0;
   if (reshuffleRate > .25) failures.push('More than 0.25 reshuffles per action');
-  const preferredMoves = map.objectives.every(o => o.type === 'Collect') ? 12 : 16;
-  const loss = Math.abs(summary.winRate - midpoint(request.bands.win)) + Math.abs(summary.starRates[3] - midpoint(request.bands.three))
-    + .002 * Math.abs(map.moves - preferredMoves) + .05 * reshuffleRate;
+  const loss = Math.abs(summary.starRates[3] - request.starQuantile) + .05 * reshuffleRate;
   return { passed: !failures.length, failures, loss, summary: { ...summary, bot: 'normal', power: 'expected', totalExp: request.totalExp, reshuffleRate } };
 }
 function percentile(values, probability) {
   const sorted = [...values].sort((a, b) => a - b);
-  return sorted[Math.min(sorted.length - 1, Math.floor(probability * sorted.length))];
+  return sorted[Math.max(0, Math.min(sorted.length - 1, Math.ceil(probability * sorted.length) - 1))];
 }
-function policyVariants(difficulty) {
+function firstAttemptQuantile(results, probability) {
+  return percentile(results.map(result => result.won ? result.movesUsed : Infinity), probability);
+}
+function convergeBudget(startMoves, request, evaluate) {
+  const history = [], seenMoves = new Set();
+  let moves = startMoves;
+  for (let iteration = 0; iteration < MAX_BUDGET_REFINEMENTS; iteration++) {
+    const measurement = evaluate(moves);
+    const quantileMoves = measurement.quantile;
+    const derivedMoves = Number.isFinite(quantileMoves) ? Math.ceil(quantileMoves / .6) : null;
+    history.push({ iteration: iteration + 1, testedMoves: moves,
+      quantileMoves: Number.isFinite(quantileMoves) ? quantileMoves : null,
+      censored: !Number.isFinite(quantileMoves), derivedMoves });
+    if (derivedMoves === null) return { status: 'censored', moves, history };
+    if (derivedMoves > request.maxMoves) return { status: 'over-budget', moves, history };
+    const nextMoves = Math.max(request.minMoves, derivedMoves);
+    if (nextMoves === moves) return { status: 'converged', moves, history, measurement };
+    if (seenMoves.has(nextMoves)) {
+      history.push({ iteration: iteration + 1, cycleAtMoves: nextMoves });
+      return { status: 'budget-cycle', moves, history };
+    }
+    seenMoves.add(moves);
+    moves = nextMoves;
+  }
+  return { status: 'no-convergence', moves, history };
+}
+function progressQuantile(results, map, probability) {
+  const values = results.map(result => Math.min(...map.objectives.map(objective => result.objectiveProgress[objective.id] ?? 0)));
+  return percentile(values, probability);
+}
+function targetChoices(template, request, results) {
+  if (request.fixedTargets || ['break-rocks', 'break-seals'].includes(request.objective)) return [null];
+  const progress = Math.floor(progressQuantile(results, template.map, request.starQuantile));
+  const minimum = template.map.objectives.every(objective => objective.type === 'Collect') ? 3 : 10;
+  const maximum = template.map.objectives.every(objective => objective.type === 'Collect') ? 30 : 1_000_000_000;
+  return [...new Set([-2, -1, 0, 1, 2].map(offset => Math.max(minimum, Math.min(maximum, progress + offset))))];
+}
+function policyVariants(difficulty, objective) {
   const pressure = { easy: 0, medium: .1, hard: .25, 'very-hard': .4 }[difficulty];
-  return [0, 1, 2].map(i => ({ comboChance: [.05, .1, .15][i], setupChance: [.15, .25, .35][i], collectionPressure: pressure }));
+  return CHANCE_POLICIES.map(policy => ({ ...policy,
+    collectionPressure: objective === 'collect' ? pressure : 0 }));
+}
+function pressureVariants(objective) {
+  return ['break-rocks', 'break-seals'].includes(objective) ? [0, .15, .3] : [0];
+}
+function pressureSelectable(objective, obstaclePressure) {
+  return !['break-rocks', 'break-seals'].includes(objective) || obstaclePressure > 0;
 }
 function calibrate(templates, config, request, progress = console.log) {
   installSnapshot(config, []);
-  const shortlist = [], rejected = [];
+  const shortlist = [], rejected = [], adjustmentHistory = [];
   const coarseSeeds = Math.min(40, request.trainingSeeds);
-  const budgets = [...new Set([...Array.from({ length: Math.floor((request.maxMoves - request.minMoves) / 2) + 1 }, (_, i) => request.minMoves + i * 2), request.maxMoves])];
   for (const [index, template] of templates.entries()) {
-    const variants = policyVariants(template.map.difficulty);
-    for (const policy of variants) for (const moves of budgets) {
-      const probe = structuredClone(template.map);
-      probe.moves = moves; Object.assign(probe.spawnPolicy, policy);
+    const policies = policyVariants(template.map.difficulty, request.objective);
+    for (const obstaclePressure of pressureVariants(request.objective)) for (const policy of policies) {
       try {
-        let targets = [null];
-        if (!request.fixedTargets) {
-          const collect = probe.objectives.every(o => o.type === 'Collect');
-          probe.objectives.forEach(o => { o.target = collect ? 30 : 1_000_000_000; });
-          const measured = samples(probe, coarseSeeds, 'training', request);
-          const values = measured.map(r => Math.min(...probe.objectives.map(o => r.objectiveProgress[o.id])));
-          targets = [...new Set([request.bands.win[0], midpoint(request.bands.win), request.bands.win[1]].flatMap(rate => {
-            const target = percentile(values, 1 - rate);
-            return [Math.floor(target), Math.floor(target) + 1];
-          }).map(target => Math.max(collect ? 3 : 10, Math.min(collect ? 30 : 1_000_000_000, target))))];
+        const probe = structuredClone(template.map);
+        probe.moves = Math.max(request.minMoves, Math.round(.6 * request.maxMoves));
+        Object.assign(probe.spawnPolicy, policy, { obstaclePressure });
+        if (!request.fixedTargets && !['break-rocks', 'break-seals'].includes(request.objective)) {
+          probe.objectives.forEach(objective => { objective.target = objective.type === 'Collect' ? 30 : 1_000_000_000; });
         }
-        for (const target of targets) {
-          const map = structuredClone(probe);
+        const capacity = samples(probe, coarseSeeds, 'training', request);
+        for (const target of targetChoices(template, request, capacity)) {
+          const map = structuredClone(template.map);
+          Object.assign(map.spawnPolicy, policy, { obstaclePressure });
           if (target !== null) map.objectives.forEach(o => { o.target = target; });
-          const report = assess(map, samples(map, coarseSeeds, 'training', request), request, true);
-          shortlist.push({ map, shape: template.shape, coarse: report });
+          const fit = convergeBudget(request.maxMoves, request, moves => {
+            map.moves = moves;
+            const results = samples(map, coarseSeeds, 'training', request);
+            return { quantile: firstAttemptQuantile(results, request.starQuantile), results };
+          });
+          if (fit.status === 'converged') {
+            map.moves = fit.moves;
+            const cutoffs = moveCutoffs(fit.moves);
+            if (cutoffs) {
+              map.starThresholds = cutoffs.thresholds;
+              const report = assess(map, fit.measurement.results, request);
+              const selectable = pressureSelectable(request.objective, obstaclePressure);
+              if (selectable) shortlist.push({ map: structuredClone(map), shape: template.shape, coarse: report, history: fit.history });
+              adjustmentHistory.push({ shape: index + 1, policy, obstaclePressure, target: map.objectives[0].target,
+                moves: fit.moves, history: fit.history, status: !selectable ? 'pressure-control-only' : report.passed ? 'candidate' : 'three-star-band-miss' });
+            } else rejected.push({ shape: index + 1, policy, obstaclePressure, target: map.objectives[0].target,
+              reason: 'invalid-star-cutoffs', history: fit.history });
+          } else {
+            rejected.push({ shape: index + 1, policy, obstaclePressure, target: map.objectives[0].target,
+              reason: fit.status, history: fit.history });
+            adjustmentHistory.push({ shape: index + 1, policy, obstaclePressure, target: map.objectives[0].target,
+              moves: fit.moves, history: fit.history, status: fit.status });
+          }
         }
-      } catch (error) { rejected.push({ shape: index + 1, moves, policy, error: error.message }); }
+      } catch (error) { rejected.push({ shape: index + 1, policy, obstaclePressure, error: error.message }); }
     }
     progress(`Training shape ${index + 1}/${templates.length} (${template.shape.family}): ${shortlist.length} candidates`);
   }
@@ -90,8 +146,26 @@ function calibrate(templates, config, request, progress = console.log) {
     if (evaluated >= 12 && selected) break;
     evaluated++;
     try {
-      const report = assess(candidate.map, samples(candidate.map, request.trainingSeeds, 'training', request), request, true);
-      if (report.passed && (!selected || report.loss < selected.training.loss)) selected = { map: candidate.map, shape: candidate.shape, training: report };
+      const refined = structuredClone(candidate.map);
+      const fit = convergeBudget(refined.moves, request, moves => {
+        refined.moves = moves;
+        const results = samples(refined, request.trainingSeeds, 'training', request);
+        return { quantile: firstAttemptQuantile(results, request.starQuantile), results };
+      });
+      if (fit.status !== 'converged') {
+        adjustmentHistory.push({ shape: candidate.shape.family, target: refined.objectives[0].target,
+          history: fit.history, status: `refinement-${fit.status}` });
+        continue;
+      }
+      refined.moves = fit.moves;
+      const cutoffs = moveCutoffs(fit.moves);
+      if (!cutoffs) continue;
+      refined.starThresholds = cutoffs.thresholds;
+      const report = assess(refined, fit.measurement.results, request);
+      if (report.passed && (!selected || report.loss < selected.training.loss)) {
+        selected = { map: structuredClone(refined), shape: candidate.shape, training: report,
+          history: [...candidate.history, ...fit.history] };
+      }
     } catch (error) { rejected.push({ stage: 'training-refinement', error: error.message }); }
   }
   if (!selected) {
@@ -99,7 +173,8 @@ function calibrate(templates, config, request, progress = console.log) {
     error.details = { candidates: shortlist.length, evaluated, rejected, closest: shortlist.slice(0, 5).map(c => ({ map: c.map, assessment: c.coarse })) };
     throw error;
   }
-  return { ...selected, search: { shapes: templates.length, candidates: shortlist.length, refined: evaluated, coarseSeeds, rejected } };
+  return { ...selected, search: { shapes: templates.length, candidates: shortlist.length, refined: evaluated, coarseSeeds, rejected,
+    policyVersion: request.policyVersion, starQuantile: request.starQuantile, selectedHistory: selected.history, adjustmentHistory } };
 }
 function attemptStats(firstAttempts, count, maxAttempts) {
   const completed = firstAttempts.filter(n => n !== null).sort((a, b) => a - b);
@@ -145,6 +220,7 @@ function verify(map, config, request, training = null, search = null) {
   installSnapshot(config, []);
   const validation = assess(map, samples(map, request.validationSeeds, 'validation', request), request);
   const retries = simulateToThreeStars(map, request), failures = [...validation.failures];
+  const cutoffs = moveCutoffs(map.moves);
   for (const [key, range] of [['firstWin', request.retryWinMedian], ['firstThreeStars', request.retryThreeMedian]]) {
     if (!range) continue;
     const median = retries[key].medianAttempts;
@@ -155,10 +231,19 @@ function verify(map, config, request, training = null, search = null) {
   return { format: 1, status: failures.length ? 'failed' : 'passed', failures,
     hashes: { map: hash(map), config: hash(contentWire(config)), engine: engineHash() },
     bands: request.bands, botModel: require('./simulate_maps.cjs').BOT_MODEL,
+    authoringPolicy: request.policyVersion === 2 ? {
+      version: 2, starQuantile: request.starQuantile, totalMoves: map.moves,
+      threeStarMaxMoves: cutoffs?.three ?? null, twoStarMaxMoves: cutoffs?.two ?? null,
+      moveRatios: { threeStars: .6, twoStars: .8 }, maxMoves: request.maxMoves,
+      winRateEnforced: false, chanceCaps: { comboChance: .15, setupChance: .35 },
+      budgetRefinement: search?.selectedHistory ?? []
+    } : { version: 1, winRateEnforced: true },
     powerModel: { expectedTotalExp: request.totalExp, minimumTotalExp: 0, strongTotalExp: (map.id - 1) * 100 + 1500,
       loadout: { sword: null, skills: [] }, extraMoves: false },
     seedSuites: { generationSeed: request.seed, training: request.trainingSeeds, validation: request.validationSeeds,
       retrySequences: request.retrySeeds, maxRetryAttempts: request.retryAttempts, selection: 'training-only; one frozen validation pass' },
     training, search, validation, retries, diagnostics };
 }
-module.exports = { samples, assess, calibrate, attemptStats, simulateToThreeStars, verify };
+module.exports = { samples, assess, calibrate, attemptStats, simulateToThreeStars, verify,
+  moveCutoffs, percentile, firstAttemptQuantile, progressQuantile, targetChoices, convergeBudget,
+  policyVariants, pressureVariants, pressureSelectable };

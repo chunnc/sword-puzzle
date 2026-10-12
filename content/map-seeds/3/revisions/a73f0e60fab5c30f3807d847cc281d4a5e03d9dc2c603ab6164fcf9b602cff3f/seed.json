@@ -1,0 +1,214 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 9,
+    "id": 3,
+    "chapterId": "chapter-1",
+    "orderInChapter": 3,
+    "name": "Map 3",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-sword",
+        "type": "Collect",
+        "tileKind": 1,
+        "target": 14
+      },
+      {
+        "id": "collect-fire",
+        "type": "Collect",
+        "tileKind": 2,
+        "target": 14
+      }
+    ],
+    "moves": 12,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 84,
+      "twoStarBelowPercent": 92
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 568205760,
+    "request": {
+      "difficulty": "easy",
+      "objective": "collect",
+      "index": 3,
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "minMoves": 6,
+      "maxMoves": 24,
+      "tiles": [
+        "sword",
+        "fire"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "seed": 568205760,
+      "totalExp": 120,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": null,
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    },
+    "shape": {
+      "family": "chamfer",
+      "layout": [
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          0,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          0,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 6,
+        "height": 5,
+        "activeCells": 22,
+        "holes": 8,
+        "holeRatio": 0.26666666666666666
+      },
+      "key": "[[0,0,1,1,0],[0,1,1,1,1],[1,1,1,1,1],[1,1,0,0,1],[1,1,1,1,1],[0,1,1,1,0]]"
+    },
+    "sourceCatalogHash": "93873b10177be7bb4ce353c0f8ff9cc17b5f7adce6976544adcf3591ffdb8b10",
+    "authoringConfigVersion": 9
+  },
+  "hashes": {
+    "map": "f2cd62bb068d52ee936d8c7ffd2936cdee4f29c642d2e619410b510d0018c2c1",
+    "config": "011c9918f24e86907df4f022797bc4b91881d054fa1f43a7f04fba2fa7e5934b",
+    "engine": "794ef2b259df34adbbdb3fdf8262288ae57e200abac7cc67d530f6f8878da87d",
+    "report": "5137010d7f8336c923305f69d27c42fa7bbf9d0f5f4520b1293fbf4b5cd1109b"
+  }
+}

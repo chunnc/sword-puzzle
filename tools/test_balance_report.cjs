@@ -85,21 +85,24 @@ function profile(id=1,bot='normal',power='expected') {
     averageWaves:20,averageReshuffles:0,maxChain:4,mapHash:'test-map-hash',suboptimalChoices:42,suboptimalChoiceRate:.2};
 }
 
-test('check assessment uses shared strict map-generation gates and strategic comparison',()=>{
+test('check assessment gates on 3-star rate while treating win rate as diagnostic',()=>{
   const r=profile();
   assert.equal(evaluateChecks([r],100,true).status,'passed');
   const strict=evaluateChecks([r],1000,true);
   assert.equal(strict.status,'failed');
-  assert.equal(strict.failures.length,2);
+  assert.equal(strict.failures.length,1);
+  assert.equal(strict.results[0].winRateDiagnostic,.9);
   const atEasyCutoff={...r,winRate:.95,starRates:[.2,0,0,.8]};
-  assert.equal(evaluateChecks([atEasyCutoff],1000,true).failures.length,2);
+  assert.equal(evaluateChecks([atEasyCutoff],1000,true).failures.length,1);
   const aboveEasyCutoffs={...r,winRate:.951,starRates:[.049,0,0,.951]};
   assert.equal(evaluateChecks([aboveEasyCutoffs],1000,true).status,'passed');
+  assert.equal(evaluateChecks([{...aboveEasyCutoffs,winRate:0}],1000,true).status,'passed');
   assert.equal(evaluateChecks([r],100,false).status,'not-run');
   assert.equal(evaluateChecks([profile(1,'basic')],100,true).status,'not-applicable');
   const basic={...profile(1,'basic'),winRate:.9},strategic={...profile(1,'strategic'),winRate:.89};
-  assert.equal(evaluateChecks([basic,strategic],100,true).status,'failed');
+  assert.equal(evaluateChecks([basic,strategic],100,true).status,'passed');
   assert.equal(evaluateChecks([basic,{...strategic,winRate:.9}],100,true).status,'passed');
+  assert.equal(evaluateChecks([basic,{...strategic,starRates:[.1,.1,.1,.7]}],100,true).status,'failed');
 });
 
 test('CLI rejects malformed sample counts and selections before simulations start',()=>{

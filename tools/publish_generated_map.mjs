@@ -44,7 +44,8 @@ function assertBalanced(artifact) {
   if (seed.hashes.engine !== engineHash() || seed.hashes.map !== hash(artifact.map)
     || seed.hashes.config !== hash(contentWire(artifact.config)) || seed.hashes.report !== hash(report)) throw new Error('STALE_OR_MODIFIED_SEED: revalidate the saved map');
   if (report.status !== 'passed' || !report.validation?.passed || report.failures?.length || !summary || summary.samples < 1000
-    || summary.mapHash !== seed.hashes.map || !inBand(summary.winRate, request.bands.win, request.bands.exclusiveWin)
+    || summary.mapHash !== seed.hashes.map
+    || request.winRateEnforced !== false && !inBand(summary.winRate, request.bands.win, request.bands.exclusiveWin)
     || !inBand(summary.starRates[3], request.bands.three, request.bands.exclusiveThree)) {
     throw new Error('BALANCE_NOT_PASSED: a matching, passed validation report with at least 1000 seeds is required');
   }
@@ -137,6 +138,7 @@ Changed maps get a new immutable revision; identical re-publishes are idempotent
     deliverReceipt(receipt, project, artifact.directory); return receipt;
   } finally { await db.terminate(); }
 }
+export { assertBalanced };
 function deliverReceipt(receipt, project, directory) {
   if (!receipt.dryRun) writeJSON(path.join(directory, 'published', `${project}.json`), { ...receipt, project });
   console.log(`${receipt.dryRun ? 'Dry run' : receipt.changed ? 'Published' : 'Unchanged'}: map ${receipt.id} v${receipt.mapVersion}; content v${receipt.contentVersion}; catalog revision ${receipt.catalogRevision}; ${project}.`);

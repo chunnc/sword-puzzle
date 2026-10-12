@@ -47,7 +47,7 @@ function renderBalanceReport(report) {
     const label=gate?(gate.passed?'Đạt':'Không đạt'):'Tham khảo';
     return `<tr ${attributes(r)}><th scope="row"><a data-detail-link href="#profile-${escape(r.id)}-${escape(r.bot)}-${escape(r.power)}">${escape(r.bot)}</a></th>
       <td>${escape(powerNames[r.power]??r.power)}</td><td class="numeric">${number(r.samples)}</td>
-      <td class="rate-cell">${band(r.winRate,target?.win,checks.tolerance)}</td><td class="numeric">${percent(r.starRates[0])}</td><td class="numeric">${percent(r.starRates[1])}</td><td class="numeric">${percent(r.starRates[2])}</td>
+      <td class="numeric">${percent(r.winRate)}</td><td class="numeric">${percent(r.starRates[0])}</td><td class="numeric">${percent(r.starRates[1])}</td><td class="numeric">${percent(r.starRates[2])}</td>
       <td class="rate-cell">${band(r.starRates[3],target?.three,checks.tolerance)}</td><td class="numeric">${number(r.averageMoves,2)}</td>
       <td class="numeric">${number(r.suboptimalChoices)}<small>${percent(r.suboptimalChoiceRate)}</small></td>
       <td>${badge(label,gate?(gate.passed?'good':'bad'):'neutral')}</td></tr>`;
@@ -97,7 +97,7 @@ function renderBalanceReport(report) {
     return `<tr data-overview data-map="${escape(id)}"><th scope="row"><a data-detail-link href="#map-${escape(id)}">Map ${escape(id)}</a><small>${escape(m?.name??`Màn ${id}`)}</small></th>
       <td>${escape(difficultyNames[difficulty]??difficulty??'—')}<small>${number(m?.moves)} lượt</small></td>
       <td class="numeric" data-field="samples">${profileValues(entries,r=>number(r.samples))}</td>
-      <td class="rate-cell" data-field="win">${profileValues(entries,r=>band(r.winRate,targetFor(r)?.win,checks.tolerance))}</td>
+      <td class="numeric" data-field="win">${profileValues(entries,r=>percent(r.winRate))}</td>
       <td class="numeric" data-field="stars">${profileValues(entries,r=>`${percent(r.starRates[1])} / ${percent(r.starRates[2])}`)}</td>
       <td class="rate-cell" data-field="three">${profileValues(entries,r=>band(r.starRates[3],targetFor(r)?.three,checks.tolerance))}</td>
       <td class="numeric" data-field="retry">${retry?`<a data-detail-link href="#retry-${escape(id)}"><strong>${percent(completed/retry.samples)}</strong></a><small>${number(completed)} / ${number(retry.samples)} chuỗi</small>`:'<span class="muted">Chưa chạy</span>'}</td>
@@ -147,7 +147,7 @@ ${!retries.length?'<p class="notice"><strong>Chưa chạy retry.</strong> Thêm 
 </section>
 ${report.assistReports?.length?`<section id="paired-assist"><div class="section-heading"><h2>Assist trên cùng bộ seed</h2><p>Normal / dự kiến · ${number(report.assistReports[0].rates[0].samples)} seed mỗi mức</p></div><div class="panel table-wrap"><table><thead><tr><th>Map</th><th>Không assist</th><th>10%</th><th>20%</th><th>30%</th><th>Gate</th></tr></thead><tbody>${report.assistReports.map(r=>`<tr><th>${escape(r.id)}</th>${r.rates.map(rate=>`<td>${percent(rate.winRate)}</td>`).join('')}<td>${badge(r.passed?'Đạt':'Không đạt',r.passed?'good':'bad')}</td></tr>`).join('')}</tbody></table></div></section>`:''}
 <section><div class="section-heading"><h2>Chi tiết từng map</h2><p>Mở map để so sánh tất cả bot, sức mạnh và retry.</p></div>${mapDetails}</section>
-<section><div class="section-heading"><h2>Khoảng mục tiêu độ khó</h2></div><div class="panel target-table"><table><thead><tr><th>Độ khó</th><th>Thắng</th><th>3 sao</th></tr></thead><tbody>${Object.entries(report.targets).map(([name,t])=>`<tr><th scope="row">${escape(difficultyNames[name]??name)}</th><td>${percent(t.win[0])}–${percent(t.win[1])}</td><td>${percent(t.three[0])}–${percent(t.three[1])}</td></tr>`).join('')}</tbody></table></div></section>
+<section><div class="section-heading"><h2>Khoảng mục tiêu độ khó</h2><p>Tỷ lệ thắng là số liệu tham khảo; kiểm tra cân bằng dựa trên tỷ lệ 3 sao.</p></div><div class="panel target-table"><table><thead><tr><th>Độ khó</th><th>Thắng (tham khảo)</th><th>3 sao (điều kiện)</th></tr></thead><tbody>${Object.entries(report.targets).map(([name,t])=>`<tr><th scope="row">${escape(difficultyNames[name]??name)}</th><td>${percent(t.win[0])}–${percent(t.win[1])}</td><td>${percent(t.three[0])}–${percent(t.three[1])}</td></tr>`).join('')}</tbody></table></div></section>
 <footer><p>Report tự chứa, xem được offline. Bot dùng engine thật với loadout trống${botModel?` (mô hình v${escape(botModel.version)}; chọn nước kém tối ưu basic / normal / strategic: ${Object.values(botModel.mistakeRates).map(rate=>percent(rate)).join(' / ')}; mỗi lần chọn sai rút đều tối đa ${number(botModel.mistakeCandidateLimit)} nước điểm thấp hơn gần nhất)`:''}. Thống kê mô phỏng dùng để đối chiếu cân bằng map.</p>${source?`<p>Nguồn dữ liệu: ${escape(sourceLabel)} · project <code>${escape(source.project)}</code> · content v${escape(source.version)} · snapshot <code>${escape(source.hashes?.snapshot??'—')}</code>${source.cacheFile?` · cache <code>${escape(source.cacheFile)}</code>`:''}</p>`:''}<p>Run ${escape(run.id??'—')} · Config hash <code>${escape(report.configHash??'—')}</code></p></footer>
 </main><script id="report-data" type="application/json">${serialize}</script>
 <script>

@@ -6,7 +6,7 @@ Kiến trúc và hướng dẫn chạy prototype: [SYSTEM_ARCHITECTURE.md](SYSTE
 
 ![Ảnh preview gồm bản đồ, màn khám phá, trận boss và đột phá tu vi](assets/ui-preview.png)
 
-> **Catalog hiện tại v9:** Client Expo/React Native có hai map hướng dẫn ghép ô, bốn loại ô, cường hóa, kiếm thuật chủ động/bị động, bảo kiếm và tu vi theo EXP. Map 1 dạy ghép 3 Kiếm; map 2 dạy tạo rồi kích hoạt ô Lôi cấp 4. Catalog sẽ được mở rộng sau.
+> **Catalog hiện tại v11:** Client Expo/React Native có bốn map, trong đó hai map hướng dẫn ghép ô, bốn loại ô, cường hóa, kiếm thuật chủ động/bị động, bảo kiếm và tu vi theo EXP. Map 1 dạy ghép 3 Kiếm; map 2 dạy tạo rồi kích hoạt ô Lôi cấp 4. Map 3 thu Kiếm và Hỏa; map 4 phá cụm đá chắn.
 
 ## 1. Tầm nhìn
 
@@ -164,7 +164,7 @@ Bốn màn hình chính là **bản đồ**, **giải đố khám phá**, **đá
 
 ## 8. Nội dung và kiểm chứng
 
-Catalog hiện có hai màn, mỗi màn có 8 lượt. Dùng dưới một nửa lượt gốc được 3 sao. Hai đường giải hướng dẫn thắng sau một và hai lượt tương ứng. Map tiếp theo sẽ tiếp tục các mục tiêu thu thập, chiến đấu và vật cản; thiết kế độ khó sẽ được bổ sung theo từng màn.
+Catalog hiện có bốn màn; hai màn hướng dẫn đầu có 8 lượt. Dùng dưới một nửa lượt gốc được 3 sao. Hai đường giải hướng dẫn thắng sau một và hai lượt tương ứng. Hai map tiếp theo lần lượt yêu cầu thu thập và phá đá chắn; các map mới được cân bằng theo mục tiêu, số lượt và độ khó.
 
 Đột phá vẫn phụ thuộc EXP, không gắn cứng với màn. Có thể quay lại nâng sao để đạt cảnh giới cao hơn. Tám skill, tám bảo kiếm, cửa hàng và tài khoản giữ nguyên trong khi catalog map được tạo lại.
 

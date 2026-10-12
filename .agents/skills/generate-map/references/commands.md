@@ -15,6 +15,14 @@ npm run maps:generate -- --difficulty medium --objective collect --tiles sword,f
 npm run maps:generate -- --difficulty hard --objective boss --seed 12345 \
   --name "Huyền Nham Yêu Vương" --enemy-name "Huyền Nham Yêu Vương"
 
+# BreakRocks generates candidate rock clusters and balances their count automatically.
+npm run maps:generate -- --difficulty easy --objective break-rocks --index 4 \
+  --name "Đường đá chắn"
+
+# BreakSeals generates candidate seal clusters and balances their count automatically.
+npm run maps:generate -- --difficulty medium --objective break-seals --index 5 \
+  --name "Phong ấn cổ"
+
 # Fixed collection targets; balance is found through budget/spawn/star cutoffs.
 npm run maps:generate -- --difficulty easy --objective collect --tiles sword,lightning \
   --target 8,6 --min-moves 8 --max-moves 16
@@ -40,17 +48,17 @@ npm run maps:generate -- --help
 | Option | Default / meaning |
 | --- | --- |
 | `--difficulty` | Required: `easy`, `medium`, `hard`, `very-hard` |
-| `--objective` | Required: `collect`, `battle`, `boss` |
+| `--objective` | Required: `collect`, `battle`, `boss`, `break-rocks`, `break-seals` |
 | `--tiles` | `sword`; CSV tile keys, collection only |
-| `--target` | Automatic; one integer or one integer per collected tile; Collect 1–30 |
+| `--target` | Automatic; one target per enemy/obstacle objective or one per collected tile; Collect 1–30, obstacles up to 56 |
 | `--index` | Next contiguous local ID, maximum 1000 |
 | `--replace` | Explicitly revise an existing non-tutorial map |
 | `--name` | `Map INDEX` |
 | `--seed` | Random nonzero uint32; authoring seed recorded in output |
 | `--chapter`, `--chapter-name` | Last chapter, or a new chapter at the next ID |
 | `--enemy-id`, `--enemy-name`, `--enemy-art` | Generated identity/name and `beast` artwork |
-| `--min-moves`, `--max-moves` | 6, 24; range 3–50, set equal for a fixed budget |
-| `--win-rate`, `--three-rate` | CSV `MIN,MAX` fractions in 0–1; explicit bands inclusive |
+| `--min-moves`, `--max-moves` | 6, 30; each is 3–30, set equal for a fixed budget |
+| `--win-rate`, `--three-rate` | CSV `MIN,MAX` fractions in 0–1; win is diagnostic, three-star is an acceptance band |
 | `--total-exp` | `(INDEX-1)*60`, recorded reference power |
 | `--layouts` | 8 distinct layouts, range 1–24 |
 | `--training-seeds` | 150, range 40–1000; coarse search uses up to 40 |
@@ -59,8 +67,16 @@ npm run maps:generate -- --help
 | `--retry-attempts` | 100 attempts per sequence, range 10–100 |
 | `--retry-win-median`, `--retry-three-median` | Optional `MIN,MAX` total-attempt gates, range 1–100 |
 
-Normal first-attempt defaults: easy win >95%, three >80%; medium win >80%, three
-45–55%; hard win 25–40%, three 5–15%; very-hard win 10–20%, three 2–6%.
+New generation policy uses the normal bot's P80/P50/P10/P4 successful-move quantile
+for easy/medium/hard/very-hard, respectively. The generator derives total moves as
+`ceil(Pq/0.6)`, rounds the star cutoffs to 60% and 80% of that budget, and rejects
+budgets above 30. All first-attempt losses remain right-censored in the quantile.
+First-attempt 3-star gates remain easy >80%, medium 45–55%, hard 5–15%, very-hard
+2–6%; first-attempt win rates are reported as diagnostics. Base chance caps are
+15% combo and 35% setup; retries retain server assistance. Rock and seal maps compare
+`obstaclePressure` at 0, 0.15 or 0.30; zero is a control measurement, saved obstacle
+maps use positive pressure, and retry assistance reduces its effect. Auto-generated
+obstacle placements and targets change together.
 All bots use an empty loadout and no passive skills. They choose a lower-ranked move
 30% (basic), 20% (normal), and 10% (strategic) of the time, uniformly from up to
 the next three lower-ranked moves. Reports include the model version and observed

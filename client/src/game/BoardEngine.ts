@@ -565,7 +565,14 @@ export class BoardEngine {
         const comboChance = this.refillChance(chain);
         if (comboChance > 0 && this.nextIndex(1_000_000) / 1_000_000 < comboChance) {
             const seeded = this.seededRefill(before, positions);
-            if (seeded) { this.tiles = seeded.tiles; this.metrics.seeded++; return seeded.falls; }
+            if (seeded) {
+                const spawned = new Set(positions.filter(position => position.spawned).map(position => position.index));
+                const seededGroups = this.findGroups().filter(group => group.some(index => spawned.has(index)));
+                if (!this.rejectObstacleCombo(seededGroups, before)) {
+                    this.tiles = seeded.tiles; this.metrics.seeded++; return seeded.falls;
+                }
+                this.tiles = before.map(tile => tile ? copy(tile) : null);
+            }
         }
         const candidates: { tiles: (Tile|null)[]; falls: BoardAnimationFall[]; weight: number }[] = [];
         for (let n = 0; n < map.spawnPolicy.candidates; n++) {
@@ -573,7 +580,7 @@ export class BoardEngine {
             const falls = this.refillOnce();
             const generated = new Set(falls.filter(f => f.spawned).map(f => f.index));
             const groups = this.findGroups().filter(g => g.some(i => generated.has(i)));
-            const obstacleScore = groups.reduce((sum,g) => sum + g.filter(i => this.area(i, 1).some(j => before[j]?.kind === this.kind('rock') || before[j]?.locked)).length, 0);
+            const obstacleScore = this.obstacleScore(groups, before);
             const cascadePenalty = (chain >= MAX_CASCADE_WAVES ? 20 : Math.max(0, chain - 1) * 1.5) * groups.length;
             candidates.push({ tiles: this.tiles, falls, weight: Math.exp(-Math.min(40, pressure * map.spawnPolicy.obstaclePressure * obstacleScore + cascadePenalty)) });
         }
@@ -585,6 +592,18 @@ export class BoardEngine {
     private refillChance(chain: number): number {
         const base = this.level.mapDefinition?.spawnPolicy.comboChance ?? 0;
         return Math.min(1, base + (this.level.assistReduction ?? 0)) * ([0, 1, .5, .25, 0][chain] ?? 0);
+    }
+    private obstacleScore(groups: number[][], board: (Tile | null)[]): number {
+        return groups.reduce((sum, group) => sum + group.filter(index =>
+            this.area(index, 1).some(nearby => board[nearby]?.kind === this.kind('rock') || board[nearby]?.locked)).length, 0);
+    }
+    private rejectObstacleCombo(groups: number[][], board: (Tile | null)[]): boolean {
+        const policy = this.level.mapDefinition?.spawnPolicy;
+        const score = this.obstacleScore(groups, board);
+        if (!score || !policy?.obstaclePressure) return false;
+        const exponent = this.effectivePressure() * policy.obstaclePressure * score;
+        if (exponent <= 0) return false;
+        return this.nextIndex(1_000_000) / 1_000_000 >= Math.exp(-Math.min(40, exponent));
     }
     private refillTutorial(): BoardAnimationFall[] {
         const positions = this.refillPositions();
@@ -790,9 +809,15 @@ export class BoardEngine {
                         if (editable(hole)) this.tiles[hole] = plain(holeKind);
                         if (this.findGroups().length) continue;
                         [this.tiles[hole],this.tiles[donor]] = [this.tiles[donor],this.tiles[hole]];
-                        const valid = this.findGroups().some(g => g.length >= length && g.includes(hole) && g.every(i => !this.tiles[i]!.chargeTier));
+                        const matchingGroups = this.findGroups().filter(g => g.length >= length && g.includes(hole) && g.every(i => !this.tiles[i]!.chargeTier));
+                        const valid = matchingGroups.length > 0;
                         [this.tiles[hole],this.tiles[donor]] = [this.tiles[donor],this.tiles[hole]];
                         if (valid) {
+                            if (this.rejectObstacleCombo(matchingGroups, original)) {
+                                this.tiles = original.map(t => t ? copy(t) : null);
+                                this.metrics.setupFallbacks++;
+                                return;
+                            }
                             this.metrics.setups++;
                             const [a,b] = hole < donor ? [hole,donor] : [donor,hole];
                             this.metrics.setupMove = [a%this.width,Math.floor(a/this.width),b%this.width,Math.floor(b/this.width)];

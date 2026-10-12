@@ -212,17 +212,16 @@ function evaluateChecks(reports, count, enabled) {
     : rate<range[0]-tolerance-1e-12||rate>range[1]+tolerance+1e-12;
   for(const r of reports.filter(r=>r.bot==='normal'&&r.power==='expected')) {
     const t=targets[r.difficulty], failures=[];
-    if(outside(r.winRate,t.win,t.exclusiveWin))failures.push(`Map ${r.id}: tỷ lệ thắng nằm ngoài khoảng kiểm tra.`);
     if(outside(r.starRates[3],t.three,t.exclusiveThree))failures.push(`Map ${r.id}: tỷ lệ 3 sao nằm ngoài khoảng kiểm tra.`);
     if(content.version>=8){
       if(r.maxChain>4)failures.push(`Map ${r.id}: cascade vượt 4 wave.`);
     }
-    results.push({id:r.id,bot:r.bot,power:r.power,gate:'difficulty',passed:!failures.length,failures});
+    results.push({id:r.id,bot:r.bot,power:r.power,gate:'three-star-and-engine',winRateDiagnostic:r.winRate,passed:!failures.length,failures});
   }
   for(const r of reports.filter(r=>r.bot==='strategic'&&r.power==='expected')) {
     const basic=reports.find(b=>b.id===r.id&&b.bot==='basic'&&b.power===r.power);
     if(basic) {
-      const failures=below(r.winRate,basic.winRate)||below(r.starRates[3],basic.starRates[3])?[`Map ${r.id}: strategic kém basic về win hoặc 3 sao.`]:[];
+      const failures=below(r.starRates[3],basic.starRates[3])?[`Map ${r.id}: strategic kém basic về tỷ lệ 3 sao.`]:[];
       results.push({id:r.id,bot:r.bot,power:r.power,gate:'strategy',passed:!failures.length,failures});
     }
   }

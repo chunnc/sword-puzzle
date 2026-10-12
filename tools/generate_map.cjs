@@ -3,7 +3,7 @@ const path = require('node:path');
 const { randomBytes } = require('node:crypto');
 const { validateContent, validateMap, versionMap, chapterForLevel, contentWire } = require('./game-runtime.cjs');
 const { ROOT, PROFILES, hash, readJSON, writeJSON, engineHash, positiveInteger, band, parseArgs,
-  generateLayouts, artifactDir, withAuthoringLock } = require('./map_generation.cjs');
+  generateLayouts, addRockObstacles, addSealObstacles, artifactDir, withAuthoringLock } = require('./map_generation.cjs');
 const { calibrate, verify } = require('./generate_map_balance.cjs');
 const { renderGeneratedMap } = require('./render_generated_map.cjs');
 
@@ -11,20 +11,23 @@ const HELP = `Generate and balance a local map (no Firestore writes).
   npm run maps:generate -- --difficulty medium --objective collect --tiles sword,fire
   npm run maps:generate -- --difficulty hard --objective boss --index 3 --seed 12345
 
-Required: --difficulty easy|medium|hard|very-hard --objective collect|battle|boss
+Required: --difficulty easy|medium|hard|very-hard --objective collect|battle|boss|break-rocks|break-seals
 Collect: --tiles sword,fire,lightning,spirit (default sword); --target N or N,N
+BreakRocks: generates a connected cluster of 2–6 rocks; --target N fixes the rock count
+BreakSeals: generates a connected cluster of 2–6 seals; --target N fixes the seal count
 Enemy:   --enemy-id ID --enemy-name NAME --enemy-art beast --target HP
 Author:  --index N (default next) --name NAME --seed UINT32 --replace
          --chapter ID --chapter-name NAME (new chapter starts at next index)
-Budget:  --min-moves 6 --max-moves 24 (set both equal for a fixed budget)
+Budget:  --min-moves 6 --max-moves 30 (set both equal for a fixed budget)
 Balance: --win-rate MIN,MAX --three-rate MIN,MAX --total-exp N
          --retry-win-median MIN,MAX --retry-three-median MIN,MAX (total attempts)
 Samples: --layouts 8 --training-seeds 150 --validation-seeds 1000
          --retry-seeds 100 --retry-attempts 100
 
-Targets/HP are proposed automatically unless --target is provided.
-Easy: win >95%, three >80%; medium: win >80%, three 45–55%;
-hard: win 25–40%, three 5–15%; very-hard: win 10–20%, three 2–6%.
+Targets/HP are proposed automatically unless --target is provided. Maps are limited to 30 moves.
+3-star move cutoffs target about 60% of the budget; 2-star cutoffs target about 80%.
+Star-rate bands: easy >80% (P80), medium 45–55% (P50), hard 5–15% (P10), very-hard 2–6% (P4).
+First-attempt win rate is diagnostic and does not gate candidate selection.
 Validation uses a single independent holdout; failed maps do not enter the catalog.
 Artifacts: content/map-seeds/INDEX/{seed.json,config.json,balance.json,preview.html}
 `;
@@ -35,23 +38,27 @@ function parseRequest(args, nextIndex) {
   if (opts['--help']) return { help: true };
   const difficulty = opts['--difficulty'], objective = opts['--objective'];
   if (!PROFILES[difficulty]) throw new Error('--difficulty must be easy, medium, hard or very-hard');
-  if (!['collect', 'battle', 'boss'].includes(objective)) throw new Error('--objective must be collect, battle or boss');
+  if (!['collect', 'battle', 'boss', 'break-rocks', 'break-seals'].includes(objective)) throw new Error('--objective must be collect, battle, boss, break-rocks or break-seals');
   const index = positiveInteger(opts['--index'] ?? nextIndex, '--index', 1, 1000);
   const bands = structuredClone(PROFILES[difficulty]);
   if (opts['--win-rate']) { bands.win = band(opts['--win-rate'], '--win-rate'); bands.exclusiveWin = false; }
   if (opts['--three-rate']) { bands.three = band(opts['--three-rate'], '--three-rate'); bands.exclusiveThree = false; }
   if (bands.three[0] > bands.win[1]) throw new Error('Three-star rate cannot exceed win rate');
-  const minMoves = positiveInteger(opts['--min-moves'] ?? 6, '--min-moves', 3, 50);
-  const maxMoves = positiveInteger(opts['--max-moves'] ?? 24, '--max-moves', minMoves, 50);
+  const minMoves = positiveInteger(opts['--min-moves'] ?? 6, '--min-moves', 3, 30);
+  const maxMoves = positiveInteger(opts['--max-moves'] ?? 30, '--max-moves', minMoves, 30);
   const tiles = (opts['--tiles'] ?? 'sword').split(',').map(s => s.trim());
   if (tiles.some(tile => !['sword', 'fire', 'lightning', 'spirit'].includes(tile)) || new Set(tiles).size !== tiles.length) throw new Error('--tiles must contain distinct normal tile keys');
   if (objective !== 'collect' && opts['--tiles']) throw new Error('--tiles applies to collect only');
-  const targets = opts['--target'] === undefined ? null : opts['--target'].split(',').map(n => positiveInteger(n, '--target', 1, objective === 'collect' ? 30 : 1_000_000_000));
+  const targetMaximum = objective === 'collect' ? 30 : ['break-rocks', 'break-seals'].includes(objective) ? 56 : 1_000_000_000;
+  const targets = opts['--target'] === undefined ? null : opts['--target'].split(',').map(n => positiveInteger(n, '--target', 1, targetMaximum));
   if (targets && targets.length !== 1 && (objective !== 'collect' || targets.length !== tiles.length)) throw new Error('--target must have one value or one per collected tile');
-  if (objective === 'collect' && ['--enemy-id', '--enemy-name', '--enemy-art'].some(key => opts[key])) throw new Error('Enemy options apply to battle/boss only');
+  if (!['battle', 'boss'].includes(objective) && ['--enemy-id', '--enemy-name', '--enemy-art'].some(key => opts[key])) throw new Error('Enemy options apply to battle/boss only');
   if (opts['--chapter-name'] && !opts['--chapter']) throw new Error('--chapter-name requires --chapter');
   if (opts['--chapter'] && !/^[a-z0-9-]+$/.test(opts['--chapter'])) throw new Error('--chapter must be a lowercase chapter ID');
-  return { difficulty, objective, index, bands, minMoves, maxMoves, tiles, targets, fixedTargets: targets !== null,
+  const defaultQuantiles = { easy: .8, medium: .5, hard: .1, 'very-hard': .04 };
+  return { policyVersion: 2, difficulty, objective, index, bands,
+    starQuantile: opts['--three-rate'] ? (bands.three[0] + bands.three[1]) / 2 : defaultQuantiles[difficulty],
+    winRateEnforced: false, minMoves, maxMoves, tiles, targets, fixedTargets: targets !== null,
     seed: positiveInteger(opts['--seed'] ?? (randomBytes(4).readUInt32LE() || 1), '--seed', 1, 0xffffffff),
     totalExp: positiveInteger(opts['--total-exp'] ?? (index - 1) * 60, '--total-exp', 0, 10_000_000),
     layouts: positiveInteger(opts['--layouts'] ?? 8, '--layouts', 1, 24),
@@ -63,7 +70,7 @@ function parseRequest(args, nextIndex) {
     retryThreeMedian: opts['--retry-three-median'] ? band(opts['--retry-three-median'], '--retry-three-median', 1, 100) : null,
     name: opts['--name'] ?? null, replace: opts['--replace'] === true,
     chapter: opts['--chapter'] ?? null, chapterName: opts['--chapter-name'] ?? null,
-    enemy: objective === 'collect' ? null : { id: opts['--enemy-id'] ?? `${objective}-${index}`,
+    enemy: !['battle', 'boss'].includes(objective) ? null : { id: opts['--enemy-id'] ?? `${objective}-${index}`,
       name: opts['--enemy-name'] ?? (objective === 'boss' ? 'Yêu Vương' : 'Yêu Thú'), artKey: opts['--enemy-art'] ?? 'beast' } };
 }
 function prepareCatalog(originalConfig, catalog, request) {
@@ -89,13 +96,15 @@ function mapTemplate(config, catalog, request, shape) {
   const chapter = chapterForLevel(request.index, config), existing = catalog.find(map => map.id === request.index);
   const objectives = request.objective === 'collect' ? request.tiles.map((key, i) => ({ id: `collect-${key}`, type: 'Collect',
     tileKind: config.tiles.find(tile => tile.key === key).id, target: request.targets?.[i] ?? request.targets?.[0] ?? 15 }))
+    : request.objective === 'break-rocks' ? [{ id: 'break-rocks', type: 'BreakRocks', target: request.targets?.[0] ?? shape.rockCount }]
+    : request.objective === 'break-seals' ? [{ id: 'break-seals', type: 'BreakSeals', target: request.targets?.[0] ?? shape.sealCount }]
     : [{ id: 'main', type: request.objective === 'boss' ? 'Boss' : 'Battle', target: request.targets?.[0] ?? 500, enemy: request.enemy }];
   return versionMap({ contentVersion: config.version, id: request.index, chapterId: chapter.id,
     orderInChapter: request.index - chapter.firstLevelId + 1, name: request.name ?? existing?.name ?? `Map ${request.index}`, difficulty: request.difficulty,
-    layout: shape.layout, initialSeals: [], objectives, moves: request.maxMoves, baseExp: config.levelBaseExp[request.index - 1],
-    starThresholds: { mode: 'percentage', threeStarBelowPercent: 70, twoStarBelowPercent: 90 },
+    layout: shape.layout, initialSeals: shape.sealCells ?? [], objectives, moves: request.maxMoves, baseExp: config.levelBaseExp[request.index - 1],
+    starThresholds: { mode: 'percentage', threeStarBelowPercent: 61, twoStarBelowPercent: 81 },
     spawnPolicy: { weights: Object.fromEntries(config.normalTileIds.map(id => [id, 100])), collectionPressure: 0,
-      comboChance: .1, setupChance: .25, obstaclePressure: 0, candidates: 4 },
+      comboChance: .05, setupChance: .15, obstaclePressure: ['break-rocks', 'break-seals'].includes(request.objective) ? .15 : 0, candidates: 4 },
     retryAssistPolicy: { thresholds: [3, 5, 8], reductions: [.1, .2, .3] } }, config, (existing?.mapVersion ?? 0) + 1);
 }
 function saveArtifacts(directory, seed, config, report) {
@@ -121,6 +130,22 @@ function main(args = process.argv.slice(2)) {
     console.log(`Generating map ${request.index}: ${request.difficulty}/${request.objective}; generation seed ${request.seed}`);
     try {
       const layouts = generateLayouts(request.seed, request.layouts, catalog.filter(map => map.id !== request.index));
+      if (request.objective === 'break-rocks') {
+        const rockId = config.tiles.find(tile => tile.key === 'rock').id;
+        const counts = request.fixedTargets ? [request.targets[0]] : [2, 3, 4, 5, 6];
+        const variants = [];
+        for (const shape of layouts) for (const count of counts) {
+          try { variants.push(...addRockObstacles([shape], request.seed, rockId, count)); } catch {}
+        }
+        layouts.splice(0, layouts.length, ...variants);
+      } else if (request.objective === 'break-seals') {
+        const counts = request.fixedTargets ? [request.targets[0]] : [2, 3, 4, 5, 6];
+        const variants = [];
+        for (const shape of layouts) for (const count of counts) {
+          try { variants.push(...addSealObstacles([shape], request.seed, count)); } catch {}
+        }
+        layouts.splice(0, layouts.length, ...variants);
+      }
       const templates = layouts.map(shape => ({ shape, map: mapTemplate(config, catalog, request, shape) }));
       const selected = calibrate(templates, config, request);
       const map = validateMap(selected.map, config);

@@ -1,0 +1,233 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 11,
+    "id": 4,
+    "chapterId": "chapter-1",
+    "orderInChapter": 4,
+    "name": "Đường đá chắn",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        0,
+        5,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        -1,
+        5,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "break-rocks",
+        "type": "BreakRocks",
+        "target": 2
+      }
+    ],
+    "moves": 16,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 19,
+      "twoStarBelowPercent": 26
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 3363604550,
+    "request": {
+      "difficulty": "easy",
+      "objective": "break-rocks",
+      "index": 4,
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "minMoves": 6,
+      "maxMoves": 24,
+      "tiles": [
+        "sword"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "seed": 3363604550,
+      "totalExp": 180,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Đường đá chắn",
+      "replace": false,
+      "chapter": "chapter-1",
+      "chapterName": null,
+      "enemy": null
+    },
+    "shape": {
+      "family": "chamfer",
+      "layout": [
+        [
+          0,
+          0,
+          5,
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          -1,
+          5,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          0,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 6,
+        "height": 6,
+        "activeCells": 26,
+        "holes": 10,
+        "holeRatio": 0.2777777777777778
+      },
+      "key": "[[0,0,1,1,0,0],[0,1,1,1,1,1],[1,1,1,1,1,1],[1,0,1,1,1,1],[1,1,1,1,1,0],[0,0,1,1,1,0]]",
+      "rockCount": 2,
+      "rockCells": [
+        {
+          "row": 0,
+          "column": 2
+        },
+        {
+          "row": 1,
+          "column": 2
+        }
+      ]
+    },
+    "sourceCatalogHash": "44db3f6448baf955b31000e9cb341801a3ccf936a4bb6e2975f783eb3b46782d",
+    "authoringConfigVersion": 11
+  },
+  "hashes": {
+    "map": "25d8921b628e7542724abe3bd176ddd87505d1ca14b7d6e735013248f57e3ee7",
+    "config": "b2f05aec438cce3c7e18ddf1147311aeb6399d833a37a64f8a081d91c100b8ea",
+    "engine": "5f3d0e0fc6724a817c48202a9b282eaea69be5aaa6e2b776be5e4b5ca430c434",
+    "report": "4cf4717c8723e87d5f88349b3445663a0832a92208cc748e429d91dd7933e0b3"
+  }
+}
