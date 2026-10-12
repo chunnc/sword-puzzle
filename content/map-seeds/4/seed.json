@@ -11,36 +11,41 @@
       [
         0,
         0,
+        -1,
+        -1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
         5,
         -1,
+        -1,
+        -1,
+        -1,
         0,
         0
       ],
       [
-        0,
-        -1,
+        5,
+        5,
+        5,
         5,
         -1,
         -1,
-        -1
+        0
       ],
       [
         -1,
-        -1,
-        -1,
-        -1,
-        -1,
-        -1
-      ],
-      [
-        -1,
-        0,
-        -1,
-        -1,
-        -1,
-        -1
-      ],
-      [
         -1,
         -1,
         -1,
@@ -49,12 +54,22 @@
         0
       ],
       [
-        0,
-        0,
         -1,
         -1,
         -1,
-        0
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
       ]
     ],
     "initialSeals": [],
@@ -62,15 +77,15 @@
       {
         "id": "break-rocks",
         "type": "BreakRocks",
-        "target": 2
+        "target": 5
       }
     ],
-    "moves": 16,
+    "moves": 12,
     "baseExp": 100,
     "starThresholds": {
       "mode": "percentage",
-      "threeStarBelowPercent": 19,
-      "twoStarBelowPercent": 26
+      "threeStarBelowPercent": 59,
+      "twoStarBelowPercent": 84
     },
     "spawnPolicy": {
       "weights": {
@@ -80,9 +95,9 @@
         "4": 100
       },
       "collectionPressure": 0,
-      "comboChance": 0.05,
-      "setupChance": 0.15,
-      "obstaclePressure": 0,
+      "comboChance": 0.1,
+      "setupChance": 0.25,
+      "obstaclePressure": 0.15,
       "candidates": 4
     },
     "retryAssistPolicy": {
@@ -97,7 +112,7 @@
         0.3
       ]
     },
-    "mapVersion": 1,
+    "mapVersion": 2,
     "rulesMode": "modern",
     "tileRegistry": {
       "sword": 1,
@@ -110,6 +125,7 @@
   "generation": {
     "seed": 3363604550,
     "request": {
+      "policyVersion": 2,
       "difficulty": "easy",
       "objective": "break-rocks",
       "index": 4,
@@ -125,6 +141,8 @@
         "exclusiveWin": true,
         "exclusiveThree": true
       },
+      "starQuantile": 0.8,
+      "winRateEnforced": false,
       "minMoves": 6,
       "maxMoves": 24,
       "tiles": [
@@ -142,47 +160,52 @@
       "retryWinMedian": null,
       "retryThreeMedian": null,
       "name": "Đường đá chắn",
-      "replace": false,
+      "replace": true,
       "chapter": "chapter-1",
       "chapterName": null,
       "enemy": null
     },
     "shape": {
-      "family": "chamfer",
+      "family": "stairs",
       "layout": [
         [
           0,
           0,
+          -1,
+          -1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
           5,
           -1,
+          -1,
+          -1,
+          -1,
           0,
           0
         ],
         [
-          0,
-          -1,
+          5,
+          5,
+          5,
           5,
           -1,
           -1,
-          -1
+          0
         ],
         [
           -1,
-          -1,
-          -1,
-          -1,
-          -1,
-          -1
-        ],
-        [
-          -1,
-          0,
-          -1,
-          -1,
-          -1,
-          -1
-        ],
-        [
           -1,
           -1,
           -1,
@@ -191,43 +214,65 @@
           0
         ],
         [
-          0,
-          0,
           -1,
           -1,
           -1,
-          0
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
         ]
       ],
       "checks": {
         "passed": true,
         "failures": [],
-        "width": 6,
-        "height": 6,
-        "activeCells": 26,
-        "holes": 10,
-        "holeRatio": 0.2777777777777778
+        "width": 7,
+        "height": 7,
+        "activeCells": 36,
+        "holes": 13,
+        "holeRatio": 0.2653061224489796
       },
-      "key": "[[0,0,1,1,0,0],[0,1,1,1,1,1],[1,1,1,1,1,1],[1,0,1,1,1,1],[1,1,1,1,1,0],[0,0,1,1,1,0]]",
-      "rockCount": 2,
+      "key": "[[0,0,0,0,0,1,1],[0,0,0,1,1,1,1],[0,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[0,0,1,1,1,1,1],[0,0,1,1,1,1,1]]",
+      "rockCount": 5,
       "rockCells": [
         {
-          "row": 0,
+          "row": 2,
+          "column": 0
+        },
+        {
+          "row": 3,
+          "column": 0
+        },
+        {
+          "row": 3,
+          "column": 1
+        },
+        {
+          "row": 3,
           "column": 2
         },
         {
-          "row": 1,
-          "column": 2
+          "row": 3,
+          "column": 3
         }
       ]
     },
-    "sourceCatalogHash": "44db3f6448baf955b31000e9cb341801a3ccf936a4bb6e2975f783eb3b46782d",
+    "sourceCatalogHash": "34c5615df62fc7ab475f1f34585966a10331d5c16ce73d8bb4de56114374ca98",
     "authoringConfigVersion": 11
   },
   "hashes": {
-    "map": "25d8921b628e7542724abe3bd176ddd87505d1ca14b7d6e735013248f57e3ee7",
+    "map": "a7e7cfaaddc26ceaf29298b5b47c96ee23dd89072ce356d43f5f469f28418b22",
     "config": "b2f05aec438cce3c7e18ddf1147311aeb6399d833a37a64f8a081d91c100b8ea",
-    "engine": "5f3d0e0fc6724a817c48202a9b282eaea69be5aaa6e2b776be5e4b5ca430c434",
-    "report": "4cf4717c8723e87d5f88349b3445663a0832a92208cc748e429d91dd7933e0b3"
+    "engine": "1b289ae4798972da9ba8d273709c01e6da1c2ceeb6f1f10bb1bb63efbf7158af",
+    "report": "10ef09b4bb1fe6805ac63a9a712fc28f3b430bfbe763bcefcb5af5d69688129a"
   }
 }

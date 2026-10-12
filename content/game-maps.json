@@ -354,36 +354,41 @@
       [
         0,
         0,
+        -1,
+        -1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
         5,
         -1,
+        -1,
+        -1,
+        -1,
         0,
         0
       ],
       [
-        0,
-        -1,
+        5,
+        5,
+        5,
         5,
         -1,
         -1,
-        -1
+        0
       ],
       [
         -1,
-        -1,
-        -1,
-        -1,
-        -1,
-        -1
-      ],
-      [
-        -1,
-        0,
-        -1,
-        -1,
-        -1,
-        -1
-      ],
-      [
         -1,
         -1,
         -1,
@@ -392,12 +397,22 @@
         0
       ],
       [
-        0,
-        0,
         -1,
         -1,
         -1,
-        0
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
       ]
     ],
     "initialSeals": [],
@@ -405,15 +420,15 @@
       {
         "id": "break-rocks",
         "type": "BreakRocks",
-        "target": 2
+        "target": 5
       }
     ],
-    "moves": 16,
+    "moves": 12,
     "baseExp": 100,
     "starThresholds": {
       "mode": "percentage",
-      "threeStarBelowPercent": 19,
-      "twoStarBelowPercent": 26
+      "threeStarBelowPercent": 59,
+      "twoStarBelowPercent": 84
     },
     "spawnPolicy": {
       "weights": {
@@ -423,9 +438,9 @@
         "4": 100
       },
       "collectionPressure": 0,
-      "comboChance": 0.05,
-      "setupChance": 0.15,
-      "obstaclePressure": 0,
+      "comboChance": 0.1,
+      "setupChance": 0.25,
+      "obstaclePressure": 0.15,
       "candidates": 4
     },
     "retryAssistPolicy": {
@@ -440,7 +455,7 @@
         0.3
       ]
     },
-    "mapVersion": 1,
+    "mapVersion": 2,
     "rulesMode": "modern",
     "tileRegistry": {
       "sword": 1,
