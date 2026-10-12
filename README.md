@@ -55,6 +55,23 @@ Trước deploy, cấu hình IAM tối thiểu cho tài khoản chạy Functions
 
 Game API cấp cấu hình và tóm tắt chương; từng ván lấy một map đã ghim phiên bản. Catalog local hiện có hai màn hướng dẫn. Layout map được lưu riêng trong `game-maps.json`; cấu hình chung nằm trong `game-config.json`. Schema và versioning: [MAP_AUTHORING.md](content/MAP_AUTHORING.md), [MAP_VERSIONING.md](content/MAP_VERSIONING.md). Schema tài khoản và Firestore: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
 
+## Thu hồi trang bị khởi đầu cũ
+
+Nhân vật mới bắt đầu không có kiếm/skill. Thanh Phong và Nhất Kiếm đã ngừng phát hành;
+chuẩn hóa hồ sơ loại hai món này khỏi sở hữu và trang bị, không lưu cờ migration.
+
+Xuất bản riêng cấu hình (không ghi map) và thu hồi cho toàn bộ tài khoản:
+
+```sh
+node tools/publish_game_config.mjs --project sword-puzzle --firebase-cli
+node tools/retire_starter_items.mjs --project sword-puzzle --firebase-cli
+```
+
+Hai lệnh mặc định chạy thử; thêm `--apply` để ghi. Triển khai API mới trước khi xuất bản
+cấu hình và thu hồi. Script thu hồi cập nhật từng hồ sơ trong transaction, giữ các món
+khác, ví và tiến trình; chạy lại không ghi khi hồ sơ đã sạch. Kiểm thử:
+`node --test tools/test_retired_starters.mjs`.
+
 ## Phiên thiết bị / client 1.8.0
 
 Mở game tự chơi khách, vẫn cần internet. Tạo tài khoản giữ tiến trình khách; đăng nhập tài khoản có sẵn dùng dữ liệu tài khoản đó, không gộp. Khách phải xác nhận nguy cơ mất tiến trình trước khi đổi tài khoản. Mỗi bản cài đặt chỉ dùng một UID; một tài khoản dùng được nhiều máy. Đăng xuất chỉ chuyển máy hiện tại sang khách mới.

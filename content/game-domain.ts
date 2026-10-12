@@ -314,7 +314,6 @@ export interface Loadout {
   sword: SwordId | null;
 }
 export interface PlayerProfile {
-  startingLoadoutVersion?: 1;
   rewardCredits?: Record<string, { exp: number; starBonus: number }>;
   levels: LevelResult[];
   coins: number;
@@ -362,7 +361,6 @@ export function emptyProfile(): PlayerProfile {
   return {
     levels: [],
     coins: 0,
-    startingLoadoutVersion: 1,
     ownedSkills: [],
     ownedSwords: [],
     loadout: {
@@ -451,8 +449,8 @@ export function normalizeProfile(raw: unknown, c = requireContent()): PlayerProf
     coins: p.coins,
     totalExp: p.totalExp,
     revision: integer(p.revision) ? p.revision : 0,
-    ownedSkills: [...new Set<SkillId>(p.ownedSkills.filter(id => c.skills.some(x => x.id === id)))],
-    ownedSwords: [...new Set<SwordId>(p.ownedSwords.filter(id => c.swords.some(x => x.id === id)))]
+    ownedSkills: [...new Set<SkillId>(p.ownedSkills.filter(id => c.skills.some(x => x.id === id && x.acquisition !== 'retired')))],
+    ownedSwords: [...new Set<SwordId>(p.ownedSwords.filter(id => c.swords.some(x => x.id === id && x.acquisition !== 'retired')))]
   };
   if (p.rewardCredits !== undefined) {
     if (!p.rewardCredits || typeof p.rewardCredits !== 'object' || Array.isArray(p.rewardCredits)) return null;
@@ -461,10 +459,6 @@ export function normalizeProfile(raw: unknown, c = requireContent()): PlayerProf
       if (!/^[1-9]\d*$/.test(id) || !credit || !integer(credit.exp) || !integer(credit.starBonus)) return null;
       result.rewardCredits[id] = { exp: credit.exp, starBonus: credit.starBonus };
     }
-  }
-  if (p.startingLoadoutVersion !== 1 && c.milestoneRewards) {
-    result.ownedSkills = result.ownedSkills.filter(id => id !== 'nhat-kiem');
-    result.ownedSwords = result.ownedSwords.filter(id => id !== 'thanh-phong');
   }
   const repaired = p.loadout && Array.isArray(p.loadout.skills) ? {
     sword: p.loadout.sword !== null && result.ownedSwords.includes(p.loadout.sword) ? p.loadout.sword : null,

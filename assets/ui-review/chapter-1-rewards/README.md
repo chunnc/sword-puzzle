@@ -17,7 +17,7 @@ All source PNGs are RGBA with alpha spanning 0–255. Runtime WebPs use the exis
 ## Validation
 
 - 91 focused client tests passed, including combat, empty loadout restore, passive inventory, item reward popup and navigation.
-- 7 new server tests passed: migration, all four milestones, star improvement, receipt retry, backfill, merging and purchase/equip restrictions. Future milestones use test fixtures only.
+- 7 new server tests passed: retired-item cleanup, all four milestones, star improvement, receipt retry, backfill, merging and purchase/equip restrictions. Future milestones use test fixtures only.
 - Production client TypeScript and server TypeScript passed; generated shared domain check and `git diff --check` passed.
 - Full client comparison: baseline 329 passed / 191 failed; current 350 passed / 191 failed, with no newly failing test cases. The pre-existing Board test module load failure also remains. Full client typecheck retains the same six pre-existing errors in old test code.
 - Full server suite: 36 passed / 4 failed. Existing failures are stale map count, map objective and progress fixtures; the same map/progress failures reproduce before this change.
