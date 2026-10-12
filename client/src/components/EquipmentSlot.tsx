@@ -5,7 +5,7 @@ import { ART, type Artwork } from '../assets';
 import { useSfxPress } from '../audio/useSfxPress';
 
 type EquipmentSlotProps = { label: string; onPress: () => void } & (
-  { kind: 'sword'; art: Artwork } |
+  { kind: 'sword'; art?: Artwork } |
   { kind: 'skill'; state: 'equipped'; art: Artwork } |
   { kind: 'skill'; state: 'empty' | 'locked'; art?: never }
 );

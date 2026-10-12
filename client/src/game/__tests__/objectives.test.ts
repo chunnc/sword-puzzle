@@ -31,6 +31,7 @@ function fixture(objectives: ObjectiveDefinition[], width = 7, height = 7, holes
     locked: false
   } : null);
   snapshot.swordQi = 100;
+  snapshot.loadout = { sword: null, skills: ['nhat-kiem'] };
   return {
     content,
     level,

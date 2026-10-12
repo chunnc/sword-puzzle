@@ -192,10 +192,11 @@ async function recoverRunStart() {
   const map = validateMap(run.map, content);
   if (run.configVersion !== content.version || run.mapVersion !== map.mapVersion || run.runId !== pending.runId || map.id !== pending.levelId || !Number.isSafeInteger(run.seed) || run.seed <= 0 || run.seed > 0xffffffff
     || !Number.isSafeInteger(run.totalExp) || run.totalExp < 0 || !Number.isSafeInteger(run.attempt) || run.attempt < 1
-    || !run.loadout || !Array.isArray(run.loadout.skills) || !run.loadout.skills.length || run.loadout.skills.length > 2
-    || new Set(run.loadout.skills).size !== run.loadout.skills.length || !run.loadout.skills.every(id => content.skills.some(s => s.id === id)) || !content.swords.some(s => s.id === run.loadout.sword)
+    || !run.loadout || !Array.isArray(run.loadout.skills) || run.loadout.skills.length > 2
+    || new Set(run.loadout.skills).size !== run.loadout.skills.length || !run.loadout.skills.every(id => content.skills.some(s => s.id === id && s.kind !== 'passive')) || run.loadout.sword !== null && !content.swords.some(s => s.id === run.loadout.sword)
     || !Number.isFinite(run.assistReduction) || run.assistReduction < 0 || run.assistReduction > .3) throw new GameApiError('INVALID_RESPONSE');
-  const active = new BoardEngine(mapToLevel(map, run.seed, run.assistReduction, content), null, { loadout: run.loadout, totalExp: run.totalExp }).snapshot();
+  if (run.passiveSkills !== undefined && (!Array.isArray(run.passiveSkills) || new Set(run.passiveSkills).size !== run.passiveSkills.length || !run.passiveSkills.every(id => content.skills.some(s => s.id === id && s.kind === 'passive')))) throw new GameApiError('INVALID_RESPONSE');
+  const active = new BoardEngine(mapToLevel(map, run.seed, run.assistReduction, content), null, { loadout: run.loadout, totalExp: run.totalExp, passiveSkills: run.passiveSkills }).snapshot();
   active.runId = run.runId;
   await persistNext({ ...useGameStore.getState().save, active, pendingStart: undefined, retiredRunId: undefined, lastWin: null });
   useGameStore.setState({ session: response.session });
@@ -275,6 +276,7 @@ export function apiErrorMessage(error: unknown): string {
     INVALID_SESSION_STORAGE: 'Không đọc được phiên đã lưu. Vui lòng thử lại.',
     INSUFFICIENT_COINS: 'Chưa đủ linh thạch.',
     ALREADY_OWNED: 'Bạn đã sở hữu món này.',
+    ITEM_NOT_FOR_SALE: 'Vật phẩm này chỉ nhận qua thành tích hoặc đã ngừng phát hành.',
     ITEM_LOCKED: 'Hãy vượt thêm màn để mở món này.',
     INVALID_LOADOUT: 'Trang bị chưa hợp lệ hoặc chưa đủ ô kỹ năng.',
     CONTENT_MISMATCH: 'Cấu hình game đã thay đổi. Vui lòng kết nối lại.',

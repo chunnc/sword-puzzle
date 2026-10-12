@@ -81,7 +81,7 @@ export function ShopCollection({ initialCategory = 'sword' }: { initialCategory?
   const list = useRef<ScrollView>(null);
   const items = category === 'sword' ? SWORDS : SKILLS;
   const owned: readonly string[] = category === 'sword' ? profile.ownedSwords : profile.ownedSkills;
-  const available = items.filter(item => !owned.includes(item.id));
+  const available = items.filter(item => (!item.acquisition || item.acquisition === 'shop') && !owned.includes(item.id));
   const selectedOwned: readonly string[] = selection?.category === 'skill' ? profile.ownedSkills : profile.ownedSwords;
   const selectedItem = selection && !selectedOwned.includes(selection.id)
     ? (selection.category === 'sword' ? SWORDS : SKILLS).find(item => item.id === selection.id)

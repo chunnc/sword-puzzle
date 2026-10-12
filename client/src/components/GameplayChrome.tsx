@@ -96,7 +96,7 @@ export function GameplayDock({ board, skillSlots, available, cost, targetSkill, 
 }) {
   const sfxPress = useSfxPress();
   const content = getContentVersion(board.contentVersion);
-  const sword = content.swords.find(item => item.id === board.loadout.sword)!;
+  const sword = content.swords.find(item => item.id === board.loadout.sword);
   return (
     <View testID="game-skill-controls" style={[styles.controls, compact && styles.compactControls]}>
       <View style={styles.energy}>
@@ -116,12 +116,12 @@ export function GameplayDock({ board, skillSlots, available, cost, targetSkill, 
         </View> : null}
       </View>
       <View testID="game-equipment-row" style={[styles.dock, compact && styles.compactDock]}>
-        <View testID="game-sword" accessible accessibilityRole="image" accessibilityLabel={`Bảo kiếm ${sword.name}`} style={styles.equipmentColumn}>
+        <View testID="game-sword" accessible accessibilityRole="image" accessibilityLabel={`Bảo kiếm ${sword?.name ?? 'Chưa có kiếm'}`} style={styles.equipmentColumn}>
           <View style={[styles.socket, compact && styles.compactSocket]}>
             <Image source={ART.slotSword} contentFit="contain" accessible={false} style={StyleSheet.absoluteFill} />
-            <Image source={ART[SWORD_ART[sword.id]]} contentFit="contain" accessible={false} style={[styles.equipmentIcon, compact && styles.compactEquipmentIcon]} />
+            {sword ? <Image source={ART[SWORD_ART[sword.id]]} contentFit="contain" accessible={false} style={[styles.equipmentIcon, compact && styles.compactEquipmentIcon]} /> : null}
           </View>
-          <OutlinedText numberOfLines={1} maxFontSizeMultiplier={1.2} style={[styles.itemName, compact && styles.compactItemName]}>{sword.name}</OutlinedText>
+          <OutlinedText numberOfLines={1} maxFontSizeMultiplier={1.2} style={[styles.itemName, compact && styles.compactItemName]}>{sword?.name ?? 'Chưa có kiếm'}</OutlinedText>
           <OutlinedText maxFontSizeMultiplier={1.2} style={[styles.itemCaption, compact && styles.compactItemCaption]}>Bảo kiếm</OutlinedText>
         </View>
         {[0, 1].map(slot => {

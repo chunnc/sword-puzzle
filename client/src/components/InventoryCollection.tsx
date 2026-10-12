@@ -102,11 +102,13 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
       <TopHud onAccount={() => router.push('/account')} />
       <CollectionTabs category={category} disabled={working} onSelect={setCategory} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
+        {!items.some(item => owned.includes(item.id)) ? <Text style={styles.description}>{category === 'sword' ? 'Chưa có kiếm. Đạt 3 sao màn 3 để nhận kiếm cơ bản.' : 'Chưa học kiếm thức. Đạt 3 sao màn 5 để học Thứ.'}</Text> : null}
         {items.filter(item => owned.includes(item.id)).map(item => {
           const isSkill = 'cost' in item;
+          const passive = isSkill && item.kind === 'passive';
           const slot = isSkill ? profile.loadout.skills.indexOf(item.id) : -1;
           const equipped = isSkill ? slot >= 0 : profile.loadout.sword === item.id;
-          const canEquip = !equipped || (isSkill && profile.loadout.skills.length > 1);
+          const canEquip = !passive && (!equipped || (isSkill && profile.loadout.skills.length > 1));
           const art = isSkill ? SKILL_ART[item.id] : SWORD_ART[item.id];
           return (
             <View key={item.id} style={styles.card}>
@@ -116,7 +118,7 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
                 <View style={styles.cardHeading}>
                   <View style={styles.nameArea}>
                     <Text style={styles.name}>{item.name}</Text>
-                    {equipped || isSkill ? <Text style={styles.meta}>{equipped ? isSkill ? `Đang ở ô ${slot + 1} · ` : 'Đang trang bị' : ''}{isSkill ? `${item.cost} khí` : ''}</Text> : null}
+                    {equipped || isSkill ? <Text style={styles.meta}>{equipped ? isSkill ? `Đang ở ô ${slot + 1} · ` : 'Đang trang bị' : ''}{passive ? 'Bị động · Đã học' : isSkill ? `${item.cost} khí` : ''}</Text> : null}
                   </View>
                   {canEquip ? <EquipButton title={equipped ? 'ĐỔI Ô' : 'TRANG BỊ'} label={`${equipped ? 'Đổi ô' : 'Trang bị'} ${item.name}`} disabled={working} onPress={() => {
                     if (isSkill) {

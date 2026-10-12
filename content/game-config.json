@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "levelCount": 2,
   "qiCap": 100,
   "expRates": [
@@ -115,7 +115,8 @@
       "cost": 60,
       "unlock": 0,
       "price": 0,
-      "artKey": "iconSkillNhatKiem"
+      "artKey": "iconSkillNhatKiem",
+      "acquisition": "retired"
     },
     {
       "id": "ngu-kiem",
@@ -179,6 +180,44 @@
       "unlock": 30,
       "price": 500,
       "artKey": "iconSkillVanKiem"
+    },
+    {
+      "id": "thu",
+      "name": "Thứ",
+      "description": "Chọn một ô: xóa ô thường, kích hoạt ô cường hóa hoặc phá một lớp đá/phong ấn.",
+      "cost": 60,
+      "unlock": 5,
+      "price": 0,
+      "artKey": "iconSkillThu",
+      "kind": "active",
+      "acquisition": "milestone",
+      "swordForm": 1
+    },
+    {
+      "id": "thieu",
+      "name": "Thiêu",
+      "description": "Bị động: mỗi ô ghép bị xóa nhận thêm 1 sát thương lên boss.",
+      "cost": 0,
+      "unlock": 8,
+      "price": 0,
+      "artKey": "iconSkillThieu",
+      "kind": "passive",
+      "acquisition": "milestone",
+      "swordForm": 2,
+      "bossDamagePerTile": 1
+    },
+    {
+      "id": "van",
+      "name": "Vân",
+      "description": "Bị động: mỗi ô ghép bị xóa nhận thêm 1 sát thương lên boss.",
+      "cost": 0,
+      "unlock": 10,
+      "price": 0,
+      "artKey": "iconSkillVan",
+      "kind": "passive",
+      "acquisition": "milestone",
+      "swordForm": 3,
+      "bossDamagePerTile": 1
     }
   ],
   "swords": [
@@ -189,7 +228,8 @@
       "unlock": 0,
       "price": 0,
       "color": "#49c8e5",
-      "artKey": "iconSwordThanhPhong"
+      "artKey": "iconSwordThanhPhong",
+      "acquisition": "retired"
     },
     {
       "id": "trong-nhac",
@@ -253,6 +293,17 @@
       "price": 450,
       "color": "#87c3dc",
       "artKey": "iconSwordHuyenCo"
+    },
+    {
+      "id": "co-ban",
+      "name": "Kiếm cơ bản",
+      "description": "Mỗi ô ghép bị xóa nhận thêm 1 sát thương, gồm Tụ Linh Châu.",
+      "unlock": 3,
+      "price": 0,
+      "color": "#d7b76e",
+      "artKey": "iconSwordCoBan",
+      "acquisition": "milestone",
+      "flatDamage": 1
     }
   ],
   "rewards": {
@@ -286,6 +337,32 @@
       "order": 1,
       "firstLevelId": 1,
       "lastLevelId": 2
+    }
+  ],
+  "milestoneRewards": [
+    {
+      "levelId": 3,
+      "stars": 3,
+      "category": "sword",
+      "itemId": "co-ban"
+    },
+    {
+      "levelId": 5,
+      "stars": 3,
+      "category": "skill",
+      "itemId": "thu"
+    },
+    {
+      "levelId": 8,
+      "stars": 3,
+      "category": "skill",
+      "itemId": "thieu"
+    },
+    {
+      "levelId": 10,
+      "stars": 3,
+      "category": "skill",
+      "itemId": "van"
     }
   ]
 }

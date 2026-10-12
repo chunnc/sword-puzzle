@@ -22,8 +22,9 @@ export function normalizeSnapshot(raw: unknown): BoardSnapshot | null {
     if (content.version < 8 || !p.level.mapDefinition) return null;
     const level = mapToLevel(validateMap(p.level.mapDefinition, content), p.level.seed, p.level.assistReduction, content);
     if (level.id !== p.levelId || !Number.isSafeInteger(level.seed) || level.seed <= 0 || level.seed > 0xffffffff || !Number.isFinite(level.assistReduction ?? 0) || (level.assistReduction ?? 0) < 0 || (level.assistReduction ?? 0) > .3 || p.directorPressure !== undefined && (!Number.isFinite(p.directorPressure) || p.directorPressure < 0 || p.directorPressure > 1.2)) return null;
+    if (p.passiveSkills !== undefined && (!Array.isArray(p.passiveSkills) || new Set(p.passiveSkills).size !== p.passiveSkills.length || !p.passiveSkills.every(id => content.skills.some(s => s.id === id && s.kind === 'passive')))) return null;
     if (p.mapVersion !== undefined && p.mapVersion !== level.mapVersion) return null;
-    if (typeof p.runId !== 'string' || !/^[a-zA-Z0-9_-]{8,120}$/.test(p.runId) || !Number.isSafeInteger(p.moves) || p.moves < 0 || p.moves > level.moves + 3 || !p.objectiveProgress || Object.keys(p.objectiveProgress).length !== level.objectives.length || !level.objectives.every(o => Number.isSafeInteger(p.objectiveProgress[o.id]) && p.objectiveProgress[o.id] >= 0 && p.objectiveProgress[o.id] <= o.target) || !Number.isSafeInteger(p.swordQi) || p.swordQi < 0 || p.swordQi > content.qiCap || !Number.isSafeInteger(p.score) || p.score < 0 || !Number.isSafeInteger(p.drops) || p.drops < 0 || !Number.isSafeInteger(p.randomState) || p.randomState <= 0 || p.randomState > 0xffffffff || !Number.isFinite(p.damageScale) || p.damageScale < 1 || typeof p.extraMovesUsed !== 'boolean' || typeof p.condensed !== 'boolean' || typeof p.skillUsed !== 'boolean' || !Array.isArray(p.tiles) || p.tiles.length !== level.board.activeCells.length || !p.loadout || !Array.isArray(p.loadout.skills) || p.loadout.skills.length < 1 || p.loadout.skills.length > 2 || new Set(p.loadout.skills).size !== p.loadout.skills.length || !p.loadout.skills.every(id => content.skills.some(s => s.id === id)) || !content.swords.some(s => s.id === p.loadout.sword)) return null;
+    if (typeof p.runId !== 'string' || !/^[a-zA-Z0-9_-]{8,120}$/.test(p.runId) || !Number.isSafeInteger(p.moves) || p.moves < 0 || p.moves > level.moves + 3 || !p.objectiveProgress || Object.keys(p.objectiveProgress).length !== level.objectives.length || !level.objectives.every(o => Number.isSafeInteger(p.objectiveProgress[o.id]) && p.objectiveProgress[o.id] >= 0 && p.objectiveProgress[o.id] <= o.target) || !Number.isSafeInteger(p.swordQi) || p.swordQi < 0 || p.swordQi > content.qiCap || !Number.isSafeInteger(p.score) || p.score < 0 || !Number.isSafeInteger(p.drops) || p.drops < 0 || !Number.isSafeInteger(p.randomState) || p.randomState <= 0 || p.randomState > 0xffffffff || !Number.isFinite(p.damageScale) || p.damageScale < 1 || typeof p.extraMovesUsed !== 'boolean' || typeof p.condensed !== 'boolean' || typeof p.skillUsed !== 'boolean' || !Array.isArray(p.tiles) || p.tiles.length !== level.board.activeCells.length || !p.loadout || !Array.isArray(p.loadout.skills) || p.loadout.skills.length > 2 || new Set(p.loadout.skills).size !== p.loadout.skills.length || !p.loadout.skills.every(id => content.skills.some(s => s.id === id && s.kind !== 'passive')) || p.loadout.sword !== null && !content.swords.some(s => s.id === p.loadout.sword)) return null;
     if (!p.tiles.every((t, i) => !level.board.activeCells[i] ? t === null : t && content.tiles.some(def => def.id === t.kind) && [0, 4, 5].includes(t.chargeTier) && typeof t.locked === 'boolean' && (t.kind !== tileId('rock', content) || t.chargeTier === 0 && !t.locked))) return null;
     if (level.mapDefinition?.tutorial ? !(p.tutorialStep === null || Number.isSafeInteger(p.tutorialStep) && p.tutorialStep! >= 0 && p.tutorialStep! < level.mapDefinition.tutorial.steps.length) : p.tutorialStep !== undefined) return null;
     return {
@@ -35,6 +36,7 @@ export function normalizeSnapshot(raw: unknown): BoardSnapshot | null {
       tiles: p.tiles.map(t => t ? {
         ...t
       } : null),
+      passiveSkills: [...(p.passiveSkills ?? [])],
       loadout: {
         ...p.loadout,
         skills: [...p.loadout.skills]
@@ -77,7 +79,8 @@ export function normalizeSave(raw: unknown): SaveData | null {
       || !report || !['won','lost','abandoned'].includes(report.outcome) || !Number.isSafeInteger(report.movesUsed) || report.movesUsed < 0 || report.movesUsed > active.level.moves + (active.extraMovesUsed ? 3 : 0)
       || report.extraMovesUsed !== active.extraMovesUsed || JSON.stringify(report.objectiveProgress) !== JSON.stringify(active.objectiveProgress)) return null;
   }
-  const lastWin: WinSummary | null = w && typeof w.runId === 'string' && ['levelId', 'stars', 'bestStars', 'expGained', 'totalExp', 'coinsGained', 'realmBefore', 'realmAfter'].every(k => Number.isSafeInteger(w[k as keyof WinSummary]) && Number(w[k as keyof WinSummary]) >= 0) ? w : null;
+  const validItems = w?.itemsGranted === undefined || Array.isArray(w.itemsGranted) && w.itemsGranted.every(item => item && ['skill', 'sword'].includes(item.category) && typeof item.itemId === 'string');
+  const lastWin: WinSummary | null = w && validItems && typeof w.runId === 'string' && ['levelId', 'stars', 'bestStars', 'expGained', 'totalExp', 'coinsGained', 'realmBefore', 'realmAfter'].every(k => Number.isSafeInteger(w[k as keyof WinSummary]) && Number(w[k as keyof WinSummary]) >= 0) ? w : null;
   return {
     ...emptySave(),
     ownerId: value.ownerId,

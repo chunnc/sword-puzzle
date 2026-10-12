@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { applyOperation, expForStars, starBonus, mergeProfiles, normalizeLevels, normalizeProfile, parseOperation, profileFromLegacy, realmForExp, highestUnlocked, type PlayerProfile, type PlayerOperation, type SyncResponse, type OperationReward, type GameContent, requireContent } from './game';
+import { applyOperation, grantMilestones, newlyGrantedItems, expForStars, starBonus, mergeProfiles, normalizeLevels, normalizeProfile, parseOperation, profileFromLegacy, realmForExp, highestUnlocked, type PlayerProfile, type PlayerOperation, type SyncResponse, type OperationReward, type GameContent, requireContent } from './game';
 export function profileFromDocument(data: Record<string, any> | undefined, content = requireContent()): PlayerProfile {
     // Frozen v3–v7 reward baseline. Never reprice an existing wallet on a config change.
     const historical: GameContent = { ...content, levelBaseExp: Array(content.levelCount).fill(100), expRates: [30,60,80,100],
@@ -13,6 +13,7 @@ export function profileFromDocument(data: Record<string, any> | undefined, conte
     const levels = normalizeLevels(Object.entries(stars).map(([levelId, stars]) => ({ levelId: Number(levelId), stars })), content);
     const migrated = profileFromLegacy(levels, historical);
     migrated.rewardCredits = Object.fromEntries(levels.map(l => [l.levelId, { exp: expForStars(l.stars, 100, historical), starBonus: starBonus(l.stars, historical) }]));
+    grantMilestones(migrated, content);
     return migrated;
 }
 export function profileFields(profile: PlayerProfile, previousStars: Record<string, number> = {}, content = requireContent()) {
@@ -61,7 +62,7 @@ export function processOperations(profile: PlayerProfile, operations: PlayerOper
         }
         const result = content.version !== profileContent.version && op.kind !== 'win' ? { profile: next, error: 'CONTENT_MISMATCH' } : applyOperation(next, op, content, profileContent);
         const reward: OperationReward | undefined = !result.error && op.kind === 'win' ? {
-            id: op.id, expGained: result.profile.totalExp - next.totalExp,
+            itemsGranted: newlyGrantedItems(next, result.profile), id: op.id, expGained: result.profile.totalExp - next.totalExp,
             coinsGained: result.profile.coins - next.coins,
             bestStars: result.profile.levels.find(x => x.levelId === op.levelId)!.stars,
             realmBefore: realmForExp(next.totalExp, profileContent).index,

@@ -6,7 +6,7 @@ Kiến trúc và hướng dẫn chạy prototype: [SYSTEM_ARCHITECTURE.md](SYSTE
 
 ![Ảnh preview gồm bản đồ, màn khám phá, trận boss và đột phá tu vi](assets/ui-preview.png)
 
-> **Catalog khởi đầu v8:** Client Expo/React Native bắt đầu với hai map hướng dẫn ghép ô, bốn loại ô, cường hóa, tám kiếm thuật, tám bảo kiếm và tu vi theo EXP. Map 1 dạy ghép 3 Kiếm; map 2 dạy tạo rồi kích hoạt ô Lôi cấp 4. Catalog sẽ được mở rộng sau.
+> **Catalog hiện tại v9:** Client Expo/React Native có hai map hướng dẫn ghép ô, bốn loại ô, cường hóa, kiếm thuật chủ động/bị động, bảo kiếm và tu vi theo EXP. Map 1 dạy ghép 3 Kiếm; map 2 dạy tạo rồi kích hoạt ô Lôi cấp 4. Catalog sẽ được mở rộng sau.
 
 ## 1. Tầm nhìn
 
@@ -112,7 +112,7 @@ Các cảnh trước Chân Tiên có Sơ kỳ, Trung kỳ, Hậu kỳ, Viên mã
 
 ### Kiếm thuật và bảo kiếm
 
-Danh mục, chỉ số, giá và mốc mở bán nằm trong content/game-config.json. Mỗi người dùng một bảo kiếm và một skill; ô skill thứ hai mở tại 1.500 EXP. Nhất Kiếm và Thanh Phong miễn phí ban đầu.
+Danh mục, chỉ số, giá, cách nhận và mốc thưởng nằm trong content/game-config.json. Mỗi người dùng một bảo kiếm và một skill; ô skill thứ hai mở tại 1.500 EXP. Nhân vật mới bắt đầu không có bảo kiếm hoặc kiếm thuật. Thanh Phong và Nhất Kiếm đã ngừng cấp/mở bán; migration một lần thu hồi hai món khởi đầu này, giữ các món khác và thành tích.
 
 Kiếm thuật gồm Nhất Kiếm, Ngự Kiếm, Hỏa Liên, Dẫn Lôi, Phá Chướng, Liên Kiếm, Hồi Linh, Vạn Kiếm. Không tiêu lượt; tối đa một cast giữa hai nước đổi thành công có tiêu lượt. Hủy chọn không tiêu khí. Chỉ được thi triển khi còn lượt. Khi hết lượt, xử lý hết hiệu ứng và combo của nước đổi cuối: hoàn thành mọi mục tiêu thì thắng, nếu còn mục tiêu chưa hoàn thành thì hiện dialog thua.
 
@@ -152,6 +152,15 @@ Nhân vật kiếm tu có trang phục nhẹ, dáng rõ và biểu cảm gần g
 Bốn màn hình chính là **bản đồ**, **giải đố khám phá**, **đánh boss** và **đột phá tu vi**. Bàn cờ là vùng lớn nhất trên màn gameplay; số lượt, mục tiêu và thanh kỹ năng luôn nhìn được mà không che ô. Nút chính đủ lớn để chạm bằng ngón tay. Giao diện cần thích ứng vùng an toàn của các máy iOS và Android, cùng các tỉ lệ màn hình dọc phổ biến.
 
 Ảnh đầu tài liệu là **mockup định hướng**, không phải ảnh chụp game có thể chơi. Các con số, tài nguyên, tỷ lệ lưới và chi tiết chữ phụ trên ảnh chỉ minh họa bố cục; luật và phạm vi bản đầu lấy theo tài liệu này. Nhãn chính trong ảnh dùng tiếng Việt để thuận tiện review.
+
+## Thưởng kiếm và kiếm thức chương 1
+
+- Màn 3 đạt 3 sao: nhận Kiếm cơ bản, cộng 1 sát thương cho mỗi ô ghép bị xóa, gồm Tụ Linh Châu.
+- Màn 5 đạt 3 sao: học Thứ (thức 1/14), tốn 60 kiếm khí, không tiêu lượt. Chọn một ô thường để xóa, ô cường hóa để kích hoạt hoặc đá/phong ấn để phá một lớp. Giữ giới hạn một cast giữa hai nước đổi ô thành công.
+- Màn 8 và 10 đạt 3 sao: học Thiêu và Vân (thức 2 và 3/14). Mỗi thức tự cộng 1 sát thương trên mỗi ô ghép bị xóa, chỉ với mục tiêu Boss; không chiếm ô kỹ năng.
+- Bonus cộng trước hệ số tu vi. Kiếm và cả hai thức bị động giúp Tụ Linh Châu gây 3 sát thương cơ bản lên boss.
+- Thưởng tự trao một lần, hỗ trợ chơi lại nâng sao và bổ sung cho thành tích đã đạt. Kiếm/Thứ tự trang bị khi có ô trống; không thay trang bị đang dùng. Bốn món không bán trong cửa hàng.
+- Vượt màn vẫn mở tiến trình dù chưa nhận thưởng 3 sao. Mốc 5/8/10 được cấu hình sẵn; đợt này chưa tạo map mới.
 
 ## 8. Nội dung và kiểm chứng
 

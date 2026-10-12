@@ -9,7 +9,7 @@ function engine(seed = 24680, assist = 0) {
     delete map.tutorial;
     map.moves = 14;
     map.objectives = [{ id: 'main', type: 'Battle', target: 100000, enemy: { id: 'test', name: 'Test', artKey: 'beast' } }];
-    return new BoardEngine(mapToLevel(validateMap(map, content), seed, assist, content));
+    return new BoardEngine(mapToLevel(validateMap(map, content), seed, assist, content), null, { loadout: { sword: null, skills: ['nhat-kiem'] }, totalExp: 0 });
 }
 afterEach(() => installContent(legacy));
 it('decays seeded probability, applies spawn assistance, and never seeds after wave 3', () => {

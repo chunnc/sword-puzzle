@@ -26,6 +26,7 @@ export class BoardEngine {
     private kinds!: Record<TileKey, number>;
     private runId: string;
     private loadout: Loadout;
+    private passiveSkills: SkillId[];
     private damageScale: number;
     private totalExpAtStart: number | undefined;
     private lastAnimation: BoardActionAnimation | null = null;
@@ -50,6 +51,7 @@ export class BoardEngine {
     constructor(private readonly level: LevelDefinition, restore?: BoardSnapshot | null, context?: {
         loadout: Loadout;
         totalExp: number;
+        passiveSkills?: SkillId[];
     }) {
         this.level = restore?.level ?? level;
         level = this.level;
@@ -62,6 +64,7 @@ export class BoardEngine {
         this.tutorialStep = level.mapDefinition?.tutorial ? 0 : undefined;
         this.runId = newId();
         this.loadout = context ? { ...context.loadout, skills: [...context.loadout.skills] } : emptyProfile().loadout;
+        this.passiveSkills = [...(restore?.passiveSkills ?? context?.passiveSkills ?? [])];
         this.damageScale = realmForExp(context?.totalExp ?? 0, this.content).damageScale;
         this.totalExpAtStart = restore ? restore.totalExpAtStart : context?.totalExp ?? 0;
         if (restore && restore.contentVersion === this.content.version && restore.levelId === level.id && restore.tiles.length === this.width * this.height) {
@@ -98,13 +101,13 @@ export class BoardEngine {
     snapshot(): BoardSnapshot {
         if (this.tiles.some((t,i) => this.level.board.activeCells[i] && !t))
             throw new Error('UNSETTLED_BOARD');
-        return { contentVersion: this.content.version, configVersion: this.content.version, ...(this.level.mapVersion === undefined ? {} : { mapVersion: this.level.mapVersion }), ...(this.totalExpAtStart === undefined ? {} : { totalExpAtStart: this.totalExpAtStart }), level: this.level, runId: this.runId, levelId: this.level.id, moves: this.moves, objectiveProgress: { ...this.objectiveProgress }, swordQi: this.swordQi, score: this.score, drops: this.drops, directorPressure: this.directorPressure, reshuffles: this.reshuffles, ...(this.level.mapDefinition!.tutorial ? { tutorialStep: this.tutorialStep ?? null } : {}), randomState: this.randomState >>> 0, extraMovesUsed: this.extraMovesUsed, condensed: this.condensed, skillUsed: this.skillUsed, loadout: { ...this.loadout, skills: [...this.loadout.skills] }, damageScale: this.damageScale, tiles: this.tiles.map(t => t ? copy(t) : null) };
+        return { contentVersion: this.content.version, configVersion: this.content.version, ...(this.level.mapVersion === undefined ? {} : { mapVersion: this.level.mapVersion }), ...(this.totalExpAtStart === undefined ? {} : { totalExpAtStart: this.totalExpAtStart }), level: this.level, runId: this.runId, levelId: this.level.id, moves: this.moves, objectiveProgress: { ...this.objectiveProgress }, swordQi: this.swordQi, score: this.score, drops: this.drops, directorPressure: this.directorPressure, reshuffles: this.reshuffles, ...(this.level.mapDefinition!.tutorial ? { tutorialStep: this.tutorialStep ?? null } : {}), randomState: this.randomState >>> 0, extraMovesUsed: this.extraMovesUsed, condensed: this.condensed, skillUsed: this.skillUsed, loadout: { ...this.loadout, skills: [...this.loadout.skills] }, damageScale: this.damageScale, passiveSkills: [...this.passiveSkills], tiles: this.tiles.map(t => t ? copy(t) : null) };
     }
     cost(id: SkillId): number { return skillCost(id, this.loadout.sword, this.condensed, this.content); }
     availableSkills(): SkillId[] {
         if (this.won || this.moves <= 0 || this.skillUsed)
             return [];
-        return this.loadout.skills.filter(id => this.swordQi >= this.cost(id) && this.hasSkillTarget(id));
+        return this.loadout.skills.filter(id => this.content.skills.some(s => s.id === id && s.kind !== 'passive') && this.swordQi >= this.cost(id) && this.hasSkillTarget(id));
     }
     trySwap(x1: number, y1: number, x2: number, y2: number): boolean {
         return this.drain(this.beginSwap(x1, y1, x2, y2));
@@ -138,7 +141,7 @@ export class BoardEngine {
     beginSkill(id: SkillId, targets: CellPosition[]): BoardActionStart | null {
         if (this.resolution) throw new Error('BOARD_ACTION_IN_PROGRESS');
         this.lastAnimation = null;
-        if (this.won || this.moves <= 0 || this.skillUsed || !this.loadout.skills.includes(id) || this.swordQi < this.cost(id) || !this.validTargets(id, targets))
+        if (this.content.skills.find(s => s.id === id)?.kind === 'passive' || this.won || this.moves <= 0 || this.skillUsed || !this.loadout.skills.includes(id) || this.swordQi < this.cost(id) || !this.validTargets(id, targets))
             return null;
         const indices = targets.map(this.indexOf);
         this.swordQi -= this.cost(id);
@@ -171,6 +174,10 @@ export class BoardEngine {
                 [shuffled[0], shuffled[other]] = [shuffled[other], shuffled[0]];
             }
             mutation.forEach((i, n) => { this.tiles[i] = shuffled[n]; });
+        }
+        else if (id === 'thu') {
+            initial = indices;
+            obstacleOnly = this.tiles[indices[0]]!.kind === this.kind('rock');
         }
         else if (id === 'nhat-kiem')
             initial = this.row(targets[0].y).filter(i => this.level.board.activeCells[i]);
@@ -309,10 +316,13 @@ export class BoardEngine {
                         multiplier *= 1.5;
                     if (this.loadout.sword === 'lien-tinh' && chain >= 2)
                         multiplier *= 1.2;
-                    const damage = Math.floor((this.content.tiles.find(t => t.id === tile.kind)?.damage ?? 0) * multiplier);
-                    waveDamage += damage;
+                    const baseDamage = (this.content.tiles.find(t => t.id === tile.kind)?.damage ?? 0) + (this.content.swords.find(s => s.id === this.loadout.sword)?.flatDamage ?? 0);
+                    const bossBonus = this.passiveSkills.reduce((sum, id) => sum + (this.content.skills.find(s => s.id === id && s.kind === 'passive')?.bossDamagePerTile ?? 0), 0);
+                    const damage = Math.floor(baseDamage * multiplier);
+                    const bossDamage = Math.floor((baseDamage + bossBonus) * multiplier);
+                    waveDamage += this.level.objectives.some(o => o.type === 'Boss') ? bossDamage : damage;
                     this.advance('Battle', damage);
-                    this.advance('Boss', damage);
+                    this.advance('Boss', bossDamage);
                     this.advance('Collect', 1, tile.kind);
                     this.swordQi = Math.min(this.content.qiCap, this.swordQi + baseQi(tile));
                     this.score += 10 * chain;
@@ -429,6 +439,7 @@ export class BoardEngine {
             return targets.length === 2 && indices.every(i => this.movable(i) && this.tiles[i]!.chargeTier > 0);
         if (targets.length !== 1)
             return false;
+        if (id === 'thu') return true;
         if (id === 'van-kiem')
             return this.tiles[indices[0]]!.kind !== this.kind('rock');
         if (id === 'pha-chuong')

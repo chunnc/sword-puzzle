@@ -39,7 +39,7 @@ test('legacy progress creates the wallet once, subsequent reads use profileV2',(
 });
 test('merging guest inventory and balance computes EXP from max stars',()=>{
  const a=applyOperation(emptyProfile(),win('guest_win_1',1,3)).profile,b=applyOperation(emptyProfile(),win('account_win',1,2)).profile;
- const merged=mergeProfiles(a,b);assert.equal(merged.totalExp,100);assert.equal(merged.coins,275);assert.equal(merged.ownedSkills.length,1);
+ const merged=mergeProfiles(a,b);assert.equal(merged.totalExp,100);assert.equal(merged.coins,275);assert.equal(merged.ownedSkills.length,0);
 });
 test('validates batches, star range, IDs and unsupported operations',()=>{
  assert.throws(()=>parseOperations([win('bad',1,3)]));assert.throws(()=>parseOperations([win('valid_id_1',1,4)]));assert.throws(()=>parseOperations([win('valid_id_1',1,0),win('valid_id_1',1,0)]));assert.throws(()=>parseOperations(Array.from({length:51},(_,i)=>win(`valid_id_${i}`,1,3))));

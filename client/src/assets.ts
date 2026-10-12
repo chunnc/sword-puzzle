@@ -6,6 +6,10 @@ import dialogPanelMetadata from '../app-assets/ui/dialog_panels.metadata.json';
 export const DIALOG_PANEL_METADATA = dialogPanelMetadata;
 
 export const ART = {
+  iconSwordCoBan: require('../app-assets/ui/icon_sword_co_ban.webp') as ImageSourcePropType,
+  iconSkillThu: require('../app-assets/ui/icon_skill_thu.webp') as ImageSourcePropType,
+  iconSkillThieu: require('../app-assets/ui/icon_skill_thieu.webp') as ImageSourcePropType,
+  iconSkillVan: require('../app-assets/ui/icon_skill_van.webp') as ImageSourcePropType,
   gameplayResultPanel: require('../app-assets/ui/gameplay_result_panel.webp') as ImageSourcePropType,
   gameplayResultContinue: require('../app-assets/ui/gameplay_result_continue.webp') as ImageSourcePropType,
   gameplayResultBack: require('../app-assets/ui/gameplay_result_back.webp') as ImageSourcePropType,
@@ -124,6 +128,7 @@ export const ART = {
 export type Artwork = keyof typeof ART;
 
 export const SWORD_ART = {
+  'co-ban': 'iconSwordCoBan',
   'thanh-phong': 'iconSwordThanhPhong',
   'trong-nhac': 'iconSwordTrongNhac',
   'hoa-van': 'iconSwordHoaVan',
@@ -135,6 +140,9 @@ export const SWORD_ART = {
 } as const satisfies Record<SwordId, Artwork>;
 
 export const SKILL_ART = {
+  'thu': 'iconSkillThu',
+  'thieu': 'iconSkillThieu',
+  'van': 'iconSkillVan',
   'nhat-kiem': 'iconSkillNhatKiem',
   'ngu-kiem': 'iconSkillNguKiem',
   'hoa-lien': 'iconSkillHoaLien',

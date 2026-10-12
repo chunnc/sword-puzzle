@@ -25,6 +25,7 @@ export interface CellPosition {
     y: number;
 }
 export interface BoardSnapshot {
+    passiveSkills?: SkillId[];
     configVersion?: number;
     mapVersion?: number;
     totalExpAtStart?: number;
@@ -108,6 +109,7 @@ export interface BoardActionPresenter {
 }
 export type LevelStar = LevelResult;
 export interface WinSummary {
+    itemsGranted?: import('./domain').ItemGrant[];
     runId: string;
     levelId: number;
     stars: Stars;

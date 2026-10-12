@@ -150,4 +150,12 @@ describe('result popup presentation and choreography', () => {
     expect(resultTimeline(0, true)).toEqual({ rewardStart: 340, duration: 500 });
     expect(resultPanelScale(0)).toBe(0.72); expect(resultPanelScale(240)).toBe(1.04); expect(resultPanelScale(340)).toBe(1);
   });
+  it('shows a newly granted item and its generated icon even without currency rewards', () => {
+    if (win.kind !== 'won') throw new Error('fixture');
+    mount({ result: { ...win, summary: { ...win.summary, expGained: 0, coinsGained: 0, itemsGranted: [{ category: 'sword', itemId: 'co-ban' }] } }, reduceMotion: true });
+    expect(renderer.root.findAllByType(View).map(node => node.props.source)).toContain(ART.iconSwordCoBan);
+    expect(texts().flat().join(' ').replace(/\s+/g, ' ')).toContain('Đã nhận Kiếm cơ bản');
+    expect(renderer.root.findAll(node => node.props.testID === 'result-items').length).toBeGreaterThan(0);
+  });
+
 });

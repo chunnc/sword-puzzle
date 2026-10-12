@@ -1,0 +1,9 @@
+Use case: stylized-concept. Asset type: ONE production-ready transparent inventory icon for Kiếm Khai Tiên Lộ, a portrait xianxia mobile game.
+Input images are STYLE REFERENCES ONLY, not subjects to copy or overwrite. Match the attached existing game icons: polished hand-painted 2D East Asian celestial fantasy, softly dimensional jade and warm gold materials, crisp silhouette, subtle painterly internal shading, upper-left ivory highlights, restrained glow.
+Composition: one centered isolated icon on square canvas. Entire silhouette inside central 80%, at least 10% transparent margin on every side, recognizable at 48–60px.
+Palette: jade #0b5051, mint, ivory #fff2c9, warm gold #d7b76e, celestial cyan #49c8e5.
+Genuinely transparent background including holes; no text, letters, numbers, watermark, frame, background tile, scene, character, photorealism or Western medieval motifs.
+Primary request: Third sword form VAN, a CLOUD sword motion. One small jade-and-gold straight jian moving horizontally through a broad soft S-shaped ribbon of mint-cyan cloud qi, with rounded stylized ivory cloud curls and open negative space. Calm flowing cloud motion, NOT a sharp crescent slash, not fire, not upward hook, not straight thrust.
+
+Reference images (style only): icon-skill-nhat-kiem.png, icon-skill-ngu-kiem.png
+Generator: built-in image_gen; transparent_background: true

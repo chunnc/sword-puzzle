@@ -1,4 +1,4 @@
-import { applyOperation, assistForFailures, mapStars, mapToLevel, realmForExp,
+import { applyOperation, newlyGrantedItems, assistForFailures, mapStars, mapToLevel, realmForExp,
   type GameContent, type MapDefinition, type ObjectiveProgress, type PlayerProfile, type RunDefinition, type RunReport } from './game';
 
 export interface MapStats {
@@ -42,7 +42,7 @@ export function completeRun(run: RunDefinition, report: RunReport, stats: MapSta
     nextStats.bestStars = Math.max(stats.bestStars, stars);
     nextStats.bestMovesUsed = Math.min(stats.bestMovesUsed ?? Infinity, report.movesUsed);
     nextStats.firstWinAt ??= now;
-    reward = { id: run.runId, expGained: nextProfile.totalExp-profile.totalExp, coinsGained: nextProfile.coins-profile.coins,
+    reward = { itemsGranted: newlyGrantedItems(profile, nextProfile), id: run.runId, expGained: nextProfile.totalExp-profile.totalExp, coinsGained: nextProfile.coins-profile.coins,
       bestStars: nextProfile.levels.find(l => l.levelId === run.map.id)!.stars,
       realmBefore: realmForExp(profile.totalExp, profileContent).index, realmAfter: realmForExp(nextProfile.totalExp, profileContent).index };
   } else if (report.outcome === 'lost') { nextStats.losses++; nextStats.consecutiveFailures++; }

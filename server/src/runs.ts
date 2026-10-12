@@ -3,7 +3,7 @@ import { Router, type RequestHandler } from 'express';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import { ApiError, type AuthenticatedRequest } from './identity';
 import { latestChapterMaps, currentContent, loadContent } from './content';
-import { contentWire, highestUnlocked, mapFromDocument, mapResourceFromDocument, mapToDocument, type GameContent } from './domain/game';
+import { contentWire, learnedPassives, highestUnlocked, mapFromDocument, mapResourceFromDocument, mapToDocument, type GameContent } from './domain/game';
 import { profileFields, profileFromDocument } from './domain/profile';
 import { abandonedStats, assistForFailures, completeRun, emptyMapStats, parseRunReport, startedStats, type MapStats, type StoredRun } from './domain/runs';
 
@@ -75,7 +75,7 @@ export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, ass
         }
         const run: StoredRun = { runId, mapVersion: map.mapVersion ?? map.contentVersion, configVersion: content.version, seed: randomBytes(4).readUInt32LE() || 1, map,
           assistReduction: assistForFailures(map, stats.consecutiveFailures), attempt: stats.attemptsStarted + 1,
-          loadout: profile.loadout, totalExp: profile.totalExp, installationId: req.installationId!, previousRunId, status: 'active', createdAt: Date.now() };
+          loadout: profile.loadout, totalExp: profile.totalExp, passiveSkills: learnedPassives(profile, content), installationId: req.installationId!, previousRunId, status: 'active', createdAt: Date.now() };
         if (previous?.status === 'active') tx.update(previousDoc!.ref, { status: 'abandoned', finishedAt: Date.now() });
         if (previousStatsRef && previousStats) tx.set(previousStatsRef, previousStats);
         tx.set(statsRef, startedStats(stats));
@@ -127,5 +127,5 @@ function startResponse(run: StoredRun, content: GameContent) {
   const { runId, seed, assistReduction, attempt, loadout, totalExp } = run;
   const map = run.map;
   return { run: { runId, mapVersion: run.mapVersion ?? map.mapVersion ?? map.contentVersion, configVersion: run.configVersion ?? content.version,
-    seed, map, assistReduction, attempt, loadout, totalExp }, config: contentWire(content) };
+    seed, map, assistReduction, attempt, loadout, totalExp, passiveSkills: run.passiveSkills ?? [] }, config: contentWire(content) };
 }

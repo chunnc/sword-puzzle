@@ -206,9 +206,9 @@ describe('scene navigation', () => {
 
   it('opens equipment categories from the icons and disables the locked second skill slot', () => {
     mount(React.createElement(CharacterScreen));
-    act(() => { button('Bảo kiếm Thanh Phong, mở Túi Đồ').props.onPress(); });
+    act(() => { button('Chưa có kiếm, mở Túi Đồ').props.onPress(); });
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/inventory', params: { category: 'sword' } });
-    act(() => { button('Ô kỹ năng 1, Nhất Kiếm, mở Kiếm thuật').props.onPress(); });
+    act(() => { button('Ô kỹ năng 1 trống, mở Kiếm thuật').props.onPress(); });
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/inventory', params: { category: 'skill' } });
     const locked = renderer.root.findAll(node => node.props.accessibilityLabel === 'Ô kỹ năng 2 bị khóa, mở tại 1500 EXP' && node.props.disabled)[0];
     expect(locked.props.accessibilityState.disabled).toBe(true);

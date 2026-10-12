@@ -18,7 +18,7 @@ export default function CharacterScreen() {
   const compact = sceneHeight > 0 && sceneHeight < 420;
   const profile = useGameStore(state => state.save.profile);
   const realm = realmForExp(profile.totalExp);
-  const sword = SWORDS.find(item => item.id === profile.loadout.sword)!;
+  const sword = SWORDS.find(item => item.id === profile.loadout.sword);
   const expLabel = realm.next ? `${profile.totalExp - realm.exp}/${realm.next.exp - realm.exp}` : 'MAX';
   const stageName = realm.stageName.replace(/\b(kỳ|mãn)/g, word => word[0].toUpperCase() + word.slice(1));
   const openInventory = (category: 'sword' | 'skill') => router.push({ pathname: '/inventory', params: { category } });
@@ -42,7 +42,7 @@ export default function CharacterScreen() {
         </View>
 
         <View style={[styles.loadout, compact && styles.compactLoadout]}>
-          <EquipmentSlot kind="sword" art={SWORD_ART[sword.id]} label={`Bảo kiếm ${sword.name}, mở Túi Đồ`} onPress={() => openInventory('sword')} />
+          <EquipmentSlot kind="sword" art={sword ? SWORD_ART[sword.id] : undefined} label={sword ? `Bảo kiếm ${sword.name}, mở Túi Đồ` : 'Chưa có kiếm, mở Túi Đồ'} onPress={() => openInventory('sword')} />
           {[0, 1].map(slot => {
             const locked = slot >= realm.skillSlots;
             const skillId = profile.loadout.skills[slot];

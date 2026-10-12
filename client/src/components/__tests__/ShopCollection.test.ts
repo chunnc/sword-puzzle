@@ -74,10 +74,10 @@ describe('shop collection', () => {
     expect(sources()).toContain(ART.inventoryTabActive);
     expect(sources()).toContain(ART.inventoryTabIdle);
     expect(button('Xem Thanh Phong')).toBeUndefined();
-    for (const item of SWORDS.slice(1)) expect(sources()).toContain(ART[SWORD_ART[item.id]]);
+    for (const item of SWORDS.filter(item => !item.acquisition || item.acquisition === 'shop')) expect(sources()).toContain(ART[SWORD_ART[item.id]]);
     expect(sources()).not.toContain(ART.tileSword);
     const cards = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel?.startsWith('Xem ') && typeof node.props.disabled === 'boolean');
-    expect(cards.map(node => node.props.accessibilityLabel)).toEqual(SWORDS.slice(1).map(item => `Xem ${item.name}`));
+    expect(cards.map(node => node.props.accessibilityLabel)).toEqual(SWORDS.filter(item => !item.acquisition || item.acquisition === 'shop').map(item => `Xem ${item.name}`));
     expect(text()).not.toContain('LINH BẢO CÁC');
     expect(text()).not.toContain('sở hữu vĩnh viễn');
     expect(button('XEM TÚI ĐỒ')).toBeUndefined();
@@ -109,7 +109,7 @@ describe('shop collection', () => {
   it('shows skill artwork and qi cost and purchases using the skill category', async () => {
     mount('skill');
     expect(button('Xem Nhất Kiếm')).toBeUndefined();
-    for (const item of SKILLS.slice(1)) expect(sources()).toContain(ART[SKILL_ART[item.id]]);
+    for (const item of SKILLS.filter(item => !item.acquisition || item.acquisition === 'shop')) expect(sources()).toContain(ART[SKILL_ART[item.id]]);
     open('Ngự Kiếm');
     expect(text()).toContain('Tiêu hao 30 khí');
     await act(async () => { button('Mua Ngự Kiếm, 150 Linh Thạch').props.onPress(); });
@@ -372,7 +372,7 @@ describe('shop collection', () => {
     mount();
     for (const category of ['sword', 'skill'] as const) {
       refresh(category);
-      for (const item of (category === 'sword' ? SWORDS : SKILLS).slice(1)) {
+      for (const item of (category === 'sword' ? SWORDS : SKILLS).filter(item => !item.acquisition || item.acquisition === 'shop')) {
         open(item.name);
         const description = modal().findAllByType(Text).find(node => node.props.children === item.description)!;
         expect(description).toBeDefined();

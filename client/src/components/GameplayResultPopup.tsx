@@ -4,6 +4,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Canvas, ColorMatrix, Image as SkiaImage, useImage, type SkImage } from '@shopify/react-native-skia';
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useDerivedValue, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { runOnJS } from 'react-native-worklets';
+import { SKILLS, SWORDS } from '../game/domain';
 import { ART } from '../assets';
 import type { WinSummary } from '../game/types';
 import { colors } from '../theme';
@@ -35,7 +36,8 @@ export function GameplayResultPopup({ result, busy, reduceMotion, onReady, onCon
 }) {
   const won = result.kind === 'won', stars = won ? result.summary.stars : 0;
   const exp = won ? result.summary.expGained : 0, coins = won ? result.summary.coinsGained : 0;
-  const hasRewards = exp > 0 || coins > 0;
+  const items = won ? result.summary.itemsGranted ?? [] : [];
+  const hasRewards = exp > 0 || coins > 0 || items.length > 0;
   // Freeze choreography per mount: server reward reconciliation must not replay it.
   const timeline = useRef(resultTimeline(stars, hasRewards)).current;
   const elapsed = useSharedValue(reduceMotion ? timeline.duration : 0);
@@ -93,6 +95,16 @@ export function GameplayResultPopup({ result, busy, reduceMotion, onReady, onCon
           </View>
         </View>
       </InventoryDialogPanel>
+      {items.length > 0 ? <Animated.View testID="result-items" style={[styles.itemRewards, rewardMotion]}>
+        <Image source={ART.inventoryCard} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />
+        {items.map(item => {
+          const definition = (item.category === 'sword' ? SWORDS : SKILLS).find(x => x.id === item.itemId);
+          return definition ? <View key={`${item.category}:${item.itemId}`} style={styles.coinReward}>
+            <Image source={ART[definition.artKey as keyof typeof ART]} contentFit="contain" accessible={false} style={{ width: 48, height: 48 }} />
+            <Text style={styles.itemRewardText}>Đã nhận {definition.name}</Text>
+          </View> : null;
+        })}
+      </Animated.View> : null}
     </Animated.View>
   </View>;
 }
@@ -106,6 +118,8 @@ const styles = StyleSheet.create({
   title: { fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }), color: colors.ivory, fontSize: 25, lineHeight: 30, fontWeight: '800', textAlign: 'center', letterSpacing: 1, textShadowColor: colors.inkDeep, textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 },
   compactTitle: { fontSize: 22, lineHeight: 26 },
   stars: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  itemRewards: { width: '100%', marginTop: 8, padding: 12, gap: 4 },
+  itemRewardText: { color: colors.ivory, fontSize: 14, fontWeight: '800', flexShrink: 1 },
   rewards: { minHeight: 32, width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
   compactRewards: { minHeight: 28 },
   reward: { color: colors.ivory, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] },

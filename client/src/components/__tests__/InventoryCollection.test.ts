@@ -50,6 +50,7 @@ describe('inventory collection', () => {
     mockState.save = emptySave();
     mockState.save.profile.ownedSwords = ['thanh-phong', 'trong-nhac'];
     mockState.save.profile.ownedSkills = ['nhat-kiem', 'ngu-kiem', 'hoa-lien'];
+    mockState.save.profile.loadout = { sword: 'thanh-phong', skills: ['nhat-kiem'] };
     mockState.notice = '';
     mockState.equip.mockImplementation(async loadout => {
       mockState.save = { ...mockState.save, profile: { ...mockState.save.profile, loadout } };
@@ -213,4 +214,22 @@ describe('inventory collection', () => {
       expect(scroll.props.scrollEnabled).not.toBe(false);
     }
   });
+  it('shows empty inventory guidance for a new character', () => {
+    mockState.save = emptySave();
+    mount();
+    const text = renderer.root.findAllByType(require('react-native').Text).map(node => node.props.children).join(' ');
+    expect(text).toContain('Đạt 3 sao màn 3');
+  });
+
+  it('renders new passive form icons without equipment controls', () => {
+    mockState.save.profile.ownedSkills = ['thu', 'thieu', 'van'];
+    mockState.save.profile.loadout = { sword: null, skills: ['thu'] };
+    mount('skill');
+    const text = renderer.root.findAllByType(require('react-native').Text).map(node => node.props.children).join(' ');
+    expect(text).toContain('Bị động · Đã học');
+    expect(button('Trang bị Thiêu')).toBeUndefined();
+    expect(button('Trang bị Vân')).toBeUndefined();
+    expect(sources()).toEqual(expect.arrayContaining([ART.iconSkillThu, ART.iconSkillThieu, ART.iconSkillVan]));
+  });
+
 });
