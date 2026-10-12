@@ -207,6 +207,35 @@ describe('Skia Board integration', () => {
     expect(StyleSheet.flatten(arrow.props.style)).toMatchObject({ left: 114, top: 239 });
   });
 
+  it('always balances origin-bearing static tile groups with identity transforms', () => {
+    mount();
+    const staticGroups = renderer.root.findAll(node => node.type === 'Group' as never && node.props.origin);
+    expect(staticGroups).toHaveLength(49);
+    const identity = [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }];
+    for (const group of staticGroups) expect(group.props.transform).toEqual(identity);
+    const shared = staticGroups[0].props.transform;
+    expect(staticGroups.every(group => group.props.transform === shared)).toBe(true);
+    act(() => renderer.update(React.createElement(Board, { ...props, reduceMotion: true })));
+    expect(tile(0).props.transform).toBe(shared);
+  });
+
+  it('keeps a single gold contour outside the grid clip throughout clear animation and resize', () => {
+    mount();
+    const outline = () => renderer.root.findAll(node => node.type === 'Path' as never && node.props.color === colors.gold)[0];
+    const original = outline().props.path;
+    expect(outline().props).toMatchObject({ style: 'stroke', strokeWidth: 2, strokeJoin: 'round' });
+    expect(original).toContain('Q350,0 350,4');
+    expect(StyleSheet.flatten(renderer.root.findAllByType(View)[0].props.style)).toMatchObject({ padding: 5, backgroundColor: 'transparent' });
+    expect(StyleSheet.flatten(renderer.root.findAllByType(View)[0].props.style).borderWidth).toBeUndefined();
+    act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: { id: 121, kind: 'clear', cleared: [0, 1], changed: [], effects: [] } })));
+    expect(outline().props.path).toBe(original);
+    expect(renderer.root.findAll(node => node.type === 'Canvas' as never)).toHaveLength(1);
+    const grid = renderer.root.findAllByType(View).find(node => typeof node.props.onLayout === 'function')!;
+    act(() => grid.props.onLayout({ nativeEvent: { layout: { width: 175, height: 175 } } }));
+    expect(outline().props.path).toContain('Q175,0 175,4');
+    expect(outline().props.path).not.toBe(original);
+  });
+
   it.each([
     [TileKind.Sword, 101, 102, 103],
     [TileKind.Fire, 104, 105, 106],
@@ -845,7 +874,7 @@ describe('Skia Board integration', () => {
     oldReaction();
     expect(oldTransform.value).toEqual([{ translateX: 0 }, { translateY: 0 }, { scale: 1 }]);
     expect(tile(7)).toBe(oldTile);
-    expect(tile(7).props.transform).toBeUndefined();
+    expect(tile(7).props.transform).toEqual([{ translateX: 0 }, { translateY: 0 }, { scale: 1 }]);
     expect(renderer.root.findAll(node => node.type === 'Canvas' as never)[0]).toBe(canvas);
     expect(tile(7).findAll(node => node.type === 'SkiaImage' as never)[0]).toBe(sprite);
   });
@@ -894,7 +923,7 @@ describe('Skia Board integration', () => {
     mount({ visualEffect: effect });
     const oldOpacity = tile(7).props.layer.props.opacity;
     act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: effect, reduceMotion: true })));
-    expect(tile(7).props.transform).toBeUndefined();
+    expect(tile(7).props.transform).toEqual([{ translateX: 0 }, { translateY: 0 }, { scale: 1 }]);
     expect(tile(7).props.layer).toBeUndefined();
     expect(oldOpacity.value).toBe(0);
     act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: effect, reduceMotion: false })));

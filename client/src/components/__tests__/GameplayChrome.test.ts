@@ -7,8 +7,10 @@ import { ART } from '../../assets';
 import { CONTENT, tileId, type ObjectiveDefinition, type TileKey } from '../../game/domain';
 import { getLevel } from '../../game/levels';
 import type { BoardSnapshot } from '../../game/types';
+import { colors } from '../../theme';
 
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
+jest.mock('../GameplayObjectivePanel', () => ({ GameplayObjectivePanel: require('react-native').View }));
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: require('react-native').View }));
 jest.mock('react-native-reanimated', () => ({
   __esModule: true, default: { View: require('react-native').View },
@@ -57,7 +59,7 @@ describe('gameplay header and objective rows', () => {
     expect(view('game-objectives-row').props.children).toHaveLength(count);
     for (let index = 0; index < count; index++) {
       const goal = view(`objective-goal-${index}`);
-      expect(StyleSheet.flatten(goal.props.style)).toMatchObject({ flex: 1, minWidth: 0 });
+      expect(StyleSheet.flatten(goal.props.style)).toMatchObject({ width: '33.333333%', minWidth: 0, justifyContent: 'flex-start' });
       expect(goal.props.accessibilityLabel).toContain('0 / 15');
       expect(goal.findAllByType(Text).some(node => String(node.props.children).startsWith('Thu '))).toBe(false);
     }
@@ -68,7 +70,7 @@ describe('gameplay header and objective rows', () => {
   it.each(['Battle', 'Boss'] as const)('puts %s above collection in its own full-width row and preserves HP', type => {
     act(() => { renderer = create(info([collect('collect'), enemy(type)], { enemy: 120 }, true)); });
     expect(view('game-info').props.children.filter(Boolean).map((node: React.ReactElement<{ testID: string }>) => node.props.testID)).toEqual(['game-enemy-panel', 'game-objective-panel']);
-    expect(StyleSheet.flatten(view('game-enemy-panel').props.style)).toMatchObject({ width: '100%', height: 66 });
+    expect(StyleSheet.flatten(view('game-enemy-panel').props.style)).toMatchObject({ width: '100%', height: 52, paddingVertical: 6 });
     expect(view('game-enemy-panel').findAllByType(Text).some(node => node.props.children === 'Yêu vương')).toBe(true);
     const health = renderer.root.findByType(GameplayProgressBar);
     expect(health.props).toMatchObject({ value: 180, max: 300, accessibilityLabel: 'Máu Yêu vương' });
@@ -80,13 +82,37 @@ describe('gameplay header and objective rows', () => {
     expect(view('game-objective-panel')).toBeUndefined();
   });
 
+  it.each([false, true])('uses shorter panels without shrinking avatars or collection icons (compact=%s)', compact => {
+    act(() => { renderer = create(info([enemy('Boss'), collect('collect')], {}, compact)); });
+    expect(StyleSheet.flatten(view('game-objective-panel').props.style)).toMatchObject({ height: compact ? 44 : 48, paddingVertical: compact ? 4 : 6 });
+    expect(StyleSheet.flatten(view('game-enemy-panel').props.style)).toMatchObject({ height: compact ? 52 : 60, paddingVertical: 6 });
+    expect(StyleSheet.flatten(view('game-enemy-avatar').props.style)).toMatchObject({ width: compact ? 40 : 48, height: compact ? 40 : 48 });
+    expect(StyleSheet.flatten(view('objective-icon-collect').props.style)).toMatchObject({ width: 28, height: 28 });
+  });
+
   it('updates visible and accessible progress, completion, and restored collection progress', () => {
     const goals: ObjectiveDefinition[] = [collect('collect'), { id: 'rock', type: 'BreakRocks', target: 2 }, { id: 'seal', type: 'BreakSeals', target: 3 }];
     act(() => { renderer = create(info(goals, { collect: 4, rock: 2, seal: 1 })); });
     expect(view('objective-rock').props.accessibilityLabel).toBe('Phá đá, 2 / 2, hoàn thành');
-    expect(view('objective-rock').findAllByType(Text).some(node => node.props.children === ' ✓')).toBe(true);
-    const next = info(goals, { collect: 15, rock: 2, seal: 3 });
-    act(() => renderer.update(next));
-    expect(view('objective-collect').props.accessibilityLabel).toContain('15 / 15, hoàn thành');
+    expect(view('objective-rock').findAllByType(Text).some(node => node.props.children === ' ✓')).toBe(false);
+    for (const progress of [14, 15, 23]) {
+      act(() => renderer.update(info(goals, { collect: progress, rock: 2, seal: 3 })));
+      expect(view('objective-collect').props.accessibilityLabel).toContain(`${progress} / 15${progress >= 15 ? ', hoàn thành' : ''}`);
+      const texts = view('objective-collect').findAllByType(Text);
+      const counter = texts.find(node => Array.isArray(node.props.children) && node.props.children[0] === progress)!;
+      expect(StyleSheet.flatten(counter.props.style).color).toBe(progress >= 15 ? colors.success : colors.ivory);
+      const total = texts.find(node => Array.isArray(node.props.children) && node.props.children[0] === '/')!;
+      expect(StyleSheet.flatten(total.props.style).color).toBe(progress >= 15 ? colors.success : colors.textMuted);
+    }
+    expect(renderer.root.findAllByType(Text).some(node => String(node.props.children).includes('✓'))).toBe(false);
+  });
+
+  it('uses separate panel artwork and a green name at zero boss HP without a tick', () => {
+    act(() => { renderer = create(info([enemy('Boss'), collect('collect')], { enemy: 300, collect: 23 })); });
+    expect(view('game-enemy-panel').props.variant).toBe('boss');
+    expect(view('game-objective-panel').props.variant).toBe('collection');
+    const name = view('game-enemy-panel').findAllByType(Text).find(node => node.props.children === 'Yêu vương')!;
+    expect(StyleSheet.flatten(name.props.style).color).toBe(colors.success);
+    expect(renderer.root.findByType(GameplayProgressBar).props.value).toBe(0);
   });
 });

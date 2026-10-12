@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  Canvas, FontWeight, Group, Image, Paint, Paragraph, RoundedRect, Skia, useImage,
+  Canvas, FontWeight, Group, Image, Paint, Paragraph, Path, RoundedRect, Skia, useImage,
   type SkImage, type SkParagraph,
 } from '@shopify/react-native-skia';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -27,6 +27,7 @@ import { chargedParticleStyle } from './chargedTileParticles';
 import { Fire5Tile, IdleAtlasTile, useIdleTileClock } from './Fire5Tile';
 import { TIER5_IDLE_ANIMATIONS, type IdleSpriteAnimationMetadata } from './idleTileAnimation';
 import { BOARD_FRAME_INSET } from './boardLayout';
+import { boardOutlinePath } from './boardOutline';
 
 export type { CellPosition } from '../game/types';
 export {
@@ -65,6 +66,9 @@ function useBoardLabels(cellWidth: number, targetCount: number) {
 type BoardLabels = ReturnType<typeof useBoardLabels>;
 type IdleTileAnimation = { image: SkImage | null; animation: IdleSpriteAnimationMetadata; elapsedMs: SharedValue<number> };
 type IdleTileAnimations = Partial<Record<number, IdleTileAnimation>>;
+// Skia must save the CTM for every origin-bearing group before restoring it.
+// An origin-only static tile would otherwise pop its parent's inset/clip.
+const IDENTITY_TILE_TRANSFORM = [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }];
 
 // Retain this exported helper for callers outside the board; the board itself
 // draws every sprite into its one shared Canvas.
@@ -126,6 +130,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const content = getContentVersion(snapshot.contentVersion);
   const indices = useMemo(() => displayIndices(geometry), [geometry]);
   const [side, setSide] = useState(0);
+  const outline = useMemo(() => boardOutlinePath(geometry, side), [geometry, side]);
   const images = useBoardImages();
   const imageForTile = (tile: Tile) => images[semanticTileKind(tile.kind, content) as TileKind][tile.chargeTier];
   const visualTile = (tile: Tile): Tile => ({ ...tile, kind: semanticTileKind(tile.kind, content) as TileKind });
@@ -244,36 +249,39 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   }), [locked, targetingHint, side, onSwipe, geometry]);
 
   return <View style={styles.frame}>
+    {side > geometry.width * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
+      <Group transform={[{ translateX: BOARD_FRAME_INSET }, { translateY: BOARD_FRAME_INSET }]}>
+        <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
+          {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color={colors.boardCell} />)}
+          {drawOrder.map(index => <TileVisual key={index} tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} visual={visuals[index]} motion={frame.cells[index]} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />)}
+          {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
+            progress={motion.progress} elapsedMs={hasSourceAnimation ? effectElapsedMs : motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning}
+            renderTile={index => <TileArtwork tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)}
+              image={imageForTile(snapshot.tiles[index]!)} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />} /> : null}
+          {indices.map(index => {
+            const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
+            const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
+            const tutorialCell = tutorialMove && (tutorialMove.from.x === x && tutorialMove.from.y === y || tutorialMove.to.x === x && tutorialMove.to.y === y);
+            const highlighted = selected?.x === x && selected.y === y || targetNumber > 0 || preview.includes(index) || !!tutorialCell;
+            const targetLabel = targetNumber ? labels.targets[targetNumber - 1] : null;
+            const cellMotion = frame.cells[index];
+            return <Group key={`overlay-${index}`}>
+              {visuals[index].flashing ? <RoundedRect {...bounds} r={5} color={visuals[index].flashColor}
+                opacity={visuals[index].flashAt === null ? motion.flash : cellMotion?.flashOpacity ?? 0} /> : null}
+              {preview.includes(index) ? <RoundedRect {...bounds} r={5} color="rgba(242,213,142,.16)" /> : null}
+              {highlighted ? <RoundedRect x={bounds.x + 1} y={bounds.y + 1} width={bounds.width - 2} height={bounds.height - 2} r={4} color={colors.goldBright} style="stroke" strokeWidth={2} /> : null}
+              {targetLabel ? <Group>
+                <RoundedRect x={bounds.x + 2} y={bounds.y + 1} width={targetLabel.width + 6} height={targetLabel.height} r={6} color="#6a4c22" />
+                <Paragraph paragraph={targetLabel.paragraph} x={bounds.x + 5} y={bounds.y + 1} width={targetLabel.width} />
+              </Group> : null}
+            </Group>;
+          })}
+        </Group>
+        <Path path={outline} style="stroke" strokeWidth={2} strokeJoin="round" color={colors.gold} />
+      </Group>
+    </Canvas> : null}
     <GestureDetector gesture={gesture}>
       <View ref={gridRef} collapsable={false} onLayout={event => { setSide(event.nativeEvent.layout.width); onGridLayout?.(); }} style={styles.grid}>
-        {side > geometry.width * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
-          <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
-            {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color={colors.boardCell} />)}
-            {drawOrder.map(index => <TileVisual key={index} tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} visual={visuals[index]} motion={frame.cells[index]} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />)}
-            {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
-              progress={motion.progress} elapsedMs={hasSourceAnimation ? effectElapsedMs : motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning}
-              renderTile={index => <TileArtwork tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)}
-                image={imageForTile(snapshot.tiles[index]!)} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />} /> : null}
-            {indices.map(index => {
-              const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
-              const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
-              const tutorialCell = tutorialMove && (tutorialMove.from.x === x && tutorialMove.from.y === y || tutorialMove.to.x === x && tutorialMove.to.y === y);
-              const highlighted = selected?.x === x && selected.y === y || targetNumber > 0 || preview.includes(index) || !!tutorialCell;
-              const targetLabel = targetNumber ? labels.targets[targetNumber - 1] : null;
-              const cellMotion = frame.cells[index];
-              return <Group key={`overlay-${index}`}>
-                {visuals[index].flashing ? <RoundedRect {...bounds} r={5} color={visuals[index].flashColor}
-                  opacity={visuals[index].flashAt === null ? motion.flash : cellMotion?.flashOpacity ?? 0} /> : null}
-                {preview.includes(index) ? <RoundedRect {...bounds} r={5} color="rgba(242,213,142,.16)" /> : null}
-                {highlighted ? <RoundedRect x={bounds.x + 1} y={bounds.y + 1} width={bounds.width - 2} height={bounds.height - 2} r={4} color={colors.goldBright} style="stroke" strokeWidth={2} /> : null}
-                {targetLabel ? <Group>
-                  <RoundedRect x={bounds.x + 2} y={bounds.y + 1} width={targetLabel.width + 6} height={targetLabel.height} r={6} color="#6a4c22" />
-                  <Paragraph paragraph={targetLabel.paragraph} x={bounds.x + 5} y={bounds.y + 1} width={targetLabel.width} />
-                </Group> : null}
-              </Group>;
-            })}
-          </Group>
-        </Canvas> : null}
         {side > geometry.width * 2 ? indices.map(index => {
           const tile = snapshot.tiles[index]!, x = index % geometry.width, y = Math.floor(index / geometry.width);
           const bounds = cellBounds(index, side, geometry);
@@ -305,7 +313,7 @@ function TileVisual({ tile, bounds, image, visual, motion, labels, particlePhase
   if (visual.hidden) return null;
   // Paragraph paints its own colors, so fade the complete tile as a layer.
   // Source animations also fade/hide the artwork and its orbiting particles together.
-  return <Group origin={{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }} transform={motion?.transform} layer={visual.clearing || visual.sourceAnimation ? <Paint opacity={motion!.opacity} /> : undefined}>
+  return <Group origin={{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }} transform={motion?.transform ?? IDENTITY_TILE_TRANSFORM} layer={visual.clearing || visual.sourceAnimation ? <Paint opacity={motion!.opacity} /> : undefined}>
     <TileArtwork tile={tile} bounds={bounds} image={image} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />
   </Group>;
 }
@@ -336,7 +344,7 @@ function TileArtwork({ tile, bounds, image, labels, particlePhase, idleAnimation
 }
 
 const styles = StyleSheet.create({
-  frame: { flex: 1, borderWidth: 2, borderColor: colors.gold, borderRadius: 10, padding: BOARD_FRAME_INSET - 2, backgroundColor: 'transparent', overflow: 'hidden' },
+  frame: { flex: 1, padding: BOARD_FRAME_INSET, backgroundColor: 'transparent', overflow: 'hidden' },
   grid: { flex: 1 },
   touchCell: { position: 'absolute', borderRadius: 5 },
   hint: { position: 'absolute', top: 5, alignSelf: 'center', color: colors.inkDeep, backgroundColor: colors.goldBright, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, fontSize: 10, fontWeight: '800' },

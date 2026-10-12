@@ -3,6 +3,7 @@ import { BoardEngine, newId } from '../game/BoardEngine';
 import { BoardActionCancelled, runBoardAction } from '../game/boardAction';
 import { CONTENT, registerContent, highestUnlocked, installContent, isCompleted, normalizeProfile, type Loadout, type PlayerOperation, type SkillId, type MapSummary, type RunReport, chapterForLevel, mapStars, mapToLevel, validateMap } from '../game/domain';
 import { clearSave, emptySave, loadSave, persistSave } from '../game/save';
+import { toRunReportProgress } from '../game/objectiveProgress';
 import type { BoardActionAnimation, BoardActionPresenter, BoardActionStart, CellPosition, SaveData, Stars, WinSummary } from '../game/types';
 import { checkHealth, createGuest, fetchBootstrap, fetchProfile, GameApiError, isApiConfigured, isConnectionError, setConnectionErrorHandler, loginAccount, registerAccount, syncProfile, createAdIntent, checkAdIntent, deviceSession, logoutAccount, fetchChapterMaps, startRun, finishRun } from '../services/api';
 import { initializeRewardedAds, showRewardedForIntent } from '../services/ads';
@@ -235,7 +236,7 @@ async function finishActive(outcome: RunReport['outcome']): Promise<boolean> {
   if (!snapshot?.level.mapDefinition || state.save.lastWin?.runId === snapshot.runId) return true;
   const engine = new BoardEngine(snapshot.level, snapshot);
   await persistNext({ ...state.save, pendingFinish: { runId: snapshot.runId, levelId: snapshot.levelId, contentVersion: snapshot.contentVersion,
-    report: { outcome, movesUsed: engine.movesUsed, objectiveProgress: snapshot.objectiveProgress, extraMovesUsed: snapshot.extraMovesUsed } } });
+    report: { outcome, movesUsed: engine.movesUsed, objectiveProgress: toRunReportProgress(snapshot.level, snapshot.objectiveProgress), extraMovesUsed: snapshot.extraMovesUsed } } });
   return submitRunFinish();
 }
 const emptyResult = (levelId = 0): BoardActionResult => ({
@@ -399,7 +400,7 @@ async function record(engine: BoardEngine, previous: SaveData): Promise<BoardAct
     const stars = mapStars(engine.levelDefinition.mapDefinition!, engine.movesUsed);
     await persistNext({ ...previous, active: snapshot, lastWin: null, pendingFinish: {
       runId: snapshot.runId, levelId, contentVersion: snapshot.contentVersion,
-      report: { outcome: 'won', movesUsed: engine.movesUsed, objectiveProgress: snapshot.objectiveProgress, extraMovesUsed: snapshot.extraMovesUsed }
+      report: { outcome: 'won', movesUsed: engine.movesUsed, objectiveProgress: toRunReportProgress(snapshot.level, snapshot.objectiveProgress), extraMovesUsed: snapshot.extraMovesUsed }
     } });
     let accepted = false;
     try { accepted = await submitRunFinish(); } catch (error) { await failure(error); }
@@ -513,7 +514,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
     const engine = new BoardEngine(active.level, active);
     const report: RunReport = save.pendingFinish?.report ?? { outcome: engine.won ? 'won' : engine.lost ? 'lost' : 'abandoned',
-      movesUsed: engine.movesUsed, objectiveProgress: active.objectiveProgress, extraMovesUsed: active.extraMovesUsed };
+      movesUsed: engine.movesUsed, objectiveProgress: toRunReportProgress(active.level, active.objectiveProgress), extraMovesUsed: active.extraMovesUsed };
     try {
       await persistNext({ ...save, retiredRunId: active.runId, pendingFinish: { runId: active.runId, levelId: active.levelId, contentVersion: active.contentVersion, report } });
     } catch (error) { await failure(error); return false; }

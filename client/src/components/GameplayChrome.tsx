@@ -6,7 +6,7 @@ import { ART, SKILL_ART, SWORD_ART, tileArtwork } from '../assets';
 import { semanticTileKind, getContentVersion, type SkillId, type ObjectiveDefinition } from '../game/domain';
 import { TileKind, type BoardSnapshot, type LevelDefinition } from '../game/types';
 import { colors } from '../theme';
-import { ArtPanel } from './Art';
+import { GameplayObjectivePanel } from './GameplayObjectivePanel';
 import { GameplayProgressBar } from './GameplayProgressBar';
 import { OutlinedText } from './OutlinedText';
 import { useSfxPress } from '../audio/useSfxPress';
@@ -39,7 +39,7 @@ export function GameplayInfo({ level, board, compact, reduceMotion, duration, co
   const goals = level.objectives.filter(objective => objective.type !== 'Battle' && objective.type !== 'Boss');
   return (
     <View testID="game-info" style={[styles.info, compact && styles.compactInfo]}>
-      {enemies.length ? <ArtPanel art="gameplayObjective" testID="game-enemy-panel" style={[styles.objective, compact && styles.compactObjective]}>
+      {enemies.length ? <GameplayObjectivePanel variant="boss" testID="game-enemy-panel" style={[styles.objective, styles.enemyPanel, compact && styles.compactEnemyPanel]}>
         {enemies.map(objective => {
           const progress = board.objectiveProgress[objective.id] ?? 0;
           const name = objective.enemy.name;
@@ -49,13 +49,13 @@ export function GameplayInfo({ level, board, compact, reduceMotion, duration, co
               <Image source={icon} contentFit="cover" style={[styles.avatarArt, compact && styles.compactAvatarArt]} accessible={false} />
             </View>
             <View style={[styles.goalText, styles.enemyText]}>
-              <Text numberOfLines={1} style={styles.eyebrow}>{`${name}${progress >= objective.target ? ' ✓' : ''}`}</Text>
+              <Text numberOfLines={1} style={[styles.eyebrow, progress >= objective.target && styles.goalComplete]}>{name}</Text>
               <GameplayProgressBar value={objective.target-progress} max={objective.target} tone="health" accessibilityLabel={`Máu ${name}`} animated={!reduceMotion} duration={duration} />
             </View>
           </View>;
         })}
-      </ArtPanel> : null}
-      {goals.length ? <ArtPanel art="gameplayObjective" testID="game-objective-panel" style={[styles.objective, compact && styles.compactObjective]}>
+      </GameplayObjectivePanel> : null}
+      {goals.length ? <GameplayObjectivePanel variant="collection" testID="game-objective-panel" style={[styles.objective, styles.collectionPanel, compact && styles.compactCollectionPanel]}>
           <View testID="game-objectives-row" style={styles.goalsRow}>
             {goals.map(objective => {
               const name = objective.type === 'Collect' ? `Thu ${content.tiles.find(t => t.id === objective.tileKind)?.name ?? 'linh vật'}` : objective.type === 'BreakRocks' ? 'Phá đá' : 'Phá phong ấn';
@@ -66,11 +66,11 @@ export function GameplayInfo({ level, board, compact, reduceMotion, duration, co
               return <View key={objective.id} testID={`objective-${objective.id}`} accessible accessibilityRole="text" accessibilityLabel={`${name}, ${progress} / ${objective.target}${progress >= objective.target ? ', hoàn thành' : ''}`} style={styles.goalRow}>
                 {objective.type === 'Collect' ? <CollectGoalIcon id={objective.id} icon={icon} progress={progress} reduceMotion={reduceMotion} />
                   : <Image source={icon} contentFit="contain" style={styles.goalIcon} accessible={false} />}
-                <Text accessible={false} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.2} style={styles.goalNumber}>{progress}<Text style={styles.goalTotal}>/{objective.target}</Text>{progress >= objective.target ? <Text style={styles.goalComplete}> ✓</Text> : null}</Text>
+                <Text accessible={false} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.2} style={[styles.goalNumber, progress >= objective.target && styles.goalComplete]}>{progress}<Text style={[styles.goalTotal, progress >= objective.target && styles.goalComplete]}>/{objective.target}</Text></Text>
               </View>;
             })}
           </View>
-      </ArtPanel> : null}
+      </GameplayObjectivePanel> : null}
     </View>
   );
 }
@@ -164,10 +164,13 @@ const styles = StyleSheet.create({
   movesCenter: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   info: { flexShrink: 0, paddingTop: 8, paddingBottom: 8, gap: 8 },
   compactInfo: { paddingTop: 2, paddingBottom: 4 },
-  objective: { height: 76, width: '100%', minWidth: 0, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'stretch' },
-  compactObjective: { height: 66, paddingVertical: 6, paddingHorizontal: 12 },
+  objective: { width: '100%', minWidth: 0, paddingHorizontal: 14, paddingVertical: 6, alignItems: 'stretch' },
+  collectionPanel: { height: 48 },
+  compactCollectionPanel: { height: 44, paddingVertical: 4, paddingHorizontal: 12 },
+  enemyPanel: { height: 60 },
+  compactEnemyPanel: { height: 52, paddingHorizontal: 12 },
   goalsRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  goalRow: { flexDirection: 'row', gap: 3, alignItems: 'center', justifyContent: 'center', flex: 1, minWidth: 0 },
+  goalRow: { flexDirection: 'row', gap: 3, alignItems: 'center', justifyContent: 'flex-start', width: '33.333333%', minWidth: 0 },
   enemyRow: { flexDirection: 'row', gap: 8, alignItems: 'center', flex: 1 },
   goalIcon: { width: 28, height: 28, flexShrink: 0 },
   goalIconFrame: { width: 28, height: 28, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
@@ -181,7 +184,7 @@ const styles = StyleSheet.create({
   eyebrow: { color: colors.textMuted, fontSize: 11, lineHeight: 14, fontWeight: '700' },
   goalNumber: { flexShrink: 1, color: colors.ivory, fontSize: 20, lineHeight: 26, fontWeight: '900', fontVariant: ['tabular-nums'] },
   goalTotal: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
-  goalComplete: { color: colors.goldBright, fontSize: 12 },
+  goalComplete: { color: colors.success },
   compactGoalNumber: { fontSize: 22, lineHeight: 26 },
   moves: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   movesIcon: { width: 28, height: 28 },

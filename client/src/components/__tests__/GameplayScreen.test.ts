@@ -18,6 +18,7 @@ import { GoalKind, TileKind, type BoardActionAnimation, type BoardResolutionStep
 import { gameplaySnapshot, goalLevel } from './fixtures/gameplay';
 
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
+jest.mock('../GameplayObjectivePanel', () => ({ GameplayObjectivePanel: require('react-native').View }));
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => mockRouter, useFocusEffect: (callback: () => () => void) => require('react').useEffect(callback, [callback]) }));
 jest.mock('react-native-reanimated', () => ({
@@ -179,7 +180,7 @@ describe('gameplay presentation and exit behavior', () => {
       const objective = Native.StyleSheet.flatten(view(battle ? 'game-enemy-panel' : 'game-objective-panel').props.style);
       const moves = Native.StyleSheet.flatten(view('game-moves').props.style);
       const controls = Native.StyleSheet.flatten(view('game-skill-controls').props.style);
-      expect(objective.height).toBe(compact ? 66 : 76); expect(moves.backgroundColor).toBeUndefined();
+      expect(objective.height).toBe(battle ? (compact ? 52 : 60) : (compact ? 44 : 48)); expect(moves.backgroundColor).toBeUndefined();
       expect(controls.height).toBe(compact ? 166 : 202);
       const avatar = view('game-enemy-avatar');
       expect(Boolean(avatar)).toBe(battle);
@@ -192,7 +193,7 @@ describe('gameplay presentation and exit behavior', () => {
       }
       const dock = Native.StyleSheet.flatten(view('game-equipment-row').props.style);
       expect(dock.height + 30 + 44 + 4 + 8).toBe(controls.height);
-      const result = [objective.height, moves.height, moves.width, controls.height];
+      const result = [moves.height, moves.width, controls.height];
       act(() => { renderer.unmount(); }); return result;
     });
     expect(snapshots.every(dimensions => JSON.stringify(dimensions) === JSON.stringify(snapshots[0]))).toBe(true);
@@ -245,17 +246,17 @@ describe('gameplay presentation and exit behavior', () => {
       mockParams.levelId='3';mockState.save.active=normalizeSnapshot(snapshot)!;mount();
       act(()=>{view('game-content').props.onLayout({nativeEvent:{layout:{width:320,height:compact?490:760}}});});
       expect(view('objective-main')).toBeDefined();expect(view('objective-secondary')).toBeDefined();
-      expect(Native.StyleSheet.flatten(view('game-objective-panel').props.style).height).toBe(compact?66:76);
+      expect(Native.StyleSheet.flatten(view('game-objective-panel').props.style).height).toBe(compact?44:48);
       expect(view('game-moves').props.accessibilityLabel).toBe(`Còn ${snapshot.moves} lượt`);
       expect(renderer.root.findByType(GameplayInfo).props.board.objectiveProgress).toEqual({main:30,secondary:12});
-      expect(renderer.root.findAllByType(Native.Text).some(t=>String(t.props.children).includes('✓'))).toBe(true);
+      expect(renderer.root.findAllByType(Native.Text).some(t=>String(t.props.children).includes('✓'))).toBe(false);
     } finally {installContent(require('../../../../content/game-config.json'));}
   });
 
-  it('holds collection progress until every cascade and fall finishes, then counts one beat at a time', async () => {
+  it('holds collection progress until every cascade and fall finishes, then counts past the target one beat at a time', async () => {
     jest.useFakeTimers(); mockReduceMotion = false;
     const collectLevel = goalLevel('Collect');
-    const collectObjective = { ...collectLevel.objectives[0], target: 10 } as Extract<typeof collectLevel.objectives[number], { type: 'Collect' }>;
+    const collectObjective = { ...collectLevel.objectives[0], target: 1 } as Extract<typeof collectLevel.objectives[number], { type: 'Collect' }>;
     const level = { ...collectLevel, objectives: [collectObjective] };
     const collectId = collectObjective.id;
     mockParams.levelId = String(level.id);
@@ -291,6 +292,7 @@ describe('gameplay presentation and exit behavior', () => {
     expect(board().props.locked).toBe(true);
     await advance(BOARD_COLLECTION_STEP_MS);
     expect(progressText()).toBe(2);
+    expect(view(`objective-${collectId}`).props.accessibilityLabel).toContain('2 / 1, hoàn thành');
     expect(board().props.locked).toBe(true);
     await advance(BOARD_COLLECTION_STEP_MS);
     expect(board().props.locked).toBe(false);

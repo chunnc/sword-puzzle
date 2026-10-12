@@ -16,6 +16,8 @@ export const ART = {
   gameplayResultStar: require('../app-assets/ui/gameplay_result_star.webp') as number,
   gameplayBack: require('../app-assets/ui/gameplay_back.webp') as ImageSourcePropType,
   gameplayObjective: require('../app-assets/ui/gameplay_objective_v3.webp') as ImageSourcePropType,
+  gameplayBossPanel: require('../app-assets/ui/gameplay_boss_panel.png') as number,
+  gameplayCollectionPanel: require('../app-assets/ui/gameplay_collection_panel.png') as number,
   gameplayMoves: require('../app-assets/ui/gameplay_moves_v3.webp') as ImageSourcePropType,
   gameplayMovesIcon: require('../app-assets/ui/gameplay_moves_icon.png') as ImageSourcePropType,
   gameplayCancel: require('../app-assets/ui/gameplay_cancel.webp') as ImageSourcePropType,

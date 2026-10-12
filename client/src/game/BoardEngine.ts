@@ -92,7 +92,10 @@ export class BoardEngine {
     get won(): boolean { return this.level.objectives.every(o => this.objectiveProgress[o.id] >= o.target); }
     get contentDefinition(): GameContent { return this.content; }
     private advance(type: string, amount: number, tileKind?: number): void {
-        for (const o of this.level.objectives) if (o.type === type && (o.type !== 'Collect' || o.tileKind === tileKind)) this.objectiveProgress[o.id] = Math.min(o.target, this.objectiveProgress[o.id] + amount);
+        for (const o of this.level.objectives) if (o.type === type && (o.type !== 'Collect' || o.tileKind === tileKind)) {
+            const next = this.objectiveProgress[o.id] + amount;
+            this.objectiveProgress[o.id] = o.type === 'Battle' || o.type === 'Boss' ? Math.min(o.target, next) : next;
+        }
     }
     get lost(): boolean { return this.moves <= 0 && !this.won; }
     get levelDefinition(): LevelDefinition { return this.level; }
@@ -553,7 +556,7 @@ export class BoardEngine {
         if (!map) throw new Error('MAP_REQUIRED');
         if (map.tutorial) return this.refillTutorial();
         const spent = Math.max(1, this.movesUsed) / this.level.moves;
-        const progress = this.level.objectives.reduce((sum,o) => sum + this.objectiveProgress[o.id] / o.target, 0) / this.level.objectives.length;
+        const progress = this.level.objectives.reduce((sum,o) => sum + Math.min(1, this.objectiveProgress[o.id] / o.target), 0) / this.level.objectives.length;
         const target = Math.max(.35, Math.min(1.2, progress / spent));
         this.directorPressure += (target - this.directorPressure) * .25;
         const pressure = this.effectivePressure();

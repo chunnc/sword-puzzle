@@ -1,6 +1,6 @@
 import type { BoardGeometry } from './boardVisuals';
 
-// Each edge has a 2 dp border and 3 dp padding, outside the square grid.
+// Reserve space outside the grid for the contour's stroke and its Canvas.
 export const BOARD_FRAME_INSET = 5;
 
 export function boardLayout(availableWidth: number, availableHeight: number, geometry: BoardGeometry) {

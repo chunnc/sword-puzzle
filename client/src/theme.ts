@@ -8,6 +8,7 @@ export const colors = {
   ivory: '#fff2c9',
   parchment: '#f6e5b9',
   textMuted: '#c9d4c5',
+  success: '#9ee5c9',
   red: '#e35646',
   blue: '#49c8e5',
   veil: 'rgba(1, 18, 23, 0.62)',

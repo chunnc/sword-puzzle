@@ -566,6 +566,41 @@ function modernReady() {
   } } }));
   return content;
 }
+
+it.each(['won', 'lost', 'abandoned'] as const)('keeps surplus counts while persisting and retrying a capped %s report', async outcome => {
+  modernReady();
+  const { BoardEngine } = require('../../game/BoardEngine');
+  const active = new BoardEngine(domain.mapToLevel(domain.validateMap(require('../../../../content/game-maps.json')[2], domain.CONTENT), 123456, 0, domain.CONTENT)).snapshot();
+  active.moves = outcome === 'lost' ? 0 : active.moves;
+  active.objectiveProgress = Object.fromEntries(active.level.objectives.map((goal, index) => [goal.id, outcome === 'won' || index === 0 ? goal.target + 8 : 0]));
+  store.setState({ save: { ...store.getState().save, active } });
+  (api.finishRun as jest.Mock).mockRejectedValue(new api.GameApiError('TIMEOUT'));
+  expect(await store.getState().finishLevel(outcome)).toBe(false);
+  const expected = Object.fromEntries(active.level.objectives.map(goal => [goal.id, Math.min(active.objectiveProgress[goal.id], goal.target)]));
+  expect((api.finishRun as jest.Mock).mock.calls.at(-1)[2].objectiveProgress).toEqual(expected);
+  const restored = await saveTools.loadSave(guest.uid);
+  expect(restored.active!.objectiveProgress).toEqual(active.objectiveProgress);
+  expect(restored.pendingFinish!.report.objectiveProgress).toEqual(expected);
+  store.setState({ save: restored, online: true, connectionFailed: false });
+  await store.getState().syncProgress();
+  expect((api.finishRun as jest.Mock).mock.calls.map(call => call[1])).toEqual([active.runId, active.runId]);
+  expect((api.finishRun as jest.Mock).mock.calls.at(-1)[2].objectiveProgress).toEqual(expected);
+});
+
+it('caps the automatic winning report while retaining collection surplus from the final swap', async () => {
+  modernReady();
+  const { BoardEngine } = require('../../game/BoardEngine');
+  const active = new BoardEngine(domain.mapToLevel(domain.validateMap(require('../../../../content/game-maps.json')[0], domain.CONTENT), 123456, 0, domain.CONTENT)).snapshot();
+  const goal = active.level.objectives[0];
+  active.objectiveProgress[goal.id] = goal.target - 1;
+  store.setState({ save: { ...store.getState().save, active } });
+  (api.finishRun as jest.Mock).mockRejectedValue(new api.GameApiError('TIMEOUT'));
+  const step = active.level.mapDefinition!.tutorial!.steps[0];
+  await store.getState().swap(step.from.column - 1, active.level.board.height - step.from.row, step.to.column - 1, active.level.board.height - step.to.row);
+  expect(store.getState().save.active!.objectiveProgress[goal.id]).toBeGreaterThan(goal.target);
+  expect(store.getState().save.pendingFinish!.report.objectiveProgress[goal.id]).toBe(goal.target);
+  expect((api.finishRun as jest.Mock).mock.calls.at(-1)[2].objectiveProgress[goal.id]).toBe(goal.target);
+});
 it('reuses chapter summaries on repeated entries', async () => {
   const content = modernReady();
   const chapterId = content.chapters![0].id;
