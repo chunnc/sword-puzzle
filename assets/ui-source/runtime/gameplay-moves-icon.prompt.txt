@@ -1,0 +1,6 @@
+Tool: Codex built-in ImageGen
+Style references: client/app-assets/ui/icon_sword_co_ban.webp; client/app-assets/ui/gameplay_back.webp
+Background: transparent (preserve alpha)
+Runtime asset: client/app-assets/ui/gameplay_moves_icon.png (112 × 112, displayed at 28 dp)
+
+Create one new transparent-background small HUD sword icon for this existing xianxia mobile puzzle game. The two input images are STYLE REFERENCES ONLY: image 1 existing sword, image 2 existing back button. Match their polished painterly game-art shading, silver ivory highlights, dark jade teal and warm gold accents, but dramatically SIMPLIFY details so this is readable at 24–28 pixels. Single broad straight silver blade pointing diagonally up right, short jade grip at lower left, simple plain gold crossguard and plain gold pommel, bold clean silhouette, only two or three large shading planes, subtle thick dark edge. No engraving, ornamental curls, jewels, tiny lines, particles, aura, glow, frame, badge, tile, text, numerals, background or cast shadow. The sword itself fills most of a square canvas with small consistent padding, entirely visible. Actual alpha transparency outside sword. This is a new small UI bitmap asset, not a detailed equipment illustration.

@@ -3,9 +3,11 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import * as Native from 'react-native';
 import GameScreen from '../../../app/game/[levelId]';
 import { Board } from '../Board';
-import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
 import { emptySave } from '../../game/save';
+import { gameplaySnapshot } from './fixtures/gameplay';
+import { BOARD_FRAME_INSET } from '../boardLayout';
+import { CONTENT, tileId } from '../../game/domain';
 
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
 jest.mock('../SpiritQiFlightOverlay', () => ({ SpiritQiFlightOverlay: require('react-native').View }));
@@ -42,7 +44,7 @@ describe('gameplay layout with dedicated controls', () => {
 
   beforeEach(() => {
     mockState.save = emptySave();
-    mockState.save.active = new BoardEngine(getLevel(15)).snapshot();
+    mockState.save.active = gameplaySnapshot();
     mockState.save.active.swordQi = 100;
     jest.spyOn(Native, 'useWindowDimensions').mockReturnValue({ width: 320, height: 568, scale: 3, fontScale: 1 });
   });
@@ -63,15 +65,23 @@ describe('gameplay layout with dedicated controls', () => {
     expect(boardSize()).toEqual(initialBoardSize);
     expect(Native.StyleSheet.flatten(view('game-skill-controls').props.style).height).toBe(initialControlsHeight);
   });
+  it('fits a full board inside the measured space after horizontal screen padding', () => {
+    mockState.save.active = gameplaySnapshot({ ...getLevel(15), board: { width: 7, height: 8, activeCells: Array(56).fill(true) } });
+    act(() => { renderer = create(React.createElement(GameScreen)); });
+    act(() => { view('game-content').props.onLayout({ nativeEvent: { layout: { width: 320, height: 760 } } }); });
+    act(() => { view('game-board-space').props.onLayout({ nativeEvent: { layout: { width: 296, height: 500 } } }); });
+    expect(boardSize().width).toBeLessThanOrEqual(296);
+    expect(boardSize().height).toBeLessThanOrEqual(494);
+  });
 });
 
 it('renders simultaneous collection/boss objectives and fits a rectangular board', () => {
   const level = { ...getLevel(15), board: { width: 5, height: 6, activeCells: Array.from({ length: 30 }, (_, i) => i !== 12) }, objectives: [
-    { id: 'collect', type: 'Collect' as const, tileKind: 0, target: 18 },
+    { id: 'collect', type: 'Collect' as const, tileKind: tileId('sword', CONTENT), target: 18 },
     { id: 'boss', type: 'Boss' as const, target: 360, enemy: { id: 'boss', name: 'Yêu Vương', artKey: 'beast' } },
   ] };
   mockState.save = emptySave();
-  mockState.save.active = new BoardEngine(level).snapshot();
+  mockState.save.active = gameplaySnapshot(level);
   let renderer: ReactTestRenderer;
   act(() => { renderer = create(React.createElement(GameScreen)); });
   expect(renderer!.root.findAll(node => node.props.testID === 'objective-collect').length).toBeGreaterThan(0);
@@ -80,7 +90,9 @@ it('renders simultaneous collection/boss objectives and fits a rectangular board
   act(() => { boardSpace.props.onLayout({ nativeEvent: { layout: { height: 300 } } }); });
   const board = renderer!.root.findAllByType(Board).find(node => node.props.snapshot)!;
   const size = Native.StyleSheet.flatten(board.parent!.props.style);
-  expect(size.width / size.height).toBeCloseTo(5 / 6);
+  expect((size.width - BOARD_FRAME_INSET * 2) / (size.height - BOARD_FRAME_INSET * 2)).toBeCloseTo(5 / 6);
+  const panels = renderer!.root.findAllByType(Native.View).find(node => node.props.testID === 'game-info')!;
+  expect(panels.props.children.filter(Boolean).map((node: React.ReactElement<{ testID: string }>) => node.props.testID)).toEqual(['game-enemy-panel', 'game-objective-panel']);
   expect(board.props.snapshot.tiles[12]).toBeNull();
   act(() => { renderer!.unmount(); });
 });

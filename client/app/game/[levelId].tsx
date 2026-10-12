@@ -5,19 +5,20 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { Board, boardClearDurationMs, BOARD_CLEAR_MS, type BoardVisualEffect } from '../../src/components/Board';
 import { createBoardPresenter } from '../../src/components/boardPresenter';
 import { createBoardMotionSession } from '../../src/components/boardMotion';
+import { boardLayout } from '../../src/components/boardLayout';
 import { SpiritQiFlightOverlay } from '../../src/components/SpiritQiFlightOverlay';
 import { buildSpiritFlightCues, type SpiritFlightLayout } from '../../src/components/spiritParticles';
 import { BoardActionCancelled } from '../../src/game/boardAction';
 import { GameplayDock, GameplayHeader, GameplayInfo } from '../../src/components/GameplayChrome';
 import { GameplayResultPopup, type GameplayResult } from '../../src/components/GameplayResultPopup';
 import { GameplayLeaveDialog } from '../../src/components/GameplayLeaveDialog';
-import { ArtPanel, GameButton, ScreenFrame } from '../../src/components/Art';
+import { GameButton, ScreenFrame } from '../../src/components/Art';
 import { Notice } from '../../src/components/Notice';
 import { useSfx } from '../../src/audio/SfxProvider';
 import { BoardEngine } from '../../src/game/BoardEngine';
 import { skillTarget } from '../../src/game/skillTargets';
 import { tileId, CONTENT, SKILLS, realmForExp, type SkillId } from '../../src/game/domain';
-import { GoalKind, TileKind, type BoardActionPresenter, type BoardSnapshot, type CellPosition } from '../../src/game/types';
+import { type BoardActionPresenter, type BoardSnapshot, type CellPosition } from '../../src/game/types';
 import { useGameStore, type BoardActionResult } from '../../src/state/gameStore';
 import { colors } from '../../src/theme';
 export default function GameScreen() {
@@ -37,10 +38,13 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const [selected, setSelected] = useState<CellPosition | null>(null);
     const [targetSkill, setTargetSkill] = useState<SkillId | null>(null);
     const [targets, setTargets] = useState<CellPosition[]>([]);
-    const [height, setHeight] = useState(0), [busy, setBusy] = useState(false);
+    const [boardViewport, setBoardViewport] = useState({ width: 0, height: 0 });
+    const height = boardViewport.height;
+    const [busy, setBusy] = useState(false);
     const [viewport, setViewport] = useState({ width: 0, height: 0 });
     const compact = viewport.height > 0 && viewport.height < 640;
-    const [effect, setEffect] = useState<BoardVisualEffect | null>(null), [help, setHelp] = useState(false);
+    const [effect, setEffect] = useState<BoardVisualEffect | null>(null);
+    const [tutorialHeight, setTutorialHeight] = useState(0);
     const [leave, setLeave] = useState(false);
     const [result, setResult] = useState<GameplayResult | null>(null);
     const [collectProgress, setCollectProgress] = useState<BoardSnapshot['objectiveProgress'] | null>(null);
@@ -106,7 +110,6 @@ function GameplaySession({ levelId }: { levelId: number }) {
         setSelected(null);
         setTargetSkill(null);
         setTargets([]);
-        setHelp(false);
         setLeave(false);
         setResult(next);
     }, []);
@@ -142,13 +145,12 @@ function GameplaySession({ levelId }: { levelId: number }) {
             if (busyRef.current) return true;
             if (resultRef.current) { requestLeave(); return true; }
             if (leave) setLeave(false);
-            else if (help) setHelp(false);
             else if (!board) router.replace('/map');
             else setLeave(true);
             return true;
         });
         return () => subscription.remove();
-    }, [board, help, leave, requestLeave, router]));
+    }, [board, leave, requestLeave, router]));
     if (!board || !level || !engine)
         return <ScreenFrame background="bgGame"><Text style={styles.body}>Không tìm thấy màn chơi.</Text><GameButton title="VỀ TIÊN LỘ" onPress={() => router.replace('/map')}/></ScreenFrame>;
     const content = engine.contentDefinition;
@@ -319,21 +321,20 @@ function GameplaySession({ levelId }: { levelId: number }) {
             }
         } finally { busyRef.current = false; if (alive.current) setBusy(false); }
     };
-    const overlayOpen = help || leave || Boolean(result);
+    const overlayOpen = leave || Boolean(result);
     const displayResult = result?.kind === 'won' && store.save.lastWin?.runId === result.runId
         ? { ...result, summary: store.save.lastWin } : result;
-    const cellSize = Math.min(Math.max(0, (viewport.width || width) - 28) / level.board.width, Math.max(0, height - 6 - (tutorialStep ? 40 : 0)) / level.board.height);
-    const boardWidth = cellSize * level.board.width, boardHeight = cellSize * level.board.height;
+    const boardSize = boardLayout(boardViewport.width || (viewport.width || width) - 24, height - 6 - (tutorialStep ? tutorialHeight + 8 : 0), level.board);
     return (
       <ScreenFrame background={level.objectives.some(o => o.type === 'Boss') ? 'bgBoss' : 'bgGame'}>
         <View testID="game-content" style={styles.gameContent} onLayout={event => setViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
           <View ref={sceneRef} collapsable={false} testID="game-scene" onLayout={measureFlightLayout} style={styles.scene} pointerEvents={overlayOpen ? 'none' : 'auto'} accessibilityElementsHidden={overlayOpen} importantForAccessibility={overlayOpen ? 'no-hide-descendants' : 'auto'}>
-            <GameplayHeader levelId={levelId} difficulty={level.mapDefinition?.difficulty} busy={busy || Boolean(result) || locked} compact={compact} onBack={requestLeave} onHelp={() => { if (!busyRef.current && !resultRef.current) setHelp(true); }} />
+            <GameplayHeader moves={board.moves} busy={busy || Boolean(result) || locked} compact={compact} onBack={requestLeave} />
             <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion} collectProgress={collectProgress}
                 duration={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects, effect.sourceActivation) : BOARD_CLEAR_MS} />
-            <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setHeight(event.nativeEvent.layout.height)}>
-              {tutorialStep ? <Text accessibilityRole="text" style={styles.tutorialHint}>{tutorialStep.text}</Text> : null}
-              <View style={{ width: boardWidth, height: boardHeight }}>
+            <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setBoardViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
+              {tutorialStep ? <Text accessibilityRole="text" onLayout={event => setTutorialHeight(event.nativeEvent.layout.height)} style={styles.tutorialHint}>{tutorialStep.text}</Text> : null}
+              <View style={boardSize}>
                 <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} tutorialMove={tutorialMove} showTargetingHint={false} locked={busy || overlayOpen || locked} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} onMotionStarted={onMotionStarted} onMotionFinished={onMotionFinished}
                   motionSession={spiritMotion} gridRef={gridRef} onGridLayout={measureFlightLayout} />
               </View>
@@ -349,7 +350,6 @@ function GameplaySession({ levelId }: { levelId: number }) {
           </View>
           {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} onExtraMoves={displayResult.kind === 'lost' && store.adsEnabled && !board.extraMovesUsed ? () => void continueWithAd() : undefined} /> : null}
           <View pointerEvents="box-none" style={styles.noticeLayer}><Notice message={store.notice} onDismiss={() => store.setNotice('')} /></View>
-          {help && !leave ? <View accessibilityViewIsModal style={styles.overlay}><ArtPanel art="dialogPanel" style={styles.dialog}><Text style={styles.dialogTitle}>LINH VẬT</Text><Text style={styles.body}>Ghép 3 nhận sát thương và khí. Ghép 4–5 giữ một ô cường hóa; ghép tiếp cùng loại để kích hoạt.</Text>{content.tiles.map(tile => <Text key={tile.id} style={styles.rule}>{tile.name}: {tile.damage} sát thương · {tile.qi} khí</Text>)}<Text style={styles.body}>Kiếm: hàng / chữ thập. Hỏa: 3×3 / 13 ô. Lôi: thêm 50% / toàn bộ Lôi. Châu: nhiều khí / Ngưng Khí.</Text><GameButton title="ĐÃ HIỂU" onPress={() => setHelp(false)} /></ArtPanel></View> : null}
            {leave ? <GameplayLeaveDialog busy={busy} compact={(viewport.width || width) < 360} onContinue={() => setLeave(false)} onBack={() => {
              if (busyRef.current) return;
              busyRef.current = true; setBusy(true);
@@ -367,9 +367,5 @@ const styles = StyleSheet.create({
     noticeLayer: { ...StyleSheet.absoluteFill, zIndex: 50 },
     boardSpace: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 6 },
     tutorialHint: { alignSelf: 'center', color: colors.inkDeep, backgroundColor: colors.goldBright, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, fontSize: 13, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
-    overlay: { ...StyleSheet.absoluteFill, zIndex: 30, backgroundColor: colors.veil, alignItems: 'center', justifyContent: 'center', padding: 12 },
-    dialog: { width: '100%', maxWidth: 390, padding: 24, gap: 12 },
-    dialogTitle: { fontSize: 22, fontWeight: '900', color: colors.ivory, textAlign: 'center' },
     body: { color: colors.ivory, fontSize: 13, textAlign: 'center', lineHeight: 20 },
-    rule: { color: colors.goldBright, fontSize: 13 },
 });

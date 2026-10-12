@@ -1,29 +1,31 @@
 import React, { useEffect, useRef } from 'react';
 import { Image } from 'expo-image';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { ART, SKILL_ART, SWORD_ART, tileArtwork } from '../assets';
-import { semanticTileKind, getContentVersion, type SkillId, type Difficulty } from '../game/domain';
-import { GoalKind, TileKind, type BoardSnapshot, type LevelDefinition } from '../game/types';
+import { semanticTileKind, getContentVersion, type SkillId, type ObjectiveDefinition } from '../game/domain';
+import { TileKind, type BoardSnapshot, type LevelDefinition } from '../game/types';
 import { colors } from '../theme';
 import { ArtPanel } from './Art';
 import { GameplayProgressBar } from './GameplayProgressBar';
 import { OutlinedText } from './OutlinedText';
 import { useSfxPress } from '../audio/useSfxPress';
 
-export function GameplayHeader({ levelId, difficulty, busy, compact, onBack, onHelp }: {
-  levelId: number; difficulty?: Difficulty; busy: boolean; compact: boolean; onBack: () => void; onHelp: () => void;
+export function GameplayHeader({ moves, busy, compact, onBack }: {
+  moves: number; busy: boolean; compact: boolean; onBack: () => void;
 }) {
   const sfxPress = useSfxPress();
   return (
-    <View style={[styles.header, compact && styles.compactHeader]}>
+    <View testID="game-header" style={[styles.header, compact && styles.compactHeader]}>
       <Pressable accessibilityRole="button" accessibilityLabel="Rời màn chơi" accessibilityState={{ disabled: busy }} disabled={busy} onPress={sfxPress(onBack, !busy)} style={({ pressed }) => [styles.back, pressed && styles.pressed, busy && styles.dim]}>
         <Image source={ART.gameplayBack} contentFit="contain" accessible={false} style={styles.backArt} />
       </Pressable>
-      <View style={styles.stageTitle}><OutlinedText accessibilityRole="header" numberOfLines={1} maxFontSizeMultiplier={1.2} style={[styles.stageText, compact && styles.compactStageText]}>Màn {levelId}{difficulty ? ` · ${{ easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[difficulty]}` : ''}</OutlinedText></View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Luật các ô" accessibilityState={{ disabled: busy }} disabled={busy} onPress={sfxPress(onHelp, !busy)} style={({ pressed }) => [styles.help, pressed && styles.pressed]}>
-        <OutlinedText maxFontSizeMultiplier={1.2} style={styles.helpText}>Luật ô</OutlinedText>
-      </Pressable>
+      <View pointerEvents="none" style={styles.movesCenter}>
+        <View testID="game-moves" accessible accessibilityRole="text" accessibilityLabel={`Còn ${moves} lượt`} style={styles.moves}>
+          <OutlinedText accessible={false} maxFontSizeMultiplier={1.2} style={[styles.movesNumber, compact && styles.compactGoalNumber, moves <= 3 && styles.lowMoves]}>{moves}</OutlinedText>
+          <Image source={ART.gameplayMovesIcon} contentFit="contain" accessible={false} style={styles.movesIcon} />
+        </View>
+      </View>
     </View>
   );
 }
@@ -33,36 +35,42 @@ export function GameplayInfo({ level, board, compact, reduceMotion, duration, co
   collectProgress?: BoardSnapshot['objectiveProgress'] | null;
 }) {
   const content = getContentVersion(board.contentVersion);
-  const multipleGoals = level.objectives.length > 1 ? { height: compact ? 116 : 140 } : undefined;
+  const enemies = level.objectives.filter((objective): objective is Extract<ObjectiveDefinition, { enemy: unknown }> => objective.type === 'Battle' || objective.type === 'Boss');
+  const goals = level.objectives.filter(objective => objective.type !== 'Battle' && objective.type !== 'Boss');
   return (
     <View testID="game-info" style={[styles.info, compact && styles.compactInfo]}>
-      <View style={styles.infoRow}>
-        <ArtPanel art="gameplayObjective" testID="game-objective-panel" style={[styles.objective, compact && styles.compactObjective, multipleGoals]}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {level.objectives.map(objective => {
-              const battle = objective.type === 'Battle' || objective.type === 'Boss';
-              const name = battle ? objective.enemy.name : objective.type === 'Collect' ? `Thu ${content.tiles.find(t => t.id === objective.tileKind)?.name ?? 'linh vật'}` : objective.type === 'BreakRocks' ? 'Phá đá' : 'Phá phong ấn';
-              const icon = battle ? ART[objective.enemy.artKey as keyof typeof ART] ?? ART.beast : objective.type === 'Collect' ? tileArtwork(semanticTileKind(objective.tileKind, content)) : objective.type === 'BreakRocks' ? tileArtwork(TileKind.Rock) : ART.overlaySeal;
+      {enemies.length ? <ArtPanel art="gameplayObjective" testID="game-enemy-panel" style={[styles.objective, compact && styles.compactObjective]}>
+        {enemies.map(objective => {
+          const progress = board.objectiveProgress[objective.id] ?? 0;
+          const name = objective.enemy.name;
+          const icon = ART[objective.enemy.artKey as keyof typeof ART] ?? ART.beast;
+          return <View key={objective.id} testID={`objective-${objective.id}`} style={styles.enemyRow}>
+            <View testID="game-enemy-avatar" style={[styles.avatar, compact && styles.compactAvatar]}>
+              <Image source={icon} contentFit="cover" style={[styles.avatarArt, compact && styles.compactAvatarArt]} accessible={false} />
+            </View>
+            <View style={[styles.goalText, styles.enemyText]}>
+              <Text numberOfLines={1} style={styles.eyebrow}>{`${name}${progress >= objective.target ? ' ✓' : ''}`}</Text>
+              <GameplayProgressBar value={objective.target-progress} max={objective.target} tone="health" accessibilityLabel={`Máu ${name}`} animated={!reduceMotion} duration={duration} />
+            </View>
+          </View>;
+        })}
+      </ArtPanel> : null}
+      {goals.length ? <ArtPanel art="gameplayObjective" testID="game-objective-panel" style={[styles.objective, compact && styles.compactObjective]}>
+          <View testID="game-objectives-row" style={styles.goalsRow}>
+            {goals.map(objective => {
+              const name = objective.type === 'Collect' ? `Thu ${content.tiles.find(t => t.id === objective.tileKind)?.name ?? 'linh vật'}` : objective.type === 'BreakRocks' ? 'Phá đá' : 'Phá phong ấn';
+              const icon = objective.type === 'Collect' ? tileArtwork(semanticTileKind(objective.tileKind, content)) : objective.type === 'BreakRocks' ? tileArtwork(TileKind.Rock) : ART.overlaySeal;
               const progress = objective.type === 'Collect'
                 ? collectProgress?.[objective.id] ?? board.objectiveProgress[objective.id] ?? 0
                 : board.objectiveProgress[objective.id] ?? 0;
-              return <View key={objective.id} testID={`objective-${objective.id}`} style={[styles.goalRow, { minHeight: compact ? 48 : 58 }]}>
-                {battle ? <View testID="game-enemy-avatar" style={[styles.avatar, compact && styles.compactAvatar]}><Image source={icon} contentFit="cover" style={[styles.avatarArt, compact && styles.compactAvatarArt]} accessible={false} /></View>
-                  : objective.type === 'Collect' ? <CollectGoalIcon id={objective.id} icon={icon} progress={progress} reduceMotion={reduceMotion} />
+              return <View key={objective.id} testID={`objective-${objective.id}`} accessible accessibilityRole="text" accessibilityLabel={`${name}, ${progress} / ${objective.target}${progress >= objective.target ? ', hoàn thành' : ''}`} style={styles.goalRow}>
+                {objective.type === 'Collect' ? <CollectGoalIcon id={objective.id} icon={icon} progress={progress} reduceMotion={reduceMotion} />
                   : <Image source={icon} contentFit="contain" style={styles.goalIcon} accessible={false} />}
-                <View style={[styles.goalText, styles.enemyText]}>
-                  <Text numberOfLines={1} style={styles.eyebrow}>{`${name}${progress >= objective.target ? ' ✓' : ''}`}</Text>
-                  {battle ? <GameplayProgressBar value={objective.target-progress} max={objective.target} tone="health" accessibilityLabel={`Máu ${name}`} animated={!reduceMotion} duration={duration} /> : <Text style={styles.goalNumber}>{progress}<Text style={styles.goalTotal}> / {objective.target}</Text></Text>}
-                </View>
+                <Text accessible={false} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.2} style={styles.goalNumber}>{progress}<Text style={styles.goalTotal}>/{objective.target}</Text>{progress >= objective.target ? <Text style={styles.goalComplete}> ✓</Text> : null}</Text>
               </View>;
             })}
-          </ScrollView>
-        </ArtPanel>
-        <ArtPanel art="gameplayMoves" testID="game-moves-panel" style={[styles.moves, compact && styles.compactMoves, multipleGoals]}>
-          <Text maxFontSizeMultiplier={1.2} style={styles.movesLabel}>Lượt</Text>
-          <Text maxFontSizeMultiplier={1.2} style={[styles.movesNumber, compact && styles.compactGoalNumber, board.moves <= 3 && styles.lowMoves]}>{board.moves}</Text>
-        </ArtPanel>
-      </View>
+          </View>
+      </ArtPanel> : null}
     </View>
   );
 }
@@ -148,39 +156,35 @@ export function GameplayDock({ board, skillSlots, available, cost, targetSkill, 
   );
 }
 
-const displayFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia' });
 const styles = StyleSheet.create({
   header: { height: 52, flexShrink: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
   compactHeader: { height: 44 },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   backArt: { width: 40, height: 40 },
-  stageTitle: { flex: 1, minWidth: 0 },
-  stageText: { fontFamily: displayFont, fontSize: 21, fontWeight: '700', color: colors.ivory },
-  compactStageText: { fontSize: 19 },
-  help: { minWidth: 60, height: 44, alignItems: 'center', justifyContent: 'center' },
-  helpText: { color: colors.goldBright, fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  info: { flexShrink: 0, paddingTop: 8, paddingBottom: 8 },
+  movesCenter: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+  info: { flexShrink: 0, paddingTop: 8, paddingBottom: 8, gap: 8 },
   compactInfo: { paddingTop: 2, paddingBottom: 4 },
-  infoRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
-  objective: { height: 76, flex: 1, minWidth: 0, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'stretch' },
+  objective: { height: 76, width: '100%', minWidth: 0, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'stretch' },
   compactObjective: { height: 66, paddingVertical: 6, paddingHorizontal: 12 },
-  goalRow: { flexDirection: 'row', gap: 8, alignItems: 'center', flex: 1 },
-  goalIcon: { width: 40, height: 40, flexShrink: 0 },
-  goalIconFrame: { width: 40, height: 40, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
+  goalsRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  goalRow: { flexDirection: 'row', gap: 3, alignItems: 'center', justifyContent: 'center', flex: 1, minWidth: 0 },
+  enemyRow: { flexDirection: 'row', gap: 8, alignItems: 'center', flex: 1 },
+  goalIcon: { width: 28, height: 28, flexShrink: 0 },
+  goalIconFrame: { width: 28, height: 28, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   goalText: { flex: 1, minWidth: 0 },
-  enemyText: { gap: 6, paddingRight: 28 },
+  enemyText: { gap: 6 },
   avatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: colors.gold, backgroundColor: colors.inkDeep, overflow: 'hidden', flexShrink: 0 },
   compactAvatar: { width: 40, height: 40, borderRadius: 20 },
   // Frame the existing beast's head, centered around 60% x / 29% y.
   avatarArt: { position: 'absolute', width: 120, height: 144, left: -48, top: -18 },
   compactAvatarArt: { width: 100, height: 120, left: -40, top: -15 },
   eyebrow: { color: colors.textMuted, fontSize: 11, lineHeight: 14, fontWeight: '700' },
-  goalNumber: { color: colors.ivory, fontSize: 26, lineHeight: 30, fontWeight: '900', fontVariant: ['tabular-nums'] },
-  goalTotal: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  goalNumber: { flexShrink: 1, color: colors.ivory, fontSize: 20, lineHeight: 26, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  goalTotal: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+  goalComplete: { color: colors.goldBright, fontSize: 12 },
   compactGoalNumber: { fontSize: 22, lineHeight: 26 },
-  moves: { width: 66, height: 76, paddingVertical: 8 },
-  compactMoves: { height: 66, width: 60 },
-  movesLabel: { color: colors.textMuted, fontSize: 10, lineHeight: 14, fontWeight: '700' },
+  moves: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  movesIcon: { width: 28, height: 28 },
   movesNumber: { color: colors.ivory, fontSize: 28, lineHeight: 32, fontWeight: '900', fontVariant: ['tabular-nums'] },
   lowMoves: { color: colors.goldBright },
   controls: { height: 202, flexShrink: 0, paddingTop: 4, gap: 4 },

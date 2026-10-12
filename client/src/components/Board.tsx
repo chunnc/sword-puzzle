@@ -26,6 +26,7 @@ import { ChargedTileParticle, useChargedParticleClock } from './ChargedTileParti
 import { chargedParticleStyle } from './chargedTileParticles';
 import { Fire5Tile, IdleAtlasTile, useIdleTileClock } from './Fire5Tile';
 import { TIER5_IDLE_ANIMATIONS, type IdleSpriteAnimationMetadata } from './idleTileAnimation';
+import { BOARD_FRAME_INSET } from './boardLayout';
 
 export type { CellPosition } from '../game/types';
 export {
@@ -185,6 +186,8 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
     [motion, frame],
   );
   const labels = useBoardLabels(Math.max(0, side / geometry.width - 2), targets.length);
+  const tutorialFrom = tutorialMove ? cellBounds(tutorialMove.from.y * geometry.width + tutorialMove.from.x, side, geometry) : null;
+  const tutorialTo = tutorialMove ? cellBounds(tutorialMove.to.y * geometry.width + tutorialMove.to.x, side, geometry) : null;
   const drawOrder = useMemo(() => [...indices].sort((a, b) => {
     const moving = (index: number) => Number(visuals[index].falling || !!visuals[index].dx || !!visuals[index].dy || !!visuals[index].sourceAnimation);
     return moving(a) - moving(b);
@@ -277,10 +280,10 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
           const name = content.tiles.find(def => def.id === tile.kind)?.name ?? 'Đá chắn';
           return <Pressable key={index} accessibilityRole="button" accessibilityLabel={`${name}${tile.chargeTier ? `, cường hóa ${tile.chargeTier}` : ''}${tile.locked ? ', phong ấn' : ''}, hàng ${y + 1}, cột ${x + 1}`} accessibilityState={{ disabled: locked }} disabled={locked} onPress={sfxPress(() => onCellPress(x, y), !locked)} style={[styles.touchCell, { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }]} />;
         }) : null}
-        {side > geometry.width * 2 && tutorialMove ? <Text pointerEvents="none" style={[
+        {side > geometry.width * 2 && tutorialMove && tutorialFrom && tutorialTo ? <Text pointerEvents="none" style={[
           styles.tutorialArrow,
-          { left: side * ((tutorialMove.from.x + tutorialMove.to.x) / 2 + .5) - 10,
-            top: side * ((tutorialMove.from.y + tutorialMove.to.y) / 2 + .5) - 16 },
+          { left: (tutorialFrom.x + tutorialTo.x + tutorialFrom.width) / 2 - 11,
+            top: (tutorialFrom.y + tutorialTo.y + tutorialFrom.height) / 2 - 11 },
         ]}>{tutorialMove.to.y < tutorialMove.from.y ? '↓' : tutorialMove.to.y > tutorialMove.from.y ? '↑' : tutorialMove.to.x > tutorialMove.from.x ? '→' : '←'}</Text> : null}
       </View>
     </GestureDetector>
@@ -333,7 +336,7 @@ function TileArtwork({ tile, bounds, image, labels, particlePhase, idleAnimation
 }
 
 const styles = StyleSheet.create({
-  frame: { flex: 1, borderWidth: 2, borderColor: colors.gold, borderRadius: 10, padding: 3, backgroundColor: colors.boardFrame, overflow: 'hidden' },
+  frame: { flex: 1, borderWidth: 2, borderColor: colors.gold, borderRadius: 10, padding: BOARD_FRAME_INSET - 2, backgroundColor: 'transparent', overflow: 'hidden' },
   grid: { flex: 1 },
   touchCell: { position: 'absolute', borderRadius: 5 },
   hint: { position: 'absolute', top: 5, alignSelf: 'center', color: colors.inkDeep, backgroundColor: colors.goldBright, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, fontSize: 10, fontWeight: '800' },

@@ -15,11 +15,14 @@ import { buildSpiritFlightCues } from '../spiritParticles';
 import { createBoardMotionSession } from '../boardMotion';
 import { boardClearDurationMs, buildBoardEffectCues } from '../boardVisuals';
 import type { SkImage } from '@shopify/react-native-skia';
-import { BoardEngine } from '../../game/BoardEngine';
+import { CONTENT, semanticTileKind, tileId } from '../../game/domain';
 import { getLevel } from '../../game/levels';
 import { TileKind } from '../../game/types';
 import { Gesture } from 'react-native-gesture-handler';
+import { gameplaySnapshot } from './fixtures/gameplay';
 import { cancelAnimation, Easing, makeMutable, withTiming } from 'react-native-reanimated';
+
+const gameTileId = (kind: TileKind) => tileId((['sword', 'fire', 'lightning', 'spirit', 'rock'] as const)[kind], CONTENT);
 
 // Jest Expo normally gives every image the same ID; distinct IDs make wrong
 // element/tier selection observable in the renderer and asset helper tests.
@@ -152,8 +155,8 @@ jest.mock('@shopify/react-native-skia', () => {
 
 describe('Skia Board integration', () => {
   let renderer: ReactTestRenderer;
-  const snapshot = new BoardEngine(getLevel(5)).snapshot();
-  snapshot.tiles[42] = { kind: TileKind.SpiritOrb, chargeTier: 5, locked: true };
+  const snapshot = gameplaySnapshot(getLevel(5));
+  snapshot.tiles[42] = { kind: gameTileId(TileKind.SpiritOrb), chargeTier: 5, locked: true };
   const onCellPress = jest.fn(), onSwipe = jest.fn();
   const props = { snapshot, selected: null, onCellPress, onSwipe };
 
@@ -181,6 +184,29 @@ describe('Skia Board integration', () => {
   afterEach(() => { act(() => { renderer?.unmount(); }); jest.restoreAllMocks(); });
   afterAll(() => { AppState.currentState = originalAppState; });
 
+  it('leaves holes transparent with no cell background or touch target', () => {
+    const activeCells = Array(49).fill(true);
+    activeCells[24] = false;
+    const tiles = [...snapshot.tiles];
+    tiles[24] = null;
+    mount({ snapshot: { ...snapshot, tiles, level: { ...snapshot.level, board: { ...snapshot.level.board, activeCells } } } });
+    expect(StyleSheet.flatten(renderer.root.findAllByType(View)[0].props.style).backgroundColor).toBe('transparent');
+    const backgrounds = renderer.root.findAll(node => node.type === 'RoundedRect' as never && node.props.color === colors.boardCell);
+    expect(backgrounds).toHaveLength(48);
+    expect(backgrounds.some(node => node.props.x === 151 && node.props.y === 151)).toBe(false);
+    expect(buttons()).toHaveLength(48);
+    expect(buttons().some(node => node.props.accessibilityLabel.endsWith('hàng 4, cột 4'))).toBe(false);
+    const gesture = (Gesture.Pan as jest.Mock).mock.results.at(-1)!.value;
+    gesture.onEnd.mock.calls[0][0]({ x: 175, y: 175, translationX: 50, translationY: 0 });
+    expect(onSwipe).not.toHaveBeenCalled();
+  });
+
+  it('positions the tutorial arrow using the same cell pitch and inverted row coordinates as the grid', () => {
+    mount({ tutorialMove: { from: { x: 2, y: 1 }, to: { x: 2, y: 2 } } });
+    const arrow = renderer.root.findAllByType(Text).find(node => node.props.children === '↑')!;
+    expect(StyleSheet.flatten(arrow.props.style)).toMatchObject({ left: 114, top: 239 });
+  });
+
   it.each([
     [TileKind.Sword, 101, 102, 103],
     [TileKind.Fire, 104, 105, 106],
@@ -199,10 +225,10 @@ describe('Skia Board integration', () => {
     const expected = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112];
     [TileKind.Sword, TileKind.Fire, TileKind.Lightning, TileKind.SpiritOrb].forEach((kind, k) => {
       ([0, 4, 5] as const).forEach((chargeTier, t) => {
-        next.tiles[k * 3 + t] = { kind, chargeTier, locked: false };
+        next.tiles[k * 3 + t] = { kind: gameTileId(kind), chargeTier, locked: false };
       });
     });
-    next.tiles[12] = { kind: TileKind.Rock, chargeTier: 0, locked: false };
+    next.tiles[12] = { kind: gameTileId(TileKind.Rock), chargeTier: 0, locked: false };
     mount({ snapshot: next });
     const grid = renderer.root.findAllByType(View).find(node => typeof node.props.onLayout === 'function')!;
     act(() => { grid.props.onLayout({ nativeEvent: { layout: { width: side, height: side } } }); });
@@ -243,12 +269,12 @@ describe('Skia Board integration', () => {
       expect(particle).toHaveLength(index < 12 && index % 3 !== 0 ? 1 : 0);
       if (particle.length) expect(particle[0].props).toMatchObject({
         bounds: { x: bounds.left, y: bounds.top, width: bounds.width, height: bounds.height },
-        color: chargedParticleStyle(next.tiles[index]!.kind)!.color,
+        color: chargedParticleStyle(semanticTileKind(next.tiles[index]!.kind, CONTENT))!.color,
       });
     }
     expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never
       && node.props.color === colors.boardCell)).toHaveLength(49);
-    expect(StyleSheet.flatten(renderer.root.findAllByType(View)[0].props.style).backgroundColor).toBe(colors.boardFrame);
+    expect(StyleSheet.flatten(renderer.root.findAllByType(View)[0].props.style).backgroundColor).toBe('transparent');
     expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never && node.props.color === '#C4B580')).toHaveLength(0);
     const labels = renderer.root.findAll(node => node.type === 'Paragraph' as never).map(node => node.props.paragraph.text);
     expect(labels).not.toContain('氣');
@@ -260,7 +286,7 @@ describe('Skia Board integration', () => {
 
   it('changes the sprite when a tile upgrades without remounting the board', () => {
     const next = { ...snapshot, tiles: [...snapshot.tiles] };
-    next.tiles[0] = { kind: TileKind.Fire, chargeTier: 0, locked: false };
+    next.tiles[0] = { kind: gameTileId(TileKind.Fire), chargeTier: 0, locked: false };
     mount({ snapshot: next });
     const sprite = () => tile(0).findAll(node => node.type === 'SkiaImage' as never)[0];
     const particle = () => tile(0).findAllByType(ChargedTileParticle);
@@ -298,8 +324,8 @@ describe('Skia Board integration', () => {
 
   it('shares one Fire 5 timeline through HUD updates, swaps, falls and sword fragments', () => {
     const next: typeof snapshot = { ...snapshot, tiles: snapshot.tiles.map(value => ({ ...value!, chargeTier: 0 as const })) };
-    next.tiles[0] = { kind: TileKind.Fire, chargeTier: 5, locked: false };
-    next.tiles[1] = { kind: TileKind.Fire, chargeTier: 5, locked: true };
+    next.tiles[0] = { kind: gameTileId(TileKind.Fire), chargeTier: 5, locked: false };
+    next.tiles[1] = { kind: gameTileId(TileKind.Fire), chargeTier: 5, locked: true };
     mount({ snapshot: next }); reactFrames();
     const clock = mockFrameClocks[1];
     expect(clock.active).toBe(true);
@@ -336,7 +362,7 @@ describe('Skia Board integration', () => {
 
   it('pauses Fire 5 on background, focus loss, Reduce Motion, disappearance and unmount', () => {
     const next: typeof snapshot = { ...snapshot, tiles: snapshot.tiles.map(value => ({ ...value!, chargeTier: 0 as const })) };
-    next.tiles[0] = { kind: TileKind.Fire, chargeTier: 5, locked: false };
+    next.tiles[0] = { kind: gameTileId(TileKind.Fire), chargeTier: 5, locked: false };
     mount({ snapshot: next }); reactFrames();
     const clock = mockFrameClocks[1];
     const elapsed = renderer.root.findByType(Fire5Tile).props.idle.elapsedMs;
@@ -356,7 +382,7 @@ describe('Skia Board integration', () => {
     expect(clock.active).toBe(true);
     expect(elapsed.value).toBe(250);
     const withoutFire = { ...next, tiles: [...next.tiles] };
-    withoutFire.tiles[0] = { kind: TileKind.Fire, chargeTier: 4, locked: false };
+    withoutFire.tiles[0] = { kind: gameTileId(TileKind.Fire), chargeTier: 4, locked: false };
     act(() => renderer.update(React.createElement(Board, { ...props, snapshot: withoutFire })));
     reactFrames(); expect(clock.active).toBe(false);
     act(() => renderer.unmount()); expect(clock.active).toBe(false);
@@ -367,7 +393,7 @@ describe('Skia Board integration', () => {
     skia.useImage.mockImplementation((asset: number) => asset === ART.tileFire5Idle ? null : ({ asset, width: () => 960, height: () => 576 }));
     try {
       const next: typeof snapshot = { ...snapshot, tiles: snapshot.tiles.map(value => ({ ...value!, chargeTier: 0 as const })) };
-      next.tiles[0] = { kind: TileKind.Fire, chargeTier: 5, locked: false };
+      next.tiles[0] = { kind: gameTileId(TileKind.Fire), chargeTier: 5, locked: false };
       mount({ snapshot: next }); reactFrames();
       expect(renderer.root.findAllByType(Fire5Tile)).toHaveLength(0);
       expect(tile(0).findByType('SkiaImage' as never).props.image.asset).toBe(106);
@@ -386,7 +412,7 @@ describe('Skia Board integration', () => {
     skia.useImage.mockImplementation((asset: number) => asset === idleAsset ? null : ({ asset, width: () => 960, height: () => 576 }));
     try {
       const next: typeof snapshot = { ...snapshot, tiles: snapshot.tiles.map(value => ({ ...value!, chargeTier: 0 as const })) };
-      next.tiles[0] = { kind, chargeTier: 5, locked: false };
+      next.tiles[0] = { kind: gameTileId(kind), chargeTier: 5, locked: false };
       mount({ snapshot: next }); reactFrames();
       expect(renderer.root.findAllByType(IdleAtlasTile)).toHaveLength(0);
       expect(renderer.root.findAllByType(Fire5Tile)).toHaveLength(0);
@@ -431,7 +457,7 @@ describe('Skia Board integration', () => {
     mount({ snapshot: next }); reactFrames();
     const clock = mockFrameClocks[0];
     expect(clock.active).toBe(false);
-    next.tiles[0] = { kind: TileKind.Fire, chargeTier: 4, locked: false };
+    next.tiles[0] = { kind: gameTileId(TileKind.Fire), chargeTier: 4, locked: false };
     act(() => renderer.update(React.createElement(Board, { ...props, snapshot: { ...next } })));
     reactFrames();
     expect(clock.active).toBe(true);
@@ -451,7 +477,7 @@ describe('Skia Board integration', () => {
 
   it.each(['swap', 'fall'] as const)('moves charged particles with the tile during %s without coloring its stationary cell', kind => {
     const next = { ...snapshot, tiles: [...snapshot.tiles] };
-    next.tiles[0] = { kind: TileKind.Fire, chargeTier: 4, locked: false };
+    next.tiles[0] = { kind: gameTileId(TileKind.Fire), chargeTier: 4, locked: false };
     const motionSession = createBoardMotionSession(kind);
     const visualEffect: BoardVisualEffect = kind === 'swap'
       ? { id: 91, kind, first: { x: 0, y: 0 }, second: { x: 1, y: 0 } }
@@ -473,7 +499,7 @@ describe('Skia Board integration', () => {
 
   it('fades charged particles with a cleared tile and removes it in the following clear phase', () => {
     const next = { ...snapshot, tiles: [...snapshot.tiles] };
-    next.tiles[0] = { kind: TileKind.Fire, chargeTier: 5, locked: true };
+    next.tiles[0] = { kind: gameTileId(TileKind.Fire), chargeTier: 5, locked: true };
     const motionSession = createBoardMotionSession('clear');
     const visualEffect: BoardVisualEffect = { id: 92, kind: 'clear', cleared: [0], changed: [], effects: [] };
     mount({ snapshot: next, visualEffect, motionSession, selected: { x: 0, y: 0 } });
@@ -496,8 +522,8 @@ describe('Skia Board integration', () => {
 
   it('uses the same charged artwork and padding for sword fragments', () => {
     const next = { ...snapshot, tiles: [...snapshot.tiles] };
-    next.tiles[0] = { kind: TileKind.Sword, chargeTier: 4, locked: false };
-    next.tiles[1] = { kind: TileKind.Lightning, chargeTier: 5, locked: false };
+    next.tiles[0] = { kind: gameTileId(TileKind.Sword), chargeTier: 4, locked: false };
+    next.tiles[1] = { kind: gameTileId(TileKind.Lightning), chargeTier: 5, locked: false };
     mount({ snapshot: next, visualEffect: { id: 90, kind: 'clear', cleared: [0, 1], changed: [],
       effects: [{ kind: 'slash', cells: [0, 1], source: 0, swordChargeTier: 4, damage: 1, qi: 0 }] } });
     const boardEffects = renderer.root.findByType(BoardEffects);
@@ -606,8 +632,8 @@ describe('Skia Board integration', () => {
       { kind: tier === 5 ? 'cross' : 'slash', swordChargeTier: tier, source: 24, cells: [23, 24, 25, 17], damage: 0, qi: 0 },
     ] };
     const orbSnapshot = { ...snapshot, tiles: [...snapshot.tiles] };
-    for (const index of [17, 24, 25]) orbSnapshot.tiles[index] = { kind: TileKind.Fire, chargeTier: 0, locked: false };
-    orbSnapshot.tiles[23] = { kind: TileKind.SpiritOrb, chargeTier: 5, locked: false };
+    for (const index of [17, 24, 25]) orbSnapshot.tiles[index] = { kind: gameTileId(TileKind.Fire), chargeTier: 0, locked: false };
+    orbSnapshot.tiles[23] = { kind: gameTileId(TileKind.SpiritOrb), chargeTier: 5, locked: false };
     mount({ snapshot: orbSnapshot, visualEffect: effect });
     const duration = tier === 5 ? 1080 : 1020;
     expect(withTiming).toHaveBeenCalledWith(1, { duration, easing: Easing.linear }, expect.any(Function));
@@ -900,7 +926,7 @@ describe('Skia Board integration', () => {
     [TileKind.SpiritOrb, 4, 'spirit'], [TileKind.SpiritOrb, 5, 'spirit'],
   ] as const)('renders the %s/%s source timeline after an earlier clear and preserves it through HUD updates', (kind, tier, effectKind) => {
     const next = { ...snapshot, tiles: [...snapshot.tiles] };
-    next.tiles[24] = { kind, chargeTier: tier, locked: false };
+    next.tiles[24] = { kind: gameTileId(kind), chargeTier: tier, locked: false };
     const first: BoardVisualEffect = { id: 100, kind: 'clear', cleared: [24], retainedSources: [24], changed: [],
       effects: [{ kind: 'skill', cells: [24], qi: 0, damage: 0 }] };
     mount({ snapshot: next, visualEffect: first });
@@ -1001,7 +1027,7 @@ describe('spirit orb flight rendering', () => {
   });
 
   it('uses the external clock for a linear 1000ms phase without restarting on HUD/layout updates', () => {
-    const snapshot = new BoardEngine(getLevel(5)).snapshot();
+    const snapshot = gameplaySnapshot(getLevel(5));
     const motionSession = createBoardMotionSession('clear');
     const props = { snapshot, selected: null, onCellPress: jest.fn(), onSwipe: jest.fn(), visualEffect: clear(5), motionSession };
     jest.mocked(withTiming).mockClear();
