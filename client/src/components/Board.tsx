@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  Canvas, FontWeight, Group, Image, Paint, Paragraph, Path, RoundedRect, Skia, useImage,
+  BlurMask, Canvas, DashPathEffect, FontWeight, Group, Image, Paint, Paragraph, Path, RoundedRect, Skia, useImage,
   type SkImage, type SkParagraph,
 } from '@shopify/react-native-skia';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -28,6 +28,8 @@ import { Fire5Tile, IdleAtlasTile, useIdleTileClock } from './Fire5Tile';
 import { TIER5_IDLE_ANIMATIONS, type IdleSpriteAnimationMetadata } from './idleTileAnimation';
 import { BOARD_FRAME_INSET } from './boardLayout';
 import { boardOutlinePath } from './boardOutline';
+import { TutorialGuide } from './TutorialGuide';
+import { TUTORIAL_COLOR, tutorialGeometry, type TutorialMove } from './tutorialPresentation';
 
 export type { CellPosition } from '../game/types';
 export {
@@ -106,13 +108,15 @@ function useBoardImages(): Record<TileKind, Record<Tile['chargeTier'], SkImage |
     [TileKind.SpiritOrb]: spirit, [TileKind.Rock]: { 0: rock, 4: rock, 5: rock } };
 }
 
-export function Board({ snapshot, selected, targets = [], preview = [], targetingHint, tutorialMove, showTargetingHint = true, onCellPress, onSwipe, locked = false, visualEffect = null, reduceMotion = false, onMotionStarted, onMotionFinished, motionSession, gridRef, onGridLayout }: {
+export function Board({ snapshot, selected, targets = [], preview = [], targetingHint, tutorialMove, tutorialPromptVisible = true, onTutorialDragStart, showTargetingHint = true, onCellPress, onSwipe, locked = false, visualEffect = null, reduceMotion = false, onMotionStarted, onMotionFinished, motionSession, gridRef, onGridLayout }: {
   snapshot: BoardSnapshot;
   selected: CellPosition | null;
   targets?: CellPosition[];
   preview?: number[];
   targetingHint?: string | null;
-  tutorialMove?: { from: CellPosition; to: CellPosition } | null;
+  tutorialMove?: TutorialMove | null;
+  tutorialPromptVisible?: boolean;
+  onTutorialDragStart?: (key: string) => void;
   showTargetingHint?: boolean;
   onCellPress: (x: number, y: number) => void;
   onSwipe: (x1: number, y1: number, x2: number, y2: number) => void;
@@ -191,8 +195,9 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
     [motion, frame],
   );
   const labels = useBoardLabels(Math.max(0, side / geometry.width - 2), targets.length);
-  const tutorialFrom = tutorialMove ? cellBounds(tutorialMove.from.y * geometry.width + tutorialMove.from.x, side, geometry) : null;
-  const tutorialTo = tutorialMove ? cellBounds(tutorialMove.to.y * geometry.width + tutorialMove.to.x, side, geometry) : null;
+  const guideGeometry = useMemo(() => tutorialMove ? tutorialGeometry(tutorialMove, side, geometry) : null,
+    [tutorialMove?.key, tutorialMove?.from.x, tutorialMove?.from.y, tutorialMove?.to.x, tutorialMove?.to.y, side, geometry]);
+  const tutorialActive = !!tutorialMove && !locked && !targetingHint;
   const drawOrder = useMemo(() => [...indices].sort((a, b) => {
     const moving = (index: number) => Number(visuals[index].falling || !!visuals[index].dx || !!visuals[index].dy || !!visuals[index].sourceAnimation);
     return moving(a) - moving(b);
@@ -242,11 +247,14 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
     };
   }, [motion, clearDurationMs, hasLightning, hasSword, hasSpirit, hasSourceAnimation, onMotionStarted, onMotionFinished]);
 
-  const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onEnd(event => {
+  const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onStart(event => {
+    const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side, geometry);
+    if (first && tutorialMove && onTutorialDragStart) runOnJS(onTutorialDragStart)(tutorialMove.key);
+  }).onEnd(event => {
     const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side, geometry);
     const second = pointToCell(event.x, event.y, side, geometry);
     if (first && second) runOnJS(onSwipe)(first.x, first.y, second.x, second.y);
-  }), [locked, targetingHint, side, onSwipe, geometry]);
+  }), [locked, targetingHint, side, onSwipe, geometry, tutorialMove?.key, onTutorialDragStart]);
 
   return <View style={styles.frame}>
     {side > geometry.width * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
@@ -261,8 +269,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
           {indices.map(index => {
             const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
             const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
-            const tutorialCell = tutorialMove && (tutorialMove.from.x === x && tutorialMove.from.y === y || tutorialMove.to.x === x && tutorialMove.to.y === y);
-            const highlighted = selected?.x === x && selected.y === y || targetNumber > 0 || preview.includes(index) || !!tutorialCell;
+            const highlighted = selected?.x === x && selected.y === y || targetNumber > 0 || preview.includes(index);
             const targetLabel = targetNumber ? labels.targets[targetNumber - 1] : null;
             const cellMotion = frame.cells[index];
             return <Group key={`overlay-${index}`}>
@@ -277,6 +284,14 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
             </Group>;
           })}
         </Group>
+        {tutorialActive && guideGeometry ? <Group>
+          <RoundedRect {...guideGeometry.outline} r={6} color={TUTORIAL_COLOR} style="stroke" strokeWidth={6} opacity={.6}>
+            <DashPathEffect intervals={[8, 5]} /><BlurMask blur={4} style="normal" />
+          </RoundedRect>
+          <RoundedRect {...guideGeometry.outline} r={6} color={TUTORIAL_COLOR} style="stroke" strokeWidth={4}>
+            <DashPathEffect intervals={[8, 5]} />
+          </RoundedRect>
+        </Group> : null}
         <Path path={outline} style="stroke" strokeWidth={2} strokeJoin="round" color={colors.gold} />
       </Group>
     </Canvas> : null}
@@ -288,11 +303,8 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
           const name = content.tiles.find(def => def.id === tile.kind)?.name ?? 'Đá chắn';
           return <Pressable key={index} accessibilityRole="button" accessibilityLabel={`${name}${tile.chargeTier ? `, cường hóa ${tile.chargeTier}` : ''}${tile.locked ? ', phong ấn' : ''}, hàng ${y + 1}, cột ${x + 1}`} accessibilityState={{ disabled: locked }} disabled={locked} onPress={sfxPress(() => onCellPress(x, y), !locked)} style={[styles.touchCell, { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }]} />;
         }) : null}
-        {side > geometry.width * 2 && tutorialMove && tutorialFrom && tutorialTo ? <Text pointerEvents="none" style={[
-          styles.tutorialArrow,
-          { left: (tutorialFrom.x + tutorialTo.x + tutorialFrom.width) / 2 - 11,
-            top: (tutorialFrom.y + tutorialTo.y + tutorialFrom.height) / 2 - 11 },
-        ]}>{tutorialMove.to.y < tutorialMove.from.y ? '↓' : tutorialMove.to.y > tutorialMove.from.y ? '↑' : tutorialMove.to.x > tutorialMove.from.x ? '→' : '←'}</Text> : null}
+        {side > geometry.width * 2 && tutorialMove && guideGeometry ? <TutorialGuide key={tutorialMove.key}
+          geometry={guideGeometry} text={tutorialMove.text} visible={tutorialActive && tutorialPromptVisible} reduceMotion={reduceMotion} /> : null}
       </View>
     </GestureDetector>
     {showTargetingHint && targetingHint ? <Text style={styles.hint}>{targetingHint}</Text> : null}
@@ -348,5 +360,4 @@ const styles = StyleSheet.create({
   grid: { flex: 1 },
   touchCell: { position: 'absolute', borderRadius: 5 },
   hint: { position: 'absolute', top: 5, alignSelf: 'center', color: colors.inkDeep, backgroundColor: colors.goldBright, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, fontSize: 10, fontWeight: '800' },
-  tutorialArrow: { position: 'absolute', zIndex: 5, color: colors.inkDeep, backgroundColor: colors.goldBright, borderRadius: 12, width: 22, height: 22, lineHeight: 20, fontSize: 18, fontWeight: '900', textAlign: 'center' },
 });

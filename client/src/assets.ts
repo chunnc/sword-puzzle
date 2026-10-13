@@ -6,6 +6,7 @@ import dialogPanelMetadata from '../app-assets/ui/dialog_panels.metadata.json';
 export const DIALOG_PANEL_METADATA = dialogPanelMetadata;
 
 export const ART = {
+  tutorialHand: require('../app-assets/ui/tutorial_hand.png') as ImageSourcePropType,
   iconSwordCoBan: require('../app-assets/ui/icon_sword_co_ban.webp') as ImageSourcePropType,
   iconSkillThu: require('../app-assets/ui/icon_skill_thu.webp') as ImageSourcePropType,
   iconSkillThieu: require('../app-assets/ui/icon_skill_thieu.webp') as ImageSourcePropType,

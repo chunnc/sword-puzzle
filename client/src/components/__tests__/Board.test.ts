@@ -21,6 +21,7 @@ import { TileKind } from '../../game/types';
 import { Gesture } from 'react-native-gesture-handler';
 import { gameplaySnapshot } from './fixtures/gameplay';
 import { cancelAnimation, Easing, makeMutable, withTiming } from 'react-native-reanimated';
+import { TUTORIAL_COLOR, TUTORIAL_FINGERTIP } from '../tutorialPresentation';
 
 const gameTileId = (kind: TileKind) => tileId((['sword', 'fire', 'lightning', 'spirit', 'rock'] as const)[kind], CONTENT);
 
@@ -49,9 +50,10 @@ jest.mock('expo-router', () => ({ useIsFocused: () => mockFocused }));
 jest.mock('react-native-gesture-handler', () => ({
   Gesture: {
     Pan: jest.fn(() => {
-      const gesture: { enabled: jest.Mock; minDistance: jest.Mock; onEnd: jest.Mock } = {
+      const gesture: { enabled: jest.Mock; minDistance: jest.Mock; onStart: jest.Mock; onEnd: jest.Mock } = {
         enabled: jest.fn(() => gesture),
         minDistance: jest.fn(() => gesture),
+        onStart: jest.fn(() => gesture),
         onEnd: jest.fn(() => gesture),
       };
       return gesture;
@@ -69,6 +71,10 @@ jest.mock('react-native-worklets', () => ({
 }));
 
 jest.mock('react-native-reanimated', () => ({
+  __esModule: true,
+  default: { View: require('react-native').View },
+  useAnimatedStyle: (fn: () => unknown) => fn(),
+  withRepeat: (value: number) => value,
   Easing: { linear: (value: number) => value },
   useDerivedValue: (updater: () => unknown) => {
     const React = require('react');
@@ -120,7 +126,7 @@ jest.mock('@shopify/react-native-skia', () => {
   return {
     Canvas: host('Canvas'), Group: host('Group'), Image: host('SkiaImage'), Atlas: host('Atlas'),
     RoundedRect: host('RoundedRect'), Paragraph: host('Paragraph'), Paint: host('Paint'), Circle: host('Circle'),
-    Path: host('Path'), BlurMask: host('BlurMask'), LinearGradient: host('LinearGradient'),
+    Path: host('Path'), BlurMask: host('BlurMask'), DashPathEffect: host('DashPathEffect'), LinearGradient: host('LinearGradient'),
     FontWeight: { Black: 900 },
     useImage: jest.fn((asset: number) => ({ asset, width: () => 960, height: () => 576 })),
     useRectBuffer: jest.fn((size: number, modifier: (value: never, index: number) => void) => buffer(size, () => ({
@@ -201,10 +207,42 @@ describe('Skia Board integration', () => {
     expect(onSwipe).not.toHaveBeenCalled();
   });
 
-  it('positions the tutorial arrow using the same cell pitch and inverted row coordinates as the grid', () => {
-    mount({ tutorialMove: { from: { x: 2, y: 1 }, to: { x: 2, y: 2 } } });
-    const arrow = renderer.root.findAllByType(Text).find(node => node.props.children === '↑')!;
-    expect(StyleSheet.flatten(arrow.props.style)).toMatchObject({ left: 114, top: 239 });
+  const tutorialMove = { key: 'tutorial:0', text: 'Kéo viên Kiếm xuống để ghép 3 viên.', from: { x: 2, y: 1 }, to: { x: 2, y: 2 } };
+
+  it('anchors the fingertip to the source cell and draws one bright dashed outline around both cells', () => {
+    mount({ tutorialMove, reduceMotion: true });
+    const hand = renderer.root.findAll(node => node.props.testID === 'tutorial-hand')[0];
+    const style = StyleSheet.flatten(hand.props.style);
+    expect(style.transform[0].translateX + style.width * TUTORIAL_FINGERTIP.x).toBeCloseTo(125);
+    expect(style.transform[1].translateY + style.height * TUTORIAL_FINGERTIP.y).toBeCloseTo(275);
+    expect(renderer.root.findAllByType(Text).some(node => node.props.children === tutorialMove.text)).toBe(true);
+    const outline = renderer.root.findAll(node => node.type === 'RoundedRect' as never && node.props.color === TUTORIAL_COLOR && node.props.strokeWidth === 4);
+    expect(outline).toHaveLength(1);
+    expect(outline[0].props).toMatchObject({ x: 101, y: 201, width: 48, height: 98 });
+    expect(outline[0].findAll(node => node.type === 'DashPathEffect' as never)[0].props.intervals).toEqual([8, 5]);
+  });
+
+  it('notifies drag start before drop and keeps the outline when the hand is dismissed', () => {
+    const onTutorialDragStart = jest.fn();
+    mount({ tutorialMove, onTutorialDragStart });
+    const gesture = (Gesture.Pan as jest.Mock).mock.results.at(-1)!.value;
+    expect(gesture.minDistance).toHaveBeenCalledWith(10);
+    expect(onTutorialDragStart).not.toHaveBeenCalled();
+    act(() => gesture.onStart.mock.calls[0][0]({ x: 125, y: 264, translationX: 0, translationY: -11 }));
+    expect(onTutorialDragStart).toHaveBeenCalledWith(tutorialMove.key);
+    expect(onSwipe).not.toHaveBeenCalled();
+    act(() => renderer.update(React.createElement(Board, { ...props, tutorialMove, tutorialPromptVisible: false })));
+    expect(renderer.root.findAll(node => node.props.testID === 'tutorial-guide')).toHaveLength(0);
+    expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never && node.props.color === TUTORIAL_COLOR && node.props.strokeWidth === 4)).toHaveLength(1);
+    const afterDismissal = (Gesture.Pan as jest.Mock).mock.results.at(-1)!.value;
+    act(() => afterDismissal.onEnd.mock.calls[0][0]({ x: 125, y: 225, translationX: 0, translationY: -50 }));
+    expect(onSwipe).toHaveBeenCalledWith(2, 1, 2, 2);
+  });
+
+  it('hides tutorial visuals while the board is locked', () => {
+    mount({ tutorialMove, locked: true });
+    expect(renderer.root.findAll(node => node.props.testID === 'tutorial-guide')).toHaveLength(0);
+    expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never && node.props.color === TUTORIAL_COLOR)).toHaveLength(0);
   });
 
   it('always balances origin-bearing static tile groups with identity transforms', () => {

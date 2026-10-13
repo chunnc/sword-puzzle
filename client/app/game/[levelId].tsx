@@ -44,7 +44,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const [viewport, setViewport] = useState({ width: 0, height: 0 });
     const compact = viewport.height > 0 && viewport.height < 640;
     const [effect, setEffect] = useState<BoardVisualEffect | null>(null);
-    const [tutorialHeight, setTutorialHeight] = useState(0);
+    const [dismissedTutorialKey, setDismissedTutorialKey] = useState<string | null>(null);
     const [leave, setLeave] = useState(false);
     const [result, setResult] = useState<GameplayResult | null>(null);
     const [collectProgress, setCollectProgress] = useState<BoardSnapshot['objectiveProgress'] | null>(null);
@@ -160,6 +160,8 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const tutorial = !targetSkill ? board.level.mapDefinition?.tutorial : undefined;
     const tutorialStep = tutorial && board.tutorialStep !== null && board.tutorialStep !== undefined ? tutorial.steps[board.tutorialStep] : undefined;
     const tutorialMove = tutorialStep ? {
+        key: `${board.runId}:${board.tutorialStep}`,
+        text: tutorialStep.text,
         from: { x: tutorialStep.from.column - 1, y: level.board.height - tutorialStep.from.row },
         to: { x: tutorialStep.to.column - 1, y: level.board.height - tutorialStep.to.row },
     } : null;
@@ -324,7 +326,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const overlayOpen = leave || Boolean(result);
     const displayResult = result?.kind === 'won' && store.save.lastWin?.runId === result.runId
         ? { ...result, summary: store.save.lastWin } : result;
-    const boardSize = boardLayout(boardViewport.width || (viewport.width || width) - 24, height - 6 - (tutorialStep ? tutorialHeight + 8 : 0), level.board);
+    const boardSize = boardLayout(boardViewport.width || (viewport.width || width) - 24, height - 6, level.board);
     return (
       <ScreenFrame background={level.objectives.some(o => o.type === 'Boss') ? 'bgBoss' : 'bgGame'}>
         <View testID="game-content" style={styles.gameContent} onLayout={event => setViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
@@ -333,9 +335,9 @@ function GameplaySession({ levelId }: { levelId: number }) {
             <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion} collectProgress={collectProgress}
                 duration={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects, effect.sourceActivation) : BOARD_CLEAR_MS} />
             <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setBoardViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
-              {tutorialStep ? <Text accessibilityRole="text" onLayout={event => setTutorialHeight(event.nativeEvent.layout.height)} style={styles.tutorialHint}>{tutorialStep.text}</Text> : null}
               <View style={boardSize}>
                 <Board snapshot={board} selected={selected} targets={targets} preview={preview} targetingHint={skill ? `${skill.name} · chọn ${required} ô` : null} tutorialMove={tutorialMove} showTargetingHint={false} locked={busy || overlayOpen || locked} visualEffect={effect} reduceMotion={reduceMotion} onCellPress={tap} onSwipe={swap} onMotionStarted={onMotionStarted} onMotionFinished={onMotionFinished}
+                  tutorialPromptVisible={tutorialMove?.key !== dismissedTutorialKey} onTutorialDragStart={setDismissedTutorialKey}
                   motionSession={spiritMotion} gridRef={gridRef} onGridLayout={measureFlightLayout} />
               </View>
             </View>
@@ -366,6 +368,5 @@ const styles = StyleSheet.create({
     scene: { flex: 1, minHeight: 0 },
     noticeLayer: { ...StyleSheet.absoluteFill, zIndex: 50 },
     boardSpace: { flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 6 },
-    tutorialHint: { alignSelf: 'center', color: colors.inkDeep, backgroundColor: colors.goldBright, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, fontSize: 13, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
     body: { color: colors.ivory, fontSize: 13, textAlign: 'center', lineHeight: 20 },
 });

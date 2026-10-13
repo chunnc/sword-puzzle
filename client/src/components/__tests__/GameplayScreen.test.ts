@@ -121,6 +121,39 @@ describe('gameplay presentation and exit behavior', () => {
   });
   afterEach(() => { act(() => { renderer?.unmount(); }); jest.restoreAllMocks(); jest.useRealTimers(); });
 
+  it('dismisses only the current tutorial step, then restores the next step and a new run', async () => {
+    const authored = mapToLevel(validateMap(require('../../../../content/game-maps.json')[1], CONTENT), 24680, 0, CONTENT);
+    const tutorialEngine = new BoardEngine(authored);
+    mockParams.levelId = String(authored.id);
+    mockState.save.active = tutorialEngine.snapshot();
+    mount();
+    const firstKey = board().props.tutorialMove.key;
+    expect(board().props.tutorialPromptVisible).toBe(true);
+    const originalSize = Native.StyleSheet.flatten(board().parent!.props.style);
+    act(() => board().props.onTutorialDragStart(firstKey));
+    expect(board().props.tutorialPromptVisible).toBe(false);
+    expect(Native.StyleSheet.flatten(board().parent!.props.style)).toEqual(originalSize);
+
+    mockState.swap.mockResolvedValue({ changed: false, won: false, lost: false, animation: null });
+    await act(async () => board().props.onSwipe(0, 0, 1, 0));
+    expect(board().props.tutorialPromptVisible).toBe(false);
+
+    const from = board().props.tutorialMove.from, to = board().props.tutorialMove.to;
+    expect(tutorialEngine.trySwap(from.x, from.y, to.x, to.y)).toBe(true);
+    mockState.save.active = tutorialEngine.snapshot();
+    act(() => renderer.update(React.createElement(GameScreen)));
+    expect(board().props.tutorialMove.key).not.toBe(firstKey);
+    expect(board().props.tutorialMove.text).toBe(authored.mapDefinition!.tutorial!.steps[1].text);
+    expect(board().props.tutorialPromptVisible).toBe(true);
+    act(() => board().props.onTutorialDragStart(board().props.tutorialMove.key));
+    expect(board().props.tutorialPromptVisible).toBe(false);
+
+    mockState.save.active = { ...new BoardEngine(authored).snapshot(), runId: 'restarted-tutorial' };
+    act(() => renderer.update(React.createElement(GameScreen)));
+    expect(board().props.tutorialPromptVisible).toBe(true);
+    expect(board().props.tutorialMove.key).toBe('restarted-tutorial:0');
+  });
+
   it('renders run equipment and two sockets with no shared HUD/navigation or sword navigation', () => {
     mockState.save.active!.loadout.sword = 'trong-nhac'; mount();
     expect(view('game-sword').props.accessibilityLabel).toBe('Bảo kiếm Trọng Nhạc');
