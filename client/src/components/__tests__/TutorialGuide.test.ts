@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { AppState, StyleSheet, type AppStateStatus } from 'react-native';
+import { AppState, Image, StyleSheet, type AppStateStatus } from 'react-native';
 import { cancelAnimation, withRepeat, withTiming } from 'react-native-reanimated';
 import { TutorialGuide } from '../TutorialGuide';
 import { TUTORIAL_CYCLE_MS, TUTORIAL_FINGERTIP, tutorialFrame, tutorialGeometry } from '../tutorialPresentation';
@@ -102,6 +102,27 @@ describe('tutorial animation lifecycle', () => {
     update();
     expect(withRepeat).toHaveBeenCalledTimes(1);
     expect(renderer.root.findAll(node => node.props.testID === 'tutorial-guide')[0].props.pointerEvents).toBe('none');
+  });
+
+  it.each([[0, 0], [1, 0], [1, 1]])('sizes the image itself for authored map index %i, step %i, including the rotated hand', (mapIndex, stepIndex) => {
+    const map = require('../../../../content/game-maps.json')[mapIndex];
+    const step = map.tutorial.steps[stepIndex];
+    const width = map.layout[0].length, height = map.layout.length;
+    const layout = tutorialGeometry({ key: `${map.id}:${stepIndex}`, text: step.text,
+      from: { x: step.from.column - 1, y: height - step.from.row },
+      to: { x: step.to.column - 1, y: height - step.to.row },
+    }, width * 40, { width, height });
+    mount({ geometry: layout, text: step.text, reduceMotion: true });
+    const imageStyle = StyleSheet.flatten(renderer.root.findByType(Image).props.style);
+    expect(imageStyle).toMatchObject({ width: layout.handSize, height: layout.handSize,
+      transform: [{ rotate: '180deg' }] });
+    for (const phase of [.15, .7]) {
+      const frame = tutorialFrame(phase, layout, 78);
+      expect(frame.handX).toBeGreaterThanOrEqual(0);
+      expect(frame.handY).toBeGreaterThanOrEqual(0);
+      expect(frame.handX + imageStyle.width).toBeLessThanOrEqual(layout.width);
+      expect(frame.handY + imageStyle.height).toBeLessThanOrEqual(layout.height);
+    }
   });
 
   it('cancels and hides while dismissed, backgrounded, or unfocused', () => {

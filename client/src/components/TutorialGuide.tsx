@@ -37,7 +37,8 @@ export function TutorialGuide({ geometry, text, visible, reduceMotion }: {
   return <View testID="tutorial-guide" pointerEvents="none" style={styles.overlay}>
     <Animated.View testID="tutorial-hand" style={[styles.hand, { width: geometry.handSize, height: geometry.handSize }, handStyle]}>
       <Image source={ART.tutorialHand} resizeMode="contain" accessible={false}
-        style={[StyleSheet.absoluteFill, { transform: [{ rotate: geometry.handRotation }] }]} />
+        style={[StyleSheet.absoluteFill, { width: geometry.handSize, height: geometry.handSize,
+          transform: [{ rotate: geometry.handRotation }] }]} />
     </Animated.View>
     <Animated.View testID="tutorial-text" style={[styles.label, { width: textWidth }, textStyle]}
       onLayout={event => setTextHeight(event.nativeEvent.layout.height)}>
