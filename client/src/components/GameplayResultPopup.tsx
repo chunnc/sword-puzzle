@@ -11,6 +11,7 @@ import { colors } from '../theme';
 import { resultPanelScale, resultTimeline, starColorMatrix, starProgress, RESULT_REWARD_MS } from './gameplayResultVisuals';
 import { InventoryDialogPanel } from './InventoryDialogPanel';
 import { GameplayDialogButton } from './GameplayDialogButton';
+import { useStarAwardSfx } from '../audio/useStarAwardSfx';
 
 export type GameplayResult =
   | { kind: 'won'; runId: string; summary: WinSummary }
@@ -41,6 +42,7 @@ export function GameplayResultPopup({ result, busy, reduceMotion, onReady, onCon
   // Freeze choreography per mount: server reward reconciliation must not replay it.
   const timeline = useRef(resultTimeline(stars, hasRewards)).current;
   const elapsed = useSharedValue(reduceMotion ? timeline.duration : 0);
+  useStarAwardSfx(elapsed, result.runId, stars, won, reduceMotion);
   const [ready, setReady] = useState(reduceMotion);
   const [starFailed, setStarFailed] = useState(false);
   const starError = useCallback(() => setStarFailed(true), []);

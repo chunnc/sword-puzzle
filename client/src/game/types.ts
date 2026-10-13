@@ -52,6 +52,10 @@ export interface BoardSnapshot {
 export type BoardAnimationEffectKind = 'slash' | 'cross' | 'fire' | 'lightning' | 'spirit' | 'skill' | 'shuffle';
 export interface BoardAnimationEffect {
     kind: BoardAnimationEffectKind;
+    /** Resolution-only metadata; never persisted in BoardSnapshot. */
+    origin?: 'match' | 'skill' | 'charged';
+    skillId?: SkillId;
+    brokenRocks?: number[];
     cells: number[];
     source?: number;
     /** Present only when a charged sword activates, not for slash-shaped skills. */

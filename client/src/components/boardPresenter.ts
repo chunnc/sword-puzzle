@@ -2,6 +2,7 @@ import { BoardActionCancelled } from '../game/boardAction';
 import type { BoardActionPhase, BoardActionPresenter, BoardPhasePlayback, BoardSnapshot } from '../game/types';
 import type { SfxId } from '../audio/SfxProvider';
 import { boardSoundCues } from '../audio/boardSoundCues';
+import { createSfxSequence, type TimedSfxCue } from '../audio/sfxSequence';
 import { BOARD_CHAIN_DELAY_MS, BOARD_COLLECTION_STEP_MS, type BoardVisualEffect } from './boardVisuals';
 
 function deferred() {
@@ -27,6 +28,15 @@ export function createBoardPresenter(options: {
     let reduceMotion = options.reduceMotion;
     let finishDelay: (() => void) | null = null;
     let active: { id: number; started: ReturnType<typeof deferred>; finished: ReturnType<typeof deferred> } | null = null;
+    const sequences = new Set<ReturnType<typeof createSfxSequence>>();
+    const sequence = (cues: readonly TimedSfxCue[]) => {
+        const sound = createSfxSequence(cues, id => {
+            if (!signal.aborted) options.onSfx?.(id);
+        });
+        sequences.add(sound);
+        void sound.finished.then(() => sequences.delete(sound));
+        return sound;
+    };
     let collectionProgress: BoardSnapshot['objectiveProgress'] = {};
     const check = () => { if (signal.aborted) throw new BoardActionCancelled(); };
     const wait = (ms: number) => new Promise<void>((resolve, reject) => {
@@ -48,6 +58,8 @@ export function createBoardPresenter(options: {
         signal.addEventListener('abort', abort, { once: true });
     });
     const abort = () => {
+        sequences.forEach(sound => sound.cancel());
+        sequences.clear();
         active?.started.reject(new BoardActionCancelled());
         active?.finished.reject(new BoardActionCancelled());
         active = null;
@@ -65,11 +77,13 @@ export function createBoardPresenter(options: {
         const play = async () => {
             check();
             let began = false;
-            const motion = async (effect: BoardVisualEffect) => {
+            const motion = async (effect: BoardVisualEffect, sound?: ReturnType<typeof createSfxSequence>) => {
                 const playback = animate(effect);
                 await playback.started;
+                sound?.start(reduceMotion);
                 if (!began) { began = true; started.resolve(); }
                 await playback.finished;
+                if (sound) await sound.finished;
                 check();
             };
             if (phase.kind === 'start') {
@@ -78,16 +92,21 @@ export function createBoardPresenter(options: {
                 options.onCollectionProgress?.(collectionProgress);
                 if (!reduceMotion && phase.action.swap) {
                     const { x1, y1, x2, y2 } = phase.action.swap;
-                    await motion({ id: options.nextId(), kind: 'swap', first: { x: x1, y: y1 }, second: { x: x2, y: y2 } });
+                    await motion({ id: options.nextId(), kind: 'swap', first: { x: x1, y: y1 }, second: { x: x2, y: y2 } },
+                        phase.action.skillId === 'ngu-kiem' ? sequence([{ id: 'sword_slash', delayMs: 0 }]) : undefined);
+                }
+                if (reduceMotion && phase.action.skillId === 'ngu-kiem' && !began) {
+                    const sound = sequence([{ id: 'sword_slash', delayMs: 0 }]); sound.start(true);
                 }
                 check();
                 options.setBoard(phase.action.swappedBoard);
                 options.setEffect(null);
             } else if (phase.kind === 'step') {
                 const { step } = phase;
-                for (const cue of boardSoundCues(step)) {
-                    try { options.onSfx?.(cue); } catch { /* Audio feedback never blocks board resolution. */ }
-                }
+                const cues = boardSoundCues(step);
+                const sounds = step.effects.map((_, index) => sequence(cues.filter(cue => cue.traceIndex === index)));
+                let nextSound = 0;
+                if (reduceMotion) options.setBoard(step.after);
                 if (!reduceMotion) {
                     const cleared = new Set<number>();
                     const pendingSources = new Map<number, number>();
@@ -101,6 +120,7 @@ export function createBoardPresenter(options: {
                     options.setBoard(visual);
                     for (const [index, trace] of step.effects.entries()) {
                         if (reduceMotion) break;
+                        nextSound = index + 1;
                         trace.cells.forEach(i => { if (step.cleared.includes(i)) cleared.add(i); });
                         if (trace.source !== undefined && step.cleared.includes(trace.source)) cleared.add(trace.source);
                         const nextVisual = { ...visual,
@@ -115,7 +135,7 @@ export function createBoardPresenter(options: {
                             && (trace.kind === 'fire' || trace.kind === 'lightning' || trace.kind === 'spirit')
                             ? { source: trace.source, kind: trace.kind } : undefined;
                         await motion({ id: options.nextId(), kind: 'clear', cleared: [...cleared],
-                            retainedSources: [...pendingSources.keys()], sourceActivation, changed: step.changed, effects: [trace] });
+                            retainedSources: [...pendingSources.keys()], sourceActivation, changed: step.changed, effects: [trace] }, sounds[index]);
                         if (trace.source !== undefined && pendingSources.get(trace.source) === index) pendingSources.delete(trace.source);
                         if (deferSpirit) { visual = nextVisual; options.setBoard(visual); }
                     }
@@ -131,7 +151,13 @@ export function createBoardPresenter(options: {
                         options.setBoard(step.after);
                         if (!reduceMotion) await motion({ id: options.nextId(), kind: 'settle', direction: 'in' });
                     }
-                } else options.setBoard(step.after);
+                }
+                // A mid-wave motion preference change still emits every remaining cue once.
+                for (let index = nextSound; index < sounds.length; index++) {
+                    check();
+                    sounds[index].start(true);
+                    await sounds[index].finished;
+                }
             } else {
                 options.setBoard(phase.board);
                 const objectives = phase.board.level.objectives.filter(objective => objective.type === 'Collect');
@@ -194,12 +220,13 @@ export function createBoardPresenter(options: {
         setReduceMotion(value: boolean) {
             reduceMotion = value;
             if (value) {
+                sequences.forEach(sound => sound.reduce());
                 active?.started.resolve();
                 active?.finished.resolve();
                 active = null;
                 finishDelay?.();
             }
         },
-        dispose() { signal.removeEventListener('abort', abort); },
+        dispose() { sequences.forEach(sound => sound.cancel()); sequences.clear(); signal.removeEventListener('abort', abort); },
     };
 }

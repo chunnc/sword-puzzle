@@ -27,11 +27,11 @@ it('only updates foreground on resume and never schedules health polling', async
   jest.useFakeTimers();
   const originalState = AppState.currentState;
   AppState.currentState = 'active';
-  let onChange!: (state: AppStateStatus) => void;
-  const remove = jest.fn();
+  const listeners = new Set<(state: AppStateStatus) => void>();
+  const onChange = (state: AppStateStatus) => listeners.forEach(listener => listener(state));
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, listener) => {
-    onChange = listener;
-    return { remove };
+    listeners.add(listener);
+    return { remove: () => listeners.delete(listener) };
   });
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
   const interval = jest.spyOn(global, 'setInterval');
@@ -45,7 +45,7 @@ it('only updates foreground on resume and never schedules health polling', async
     expect(interval).not.toHaveBeenCalled();
     expect(mockState.checkConnection).not.toHaveBeenCalled();
     act(() => renderer.unmount());
-    expect(remove).toHaveBeenCalledTimes(1);
+    expect(listeners.size).toBe(0);
   } finally {
     AppState.currentState = originalState;
     jest.restoreAllMocks();

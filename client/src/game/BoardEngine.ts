@@ -243,6 +243,7 @@ export class BoardEngine {
             const cleared = new Set<number>();
             const changed = new Set<number>(mutation);
             const unlocked = new Set<number>();
+            const brokenRocks = new Set<number>();
             const protectedCells = new Set<number>();
             const effects: BoardAnimationEffect[] = [];
             const queue: {
@@ -284,6 +285,7 @@ export class BoardEngine {
                             this.tiles[n] = plain(this.nextKind());
                             changed.add(n);
                             unlocked.add(n);
+                            brokenRocks.add(n);
                             this.advance('BreakRocks', 1);
                         }
                         else if (t.locked) {
@@ -332,21 +334,24 @@ export class BoardEngine {
                     weaken(i);
                 }
             };
-            const record = (kind: BoardAnimationEffect['kind'], cells: number[], source?: number, bonus?: () => void, swordChargeTier?: 4 | 5, spiritChargeTier?: 4 | 5) => {
+            const record = (kind: BoardAnimationEffect['kind'], cells: number[], source?: number, bonus?: () => void, swordChargeTier?: 4 | 5, spiritChargeTier?: 4 | 5, origin: BoardAnimationEffect['origin'] = 'charged') => {
+                const rocksBefore = new Set(brokenRocks);
                 const damageBefore = waveDamage, qiBefore = this.swordQi;
                 remove(cells);
                 bonus?.();
-                effects.push({ kind, cells: [...new Set(cells)], source, damage: waveDamage - damageBefore, qi: this.swordQi - qiBefore, objectiveProgressAfter: { ...this.objectiveProgress },
+                effects.push({ kind, origin, ...(origin === 'skill' ? { skillId: animation.skillId } : {}),
+                    brokenRocks: [...brokenRocks].filter(i => !rocksBefore.has(i)), cells: [...new Set(cells)], source, damage: waveDamage - damageBefore, qi: this.swordQi - qiBefore, objectiveProgressAfter: { ...this.objectiveProgress },
                     ...(swordChargeTier ? { swordChargeTier } : {}), ...(spiritChargeTier ? { spiritChargeTier } : {}) });
             };
             if (mutation.length)
-                effects.push({ kind: 'skill', cells: mutation, damage: 0, qi: 0 });
+                effects.push({ kind: 'skill', origin: 'skill', skillId: animation.skillId, cells: mutation, damage: 0, qi: 0 });
             if (initial && obstacleOnly) {
                 for (const i of initial) {
                     const t = this.tiles[i]!;
                     if (t.kind === this.kind('rock')) {
                         this.tiles[i] = null;
                         cleared.add(i);
+                        brokenRocks.add(i);
                         this.advance('BreakRocks', 1);
                     }
                     else if (t.locked) {
@@ -356,12 +361,12 @@ export class BoardEngine {
                         this.advance('BreakSeals', 1);
                     }
                 }
-                effects.push({ kind: 'skill', cells: initial, damage: 0, qi: 0, objectiveProgressAfter: { ...this.objectiveProgress } });
+                effects.push({ kind: 'skill', origin: 'skill', skillId: animation.skillId, brokenRocks: [...brokenRocks], cells: initial, damage: 0, qi: 0, objectiveProgressAfter: { ...this.objectiveProgress } });
             }
             else if (initial)
-                record(animation.skillId === 'hoa-lien' ? 'fire' : animation.skillId === 'nhat-kiem' ? 'slash' : 'skill', initial, initial[0]);
+                record(animation.skillId === 'hoa-lien' ? 'fire' : animation.skillId === 'nhat-kiem' ? 'slash' : 'skill', initial, initial[0], undefined, undefined, undefined, 'skill');
             if (direct.size)
-                record('skill', [...direct].sort((a, b) => a - b));
+                record('skill', [...direct].sort((a, b) => a - b), undefined, undefined, undefined, undefined, 'match');
             for (let cursor = 0; cursor < queue.length; cursor++) {
                 this.metrics.chargesActivated++;
                 const { index, tile } = queue[cursor];

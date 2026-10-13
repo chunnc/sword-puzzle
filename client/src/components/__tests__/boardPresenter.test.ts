@@ -2,12 +2,16 @@ import { createBoardPresenter } from '../boardPresenter';
 import { BoardActionCancelled, runBoardAction } from '../../game/boardAction';
 import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
-import { TileKind, type BoardResolutionStep } from '../../game/types';
+import { CONTENT, tileId } from '../../game/domain';
+import { gameplaySnapshot } from './fixtures/gameplay';
+import { type BoardResolutionStep } from '../../game/types';
 import { boardClearDurationMs, buildCellVisuals, cellMotion, type BoardVisualEffect } from '../boardVisuals';
+
+const kinds = { Sword: tileId('sword'), Fire: tileId('fire'), Lightning: tileId('lightning'), SpiritOrb: tileId('spirit') };
 
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 function fixture(reduceMotion = false, resolutionStep?: BoardResolutionStep) {
-    const board = resolutionStep?.before ?? new BoardEngine(getLevel(5)).snapshot();
+    const board = resolutionStep?.before ?? gameplaySnapshot(getLevel(5));
     const step: BoardResolutionStep = resolutionStep ?? {
         before: board, after: { ...board, swordQi: 20 }, chain: 1, damage: 1,
         cleared: [0, 1], changed: [], falls: [{ index: 0, fromY: 7 }],
@@ -31,7 +35,7 @@ it('plays eligible cues without starting a board animation when reduce motion is
     const f = fixture(true);
     const before = f.board;
     const match = { kind: 'skill' as const, cells: [0, 1, 2], damage: 3, qi: 3, objectiveProgressAfter: {} };
-    before.tiles = Array.from({ length: 49 }, (_, i) => ({ kind: i % 4, chargeTier: 0 as const, locked: false }));
+    before.tiles = Array.from({ length: 49 }, (_, i) => ({ kind: CONTENT.normalTileIds[i % 4], chargeTier: 0 as const, locked: false }));
     const step = { ...f.step, before, effects: [match], cleared: [0, 1, 2], falls: [] };
     const play = f.playback.presenter.present({ kind: 'step', step });
     await flush();
@@ -47,7 +51,7 @@ it('continues board resolution if audio playback reports a synchronous failure',
     const f = fixture(true);
     f.onSfx.mockImplementation(() => { throw new Error('AUDIO_UNAVAILABLE'); });
     const before = f.board;
-    before.tiles = Array.from({ length: 49 }, (_, i) => ({ kind: i % 4, chargeTier: 0 as const, locked: false }));
+    before.tiles = Array.from({ length: 49 }, (_, i) => ({ kind: CONTENT.normalTileIds[i % 4], chargeTier: 0 as const, locked: false }));
     const after = { ...before, score: 10 };
     const step = { ...f.step, before, after, effects: [
         { kind: 'skill' as const, cells: [0, 1, 2], damage: 3, qi: 3, objectiveProgressAfter: {} },
@@ -86,9 +90,9 @@ it('settlement fades all cells over two 75ms phases and respects reduced motion'
 });
 
 function engineFixture() {
-    const board = new BoardEngine(getLevel(5)).snapshot();
+    const board = gameplaySnapshot(getLevel(5));
     board.tiles = Array.from({ length: 49 }, (_, i) => ({
-        kind: (i % 7 + 2 * Math.floor(i / 7)) % 4, chargeTier: 0, locked: false,
+        kind: CONTENT.normalTileIds[(i % 7 + 2 * Math.floor(i / 7)) % 4], chargeTier: 0, locked: false,
     }));
     board.level = { ...board.level, objectives: [{ id: 'main', type: 'Battle', target: 100000,
         enemy: { id: 'test', name: 'Test', artKey: 'beast' } }] };
@@ -97,12 +101,12 @@ function engineFixture() {
 }
 
 it.each([
-    [TileKind.Sword, 4], [TileKind.Sword, 5], [TileKind.Fire, 4], [TileKind.Fire, 5],
-    [TileKind.Lightning, 4], [TileKind.Lightning, 5], [TileKind.SpiritOrb, 4], [TileKind.SpiritOrb, 5],
+    [kinds.Sword, 4], [kinds.Sword, 5], [kinds.Fire, 4], [kinds.Fire, 5],
+    [kinds.Lightning, 4], [kinds.Lightning, 5], [kinds.SpiritOrb, 4], [kinds.SpiritOrb, 5],
 ] as const)('plays matched %s/%s with its source lifecycle and engine rewards applied exactly once', async (kind, tier) => {
     const board = engineFixture();
     for (const index of [21, 22, 30]) board.tiles[index] = { kind, chargeTier: index === 21 ? tier : 0, locked: false };
-    board.tiles[23] = { kind: (kind + 1) % 4, chargeTier: 0, locked: false };
+    board.tiles[23] = { kind: CONTENT.normalTileIds[(CONTENT.normalTileIds.indexOf(kind) + 1) % 4], chargeTier: 0, locked: false };
     const engine = new BoardEngine(board.level, board);
     expect(engine.beginSwap(2, 4, 2, 3)).not.toBeNull();
     const step = engine.nextResolutionStep()!;
@@ -119,7 +123,7 @@ it.each([
     const activation = f.effect();
     expect(activation).toMatchObject({ retainedSources: [21], effects: [step.effects[1]] });
     expect(buildCellVisuals(activation, match)[21]).toMatchObject({ hidden: false, clearing: false, splitAt: null });
-    if (kind !== TileKind.Sword) expect(activation).toMatchObject({ sourceActivation: { source: 21, kind: step.effects[1].kind } });
+    if (kind !== kinds.Sword) expect(activation).toMatchObject({ sourceActivation: { source: 21, kind: step.effects[1].kind } });
     f.begin(); await jest.advanceTimersByTimeAsync(5000);
     expect(f.effect()).toBe(activation);
     expect(f.setBoard).not.toHaveBeenCalledWith(step.after);
@@ -141,9 +145,9 @@ it.each([
 it('retains sword → fire → lightning sources in queue order without resurrecting completed sources or duplicating capped qi', async () => {
     const board = engineFixture();
     board.swordQi = 100;
-    board.tiles[21] = { kind: TileKind.Sword, chargeTier: 4, locked: false };
-    board.tiles[24] = { kind: TileKind.Fire, chargeTier: 5, locked: false };
-    board.tiles[31] = { kind: TileKind.Lightning, chargeTier: 5, locked: false };
+    board.tiles[21] = { kind: kinds.Sword, chargeTier: 4, locked: false };
+    board.tiles[24] = { kind: kinds.Fire, chargeTier: 5, locked: false };
+    board.tiles[31] = { kind: kinds.Lightning, chargeTier: 5, locked: false };
     const engine = new BoardEngine(board.level, board);
     expect(engine.beginSkill('nhat-kiem', [{ x: 0, y: 3 }])).not.toBeNull();
     const step = engine.nextResolutionStep()!;
@@ -165,7 +169,7 @@ it('retains sword → fire → lightning sources in queue order without resurrec
         if (index >= 3) expect(visuals[24].hidden).toBe(true);
         qi += trace.qi;
         expect(f.setBoard.mock.calls.at(-1)![0]).toMatchObject({ swordQi: qi, objectiveProgress: trace.objectiveProgressAfter });
-        f.begin(); f.finish(); await flush();
+        f.begin(); await jest.advanceTimersByTimeAsync(boardClearDurationMs([trace])); f.finish(); await flush();
         previous = effect;
     }
     expect(step.after.swordQi).toBe(100);
@@ -182,7 +186,7 @@ it('starts a shared Hỏa Liên source windup only in its queued activation and 
     const board = engineFixture();
     board.swordQi = 100;
     board.loadout.skills = ['hoa-lien'];
-    board.tiles[16] = { kind: TileKind.Fire, chargeTier: 4, locked: false };
+    board.tiles[16] = { kind: kinds.Fire, chargeTier: 4, locked: false };
     const engine = new BoardEngine(board.level, board);
     expect(engine.beginSkill('hoa-lien', [{ x: 3, y: 3 }])).not.toBeNull();
     const step = engine.nextResolutionStep()!;
@@ -199,6 +203,7 @@ it('starts a shared Hỏa Liên source windup only in its queued activation and 
     expect(cellMotion(visual, 50, 220 / duration, 1).opacity).toBe(0);
     f.begin(); await flush();
     expect(f.setBoard).not.toHaveBeenCalledWith(step.after);
+    await jest.advanceTimersByTimeAsync(220);
     f.begin(); f.finish(); await flush();
     expect(f.setBoard).toHaveBeenLastCalledWith(step.after);
     f.begin(); f.finish(); await flush();
@@ -265,7 +270,7 @@ it.each([4, 5] as const)('waits for all tier %s fragments to finish before start
 
 it.each([4, 5] as const)('defers tier %s orb bonus/condensation until arrival, retaining earlier base qi', async tier => {
     const f = fixture();
-    f.board.tiles[0] = { kind: TileKind.SpiritOrb, chargeTier: tier, locked: false };
+    f.board.tiles[0] = { kind: kinds.SpiritOrb, chargeTier: tier, locked: false };
     f.step.effects = [{ kind: 'skill', cells: [0], qi: 12, damage: 0 },
         { kind: 'spirit', spiritChargeTier: tier, source: 0, cells: [], qi: 24, damage: 0 }];
     f.step.after = { ...f.board, swordQi: 36, condensed: tier === 5 };
@@ -289,7 +294,7 @@ it.each([4, 5] as const)('defers tier %s orb bonus/condensation until arrival, r
 
 it.each(['abort', 'reduce', 'cap'] as const)('handles %s during an orb flight without duplicate qi or a hung phase', async mode => {
     const f = fixture();
-    f.board.tiles[0] = { kind: TileKind.SpiritOrb, chargeTier: 5, locked: false };
+    f.board.tiles[0] = { kind: kinds.SpiritOrb, chargeTier: 5, locked: false };
     if (mode === 'cap') f.board.swordQi = 100;
     f.step.effects = [{ kind: 'spirit', spiritChargeTier: 5, source: 0, cells: [], qi: mode === 'cap' ? 0 : 24, damage: 0 }];
     f.step.after = { ...f.board, swordQi: mode === 'cap' ? 100 : 24, condensed: true };
@@ -305,7 +310,7 @@ it.each(['abort', 'reduce', 'cap'] as const)('handles %s during an orb flight wi
         expect(f.setBoard).toHaveBeenLastCalledWith(f.board);
     } else {
         if (mode === 'reduce') f.playback.setReduceMotion(true);
-        else f.finish();
+        else { await jest.advanceTimersByTimeAsync(200); f.finish(); }
         await phase.finished;
         expect(f.setBoard).toHaveBeenLastCalledWith(f.step.after);
         expect(f.effect()).toBeNull();
@@ -348,8 +353,8 @@ it('skips animations and rest in reduced motion while yielding between waves', a
 it('holds collect counts through every cascade step, then ticks all goals after the settled board', async () => {
     const f = fixture();
     const objectives = [
-        { id: 'main', type: 'Collect' as const, tileKind: TileKind.Fire, target: 3 },
-        { id: 'secondary', type: 'Collect' as const, tileKind: TileKind.Sword, target: 2 },
+        { id: 'main', type: 'Collect' as const, tileKind: kinds.Fire, target: 3 },
+        { id: 'secondary', type: 'Collect' as const, tileKind: kinds.Sword, target: 2 },
     ];
     const before = { ...f.board, level: { ...f.board.level, objectives }, objectiveProgress: { main: 0, secondary: 0 } };
     const mid = { ...before, objectiveProgress: { main: 2, secondary: 1 } };
@@ -412,4 +417,66 @@ it('prepares the next wave while the current fire trace is still visible', async
     f.controller.abort();
     await expect(result).rejects.toBeInstanceOf(BoardActionCancelled);
     f.playback.dispose();
+});
+
+it('starts each sound at its own confirmed trace, including windup and both sword strokes', async () => {
+    const f = fixture();
+    const traces: BoardResolutionStep['effects'] = [
+        { kind: 'fire', origin: 'charged', source: 0, cells: [0], qi: 0, damage: 0 },
+        { kind: 'cross', origin: 'charged', source: 1, swordChargeTier: 5, cells: [1], qi: 0, damage: 0 },
+        { kind: 'lightning', origin: 'charged', source: 2, cells: [2], qi: 0, damage: 0 },
+    ];
+    f.step.effects = traces; f.step.falls = [];
+    const phase = f.playback.presenter.present({ kind: 'step', step: f.step });
+    await jest.advanceTimersByTimeAsync(1000); expect(f.onSfx).not.toHaveBeenCalled();
+    f.begin(); await flush();
+    await jest.advanceTimersByTimeAsync(219); expect(f.onSfx).not.toHaveBeenCalled();
+    await jest.advanceTimersByTimeAsync(1); expect(f.onSfx.mock.calls).toEqual([['fire_burst']]);
+    f.finish(); await flush(); expect(f.onSfx).toHaveBeenCalledTimes(1);
+    f.begin(); await flush(); expect(f.onSfx).toHaveBeenLastCalledWith('sword_slash');
+    await jest.advanceTimersByTimeAsync(59); expect(f.onSfx).toHaveBeenCalledTimes(2);
+    await jest.advanceTimersByTimeAsync(1); expect(f.onSfx).toHaveBeenCalledTimes(3);
+    f.finish(); await flush(); expect(f.onSfx).toHaveBeenCalledTimes(3);
+    f.begin(); await flush(); expect(f.onSfx).toHaveBeenLastCalledWith('lightning_chain');
+    f.finish(); await phase.finished; f.playback.dispose();
+});
+
+it('cancels a queued second slash and never emits it after a late callback', async () => {
+    const f = fixture();
+    f.step.effects = [{ kind: 'cross', origin: 'charged', swordChargeTier: 5, source: 0, cells: [0], qi: 0, damage: 0 }];
+    const phase = f.playback.presenter.present({ kind: 'step', step: f.step });
+    f.begin(); await flush(); expect(f.onSfx).toHaveBeenCalledTimes(1);
+    const id = f.effect().id; f.controller.abort();
+    await expect(phase.finished).rejects.toBeInstanceOf(BoardActionCancelled);
+    f.playback.onMotionStarted(f.board.runId, id); await jest.runAllTimersAsync();
+    expect(f.onSfx).toHaveBeenCalledTimes(1); f.playback.dispose();
+});
+
+it('preserves remaining cues when reduced motion is enabled mid-wave', async () => {
+    const f = fixture();
+    f.step.effects = [
+        { kind: 'cross', origin: 'charged', swordChargeTier: 5, source: 0, cells: [0], qi: 0, damage: 0 },
+        { kind: 'fire', origin: 'charged', source: 1, cells: [1], qi: 0, damage: 0 },
+        { kind: 'spirit', origin: 'charged', source: 2, cells: [], qi: 0, damage: 0 },
+    ];
+    f.step.falls = [];
+    const phase = f.playback.presenter.present({ kind: 'step', step: f.step });
+    f.begin(); await flush(); await jest.advanceTimersByTimeAsync(30);
+    f.playback.setReduceMotion(true); await jest.advanceTimersByTimeAsync(30); await phase.finished;
+    expect(f.onSfx.mock.calls).toEqual([['sword_slash'], ['sword_slash'], ['fire_burst'], ['spirit_absorb']]);
+    expect(jest.getTimerCount()).toBe(0); f.playback.dispose();
+});
+
+it.each([false, true])('plays Ngự Kiếm once at the swap start (reduced=%s)', async reduced => {
+    const f = fixture(reduced);
+    const start = f.playback.presenter.present({ kind: 'start', action: { kind: 'skill', skillId: 'ngu-kiem',
+        swappedBoard: f.board, swap: { x1: 0, y1: 0, x2: 1, y2: 0 } } });
+    if (!reduced) { expect(f.onSfx).not.toHaveBeenCalled(); f.begin(); f.finish(); }
+    await jest.advanceTimersByTimeAsync(0); await start.finished;
+    const step = f.playback.presenter.present({ kind: 'step', step: { ...f.step, falls: [], effects: [
+        { kind: 'skill', origin: 'skill', skillId: 'ngu-kiem', cells: [0, 1], damage: 0, qi: 0 },
+    ] } });
+    if (!reduced) { f.begin(); f.finish(); }
+    await jest.advanceTimersByTimeAsync(0); await step.finished;
+    expect(f.onSfx.mock.calls).toEqual([['sword_slash']]); f.playback.dispose();
 });
