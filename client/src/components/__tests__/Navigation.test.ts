@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { BottomNav, TopHud } from '../Chrome';
 import { CollectionScreen } from '../CollectionScreen';
@@ -16,6 +16,15 @@ import type { SaveData, WinSummary } from '../../game/types';
 
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('expo-image', () => ({ Image: jest.fn(props => require('react').createElement(require('react-native').View, props)) }));
+jest.mock('@shopify/react-native-skia', () => {
+  const { View } = require('react-native');
+  const paths: Array<{ moveTo: jest.Mock; cubicTo: jest.Mock }> = [];
+  return { Canvas: View, Path: View, BlurMask: View, __paths: paths, Skia: { Path: { Make: () => {
+    const path = { moveTo: jest.fn(), cubicTo: jest.fn() };
+    paths.push(path);
+    return path;
+  } } } };
+});
 jest.mock('expo-router', () => ({
   useRouter: () => mockRouter,
   useLocalSearchParams: () => mockParams,
@@ -122,8 +131,123 @@ describe('scene navigation', () => {
     const labels = renderer.root.findAll(node => typeof node.props.onPress === 'function').map(node => node.props.accessibilityLabel);
     expect(labels.some(label => String(label).startsWith('Màn 1,'))).toBe(true);
     expect(labels.some(label => String(label).startsWith(`Màn ${second.firstLevelId},`))).toBe(false);
-    act(() => { button(second.name).props.onPress(); });
+    act(() => { button('Chọn chương, Vân Hải Tiên Sơn').props.onPress(); });
+    expect(button(`Chương 2, ${second.name}`).props.accessibilityState.disabled).toBe(false);
+    act(() => { button(`Chương 2, ${second.name}`).props.onPress(); });
     expect(mockState.selectChapter).toHaveBeenCalledWith(second.id);
+  });
+
+  it('uses the chapter card as the picker and displays only chapter name and star progress', () => {
+    mount(React.createElement(MapScreen));
+    expect(button('Chọn chương, Vân Hải Tiên Sơn')).toBeDefined();
+    expect(hasText('VÂN HẢI TIÊN SƠN')).toBe(true);
+    expect(hasText('0/12 ★')).toBe(true);
+    expect(hasText('TIÊN LỘ · 4 MÀN')).toBe(false);
+    expect(hasText('Dễ')).toBe(false);
+    act(() => { button('Chọn chương, Vân Hải Tiên Sơn').props.onPress(); });
+    const modal = renderer.root.findByType(Modal);
+    expect(modal.props.visible).toBe(true);
+    act(() => { modal.props.onRequestClose(); });
+    expect(renderer.root.findByType(Modal).props.visible).toBe(false);
+  });
+
+  it('shows locked chapters as disabled in the chapter picker', () => {
+    const config = structuredClone(require('../../../../content/game-config.json'));
+    const first = config.chapters[0];
+    const second = { ...first, id: 'chapter-2', name: 'Chương thử nghiệm', order: 2,
+      firstLevelId: first.lastLevelId + 1, lastLevelId: first.lastLevelId * 2 };
+    installContent({ ...config, levelCount: second.lastLevelId,
+      levelBaseExp: Array(second.lastLevelId).fill(100), chapters: [first, second] });
+    mount(React.createElement(MapScreen));
+    act(() => { button('Chọn chương, Vân Hải Tiên Sơn').props.onPress(); });
+    const locked = button(`Chương 2, ${second.name}, đã khóa`);
+    expect(locked.props.disabled).toBe(true);
+    expect(locked.props.accessibilityState.disabled).toBe(true);
+  });
+
+  it.each([
+    [[], 3],
+    [[{ levelId: 1, stars: 1 }], 2],
+    [[{ levelId: 1, stars: 1 }, { levelId: 2, stars: 2 }], 1],
+    [[{ levelId: 1, stars: 1 }, { levelId: 2, stars: 2 }, { levelId: 3, stars: 3 }], 0],
+  ])('places current progress at 30%% of the map viewport (%#)', (levels, index) => {
+    mockState.save.profile.levels = levels as typeof mockState.save.profile.levels;
+    mount(React.createElement(MapScreen));
+    const list = renderer.root.findByType(require('react-native').FlatList);
+    const scrollToOffset = jest.spyOn(list.instance, 'scrollToOffset');
+    act(() => { list.props.onLayout({ nativeEvent: { layout: { width: 320, height: 500 } } }); });
+    expect(scrollToOffset).not.toHaveBeenCalled();
+    // An event from before the new padding was laid out must not consume the scroll request.
+    act(() => { list.props.onContentSizeChange(320, 496); });
+    expect(scrollToOffset).not.toHaveBeenCalled();
+    act(() => { list.props.onContentSizeChange(320, 872); });
+    expect(scrollToOffset).toHaveBeenCalledWith({ offset: Number(index) * 124, animated: false });
+    const updatedList = renderer.root.findByType(require('react-native').FlatList);
+    const contentStyle = StyleSheet.flatten(updatedList.props.contentContainerStyle);
+    expect(contentStyle.paddingTop).toBe(88);
+    expect(contentStyle.paddingBottom).toBe(288);
+    const itemLayout = updatedList.props.getItemLayout(null, index);
+    const actualOffset = (scrollToOffset.mock.calls.at(-1)![0] as { offset: number }).offset;
+    expect(itemLayout.offset + itemLayout.length / 2 - actualOffset).toBe(150);
+    expect(itemLayout.offset + 20 - actualOffset).toBeGreaterThanOrEqual(0);
+    scrollToOffset.mockClear();
+    act(() => { list.props.onContentSizeChange(320, 872); });
+    expect(scrollToOffset).not.toHaveBeenCalled();
+  });
+
+  it('fills the area between HUD and bottom navigation and floats the chapter card above the list', () => {
+    mount(React.createElement(MapScreen));
+    const list = renderer.root.findByType(require('react-native').FlatList);
+    expect(StyleSheet.flatten(list.props.style)).toMatchObject({ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 });
+    const area = renderer.root.findAllByType(View).find(node => node.props.testID === 'map-area')!;
+    expect(StyleSheet.flatten(area.props.style)).toMatchObject({ flex: 1, position: 'relative' });
+    const chapterCard = button('Chọn chương, Vân Hải Tiên Sơn');
+    expect(StyleSheet.flatten(chapterCard.props.style)).toMatchObject({ position: 'absolute', top: 8, right: 0, zIndex: 2 });
+    expect(list.findAll(node => String(node.props.accessibilityLabel).startsWith('Chọn chương,'))).toHaveLength(0);
+    act(() => { chapterCard.props.onPress(); });
+    expect(renderer.root.findByType(Modal).props.visible).toBe(true);
+  });
+
+  it('overlays an arched star row on tighter, offset level nodes', () => {
+    const skia = require('@shopify/react-native-skia');
+    skia.__paths.length = 0;
+    mount(React.createElement(MapScreen));
+    const list = renderer.root.findByType(require('react-native').FlatList);
+    act(() => { list.props.onLayout({ nativeEvent: { layout: { width: 320, height: 500 } } }); });
+    const arcs = renderer.root.findAllByType(View).filter(node => {
+      const style = StyleSheet.flatten(node.props.style);
+      return Boolean(style) && style.width === 68 && style.height === 36 && style.top === 20;
+    });
+    expect(arcs).toHaveLength(4);
+    const arc = arcs[0];
+    expect(arc.props.pointerEvents).toBe('none');
+    const ImageComponent = require('expo-image').Image;
+    const stars = renderer.root.findAllByType(ImageComponent).filter(node => node.props.source === ART.starGray);
+    expect(stars).toHaveLength(12);
+    expect(stars.filter(star => StyleSheet.flatten(star.props.style).top === 0)).toHaveLength(4);
+    expect(stars.filter(star => StyleSheet.flatten(star.props.style).top === 8)).toHaveLength(8);
+    const middleStar = stars.find(star => StyleSheet.flatten(star.props.style).top === 0)!;
+    expect(StyleSheet.flatten(middleStar.props.style).left).toBe(22);
+    const stage = button('Màn 4, Dễ, đã khóa');
+    expect(StyleSheet.flatten(stage.props.style)).toMatchObject({ height: 84, top: 20 });
+    expect(StyleSheet.flatten(stage.props.style).transform).toEqual([{ translateX: 36 }]);
+    const arcStyle = StyleSheet.flatten(arc.props.style);
+    const stageStyle = StyleSheet.flatten(stage.props.style);
+    expect(arcStyle.marginLeft + arcStyle.width / 2).toBe(stageStyle.marginLeft + stageStyle.width / 2);
+    const row = renderer.root.findAllByType(View).find(node => StyleSheet.flatten(node.props.style)?.height === 124);
+    expect(row).toBeDefined();
+    expect(skia.__paths).toHaveLength(4);
+    const lowerEdge = skia.__paths[0].cubicTo.mock.calls[0];
+    const nextRowStart = skia.__paths[1].moveTo.mock.calls[0];
+    expect(lowerEdge.slice(4)).toEqual([nextRowStart[0], 124]);
+    expect(nextRowStart[1]).toBe(0);
+  });
+
+  it('reduces horizontal node offset on a narrow map viewport', () => {
+    mount(React.createElement(MapScreen));
+    const list = renderer.root.findByType(require('react-native').FlatList);
+    act(() => { list.props.onLayout({ nativeEvent: { layout: { width: 160, height: 500 } } }); });
+    expect(StyleSheet.flatten(button('Màn 4, Dễ, đã khóa').props.style).transform).toEqual([{ translateX: 30 }]);
   });
 
   it('preserves the map list and row renders until their displayed data changes', () => {
@@ -173,6 +297,15 @@ describe('scene navigation', () => {
     act(() => { button('CỬA HÀNG').props.onPress(); });
     expect(mockRouter.replace).toHaveBeenCalledTimes(1);
     expect(mockRouter.replace).toHaveBeenCalledWith('/shop');
+  });
+
+  it('reselecting the active map tab invokes its return-to-progress handler', () => {
+    const onSelect = jest.fn();
+    const onReselect = jest.fn();
+    mount(React.createElement(BottomNav, { active: 'map', onSelect, onReselect }));
+    act(() => { button('TIÊN LỘ').props.onPress(); });
+    expect(onReselect).toHaveBeenCalledWith('map');
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it('marks the shop as selected rather than the inventory', () => {

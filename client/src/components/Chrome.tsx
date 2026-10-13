@@ -58,7 +58,11 @@ const tabs = [
   { id: 'shop', label: 'CỬA HÀNG', image: 'iconShop' },
 ] as const;
 
-export function BottomNav({ active, onSelect }: { active: BottomNavId; onSelect: (id: BottomNavId) => void }) {
+export function BottomNav({ active, onSelect, onReselect }: {
+  active: BottomNavId;
+  onSelect: (id: BottomNavId) => void;
+  onReselect?: (id: BottomNavId) => void;
+}) {
   const sfxPress = useSfxPress();
   const { width } = useWindowDimensions();
 
@@ -73,7 +77,7 @@ export function BottomNav({ active, onSelect }: { active: BottomNavId; onSelect:
             accessibilityRole="button"
             accessibilityLabel={tab.label}
             accessibilityState={{ selected }}
-            onPress={sfxPress(() => { if (!selected) onSelect(tab.id); })}
+            onPress={sfxPress(() => { if (selected) onReselect?.(tab.id); else onSelect(tab.id); })}
             style={styles.navItem}
           >
             <ImageView source={image} selected={selected} />
