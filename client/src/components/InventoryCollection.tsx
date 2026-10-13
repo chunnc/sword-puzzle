@@ -96,14 +96,23 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
   };
   const items = category === 'sword' ? SWORDS : SKILLS;
   const owned: readonly string[] = category === 'sword' ? profile.ownedSwords : profile.ownedSkills;
+  const ownedItems = items.filter(item => owned.includes(item.id));
+  const orderedItems = [...ownedItems].sort((left, right) => {
+    const rank = (id: string) => {
+      if (category === 'sword') return id === profile.loadout.sword ? -1 : Number.MAX_SAFE_INTEGER;
+      const slot = profile.loadout.skills.indexOf(id as SkillId);
+      return slot >= 0 ? slot : Number.MAX_SAFE_INTEGER;
+    };
+    return rank(left.id) - rank(right.id);
+  });
 
   return (
     <ScreenFrame background="bgRealm">
       <TopHud onAccount={() => router.push('/account')} />
       <CollectionTabs category={category} disabled={working} onSelect={setCategory} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
-        {!items.some(item => owned.includes(item.id)) ? <Text style={styles.description}>{category === 'sword' ? 'Chưa có kiếm. Đạt 3 sao màn 3 để nhận kiếm cơ bản.' : 'Chưa học kiếm thức. Đạt 3 sao màn 5 để học Thứ.'}</Text> : null}
-        {items.filter(item => owned.includes(item.id)).map(item => {
+        {!ownedItems.length ? <Text style={styles.emptyMessage}>{category === 'sword' ? 'Chưa có kiếm. Đạt 3 sao màn 3 để nhận Thiết Kiếm.' : 'Chưa học kiếm thức. Đạt 3 sao màn 5 để học Thứ.'}</Text> : null}
+        {orderedItems.map(item => {
           const isSkill = 'cost' in item;
           const passive = isSkill && item.kind === 'passive';
           const slot = isSkill ? profile.loadout.skills.indexOf(item.id) : -1;
@@ -118,7 +127,7 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
                 <View style={styles.cardHeading}>
                   <View style={styles.nameArea}>
                     <Text style={styles.name}>{item.name}</Text>
-                    {equipped || isSkill ? <Text style={styles.meta}>{equipped ? isSkill ? `Đang ở ô ${slot + 1} · ` : 'Đang trang bị' : ''}{passive ? 'Bị động · Đã học' : isSkill ? `${item.cost} khí` : ''}</Text> : null}
+                    {isSkill ? <Text style={styles.meta}>{passive ? 'Bị động · Đã học' : `${item.cost} khí`}</Text> : null}
                   </View>
                   {canEquip ? <EquipButton title={equipped ? 'ĐỔI Ô' : 'TRANG BỊ'} label={`${equipped ? 'Đổi ô' : 'Trang bị'} ${item.name}`} disabled={working} onPress={() => {
                     if (isSkill) {
@@ -187,6 +196,7 @@ const styles = StyleSheet.create({
   nameArea: { flex: 1, minWidth: 0, gap: 2 },
   name: { color: colors.ivory, fontSize: 17, lineHeight: 22, fontWeight: '800' },
   meta: { color: colors.goldBright, fontSize: 10, lineHeight: 15, fontWeight: '600' },
+  emptyMessage: { color: colors.ivory, fontSize: 14, lineHeight: 20, fontWeight: '700' },
   description: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   equipTap: { width: 88, minHeight: 44, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   equipArt: { position: 'absolute', width: 88, height: 34 },

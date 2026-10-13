@@ -154,7 +154,7 @@ describe('result popup presentation and choreography', () => {
     if (win.kind !== 'won') throw new Error('fixture');
     mount({ result: { ...win, summary: { ...win.summary, expGained: 0, coinsGained: 0, itemsGranted: [{ category: 'sword', itemId: 'co-ban' }] } }, reduceMotion: true });
     expect(renderer.root.findAllByType(View).map(node => node.props.source)).toContain(ART.iconSwordCoBan);
-    expect(texts().flat().join(' ').replace(/\s+/g, ' ')).toContain('Đã nhận Kiếm cơ bản');
+    expect(texts().flat().join(' ').replace(/\s+/g, ' ')).toContain('Đã nhận Thiết Kiếm');
     expect(renderer.root.findAll(node => node.props.testID === 'result-items').length).toBeGreaterThan(0);
   });
 

@@ -37,7 +37,7 @@ export default function CharacterScreen() {
         </View>
 
         <View accessible style={[styles.progress, compact && styles.compactProgress]} accessibilityRole="progressbar" accessibilityLabel="Tu vi" accessibilityValue={{ min: 0, max: 100, now: Math.round(realm.progress * 100), text: expLabel }}>
-          <ProgressBar portion={realm.progress} color="blue" fillHeight={14} />
+          <ProgressBar portion={realm.progress} color="blue" fillHeight={14} horizontalInset={5} />
           <OutlinedText maxFontSizeMultiplier={1.2} style={styles.exp}>{expLabel}</OutlinedText>
         </View>
 

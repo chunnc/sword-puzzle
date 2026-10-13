@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "levelCount": 4,
   "qiCap": 100,
   "expRates": [
@@ -296,8 +296,8 @@
     },
     {
       "id": "co-ban",
-      "name": "Kiếm cơ bản",
-      "description": "Mỗi ô ghép bị xóa nhận thêm 1 sát thương, gồm Tụ Linh Châu.",
+      "name": "Thiết Kiếm",
+      "description": "Mỗi ô ghép bị xóa nhận thêm 1 sát thương.",
       "unlock": 3,
       "price": 0,
       "color": "#d7b76e",

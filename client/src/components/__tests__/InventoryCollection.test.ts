@@ -1,12 +1,13 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Modal, ScrollView, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { CollectionScreen } from '../CollectionScreen';
 import { InventoryCollection } from '../InventoryCollection';
 import { ART, SKILL_ART, SWORD_ART } from '../../assets';
 import { SKILLS, SWORDS, type Loadout } from '../../game/domain';
 import { emptySave } from '../../game/save';
+import { colors } from '../../theme';
 
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
@@ -219,6 +220,36 @@ describe('inventory collection', () => {
     mount();
     const text = renderer.root.findAllByType(require('react-native').Text).map(node => node.props.children).join(' ');
     expect(text).toContain('Đạt 3 sao màn 3');
+  });
+
+  it('puts equipped skills first in slot order and removes equipped status copy from cards', () => {
+    mockState.save.profile.ownedSkills = ['ngu-kiem', 'hoa-lien', 'nhat-kiem'];
+    mockState.save.profile.loadout.skills = ['hoa-lien', 'nhat-kiem'];
+    mount('skill');
+    const names = renderer.root.findAllByType(Text)
+      .filter(node => typeof node.props.children === 'string' && ['Hỏa Liên', 'Nhất Kiếm', 'Ngự Kiếm'].includes(node.props.children))
+      .map(node => String(node.props.children));
+    expect(names).toEqual(['Hỏa Liên', 'Nhất Kiếm', 'Ngự Kiếm']);
+    expect(renderer.root.findAllByType(Text).some(node => typeof node.props.children === 'string' && node.props.children.includes('Đang ở ô'))).toBe(false);
+    expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('65 khí');
+  });
+
+  it('puts the equipped sword first and removes equipped status copy from its card', () => {
+    mockState.save.profile.ownedSwords = ['thanh-phong', 'trong-nhac'];
+    mockState.save.profile.loadout.sword = 'trong-nhac';
+    mount('sword');
+    const names = renderer.root.findAllByType(Text)
+      .filter(node => typeof node.props.children === 'string' && ['Trọng Nhạc', 'Thanh Phong'].includes(node.props.children))
+      .map(node => String(node.props.children));
+    expect(names).toEqual(['Trọng Nhạc', 'Thanh Phong']);
+    expect(renderer.root.findAllByType(Text).some(node => node.props.children === 'Đang trang bị')).toBe(false);
+  });
+
+  it('uses high-contrast text for the empty list guidance', () => {
+    mockState.save = emptySave();
+    mount();
+    const hint = renderer.root.findAllByType(Text).find(node => String(node.props.children).includes('Đạt 3 sao màn 3'))!;
+    expect(StyleSheet.flatten(hint.props.style)).toMatchObject({ color: colors.ivory, fontWeight: '700' });
   });
 
   it('renders new passive form icons without equipment controls', () => {
