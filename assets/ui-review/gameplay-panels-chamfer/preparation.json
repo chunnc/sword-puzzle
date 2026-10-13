@@ -1,0 +1,32 @@
+[
+  {
+    "kind": "collection",
+    "generatedCrop": {
+      "left": 18,
+      "top": 225,
+      "width": 2133,
+      "height": 255
+    },
+    "runtime": {
+      "width": 1120,
+      "height": 136,
+      "padding": 4
+    },
+    "preparation": "Crop alpha >= 8 footprint; preserve source alpha; uniformly scale 0.75-height end caps; stretch quiet center; retain four-pixel exterior padding."
+  },
+  {
+    "kind": "boss",
+    "generatedCrop": {
+      "left": 19,
+      "top": 213,
+      "width": 2132,
+      "height": 287
+    },
+    "runtime": {
+      "width": 1120,
+      "height": 154,
+      "padding": 4
+    },
+    "preparation": "Crop alpha >= 8 footprint; preserve source alpha; uniformly scale 0.75-height end caps; stretch quiet center; retain four-pixel exterior padding."
+  }
+]

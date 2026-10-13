@@ -35,7 +35,7 @@ describe('native gameplay progress bars', () => {
 
   it.each(['health', 'qi'] as const)('renders %s as a clipped pill with a native gradient', tone => {
     mount({ tone });
-    expect(StyleSheet.flatten(view(`game-${tone}-bar`).props.style)).toMatchObject({ height: tone === 'health' ? 18 : 12, borderRadius: 999, overflow: 'hidden' });
+    expect(StyleSheet.flatten(view(`game-${tone}-bar`).props.style)).toMatchObject({ height: tone === 'health' ? 16 : 12, borderRadius: 999, overflow: 'hidden' });
     const gradient = renderer.root.findAllByType(LinearGradient).find(node => node.props.colors)!;
     expect(gradient.props.colors).toHaveLength(3);
     expect(view(`game-${tone}-bar`).props.accessibilityRole).toBe('progressbar');

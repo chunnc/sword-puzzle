@@ -1,0 +1,68 @@
+[
+  {
+    "viewport": 320,
+    "compact": false,
+    "paddingHorizontal": 20,
+    "bossHeight": 60,
+    "hpHeight": 16,
+    "hpWidth": 184,
+    "hpRightInset": 36,
+    "nameToHpGap": 4,
+    "labelFits": true
+  },
+  {
+    "viewport": 320,
+    "compact": true,
+    "paddingHorizontal": 18,
+    "bossHeight": 52,
+    "hpHeight": 16,
+    "hpWidth": 196,
+    "hpRightInset": 34,
+    "nameToHpGap": 4,
+    "labelFits": true
+  },
+  {
+    "viewport": 360,
+    "compact": false,
+    "paddingHorizontal": 20,
+    "bossHeight": 60,
+    "hpHeight": 16,
+    "hpWidth": 224,
+    "hpRightInset": 36,
+    "nameToHpGap": 4,
+    "labelFits": true
+  },
+  {
+    "viewport": 360,
+    "compact": true,
+    "paddingHorizontal": 18,
+    "bossHeight": 52,
+    "hpHeight": 16,
+    "hpWidth": 236,
+    "hpRightInset": 34,
+    "nameToHpGap": 4,
+    "labelFits": true
+  },
+  {
+    "viewport": 390,
+    "compact": false,
+    "paddingHorizontal": 20,
+    "bossHeight": 60,
+    "hpHeight": 16,
+    "hpWidth": 254,
+    "hpRightInset": 36,
+    "nameToHpGap": 4,
+    "labelFits": true
+  },
+  {
+    "viewport": 390,
+    "compact": true,
+    "paddingHorizontal": 18,
+    "bossHeight": 52,
+    "hpHeight": 16,
+    "hpWidth": 266,
+    "hpRightInset": 34,
+    "nameToHpGap": 4,
+    "labelFits": true
+  }
+]

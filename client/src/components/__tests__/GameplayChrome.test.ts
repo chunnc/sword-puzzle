@@ -84,8 +84,10 @@ describe('gameplay header and objective rows', () => {
 
   it.each([false, true])('uses shorter panels without shrinking avatars or collection icons (compact=%s)', compact => {
     act(() => { renderer = create(info([enemy('Boss'), collect('collect')], {}, compact)); });
-    expect(StyleSheet.flatten(view('game-objective-panel').props.style)).toMatchObject({ height: compact ? 44 : 48, paddingVertical: compact ? 4 : 6 });
-    expect(StyleSheet.flatten(view('game-enemy-panel').props.style)).toMatchObject({ height: compact ? 52 : 60, paddingVertical: 6 });
+    expect(StyleSheet.flatten(view('game-objective-panel').props.style)).toMatchObject({ height: compact ? 44 : 48, paddingVertical: compact ? 4 : 6, paddingHorizontal: compact ? 18 : 20 });
+    expect(StyleSheet.flatten(view('game-enemy-panel').props.style)).toMatchObject({ height: compact ? 52 : 60, paddingVertical: 6, paddingHorizontal: compact ? 18 : 20 });
+    const health = renderer.root.findByType(GameplayProgressBar);
+    expect(StyleSheet.flatten(health.parent!.props.style)).toMatchObject({ gap: 4, paddingRight: 16 });
     expect(StyleSheet.flatten(view('game-enemy-avatar').props.style)).toMatchObject({ width: compact ? 40 : 48, height: compact ? 40 : 48 });
     expect(StyleSheet.flatten(view('objective-icon-collect').props.style)).toMatchObject({ width: 28, height: 28 });
   });

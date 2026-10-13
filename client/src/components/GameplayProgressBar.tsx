@@ -21,7 +21,7 @@ export function GameplayProgressBar({ value, max, tone, accessibilityLabel, anim
   const health = tone === 'health';
   return (
     <View ref={viewRef} collapsable={false} onLayout={onLayout} testID={`game-${tone}-bar`} accessible accessibilityRole="progressbar" accessibilityLabel={accessibilityLabel}
-      accessibilityValue={{ min: 0, max: limit, now: current }} style={[styles.track, { height: health ? 18 : 12 }]}>
+      accessibilityValue={{ min: 0, max: limit, now: current }} style={[styles.track, { height: health ? 16 : 12 }]}>
       <View testID={`game-${tone}-track`} onLayout={event => setTrackWidth(event.nativeEvent.layout.width)} style={styles.inner}>
         <Animated.View testID={`game-${tone}-fill`} style={[styles.fill, fillStyle]}>
           <LinearGradient colors={health ? ['#942f35', '#e35646', '#ff9674'] : ['#0b717a', '#49c8e5', '#b7f4e7']}

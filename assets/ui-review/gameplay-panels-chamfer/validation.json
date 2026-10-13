@@ -1,0 +1,20 @@
+[
+  {
+    "kind": "collection",
+    "width": 1120,
+    "height": 136,
+    "transparentCorners": true,
+    "opaqueCenter": true,
+    "sourceMatchesRuntime": true,
+    "sliceGeometry": "passed at widths 296/336/366 and heights 44/48/52/60"
+  },
+  {
+    "kind": "boss",
+    "width": 1120,
+    "height": 154,
+    "transparentCorners": true,
+    "opaqueCenter": true,
+    "sourceMatchesRuntime": true,
+    "sliceGeometry": "passed at widths 296/336/366 and heights 44/48/52/60"
+  }
+]
