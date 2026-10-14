@@ -50,7 +50,7 @@ function clearValue(snapshot, cells, tiles=snapshot.tiles) {
     value += .08 + (tile.chargeTier ? tile.chargeTier*.25 : 0);
     for(const o of snapshot.level.objectives) {
       if(snapshot.objectiveProgress[o.id]>=o.target)continue;
-      if(o.type==='Collect' && tile.kind===o.tileKind)value+=1;
+      if(o.type==='Collect' && tile.kind===o.tileKind && (o.chargeTier===undefined || o.chargeTier===tile.chargeTier && !tile.locked))value+=1;
       if(o.type==='BreakSeals' && tile.locked)value+=1.4;
       if(o.type==='Battle'||o.type==='Boss')value+=(content.tiles.find(t=>t.id===tile.kind)?.damage??0)/10;
       if(o.type==='BreakRocks'||o.type==='BreakSeals')for(const [dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]) {
@@ -406,4 +406,4 @@ async function main(args) {
 if(require.main===module) {
   main(process.argv.slice(2)).catch(error=>{ console.error(error.message);process.exitCode=1; });
 }
-module.exports={BOT_MODEL,play,summarize,seedFor,targets,catalog,simulateRetries,evaluateChecks,parseOptions,main,installSnapshot,executeTask,simulateRetryChunk,mergeRetryChunks,finalizeRetries,spawnAssistMechanisms,chooseSwap,selectRankedMove};
+module.exports={BOT_MODEL,play,summarize,seedFor,targets,catalog,simulateRetries,evaluateChecks,parseOptions,main,installSnapshot,executeTask,simulateRetryChunk,mergeRetryChunks,finalizeRetries,spawnAssistMechanisms,chooseSwap,selectRankedMove,clearValue};

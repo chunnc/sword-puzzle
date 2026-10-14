@@ -38,6 +38,19 @@ Tutorial maps use percentage stars: 3 stars below 50% and 2 stars below 75% of t
 original move budget. Extra moves do not enlarge that budget. Collect targets are capped at
 30; all objectives must finish before the run wins.
 
+Collect objectives accept optional `chargeTier: 4` or `chargeTier: 5` to require that
+exact charged tier of `tileKind`. Each consumed/activated tile counts once, including
+skill hits and chain reactions. Creating a charge or only unlocking a seal does not
+count. Omitting `chargeTier` retains collection of every tier of the kind, so one
+charged tile can advance both a general and an exact-tier objective.
+
+Use `--tiles sword:4,fire:5` in the generator; `--tiles sword,sword:4,sword:5`
+creates three independent objectives. Targets can be shared (`--target 2`) or
+specified in that order (`--target 15,2,1`). Automatic calibration may choose targets
+from 1 for maps with charged objectives; ordinary-only maps keep the minimum of 3.
+HUD charged icons share a Skia canvas and clocks, using the board's particles and
+tier-5 idle sprites. They respect Reduce Motion and pause off-screen/in background.
+
 ## Seeding
 
 ```sh

@@ -12,7 +12,8 @@ const HELP = `Generate and balance a local map (no Firestore writes).
   npm run maps:generate -- --difficulty hard --objective boss --index 3 --seed 12345
 
 Required: --difficulty easy|medium|hard|very-hard --objective collect|battle|boss|break-rocks|break-seals
-Collect: --tiles sword,fire,lightning,spirit (default sword); --target N or N,N
+Collect: --tiles sword,fire,lightning,spirit (default sword); optional :4/:5, e.g. sword:4,fire:5
+         --target N or N,N; charged targets count activations, not creation
 BreakRocks: generates a connected cluster of 2–6 rocks; --target N fixes the rock count
 BreakSeals: generates a connected cluster of 2–6 seals; --target N fixes the seal count
 Enemy:   --enemy-id ID --enemy-name NAME --enemy-art beast --target HP
@@ -31,6 +32,11 @@ First-attempt win rate is diagnostic and does not gate candidate selection.
 Validation uses a single independent holdout; failed maps do not enter the catalog.
 Artifacts: content/map-seeds/INDEX/{seed.json,config.json,balance.json,preview.html}
 `;
+function collectionTile(value) {
+  const match = /^(sword|fire|lightning|spirit)(?::([45]))?$/.exec(value);
+  if (!match) throw new Error('--tiles must contain tile keys with optional :4 or :5');
+  return { key: match[1], ...(match[2] ? { chargeTier: Number(match[2]) } : {}) };
+}
 function parseRequest(args, nextIndex) {
   const opts = parseArgs(args, ['--difficulty', '--objective', '--tiles', '--target', '--index', '--name', '--seed', '--chapter', '--chapter-name',
     '--enemy-id', '--enemy-name', '--enemy-art', '--min-moves', '--max-moves', '--win-rate', '--three-rate', '--total-exp', '--layouts',
@@ -47,7 +53,8 @@ function parseRequest(args, nextIndex) {
   const minMoves = positiveInteger(opts['--min-moves'] ?? 6, '--min-moves', 3, 30);
   const maxMoves = positiveInteger(opts['--max-moves'] ?? 30, '--max-moves', minMoves, 30);
   const tiles = (opts['--tiles'] ?? 'sword').split(',').map(s => s.trim());
-  if (tiles.some(tile => !['sword', 'fire', 'lightning', 'spirit'].includes(tile)) || new Set(tiles).size !== tiles.length) throw new Error('--tiles must contain distinct normal tile keys');
+  tiles.forEach(collectionTile);
+  if (new Set(tiles).size !== tiles.length) throw new Error('--tiles must contain distinct tile kind/tier pairs');
   if (objective !== 'collect' && opts['--tiles']) throw new Error('--tiles applies to collect only');
   const targetMaximum = objective === 'collect' ? 30 : ['break-rocks', 'break-seals'].includes(objective) ? 56 : 1_000_000_000;
   const targets = opts['--target'] === undefined ? null : opts['--target'].split(',').map(n => positiveInteger(n, '--target', 1, targetMaximum));
@@ -94,8 +101,12 @@ function prepareCatalog(originalConfig, catalog, request) {
 }
 function mapTemplate(config, catalog, request, shape) {
   const chapter = chapterForLevel(request.index, config), existing = catalog.find(map => map.id === request.index);
-  const objectives = request.objective === 'collect' ? request.tiles.map((key, i) => ({ id: `collect-${key}`, type: 'Collect',
-    tileKind: config.tiles.find(tile => tile.key === key).id, target: request.targets?.[i] ?? request.targets?.[0] ?? 15 }))
+  const objectives = request.objective === 'collect' ? request.tiles.map((value, i) => {
+    const { key, chargeTier } = collectionTile(value);
+    return { id: `collect-${key}${chargeTier ? `-${chargeTier}` : ''}`, type: 'Collect',
+      tileKind: config.tiles.find(tile => tile.key === key).id, ...(chargeTier ? { chargeTier } : {}),
+      target: request.targets?.[i] ?? request.targets?.[0] ?? (chargeTier ? 1 : 15) };
+  })
     : request.objective === 'break-rocks' ? [{ id: 'break-rocks', type: 'BreakRocks', target: request.targets?.[0] ?? shape.rockCount }]
     : request.objective === 'break-seals' ? [{ id: 'break-seals', type: 'BreakSeals', target: request.targets?.[0] ?? shape.sealCount }]
     : [{ id: 'main', type: request.objective === 'boss' ? 'Boss' : 'Battle', target: request.targets?.[0] ?? 500, enemy: request.enemy }];

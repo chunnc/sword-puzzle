@@ -77,7 +77,8 @@ function progressQuantile(results, map, probability) {
 function targetChoices(template, request, results) {
   if (request.fixedTargets || ['break-rocks', 'break-seals'].includes(request.objective)) return [null];
   const progress = Math.floor(progressQuantile(results, template.map, request.starQuantile));
-  const minimum = template.map.objectives.every(objective => objective.type === 'Collect') ? 3 : 10;
+  const minimum = template.map.objectives.every(objective => objective.type === 'Collect')
+    ? template.map.objectives.some(objective => objective.chargeTier) ? 1 : 3 : 10;
   const maximum = template.map.objectives.every(objective => objective.type === 'Collect') ? 30 : 1_000_000_000;
   return [...new Set([-2, -1, 0, 1, 2].map(offset => Math.max(minimum, Math.min(maximum, progress + offset))))];
 }

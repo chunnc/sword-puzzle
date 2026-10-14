@@ -3,7 +3,7 @@ const percent = value => Number.isFinite(value) ? `${(value * 100).toFixed(1)}%`
 function renderGeneratedMap(map, config, seed, report) {
   const tileNames = Object.fromEntries(config.tiles.map(tile => [tile.id, tile.name]));
   const seals = new Set((map.initialSeals ?? []).map(seal => `${seal.row}:${seal.column}`));
-  const objectives = map.objectives.map(o => o.type === 'Collect' ? `${tileNames[o.tileKind]}: ${o.target}`
+  const objectives = map.objectives.map(o => o.type === 'Collect' ? `${tileNames[o.tileKind]}${o.chargeTier ? ` cấp ${o.chargeTier}` : ''}: ${o.target}`
     : o.type === 'BreakRocks' ? `Phá đá chắn: ${o.target}`
     : o.type === 'BreakSeals' ? `Phá phong ấn: ${o.target}` : `${o.enemy.name}: ${o.target} HP`).join(' · ');
   const summary = report.validation.summary;

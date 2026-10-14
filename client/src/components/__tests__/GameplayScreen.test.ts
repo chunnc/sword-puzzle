@@ -19,6 +19,8 @@ import { gameplaySnapshot, goalLevel } from './fixtures/gameplay';
 
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
 jest.mock('../GameplayObjectivePanel', () => ({ GameplayObjectivePanel: require('react-native').View }));
+jest.mock('../CollectionTileIcons', () => ({ CollectionTileIcons: require('react-native').View, CHARGED_GOAL_ICON_WIDTH: 36 }));
+jest.mock('../GameTileImages', () => ({ GameTileImageProvider: ({ children }: { children: React.ReactNode }) => children }));
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => mockParams, useRouter: () => mockRouter, useFocusEffect: (callback: () => () => void) => require('react').useEffect(callback, [callback]) }));
 jest.mock('react-native-reanimated', () => ({

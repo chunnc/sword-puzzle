@@ -66,7 +66,7 @@ function renderBalanceReport(report) {
       <dt>Chain lớn nhất</dt><dd>${number(r.maxChain)}</dd><dt>Xáo bàn trung bình / ván</dt><dd>${number(r.averageReshuffles,2)}</dd></dl>
       <p class="muted">Các đợt giải quyết bao gồm cả đổi ô và kỹ năng.</p>
       ${r.waveCounts?`<h3>Wave / hành động</h3>${histogram(r.waveCounts,'Phân bố wave trên mỗi hành động')}`:''}
-      ${m?`<h3>Mục tiêu map</h3><ul>${m.objectives.map(o=>`<li>${escape(o.type)}${o.type==='Collect'?` · loại ô ${escape(o.tileKind)}`:''}: ${number(o.target)}</li>`).join('')}</ul>`:''}
+      ${m?`<h3>Mục tiêu map</h3><ul>${m.objectives.map(o=>`<li>${escape(o.type)}${o.type==='Collect'?` · loại ô ${escape(o.tileKind)}${o.chargeTier ? ` cấp ${escape(o.chargeTier)}` : ''}`:''}: ${number(o.target)}</li>`).join('')}</ul>`:''}
       ${gate?.failures.length?`<ul class="failure-list">${gate.failures.map(f=>`<li>${escape(f)}</li>`).join('')}</ul>`:''}
       <small class="hash">Map hash: ${escape(r.mapHash)}</small></div></div></details>`;
   };

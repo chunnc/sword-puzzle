@@ -33,6 +33,8 @@ export type ObjectiveDefinition = {
   id: string;
   type: 'Collect';
   tileKind: number;
+  /** Omit to collect every tier of this kind; otherwise collect only this tier. */
+  chargeTier?: 4 | 5;
   target: number;
 } | {
   id: string;
@@ -215,7 +217,7 @@ export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
   for (const o of m.objectives) {
     if (!text(o.id) || !/^[a-zA-Z0-9_-]{1,80}$/.test(o.id) || !integer(o.target, 1)) return bad();
     if (o.type === 'Collect') {
-      if (!c.normalTileIds!.includes(o.tileKind) || o.target > 30) return bad();
+      if (!c.normalTileIds!.includes(o.tileKind) || o.target > 30 || o.chargeTier !== undefined && o.chargeTier !== 4 && o.chargeTier !== 5) return bad();
     }
     else if (o.type === 'Battle' || o.type === 'Boss') { if (!o.enemy || !text(o.enemy.id) || !text(o.enemy.name) || !text(o.enemy.artKey)) return bad(); }
     else if (o.type === 'BreakRocks') { if (o.target > rocks) return bad(); }

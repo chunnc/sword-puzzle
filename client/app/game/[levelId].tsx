@@ -10,6 +10,7 @@ import { SpiritQiFlightOverlay } from '../../src/components/SpiritQiFlightOverla
 import { buildSpiritFlightCues, type SpiritFlightLayout } from '../../src/components/spiritParticles';
 import { BoardActionCancelled } from '../../src/game/boardAction';
 import { GameplayDock, GameplayHeader, GameplayInfo } from '../../src/components/GameplayChrome';
+import { GameTileImageProvider } from '../../src/components/GameTileImages';
 import { GameplayResultPopup, type GameplayResult } from '../../src/components/GameplayResultPopup';
 import { GameplayLeaveDialog } from '../../src/components/GameplayLeaveDialog';
 import { GameButton, ScreenFrame } from '../../src/components/Art';
@@ -25,7 +26,7 @@ export default function GameScreen() {
     const { levelId: rawId } = useLocalSearchParams<{
         levelId: string;
     }>();
-    return <GameplaySession key={rawId} levelId={Number(rawId)} />;
+    return <GameTileImageProvider><GameplaySession key={rawId} levelId={Number(rawId)} /></GameTileImageProvider>;
 }
 
 function GameplaySession({ levelId }: { levelId: number }) {

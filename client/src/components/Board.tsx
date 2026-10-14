@@ -22,9 +22,10 @@ import {
 } from './boardVisuals';
 import { createBoardMotionSession, createBoardMotionFrame, updateBoardMotionFrame, finishBoardMotionSession, type BoardMotionSession, type CellMotionValues } from './boardMotion';
 import { BoardEffects } from './BoardEffects';
-import { ChargedTileParticle, useChargedParticleClock } from './ChargedTileParticle';
-import { chargedParticleStyle } from './chargedTileParticles';
-import { Fire5Tile, IdleAtlasTile, useIdleTileClock } from './Fire5Tile';
+import { useChargedParticleClock } from './ChargedTileParticle';
+import { useIdleTileClock } from './Fire5Tile';
+import { TileSprite } from './TileSprite';
+import { useGameTileImage } from './GameTileImages';
 import { TIER5_IDLE_ANIMATIONS, type IdleSpriteAnimationMetadata } from './idleTileAnimation';
 import { BOARD_FRAME_INSET } from './boardLayout';
 import { boardOutlinePath } from './boardOutline';
@@ -84,26 +85,26 @@ export function SpiritOrb({ size = 34 }: { size?: number }) {
 function useBoardImages(): Record<TileKind, Record<Tile['chargeTier'], SkImage | null>> {
   // Fixed hooks preload every tier, including before a tile is upgraded.
   const sword = {
-    0: useImage(tileArtwork(TileKind.Sword)),
-    4: useImage(tileArtwork(TileKind.Sword, 4)),
-    5: useImage(tileArtwork(TileKind.Sword, 5)),
+    0: useGameTileImage(tileArtwork(TileKind.Sword)),
+    4: useGameTileImage(tileArtwork(TileKind.Sword, 4)),
+    5: useGameTileImage(tileArtwork(TileKind.Sword, 5)),
   };
   const fire = {
-    0: useImage(tileArtwork(TileKind.Fire)),
-    4: useImage(tileArtwork(TileKind.Fire, 4)),
-    5: useImage(tileArtwork(TileKind.Fire, 5)),
+    0: useGameTileImage(tileArtwork(TileKind.Fire)),
+    4: useGameTileImage(tileArtwork(TileKind.Fire, 4)),
+    5: useGameTileImage(tileArtwork(TileKind.Fire, 5)),
   };
   const lightning = {
-    0: useImage(tileArtwork(TileKind.Lightning)),
-    4: useImage(tileArtwork(TileKind.Lightning, 4)),
-    5: useImage(tileArtwork(TileKind.Lightning, 5)),
+    0: useGameTileImage(tileArtwork(TileKind.Lightning)),
+    4: useGameTileImage(tileArtwork(TileKind.Lightning, 4)),
+    5: useGameTileImage(tileArtwork(TileKind.Lightning, 5)),
   };
   const spirit = {
-    0: useImage(tileArtwork(TileKind.SpiritOrb)),
-    4: useImage(tileArtwork(TileKind.SpiritOrb, 4)),
-    5: useImage(tileArtwork(TileKind.SpiritOrb, 5)),
+    0: useGameTileImage(tileArtwork(TileKind.SpiritOrb)),
+    4: useGameTileImage(tileArtwork(TileKind.SpiritOrb, 4)),
+    5: useGameTileImage(tileArtwork(TileKind.SpiritOrb, 5)),
   };
-  const rock = useImage(ART.tileRock);
+  const rock = useGameTileImage(ART.tileRock);
   return { [TileKind.Sword]: sword, [TileKind.Fire]: fire, [TileKind.Lightning]: lightning,
     [TileKind.SpiritOrb]: spirit, [TileKind.Rock]: { 0: rock, 4: rock, 5: rock } };
 }
@@ -140,10 +141,10 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const visualTile = (tile: Tile): Tile => ({ ...tile, kind: semanticTileKind(tile.kind, content) as TileKind });
   const fxFireBurst = useImage(ART.fxFireBurst), fxLightning = useImage(ART.fxLightningAtlas);
   const idleSheetImages: Record<TileKind, SkImage | null> = {
-    [TileKind.Fire]: useImage(ART.tileFire5Idle),
-    [TileKind.Lightning]: useImage(ART.tileLightning5Idle),
-    [TileKind.Sword]: useImage(ART.tileSword5Idle),
-    [TileKind.SpiritOrb]: useImage(ART.tileSpiritOrb5Idle),
+    [TileKind.Fire]: useGameTileImage(ART.tileFire5Idle),
+    [TileKind.Lightning]: useGameTileImage(ART.tileLightning5Idle),
+    [TileKind.Sword]: useGameTileImage(ART.tileSword5Idle),
+    [TileKind.SpiritOrb]: useGameTileImage(ART.tileSpiritOrb5Idle),
     [TileKind.Rock]: null,
   };
   const previousEffect = useRef<{ runId: string; effect: BoardVisualEffect | null; before: BoardVisualEffect | null } | null>(null);
@@ -334,19 +335,10 @@ function TileArtwork({ tile, bounds, image, labels, particlePhase, idleAnimation
   tile: Tile; bounds: ReturnType<typeof cellBounds>; image: SkImage | null; labels: BoardLabels;
   particlePhase: SharedValue<number>; idleAnimations: IdleTileAnimations; reduceMotion: boolean;
 }) {
-  const inset = tile.kind === TileKind.Rock ? .06 : .03;
-  const particle = tile.chargeTier > 0 ? chargedParticleStyle(tile.kind) : null;
-  const artworkBounds = { x: bounds.x + bounds.width * inset, y: bounds.y + bounds.height * inset,
-    width: bounds.width * (1 - 2 * inset), height: bounds.height * (1 - 2 * inset) };
   const idle = tile.chargeTier === 5 ? idleAnimations[tile.kind] : undefined;
   return <Group>
-    {idle?.image
-      ? tile.kind === TileKind.Fire
-        ? <Fire5Tile idle={{ image: idle.image, elapsedMs: idle.elapsedMs }} bounds={artworkBounds} reduced={reduceMotion} />
-        : <IdleAtlasTile image={idle.image} animation={idle.animation} elapsedMs={idle.elapsedMs} bounds={artworkBounds} reduced={reduceMotion} />
-      : <Image image={image} {...artworkBounds} fit="contain" />}
-    {particle ? <ChargedTileParticle bounds={bounds} color={particle.color} elementPhase={particle.phase}
-      phase={particlePhase} reduced={reduceMotion} /> : null}
+    <TileSprite kind={tile.kind} chargeTier={tile.chargeTier} bounds={bounds} image={image}
+      idleImage={idle?.image} elapsedMs={idle?.elapsedMs ?? particlePhase} particlePhase={particlePhase} reduced={reduceMotion} />
     {tile.locked ? <Group>
       <RoundedRect {...bounds} r={5} color="rgba(9,35,49,.45)" />
       <RoundedRect x={bounds.x + 1} y={bounds.y + 1} width={bounds.width - 2} height={bounds.height - 2} r={4} style="stroke" strokeWidth={2} color="#ae97cd" />

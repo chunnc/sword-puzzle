@@ -11,6 +11,8 @@ import { CONTENT, tileId } from '../../game/domain';
 
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
 jest.mock('../GameplayObjectivePanel', () => ({ GameplayObjectivePanel: require('react-native').View }));
+jest.mock('../CollectionTileIcons', () => ({ CollectionTileIcons: require('react-native').View, CHARGED_GOAL_ICON_WIDTH: 36 }));
+jest.mock('../GameTileImages', () => ({ GameTileImageProvider: ({ children }: { children: React.ReactNode }) => children }));
 jest.mock('../SpiritQiFlightOverlay', () => ({ SpiritQiFlightOverlay: require('react-native').View }));
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ levelId: '15' }), useRouter: () => ({ push: jest.fn(), replace: jest.fn() }), useFocusEffect: () => undefined }));

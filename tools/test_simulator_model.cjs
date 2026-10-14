@@ -12,6 +12,19 @@ runtime.BoardEngine = class extends OriginalBoardEngine {
 const simulator = require('./simulate_maps.cjs');
 const { renderBalanceReport } = require('./render_balance_report.cjs');
 
+test('collection scoring respects exact tiers and ignores sealed charged tiles', () => {
+  const source = simulator.catalog[0], kind = source.tileRegistry.sword;
+  const objectives = [{ id: 'all', type: 'Collect', tileKind: kind, target: 30 },
+    { id: 'four', type: 'Collect', tileKind: kind, chargeTier: 4, target: 2 }];
+  const base = { level: { board: { width: 3, height: 3 }, objectives }, objectiveProgress: { all: 0, four: 0 } };
+  for (const [chargeTier, locked, bonus] of [[0, false, 1], [4, false, 2], [5, false, 1], [4, true, 1]]) {
+    const tiles = [{ kind, chargeTier, locked }];
+    const snapshot = { ...base, tiles };
+    const withoutGoals = { ...snapshot, level: { ...snapshot.level, objectives: [] } };
+    assert.equal(Math.round((simulator.clearValue(snapshot, [0]) - simulator.clearValue(withoutGoals, [0])) * 100) / 100, bonus);
+  }
+});
+
 test('all bot and power profiles use an empty active and passive loadout', () => {
   const map = simulator.catalog.find(candidate => candidate.id === 3);
   for (const bot of ['basic', 'normal', 'strategic']) {

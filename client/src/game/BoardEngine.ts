@@ -91,8 +91,8 @@ export class BoardEngine {
     }
     get won(): boolean { return this.level.objectives.every(o => this.objectiveProgress[o.id] >= o.target); }
     get contentDefinition(): GameContent { return this.content; }
-    private advance(type: string, amount: number, tileKind?: number): void {
-        for (const o of this.level.objectives) if (o.type === type && (o.type !== 'Collect' || o.tileKind === tileKind)) {
+    private advance(type: string, amount: number, tileKind?: number, chargeTier?: Tile['chargeTier']): void {
+        for (const o of this.level.objectives) if (o.type === type && (o.type !== 'Collect' || o.tileKind === tileKind && (o.chargeTier === undefined || o.chargeTier === chargeTier))) {
             const next = this.objectiveProgress[o.id] + amount;
             this.objectiveProgress[o.id] = o.type === 'Battle' || o.type === 'Boss' ? Math.min(o.target, next) : next;
         }
@@ -333,7 +333,7 @@ export class BoardEngine {
                     waveDamage += this.level.objectives.some(o => o.type === 'Boss') ? bossDamage : damage;
                     this.advance('Battle', damage);
                     this.advance('Boss', bossDamage);
-                    this.advance('Collect', 1, tile.kind);
+                    this.advance('Collect', 1, tile.kind, tile.chargeTier);
                     this.swordQi = Math.min(this.content.qiCap, this.swordQi + baseQi(tile));
                     this.score += 10 * chain;
                     weaken(i);

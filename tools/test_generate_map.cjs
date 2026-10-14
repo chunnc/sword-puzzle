@@ -10,6 +10,41 @@ const config = validateContent(readJSON('content/game-config.json'));
 const catalog = readJSON('content/game-maps.json').map(map => validateMap(map, config));
 const rockId = config.tiles.find(tile => tile.key === 'rock').id;
 
+test('collection CLI supports independent general, tier 4 and tier 5 objectives with fixed targets', () => {
+  const request = parseRequest(['--difficulty', 'medium', '--objective', 'collect', '--tiles', 'sword,sword:4,sword:5',
+    '--target', '15,2,1'], catalog.length + 1);
+  const next = prepareCatalog(config, catalog, request);
+  const shape = generateLayouts(24680, 1, catalog)[0];
+  const map = mapTemplate(next, catalog, request, shape);
+  const sword = config.tiles.find(tile => tile.key === 'sword').id;
+  assert.deepEqual(map.objectives, [
+    { id: 'collect-sword', type: 'Collect', tileKind: sword, target: 15 },
+    { id: 'collect-sword-4', type: 'Collect', tileKind: sword, chargeTier: 4, target: 2 },
+    { id: 'collect-sword-5', type: 'Collect', tileKind: sword, chargeTier: 5, target: 1 },
+  ]);
+  assert.deepEqual(validateMap(map, next), map);
+  const shared = parseRequest(['--difficulty', 'easy', '--objective', 'collect', '--tiles', 'fire:4,lightning:5', '--target', '2'], catalog.length + 1);
+  assert.deepEqual(mapTemplate(next, catalog, shared, shape).objectives.map(o => o.target), [2, 2]);
+});
+
+test('collection CLI rejects malformed tiers, duplicate kind/tier pairs and target mismatches', () => {
+  const base = ['--difficulty', 'easy', '--objective', 'collect'];
+  for (const value of ['sword:0', 'sword:3', 'sword:6', 'sword:4:5', 'fire:04', 'rock:4', 'sword:4,sword:4', 'sword,']) {
+    assert.throws(() => parseRequest([...base, '--tiles', value], catalog.length + 1));
+  }
+  assert.throws(() => parseRequest([...base, '--tiles', 'sword:4,fire:5', '--target', '1,2,3'], catalog.length + 1));
+  assert.throws(() => parseRequest(['--difficulty', 'easy', '--objective', 'boss', '--tiles', 'sword:4'], catalog.length + 1));
+});
+
+test('automatic charged targets include one while ordinary targets keep their minimum', () => {
+  const request = parseRequest(['--difficulty', 'easy', '--objective', 'collect'], catalog.length + 1);
+  const samples = [{ objectiveProgress: { main: 0 } }];
+  const ordinary = { map: { objectives: [{ id: 'main', type: 'Collect' }] } };
+  const charged = { map: { objectives: [{ id: 'main', type: 'Collect', chargeTier: 5 }] } };
+  assert.deepEqual(targetChoices(ordinary, request, samples), [3]);
+  assert.deepEqual(targetChoices(charged, request, samples), [1, 2]);
+});
+
 test('break-rocks builds valid connected rock clusters and selects their quantity from candidates', () => {
   const request = parseRequest(['--difficulty', 'easy', '--objective', 'break-rocks'], catalog.length + 1);
   const nextConfig = prepareCatalog(config, catalog, request);
