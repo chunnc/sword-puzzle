@@ -3,7 +3,7 @@ const game=require('../lib/domain/game'),runs=require('../lib/domain/runs');
 const content=game.validateContent(require('../../content/game-config.json'));
 const maps=require('../../content/game-maps.json').map(m=>game.validateMap(m,content));
 test('all map documents round trip and config wire payload excludes map data',()=>{
- assert.equal(maps.length,2);assert.equal(game.contentWire(content).levels,undefined);
+ assert.equal(maps.length,content.levelCount);assert.equal(game.contentWire(content).levels,undefined);
  for(const map of maps)assert.deepEqual(game.mapFromDocument(game.mapToDocument(map),content),map);
 });
 test('the tutorial catalog contains the two ordered lessons with authored moves',()=>{
@@ -58,13 +58,13 @@ test('map revisions remain independent from config revisions and reject classic 
 test('reward credits use amounts already paid across revisions without resetting first-win eligibility',()=>{
   const firstMap=game.versionMap(maps[0],content);
   const context={...content,levels:[game.mapToLevel(firstMap,1,0,content)]};
-  const profile=game.applyOperation(game.emptyProfile(),{id:'reward_old',kind:'win',levelId:1,stars:2,objectiveProgress:{main:30}},context).profile;
+  const profile=game.applyOperation(game.emptyProfile(),{id:'reward_old',kind:'win',levelId:1,stars:2,objectiveProgress:{main:firstMap.objectives.find(o=>o.id==='main').target}},context).profile;
   assert.equal(profile.totalExp,80);
   const nextMap={...firstMap,mapVersion:firstMap.mapVersion+1,baseExp:200};
   const next={...content,version:content.version+1,levels:[game.mapToLevel(nextMap,2,0,content)]};
-  const improved=game.applyOperation(profile,{id:'reward_new',kind:'win',levelId:1,stars:3,objectiveProgress:{main:30}},next).profile;
+  const improved=game.applyOperation(profile,{id:'reward_new',kind:'win',levelId:1,stars:3,objectiveProgress:{main:firstMap.objectives.find(o=>o.id==='main').target}},next).profile;
   assert.equal(improved.totalExp,200);assert.equal(improved.coins-profile.coins,35);
-  const replay=game.applyOperation(improved,{id:'reward_replay',kind:'win',levelId:1,stars:3,objectiveProgress:{main:30}},next).profile;
+  const replay=game.applyOperation(improved,{id:'reward_replay',kind:'win',levelId:1,stars:3,objectiveProgress:{main:firstMap.objectives.find(o=>o.id==='main').target}},next).profile;
   assert.equal(replay.totalExp,200);assert.equal(replay.coins-improved.coins,10);
   assert.deepEqual(game.normalizeProfile(replay,content).rewardCredits,replay.rewardCredits);
 });

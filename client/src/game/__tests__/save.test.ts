@@ -3,13 +3,13 @@ import { BoardEngine } from '../BoardEngine';
 import { getLevel } from '../levels';
 import { emptySave, loadSave, normalizeSave, normalizeSnapshot, persistSave } from '../save';
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
-describe('server-backed journal v3', () => {
+describe('server-backed journal v4', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
   });
   it('ignores offline v1/v2 and their backups', async () => {
-    for (const key of ['kiemkhai.save.v1', 'kiemkhai.save.backup.v1', 'kiemkhai.save.v2', 'kiemkhai.save.backup.v2']) await AsyncStorage.setItem(key, JSON.stringify({
-      schemaVersion: 2,
+    for (const key of ['kiemkhai.save.v1', 'kiemkhai.save.backup.v1', 'kiemkhai.save.v2', 'kiemkhai.save.backup.v2', 'kiemkhai.save.v3', 'kiemkhai.save.backup.v3']) await AsyncStorage.setItem(key, JSON.stringify({
+      schemaVersion: Number(key.includes('v3') ? 3 : 2),
       levels: [{
         levelId: 1,
         stars: 3
@@ -20,7 +20,7 @@ describe('server-backed journal v3', () => {
     }));
     expect(await loadSave('player')).toEqual(emptySave());
   });
-  it('restores a snapshot from its v3 backup without restoring a profile', async () => {
+  it('restores a snapshot from its v4 backup without restoring a profile', async () => {
     const save = {
       ...emptySave(),
       ownerId: 'player',
@@ -32,7 +32,8 @@ describe('server-backed journal v3', () => {
       ...save,
       active: null
     });
-    await AsyncStorage.setItem('kiemkhai.save.v3', '{broken');
+    await AsyncStorage.setItem('kiemkhai.save.v4', '{broken');
+    await AsyncStorage.setItem('kiemkhai.save.backup.v4', JSON.stringify({ ...save, active: save.active, profile: { ...save.profile, coins: 999 } }));
     const restored = await loadSave('player');
     expect(restored.active).toEqual(save.active);
     expect(restored.profile.coins).toBe(0);
@@ -50,7 +51,7 @@ describe('server-backed journal v3', () => {
       ...emptySave(),
       ownerId: 'player',
       pending: {
-        contentVersion: 8,
+        contentVersion: 12,
         operation: {
           id: 'win_zero_123',
           kind: 'win' as const,
@@ -80,7 +81,7 @@ describe('server-backed journal v3', () => {
       objectiveProgress: {}
     })).toBeNull();
     expect(normalizeSave({
-      schemaVersion: 2
+      schemaVersion: 3
     })).toBeNull();
   });
   it('restores frozen loadout, RNG, charge, objectives and condensed status', () => {
@@ -98,8 +99,7 @@ describe('server-backed journal v3', () => {
   });
   it('migrates an uncertain start without fetching the previously requested config',async()=>{
     await persistSave({...emptySave(),ownerId:'player',pendingStart:{runId:'pending_start_123',levelId:1,previousRunId:null,contentVersion:999}});
-    const resolve=jest.fn();const save=await loadSave('player',resolve);
-    expect(resolve).not.toHaveBeenCalled();
+    const save=await loadSave('player');
     expect(save.pendingStart).toEqual({runId:'pending_start_123',levelId:1,previousRunId:null});
   });
   it('does not invent starting EXP when restoring a pre-pin snapshot',()=>{

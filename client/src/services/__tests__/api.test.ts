@@ -191,7 +191,6 @@ it('does not replace the session when device recovery is denied', async () => {
 it.each([
   ['health', () => api.checkHealth()],
   ['bootstrap', () => api.fetchBootstrap()],
-  ['content', () => api.fetchContent(3)],
   ['profile', () => api.fetchProfile(initial)],
   ['sync', () => api.syncProfile(initial, [], 3)],
   ['refresh', () => api.refreshSession(initial.refreshToken)],

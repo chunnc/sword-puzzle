@@ -7,6 +7,8 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 function engine(seed = 24680, assist = 0) {
     const content = installContent(config), map = clone(sources[0]);
     delete map.tutorial;
+    map.layout = Array.from({ length: 7 }, (_, y) => Array.from({ length: 7 }, (_, x) => content.normalTileIds[(x + 2*y) % 4]));
+    map.layout[0][0] = content.normalTileIds[0]; map.layout[0][1] = content.normalTileIds[1]; map.layout[0][2] = content.normalTileIds[0]; map.layout[1][1] = content.normalTileIds[0];
     map.moves = 14;
     map.objectives = [{ id: 'main', type: 'Battle', target: 100000, enemy: { id: 'test', name: 'Test', artKey: 'beast' } }];
     return new BoardEngine(mapToLevel(validateMap(map, content), seed, assist, content), null, { loadout: { sword: null, skills: ['nhat-kiem'] }, totalExp: 0 });
@@ -84,6 +86,7 @@ it('prepares a legal four/five match without an immediate match and only edits s
 });
 it('falls back from a five-piece setup to four when the board cannot fit a five-cell line', () => {
     const c=installContent(config),map=clone(sources[0]);
+    delete map.tutorial;
     map.layout=Array.from({length:3},()=>[-1,-1,-1,-1]);map.moves=14;
     map.objectives=[{id:'main',type:'Battle',target:100000,enemy:{id:'test',name:'Test',artKey:'beast'}}];
     map.spawnPolicy.setupChance=1;

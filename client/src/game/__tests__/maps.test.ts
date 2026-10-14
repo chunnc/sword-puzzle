@@ -23,7 +23,7 @@ it('preserves explicit starting tiles and seals across seeds and resumes RNG/dir
   const m = map(2);
   for (const seed of [1, 4321, 987654]) {
     const engine = new BoardEngine(mapToLevel(m, seed, .2, content));
-    m.layout.forEach((row,y) => row.forEach((id,x) => { if (id > 0) expect(engine.get(x, row.length-1-y)?.kind).toBe(id); }));
+    m.layout.forEach((row,y) => row.forEach((id,x) => { if (id > 0) expect(engine.get(x, m.layout.length-1-y)?.kind).toBe(id); }));
     for (const seal of m.initialSeals) expect(engine.get(seal.column, m.layout.length-1-seal.row)?.locked).toBe(true);
     const snapshot = engine.snapshot(), restored = normalizeSnapshot(snapshot)!;
     expect(restored).not.toBeNull();
@@ -40,7 +40,7 @@ it('uses a sparse shuffled ID registry for initialization, effects and collectio
   const m=clone(sources[0]) as MapDefinition;
   m.layout=m.layout.map(row=>row.map(id=>id>0?ids[id]:id));
   m.objectives.forEach(o=>{if(o.type==='Collect')o.tileKind=ids[o.tileKind];});
-  m.tileRegistry=Object.fromEntries(Object.entries(m.tileRegistry!).map(([key,id])=>[key,ids[id as number]]));
+  m.tileRegistry=Object.fromEntries(Object.entries(m.tileRegistry!).map(([key,id])=>[key,ids[id as number]])) as MapDefinition['tileRegistry'];
   m.spawnPolicy.weights=Object.fromEntries(Object.entries(m.spawnPolicy.weights).map(([id,w])=>[ids[Number(id)],w]));
   const engine=new BoardEngine(mapToLevel(validateMap(m,content),54321,0,content));
   expect(tileId('fire',content)).toBe(123);
@@ -76,7 +76,8 @@ it('bootstrap has metadata and no maps; percentage stars and capped retry suppor
   expect(contentWire(content)).not.toHaveProperty('levels');
   expect(content.levels).toEqual([]);
   expect(chapterForLevel(2,content).id).toBe('chapter-1');
-  expect(() => chapterForLevel(3,content)).toThrow('INVALID_CHAPTER');
+  expect(chapterForLevel(content.levelCount,content).id).toBe('chapter-1');
+  expect(() => chapterForLevel(content.levelCount + 1,content)).toThrow('INVALID_CHAPTER');
   const m=map();
   expect(mapStars(m,3)).toBe(3);
   expect(mapStars(m,4)).toBe(2);
@@ -98,16 +99,17 @@ it.each([
   expect(mapStars(m,moves+3)).toBe(1); // Bonus moves count as moves used; denominator stays at the map budget.
 });
 it('validates percentage stars and tutorial metadata in the v8 catalog',()=>{
-  for(const source of sources){const valid=mapFromDocument(mapToDocument(source),content);expect(valid.tutorial?.steps.length).toBeGreaterThan(0);expect(mapStars(valid,1)).toBe(3);}
-  const invalid=clone(map());invalid.starThresholds={mode:'percentage',threeStarBelowPercent:51,twoStarBelowPercent:75};
+  for(const source of sources){const valid=mapFromDocument(mapToDocument(source),content);if(valid.tutorial)expect(valid.tutorial.steps.length).toBeGreaterThan(0);expect(mapStars(valid,1)).toBe(3);}
+  const invalid=clone(map());invalid.starThresholds={mode:'percentage',threeStarBelowPercent:75,twoStarBelowPercent:50};
   expect(()=>validateMap(invalid,content)).toThrow('INVALID_MAP');
 });
 it('keeps sword damage modifiers correct with registry IDs instead of legacy enum values', () => {
-  const m=map(5),s=new BoardEngine(mapToLevel(m,54321,0,content)).snapshot();
-  s.tiles=Array.from({length:49},(_,i)=>({kind:(i%7+2*Math.floor(i/7))%4+1,chargeTier:0,locked:false}));
+  const m=map(4),s=new BoardEngine(mapToLevel(m,54321,0,content)).snapshot();
+  s.tiles=Array.from({length:s.tiles.length},(_,i)=>({kind:content.normalTileIds[(i%7+2*Math.floor(i/7))%4],chargeTier:0 as const,locked:false}));
   for(let x=0;x<7;x++)s.tiles[3*7+x]!.kind=tileId('fire',content);
   s.swordQi=100;s.loadout={sword:'hoa-van',skills:['nhat-kiem']};
   const engine=new BoardEngine(s.level,s);
   expect(engine.trySkill('nhat-kiem',[{x:0,y:3}])).toBe(true);
-  expect(engine.animation!.steps[0].damage).toBe(7*9);
+  const activeFireCells = s.level.board.activeCells.slice(3*7,4*7).filter(Boolean).length;
+  expect(engine.animation!.steps[0].damage).toBe(activeFireCells * Math.floor(content.tiles.find(t=>t.key==='fire')!.damage * 1.5));
 });

@@ -4,7 +4,9 @@ import { TileKind, GoalKind, type BoardSnapshot, type Tile } from '../types';
 import { SKILLS, SWORDS, installContent, mapToLevel, validateMap, type SkillId } from '../domain';
 const currentConfig = require('../../../../content/game-config.json');
 const currentMaps = require('../../../../content/game-maps.json');
-const tile = (kind: number, chargeTier: 0 | 4 | 5 = 0): Tile => ({ kind, chargeTier, locked: false });
+const normalKinds: number[] = currentConfig.normalTileIds;
+const rockKind: number = currentConfig.tiles.find((t: { key: string }) => t.key === 'rock').id;
+const tile = (kind: number, chargeTier: 0 | 4 | 5 = 0): Tile => ({ kind: kind >= 0 && kind < 4 ? normalKinds[kind] : kind === TileKind.Rock ? rockKind : kind, chargeTier, locked: false });
 function fixture(): BoardSnapshot { const s = new BoardEngine(getLevel(5)).snapshot(); s.tiles = Array.from({ length: 49 }, (_, i) => tile((i % 7 + 2 * Math.floor(i / 7)) % 4)); s.level = { ...s.level, objectives: [{ id: 'main', type: 'Battle', target: 100000, enemy: { id: 'test', name: 'Test', artKey: 'beast' } }] }; s.objectiveProgress = { main: 0 }; s.swordQi = 100; s.loadout = { sword: 'thanh-phong', skills: ['nhat-kiem'] }; return s; }
 function matching(size: number, kind: TileKind, tier: 0 | 4 | 5 = 0) {
     const s = fixture(), others = [0, 1, 2, 3].filter(k => k !== kind);
@@ -59,18 +61,18 @@ describe('board rules v2', () => {
         expect(steps).toEqual(sync.animation!.steps);
         expect(live.snapshot()).toEqual(sync.snapshot());
     });
-    it('generates all four types with a legal move in all 40 stages', () => { for (let id = 1; id <= 40; id++) {
+    it('generates all four types with a legal move in the 40-stage rule fixture', () => { for (let id = 1; id <= 40; id++) {
         const b = new BoardEngine(getLevel(id));
-        expect(new Set(b.snapshot().tiles.filter(t => t!.kind !== TileKind.Rock).map(t => t!.kind)).size).toBe(4);
+        expect(new Set(b.snapshot().tiles.filter(t => t!.kind !== rockKind).map(t => t!.kind)).size).toBe(4);
         expect(b.legalMoves().length).toBeGreaterThan(0);
         expect(b.snapshot().swordQi).toBe(0);
     } });
     it('restores the complete snapshot and deterministic RNG', () => { const a = new BoardEngine(getLevel(5)); const snap = a.snapshot(); const b = new BoardEngine(getLevel(5), snap); expect(b.snapshot()).toEqual(snap); const move = a.legalMoves()[0]; a.trySwap(...move); b.trySwap(...move); expect(a.snapshot()).toEqual(b.snapshot()); expect(a.animation).toEqual(b.animation); });
     it('rejects invalid and non-matching swaps without changes, even with a charged piece', () => { const s = fixture(); s.tiles[0]!.chargeTier = 5; const b = new BoardEngine(getLevel(5), s); const old = b.snapshot(); expect(b.trySwap(0, 0, 2, 0)).toBe(false); expect(b.trySwap(0, 0, 1, 0)).toBe(false); expect(b.snapshot()).toEqual(old); });
     it.each([0, 1, 2, 3])('match 3 type %i has no elemental effect', (kind) => { const b = matching(3, kind); expect(b.animation!.steps[0].effects.every(e => e.kind === 'skill')).toBe(true); expect(b.animation!.steps[0].cleared.length).toBe(3); });
-    it.each([0, 1, 2, 3])('match 4 type %i retains a charged piece', (kind) => { const b = matching(4, kind); expect(b.animation!.steps[0].after.tiles.some(t => t!.kind === kind && t!.chargeTier === 4)).toBe(true); expect(b.animation!.steps[0].cleared.length).toBe(3); });
-    it.each([0, 1, 2, 3])('match 5 type %i retains tier 5', (kind) => { const b = matching(5, kind); expect(b.animation!.steps[0].after.tiles.some(t => t!.kind === kind && t!.chargeTier === 5)).toBe(true); });
-    it.each([[0, 4, 'slash'], [0, 5, 'cross'], [1, 4, 'fire'], [1, 5, 'fire'], [2, 4, 'lightning'], [2, 5, 'lightning'], [3, 4, 'spirit'], [3, 5, 'spirit']] as const)('matched charge %i/%i activates %s', (kind, tier, effect) => { const b = matching(3, kind, tier); expect(b.animation!.steps[0].effects.some(e => e.kind === effect)).toBe(true); expect(b.animation!.steps[0].after.tiles.some(t => t!.chargeTier > 0 && t!.kind === kind)).toBe(false); });
+    it.each([0, 1, 2, 3])('match 4 type %i retains a charged piece', (kind) => { const b = matching(4, kind); expect(b.animation!.steps[0].after.tiles.some(t => t!.kind === normalKinds[kind] && t!.chargeTier === 4)).toBe(true); expect(b.animation!.steps[0].cleared.length).toBe(3); });
+    it.each([0, 1, 2, 3])('match 5 type %i retains tier 5', (kind) => { const b = matching(5, kind); expect(b.animation!.steps[0].after.tiles.some(t => t!.kind === normalKinds[kind] && t!.chargeTier === 5)).toBe(true); });
+    it.each([[0, 4, 'slash'], [0, 5, 'cross'], [1, 4, 'fire'], [1, 5, 'fire'], [2, 4, 'lightning'], [2, 5, 'lightning'], [3, 4, 'spirit'], [3, 5, 'spirit']] as const)('matched charge %i/%i activates %s', (kind, tier, effect) => { const b = matching(3, kind, tier); expect(b.animation!.steps[0].effects.some(e => e.kind === effect)).toBe(true); expect(b.animation!.steps[0].after.tiles.some(t => t!.chargeTier > 0 && t!.kind === normalKinds[kind])).toBe(false); });
     it('fire tier 5 has thirteen distinct targets at board center', () => { const s = fixture(); s.tiles[24] = tile(1, 5); const b = new BoardEngine(getLevel(5), s); expect(b.trySkill('nhat-kiem', [{ x: 0, y: 3 }])).toBe(true); const fire = b.animation!.steps[0].effects.find(e => e.kind === 'fire')!; expect(fire.cells).toHaveLength(13); });
     it.each([4, 5] as const)('marks only charged sword activation with tier %s, preserving its target geometry', tier => {
         const s = fixture(); s.tiles[24] = tile(TileKind.Sword, tier);
@@ -127,7 +129,7 @@ describe('board rules v2', () => {
         expect(b.animation!.finalBoard).toEqual(b.snapshot());
         expect(b.snapshot().tiles.every(Boolean)).toBe(true);
     });
-    it('supports every skill with valid targets', () => { for (const skill of SKILLS) {
+    it('supports every active skill with valid targets', () => { for (const skill of SKILLS.filter(skill => skill.kind !== 'passive')) {
         const s = fixture();
         s.loadout.skills = [skill.id];
         if (skill.id === 'lien-kiem') {
@@ -142,13 +144,17 @@ describe('board rules v2', () => {
         expect(b.snapshot().skillUsed).toBe(true);
         expect(b.moves).toBe(s.moves);
     } });
-    it('spirit stays at zero damage under every sword modifier', () => { for (const sword of SWORDS) {
+    it('does not allow passive skills to be cast', () => { for (const skill of SKILLS.filter(skill => skill.kind === 'passive')) {
+        const s = fixture(); s.loadout.skills = [skill.id]; const b = new BoardEngine(getLevel(5), s);
+        expect(b.trySkill(skill.id, [{ x: 0, y: 0 }])).toBe(false);
+    } });
+    it('spirit has no base damage and only receives explicit flat weapon bonuses', () => { for (const sword of SWORDS) {
         const s = fixture();
         s.loadout.sword = sword.id;
         s.tiles = Array.from({ length: 49 }, (_, i) => tile(i < 7 ? 3 : (i % 7 + 2 * Math.floor(i / 7)) % 4));
         const b = new BoardEngine(getLevel(5), s);
         b.trySkill('nhat-kiem', [{ x: 0, y: 0 }]);
-        expect(b.animation!.steps[0].damage).toBe(0);
+        expect(b.animation!.steps[0].damage).toBe((currentConfig.swords.find((entry: { id: string }) => entry.id === sword.id)?.flatDamage ?? 0) * 7);
     } });
     describe('combo seeding', () => {
         const modernContent = currentConfig;

@@ -10,14 +10,14 @@ test('offline and server progress merge by highest stars', () => {
   assert.deepEqual(progressResponse(merged).levels, [
     { levelId: 1, stars: 3 }, { levelId: 2, stars: 2 }
   ]);
-  assert.equal(merged.highestUnlocked, 2);
+  assert.equal(merged.highestUnlocked, 3);
 });
 
 test('realm derives from EXP rather than the third level', () => {
   const two = { '1': 1, '2': 1 };
   assert.equal(mergeProgress({}, two).realm, 'LuyenKhi');
-  assert.equal(mergeProgress(two, {}).highestUnlocked, 2);
-  assert.deepEqual(parseStoredStars({ ...two, '3': 2, '60': 3 }), two);
+  assert.equal(mergeProgress(two, {}).highestUnlocked, 3);
+  assert.deepEqual(parseStoredStars({ ...two, '3': 2, '60': 3 }), { ...two, '3': 2 });
 });
 
 test('reject duplicate, invalid and skipped levels', () => {

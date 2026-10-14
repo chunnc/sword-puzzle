@@ -1,4 +1,5 @@
 import type { SessionData } from '../../services/session';
+import type { BoardSnapshot } from '../../game/types';
 import type { PlayerProfile } from '../../game/domain';
 import type { BoardActionPhase, BoardActionPresenter } from '../../game/types';
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
@@ -16,7 +17,6 @@ jest.mock('../../services/api', () => ({
   isApiConfigured: jest.fn(() => true),
   checkHealth: jest.fn(async () => undefined),
   fetchBootstrap: jest.fn(),
-  fetchContent: jest.fn(),
   createGuest: jest.fn(),
   deviceSession: jest.fn(),
   logoutAccount: jest.fn(),
@@ -55,6 +55,25 @@ function ready(profile: PlayerProfile = domain.emptyProfile()) {
     }
   });
 }
+function currentMapLevel(levelId = 1) {
+  const maps = require('../../../../content/game-maps.json');
+  return domain.mapToLevel(domain.validateMap(maps[levelId - 1], domain.CONTENT), 24680, 0, domain.CONTENT);
+}
+function prepareBattleRun(target = 18): BoardSnapshot {
+  const prior = store.getState().save.active!;
+  const content = domain.getContentVersion(prior.configVersion ?? prior.contentVersion);
+  const map = JSON.parse(JSON.stringify(prior.level.mapDefinition));
+  delete map.tutorial;
+  map.layout = Array.from({ length: 7 }, (_, y) => Array.from({ length: 7 }, (_, x) => content.normalTileIds[(x + 2*y) % 4]));
+  map.layout[0][0] = content.normalTileIds[0]; map.layout[0][1] = content.normalTileIds[1]; map.layout[0][2] = content.normalTileIds[0]; map.layout[1][1] = content.normalTileIds[0];
+  map.objectives = [{ id: 'main', type: 'Battle', target, enemy: { id: 'fixture', name: 'Fixture', artKey: 'beast' } }];
+  const level = domain.mapToLevel(domain.validateMap(map, content), prior.level.seed, prior.level.assistReduction, content);
+  const { BoardEngine } = require('../../game/BoardEngine');
+  const snapshot: BoardSnapshot = new BoardEngine(level, null, { loadout: prior.loadout, totalExp: prior.totalExpAtStart ?? 0, passiveSkills: prior.passiveSkills }).snapshot();
+  snapshot.runId = prior.runId;
+  store.setState({ save: { ...store.getState().save, active: snapshot } });
+  return snapshot;
+}
 beforeEach(async () => {
   jest.resetModules();
   process.env.EXPO_PUBLIC_GAME_API_URL = 'http://localhost:5001/game';
@@ -68,9 +87,9 @@ beforeEach(async () => {
   await storage.clear();
   await session.saveSession(guest);
   (api.fetchBootstrap as jest.Mock).mockResolvedValue({
-    contentVersion: 8,
+    contentVersion: domain.CONTENT.version,
     content: domain.CONTENT,
-    levelCount: 2,
+    levelCount: domain.CONTENT.levelCount,
     rewardedAdsEnabled: false,
     minClientVersion: '1.2.0'
   });
@@ -80,7 +99,21 @@ beforeEach(async () => {
   });
   (api.createGuest as jest.Mock).mockResolvedValue(guest);
   (api.deviceSession as jest.Mock).mockResolvedValue(guest);
-  (api.fetchContent as jest.Mock).mockResolvedValue(domain.CONTENT);
+  (api.fetchChapterMaps as jest.Mock).mockImplementation(async (_session, chapterId) => ({
+    session: guest,
+    value: { chapterId, contentVersion: domain.CONTENT.version, maps: require('../../../../content/game-maps.json').filter((map: any) => map.chapterId === chapterId).map(domain.mapSummary) }
+  }));
+  (api.startRun as jest.Mock).mockImplementation(async (_session, input) => {
+    const map = domain.versionMap(require('../../../../content/game-maps.json')[input.levelId - 1], domain.CONTENT);
+    return { session: guest, value: { config: domain.contentWire(domain.CONTENT), run: {
+      runId: input.runId, configVersion: domain.CONTENT.version, mapVersion: map.mapVersion,
+      map, seed: 123456, assistReduction: .1, attempt: 1, loadout: store.getState().save.profile.loadout, totalExp: store.getState().save.profile.totalExp
+    } } };
+  });
+  (api.finishRun as jest.Mock).mockImplementation(async (_session, runId, report) => ({ session: guest, value: {
+    profile: store.getState().save.profile, stars: report.outcome === 'won' ? 1 : 0,
+    ...(report.outcome === 'won' ? { reward: { id: runId, expGained: 0, coinsGained: 0, bestStars: 1, realmBefore: 0, realmAfter: 0 } } : {})
+  } }));
 });
 it('creates a guest once for simultaneous initialization and waits for profile', async () => {
   await session.clearSession();
@@ -117,7 +150,7 @@ it('reuses the saved session and ignores offline progress', async () => {
 });
 it.each(['unfinished', 'won', 'lost'])('boots to the map while preserving the saved %s journal', async (status) => {
   const { BoardEngine }: typeof import('../../game/BoardEngine') = require('../../game/BoardEngine');
-  const level = domain.getLevelData(1);
+  const level = currentMapLevel(1);
   const active = new BoardEngine(level).snapshot();
   const saved = { ...saveTools.emptySave(), ownerId: guest.uid, active };
   if (status === 'lost') active.moves = 0;
@@ -165,11 +198,11 @@ it.each(['unfinished', 'won', 'lost'])('starts a fresh run instead of the previo
 });
 it('settles a pending win during cold boot to the map without submitting it twice', async () => {
   const { BoardEngine }: typeof import('../../game/BoardEngine') = require('../../game/BoardEngine');
-  const level = domain.getLevelData(1);
+  const level = currentMapLevel(1);
   const active = new BoardEngine(level).snapshot();
   active.objectiveProgress = Object.fromEntries(level.objectives.map(goal => [goal.id, goal.target]));
   const operation = { id: active.runId, kind: 'win' as const, levelId: 1, stars: 3 as const, objectiveProgress: active.objectiveProgress };
-  const profile = domain.applyOperation(domain.emptyProfile(), operation).profile;
+  const profile = domain.applyOperation(domain.emptyProfile(), operation, { ...domain.CONTENT, levels: [level] }).profile;
   await saveTools.persistSave({ ...saveTools.emptySave(), ownerId: guest.uid, active, pending: { contentVersion: active.contentVersion, operation } });
   (api.syncProfile as jest.Mock).mockResolvedValue({ session: guest, response: {
     profile, acknowledged: [operation.id], rejected: [],
@@ -304,17 +337,18 @@ it('purchases only after server confirmation and freezes the run loadout', async
   });
   expect(await buying).toBe(true);
   expect(store.getState().save.profile.ownedSkills).toContain('ngu-kiem');
-  expect(store.getState().save.active!.loadout.skills).toEqual(['nhat-kiem']);
+  expect(store.getState().save.active!.loadout.skills).toEqual(p.loadout.skills);
 });
 const flushAction = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
-function finalWinningSwap(): [number, number, number, number] {
-  const snapshot = store.getState().save.active!;
+function finalWinningSwap(target = 18): [number, number, number, number] {
+  const snapshot = prepareBattleRun(target);
   snapshot.moves = 1; snapshot.objectiveProgress.main = 17; snapshot.swordQi = 100;
+  const content = domain.getContentVersion(snapshot.configVersion ?? snapshot.contentVersion);
   snapshot.tiles = snapshot.tiles.map((tile, i) => tile ? {
-    kind: (i % 7 + 2 * Math.floor(i / 7)) % 4, chargeTier: 0, locked: false
+    kind: content.normalTileIds[(i % 7 + 2 * Math.floor(i / 7)) % 4], chargeTier: 0 as const, locked: false
   } : null);
-  snapshot.tiles[0]!.kind = 0; snapshot.tiles[1]!.kind = 0;
-  snapshot.tiles[2]!.kind = 1; snapshot.tiles[9]!.kind = 0;
+  snapshot.tiles[0]!.kind = content.normalTileIds[0]; snapshot.tiles[1]!.kind = content.normalTileIds[0];
+  snapshot.tiles[2]!.kind = content.normalTileIds[1]; snapshot.tiles[9]!.kind = content.normalTileIds[0];
   return [2, 1, 2, 0];
 }
 function livePresenter(lastWave: number) {
@@ -332,8 +366,7 @@ function livePresenter(lastWave: number) {
 it('starts live animation before storage and keeps the final animation independent of a slow write', async () => {
   ready(); await store.getState().startLevel(1);
   const { BoardEngine } = require('../../game/BoardEngine');
-  const snapshot = store.getState().save.active!;
-  snapshot.level = { ...snapshot.level, objectives: [{ id: 'main', type: 'Battle', target: 1000000 }] } as typeof snapshot.level;
+  const snapshot = prepareBattleRun(1000000);
   snapshot.objectiveProgress = { main: 0 };
   const expected = new BoardEngine(snapshot.level, snapshot);
   const move = expected.legalMoves()[0]; expected.trySwap(...move);
@@ -359,7 +392,7 @@ it('starts live animation before storage and keeps the final animation independe
 it('persists a final-swap loss with enough qi and returns it only after playback settles', async () => {
   ready(); await store.getState().startLevel(1);
   const { BoardEngine } = require('../../game/BoardEngine');
-  const move = finalWinningSwap(), snapshot = store.getState().save.active!;
+  const move = finalWinningSwap(100000), snapshot = store.getState().save.active!;
   snapshot.objectiveProgress.main = 0;
   const expected = new BoardEngine(snapshot.level, snapshot);
   expect(expected.trySwap(...move)).toBe(true);
@@ -388,59 +421,49 @@ it('runs winning animation while server confirmation is pending and never grants
   expect(expected.trySwap(...move)).toBe(true);
   const live = livePresenter(expected.animation.steps.length);
   let confirm!: (value: unknown) => void;
-  (api.syncProfile as jest.Mock).mockImplementationOnce(() => new Promise(resolve => { confirm = resolve; }));
+  (api.finishRun as jest.Mock).mockImplementationOnce(() => new Promise(resolve => { confirm = resolve; }));
   const action = store.getState().swap(...move, live.presenter);
   let done = false; void action.then(() => { done = true; });
   await flushAction();
-  expect(api.syncProfile).toHaveBeenCalledTimes(1);
+  expect(api.finishRun).toHaveBeenCalledTimes(1);
   expect(live.phases.at(-1)!.kind).toBe('step');
   expect(store.getState().save.profile.coins).toBe(0);
   expect(store.getState().save.lastWin).toBeNull();
   live.finish(); await flushAction();
   expect(live.phases.at(-1)!.kind).toBe('settled');
   expect(done).toBe(false);
-  const operation = store.getState().save.pending!.operation;
-  const canonical = domain.applyOperation(domain.emptyProfile(), operation).profile;
-  confirm({ session: guest, response: { profile: canonical, acknowledged: [operation.id], rejected: [],
-    rewards: [{ id: operation.id, expGained: 30, coinsGained: 100, bestStars: 0, realmBefore: 0, realmAfter: 0 }] } });
+  const run = store.getState().save.pendingFinish!;
+  const stars = domain.mapStars(snapshot.level.mapDefinition!, expected.movesUsed);
+  const reward = { id: run.runId, expGained: 30, coinsGained: 100, bestStars: stars, realmBefore: 0, realmAfter: 0 };
+  const operation = { id: run.runId, kind: 'win' as const, levelId: run.levelId, stars, objectiveProgress: run.report.objectiveProgress };
+  const canonical = domain.applyOperation(domain.emptyProfile(), operation, { ...domain.getContentVersion(snapshot.contentVersion), levels: [snapshot.level] }).profile;
+  confirm({ session: guest, value: { profile: canonical, stars, reward } });
   const result = await action;
-  expect(result).toMatchObject({ won: true, lost: false, stars: 0, animation: null, summary: { coinsGained: 100 } });
-  expect(store.getState().save.pending).toBeNull();
+  expect(result).toMatchObject({ won: true, lost: false, stars, animation: null, summary: { coinsGained: 100 } });
+  expect(store.getState().save.pendingFinish).toBeUndefined();
 });
 it('retries a timed-out committed result with the same run ID without local rewards', async () => {
   ready();
   await store.getState().startLevel(1);
   const move = finalWinningSwap();
   const snapshot = store.getState().save.active!;
-  (api.syncProfile as jest.Mock).mockRejectedValueOnce(new api.GameApiError('TIMEOUT'));
+  (api.finishRun as jest.Mock).mockRejectedValueOnce(new api.GameApiError('TIMEOUT'));
   const result = await store.getState().swap(...move);
   expect(result.won).toBe(true);
   expect(result.summary).toBeUndefined();
   expect(store.getState().save.profile.coins).toBe(0);
   expect(await store.getState().startLevel(2)).toBe(false);
-  const pending = store.getState().save.pending!,
-    canonical = domain.applyOperation(domain.emptyProfile(), pending.operation).profile;
-  (api.syncProfile as jest.Mock).mockResolvedValue({
-    session: guest,
-    response: {
-      profile: canonical,
-      acknowledged: [pending.operation.id],
-      rejected: [],
-      rewards: [{
-        id: pending.operation.id,
-        expGained: 30,
-        coinsGained: 100,
-        bestStars: 0,
-        realmBefore: 0,
-        realmAfter: 0
-      }]
-    }
-  });
+  const pending = store.getState().save.pendingFinish!;
+  const operation = { id: pending.runId, kind: 'win' as const, levelId: pending.levelId, stars: 3 as const, objectiveProgress: pending.report.objectiveProgress };
+  const canonical = domain.applyOperation(domain.emptyProfile(), operation, { ...domain.getContentVersion(snapshot.contentVersion), levels: [snapshot.level] }).profile;
+  (api.finishRun as jest.Mock).mockResolvedValue({ session: guest, value: { profile: canonical, stars: 3, reward: {
+    id: pending.runId, expGained: 30, coinsGained: 100, bestStars: 3, realmBefore: 0, realmAfter: 0
+  } } });
   await store.getState().checkConnection();
   expect(store.getState()).toMatchObject({ online: true, connectionFailed: false });
-  expect(store.getState().save.pending).toBeNull();
+  expect(store.getState().save.pendingFinish).toBeUndefined();
   expect(store.getState().save.lastWin?.coinsGained).toBe(100);
-  expect((api.syncProfile as jest.Mock).mock.calls[1][1][0].id).toBe(snapshot.runId);
+  expect((api.finishRun as jest.Mock).mock.calls.map(call => call[1])).toEqual([snapshot.runId, snapshot.runId]);
   expect(await store.getState().startLevel(2)).toBe(true);
 });
 it('reconciles a rejected purchase without optimistic ownership', async () => {
@@ -499,7 +522,7 @@ it('reauthenticates the same registered UID without discarding a pending request
   await session.saveSession(registered);
   ready(p);
   const operation = { id: 'reauth_purchase1', kind: 'purchase' as const, category: 'skill' as const, itemId: 'ngu-kiem' };
-  store.setState({ session: registered, authRequired: true, save: { ...store.getState().save, pending: { contentVersion: 8, operation } } });
+  store.setState({ session: registered, authRequired: true, save: { ...store.getState().save, pending: { contentVersion: domain.CONTENT.version, operation } } });
   (api.loginAccount as jest.Mock).mockResolvedValue(registered);
   (api.fetchProfile as jest.Mock).mockResolvedValue({ session: registered, profile: p });
   const canonical = domain.applyOperation(p, operation).profile;
@@ -514,7 +537,7 @@ it('restores the pending journal after a cold boot with a revoked registered ses
   const registered = { ...guest, isGuest: false };
   const p = domain.profileFromLegacy([{ levelId: 1, stars: 3 }, { levelId: 2, stars: 3 }, { levelId: 3, stars: 3 }]);
   const operation = { id: 'cold_reauth_buy1', kind: 'purchase' as const, category: 'skill' as const, itemId: 'ngu-kiem' };
-  await saveTools.persistSave({ ...saveTools.emptySave(), ownerId: guest.uid, pending: { contentVersion: 8, operation } });
+  await saveTools.persistSave({ ...saveTools.emptySave(), ownerId: guest.uid, pending: { contentVersion: domain.CONTENT.version, operation } });
   require('expo-secure-store').getItemAsync.mockResolvedValue(JSON.stringify(registered));
   (api.fetchProfile as jest.Mock).mockRejectedValueOnce(new api.GameApiError('INVALID_SESSION', 401));
   await expect(store.getState().initialize()).rejects.toThrow();
@@ -553,16 +576,16 @@ it('deduplicates simultaneous manual retries of a rejected identity', async () =
   expect(store.getState()).toMatchObject({ authRequired: false, initialized: true, online: true });
 });
 
-function modernReady() {
+function modernReady(profile: PlayerProfile = domain.emptyProfile()) {
   const content = domain.installContent(require('../../../../content/game-config.json'));
-  ready();
+  ready(profile);
   const maps = require('../../../../content/game-maps.json');
   (api.fetchChapterMaps as jest.Mock).mockImplementation(async (_session, chapterId) => ({
     session: guest, value: { chapterId, contentVersion: content.version, maps: maps.filter((m: any) => m.chapterId === chapterId).map(domain.mapSummary) }
   }));
   (api.startRun as jest.Mock).mockImplementation(async (_session, input) => ({ session: guest, value: { config:domain.contentWire(content), run: {
-    runId: input.runId, configVersion:content.version,mapVersion:content.version,map: domain.versionMap(maps[input.levelId-1],content), seed: 123456, assistReduction: .1, attempt: 1,
-    loadout: domain.emptyProfile().loadout, totalExp: 0
+    runId: input.runId, configVersion:content.version,mapVersion:domain.versionMap(maps[input.levelId-1],content).mapVersion,map: domain.versionMap(maps[input.levelId-1],content), seed: 123456, assistReduction: .1, attempt: 1,
+    loadout: store.getState().save.profile.loadout, totalExp: store.getState().save.profile.totalExp
   } } }));
   return content;
 }
@@ -570,7 +593,7 @@ function modernReady() {
 it.each(['won', 'lost', 'abandoned'] as const)('keeps surplus counts while persisting and retrying a capped %s report', async outcome => {
   modernReady();
   const { BoardEngine } = require('../../game/BoardEngine');
-  const active = new BoardEngine(domain.mapToLevel(domain.validateMap(require('../../../../content/game-maps.json')[2], domain.CONTENT), 123456, 0, domain.CONTENT)).snapshot();
+  const active: BoardSnapshot = new BoardEngine(domain.mapToLevel(domain.validateMap(require('../../../../content/game-maps.json')[2], domain.CONTENT), 123456, 0, domain.CONTENT)).snapshot();
   active.moves = outcome === 'lost' ? 0 : active.moves;
   active.objectiveProgress = Object.fromEntries(active.level.objectives.map((goal, index) => [goal.id, outcome === 'won' || index === 0 ? goal.target + 8 : 0]));
   store.setState({ save: { ...store.getState().save, active } });
@@ -590,7 +613,7 @@ it.each(['won', 'lost', 'abandoned'] as const)('keeps surplus counts while persi
 it('caps the automatic winning report while retaining collection surplus from the final swap', async () => {
   modernReady();
   const { BoardEngine } = require('../../game/BoardEngine');
-  const active = new BoardEngine(domain.mapToLevel(domain.validateMap(require('../../../../content/game-maps.json')[0], domain.CONTENT), 123456, 0, domain.CONTENT)).snapshot();
+  const active: BoardSnapshot = new BoardEngine(domain.mapToLevel(domain.validateMap(require('../../../../content/game-maps.json')[0], domain.CONTENT), 123456, 0, domain.CONTENT)).snapshot();
   const goal = active.level.objectives[0];
   active.objectiveProgress[goal.id] = goal.target - 1;
   store.setState({ save: { ...store.getState().save, active } });
@@ -648,7 +671,8 @@ it('defers a loss report until leaving/retrying, and retries a failed finish wit
   expect(store.getState().save.pendingFinish).toBeUndefined();
 });
 it('grants rewarded extra moves to a lost run even when a skill is affordable', async () => {
-  modernReady(); await store.getState().startLevel(1);
+  const profile=domain.emptyProfile();profile.ownedSkills=['nhat-kiem'];profile.ownedSwords=['thanh-phong'];profile.loadout={sword:'thanh-phong',skills:['nhat-kiem']};
+  modernReady(profile); await store.getState().startLevel(1);
   const { BoardEngine } = require('../../game/BoardEngine');
   const ads = require('../../services/ads');
   const active = store.getState().save.active!;
@@ -672,12 +696,11 @@ it('grants rewarded extra moves to a lost run even when a skill is affordable', 
 it('startup requests one chapter without fetching map definitions or starting a new run', async () => {
   const content = modernReady();
   store.setState({initialized:false,bootstrapLoaded:false,online:false,save:{...saveTools.emptySave(),ownerId:guest.uid}});
-  (api.fetchBootstrap as jest.Mock).mockResolvedValue({contentVersion:content.version,content:domain.contentWire(content),levelCount:2,rewardedAdsEnabled:false,minClientVersion:'1.8.0'});
+  (api.fetchBootstrap as jest.Mock).mockResolvedValue({contentVersion:content.version,content:domain.contentWire(content),levelCount:content.levelCount,rewardedAdsEnabled:false,minClientVersion:'1.8.0'});
   await store.getState().initialize();
   expect(store.getState().chapterId).toBe('chapter-1');
   expect(api.fetchChapterMaps).toHaveBeenCalledTimes(1);
   expect(api.startRun).not.toHaveBeenCalled();
-  expect(api.fetchContent).not.toHaveBeenCalled();
 });
 it('clears a superseded run receipt rather than blocking recovery forever', async () => {
   modernReady(); await store.getState().startLevel(1);
@@ -724,21 +747,23 @@ it('manual healthy recovery drains an uncertain start without creating another a
   await store.getState().checkConnection();expect(store.getState().save.active!.runId).toBe(id);
   expect(api.startRun).toHaveBeenCalledTimes(2);
 });
-it('refreshes expanded catalog metadata without changing gameplay pins or dropping newer progress',async()=>{
+it('installs expanded catalog metadata while keeping an active run pinned and preserving progress',async()=>{
   const config=modernReady();await store.getState().startLevel(1);
   const active=store.getState().save.active!;
-  const expanded={...config,version:config.version+1,levelCount:41,levelBaseExp:[...config.levelBaseExp!,100],
-    chapters:config.chapters!.map((ch,i)=>i===3?{...ch,lastLevelId:41}:ch)};
-  const maps=require('../../../../content/game-maps.json').filter((m:any)=>m.chapterId==='chapter-4');
-  maps.push({...maps[maps.length-1],id:41,orderInChapter:11,name:'Màn 41'});
-  const profile={...domain.emptyProfile(),totalExp:2460,levels:Array.from({length:41},(_,i)=>({levelId:i+1,stars:1 as const}))};
-  store.setState({save:{...store.getState().save,profile:{...profile,levels:profile.levels.slice(0,40)}}});
-  (api.fetchContent as jest.Mock).mockResolvedValue(domain.contentWire(expanded));
-  (api.fetchChapterMaps as jest.Mock).mockResolvedValue({session:guest,value:{contentVersion:expanded.version,chapterId:'chapter-4',maps:maps.map(domain.mapSummary)}});
-  await store.getState().selectChapter('chapter-4');
-  expect(store.getState().chapterMaps).toHaveLength(11);expect(store.getState().save.active).toEqual(active);
+  const expanded={...config,version:config.version+1,levelCount:5,levelBaseExp:[...config.levelBaseExp!,100],chapters:[
+    {...config.chapters![0],lastLevelId:4},{id:'chapter-2',name:'Vân Hải Tiên Sơn II',order:2,firstLevelId:5,lastLevelId:5}
+  ]};
+  const profile={...domain.emptyProfile(),totalExp:300,levels:Array.from({length:5},(_,i)=>({levelId:i+1,stars:1 as const}))};
+  store.setState({save:{...store.getState().save,profile:{...profile,levels:profile.levels.slice(0,4)}}});
+  (api.finishRun as jest.Mock).mockResolvedValue({session:guest,value:{profile,profileConfig:domain.contentWire(expanded),stars:3,reward:{id:active.runId,expGained:0,coinsGained:0,bestStars:3,realmBefore:0,realmAfter:0}}});
+  expect(await store.getState().finishLevel('won')).toBe(true);
+  expect(store.getState().save.profile.levels).toHaveLength(5);
+  expect(store.getState().save.active).toEqual(active);
   expect(store.getState().save.active!.configVersion).toBe(config.version);
-  (api.finishRun as jest.Mock).mockResolvedValue({session:guest,value:{profile,profileConfig:domain.contentWire(expanded),stars:0}});
-  expect(await store.getState().finishLevel('abandoned')).toBe(true);
-  expect(store.getState().save.profile.levels).toHaveLength(41);
+  const map5={...require('../../../../content/game-maps.json')[3],id:5,chapterId:'chapter-2',orderInChapter:1,name:'Màn 5'};
+  (api.fetchChapterMaps as jest.Mock).mockResolvedValueOnce({session:guest,value:{contentVersion:expanded.version,chapterId:'chapter-2',maps:[domain.mapSummary(map5)]}});
+  await store.getState().selectChapter('chapter-2');
+  expect(store.getState().chapterMaps).toHaveLength(1);
+  expect(store.getState().chapterMaps[0].id).toBe(5);
+  expect(store.getState().save.active).toEqual(active);
 });

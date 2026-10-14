@@ -8,6 +8,12 @@ export function getLevel(id: number, content?: GameContent) {
   const raw = structuredClone(maps[0]);
   raw.name = `Engine fixture ${id}`;
   raw.layout = Array.from({ length: 7 }, (_, y) => Array.from({ length: 7 }, (_, x) => current.normalTileIds[(x + 2*y) % 4]));
+  // Keep the deterministic test board match-free while providing one known legal
+  // move. Production runs use server-authored layouts and do not use this helper.
+  raw.layout[0][0] = current.normalTileIds[0];
+  raw.layout[0][1] = current.normalTileIds[1];
+  raw.layout[0][2] = current.normalTileIds[0];
+  raw.layout[1][1] = current.normalTileIds[0];
   raw.objectives = [{ id: 'main', type: 'Battle', target: 100_000, enemy: { id: 'fixture', name: 'Fixture', artKey: 'beast' } }];
   delete raw.tutorial;
   raw.moves = 18;
