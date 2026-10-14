@@ -299,8 +299,13 @@ export class BoardEngine {
             const remove = (cells: number[]) => {
                 for (const i of cells) {
                     const tile = this.tiles[i];
-                    if (!tile || cleared.has(i) || protectedCells.has(i) || unlocked.has(i) || tile.kind === this.kind('rock'))
+                    if (!tile || cleared.has(i) || unlocked.has(i) || tile.kind === this.kind('rock'))
                         continue;
+                    if (protectedCells.has(i)) {
+                        // A retained match anchor still breaks adjacent obstacles.
+                        weaken(i);
+                        continue;
+                    }
                     if (tile.locked) {
                         this.tiles[i] = { ...tile, locked: false };
                         changed.add(i);
