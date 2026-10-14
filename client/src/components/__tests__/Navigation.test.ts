@@ -141,7 +141,7 @@ describe('scene navigation', () => {
     mount(React.createElement(MapScreen));
     expect(button('Chọn chương, Vân Hải Tiên Sơn')).toBeDefined();
     expect(hasText('VÂN HẢI TIÊN SƠN')).toBe(true);
-    expect(hasText('0/12 ★')).toBe(true);
+    expect(hasText(`0/${mockState.chapterMaps.length * 3} ★`)).toBe(true);
     expect(hasText('TIÊN LỘ · 4 MÀN')).toBe(false);
     expect(hasText('Dễ')).toBe(false);
     act(() => { button('Chọn chương, Vân Hải Tiên Sơn').props.onPress(); });
@@ -166,12 +166,13 @@ describe('scene navigation', () => {
   });
 
   it.each([
-    [[], 3],
-    [[{ levelId: 1, stars: 1 }], 2],
-    [[{ levelId: 1, stars: 1 }, { levelId: 2, stars: 2 }], 1],
-    [[{ levelId: 1, stars: 1 }, { levelId: 2, stars: 2 }, { levelId: 3, stars: 3 }], 0],
-  ])('places current progress at 30%% of the map viewport (%#)', (levels, index) => {
-    mockState.save.profile.levels = levels as typeof mockState.save.profile.levels;
+    { levels: [] as typeof mockState.save.profile.levels },
+    { levels: [{ levelId: 1, stars: 1 }] as typeof mockState.save.profile.levels },
+    { levels: [{ levelId: 1, stars: 1 }, { levelId: 2, stars: 2 }] as typeof mockState.save.profile.levels },
+    { levels: [{ levelId: 1, stars: 1 }, { levelId: 2, stars: 2 }, { levelId: 3, stars: 3 }] as typeof mockState.save.profile.levels },
+  ])('places current progress at 30%% of the map viewport (%#)', ({ levels }) => {
+    mockState.save.profile.levels = levels;
+    const index = mockState.chapterMaps.length - 1 - levels.length;
     mount(React.createElement(MapScreen));
     const list = renderer.root.findByType(require('react-native').FlatList);
     const scrollToOffset = jest.spyOn(list.instance, 'scrollToOffset');
@@ -180,7 +181,8 @@ describe('scene navigation', () => {
     // An event from before the new padding was laid out must not consume the scroll request.
     act(() => { list.props.onContentSizeChange(320, 496); });
     expect(scrollToOffset).not.toHaveBeenCalled();
-    act(() => { list.props.onContentSizeChange(320, 872); });
+    const expectedContentHeight = 88 + mockState.chapterMaps.length * 124 + 288;
+    act(() => { list.props.onContentSizeChange(320, expectedContentHeight); });
     expect(scrollToOffset).toHaveBeenCalledWith({ offset: Number(index) * 124, animated: false });
     const updatedList = renderer.root.findByType(require('react-native').FlatList);
     const contentStyle = StyleSheet.flatten(updatedList.props.contentContainerStyle);
@@ -211,6 +213,7 @@ describe('scene navigation', () => {
   it('overlays an arched star row on tighter, offset level nodes', () => {
     const skia = require('@shopify/react-native-skia');
     skia.__paths.length = 0;
+    mockState.save.profile.levels = [{ levelId: 1, stars: 1 }];
     mount(React.createElement(MapScreen));
     const list = renderer.root.findByType(require('react-native').FlatList);
     act(() => { list.props.onLayout({ nativeEvent: { layout: { width: 320, height: 500 } } }); });
@@ -218,29 +221,46 @@ describe('scene navigation', () => {
       const style = StyleSheet.flatten(node.props.style);
       return Boolean(style) && style.width === 68 && style.height === 36 && style.top === 20;
     });
-    expect(arcs).toHaveLength(4);
+    expect(arcs).toHaveLength(1);
     const arc = arcs[0];
     expect(arc.props.pointerEvents).toBe('none');
     const ImageComponent = require('expo-image').Image;
     const stars = renderer.root.findAllByType(ImageComponent).filter(node => node.props.source === ART.starGray);
-    expect(stars).toHaveLength(12);
-    expect(stars.filter(star => StyleSheet.flatten(star.props.style).top === 0)).toHaveLength(4);
-    expect(stars.filter(star => StyleSheet.flatten(star.props.style).top === 8)).toHaveLength(8);
+    const brightStars = renderer.root.findAllByType(ImageComponent).filter(node => node.props.source === ART.starBright);
+    expect(stars).toHaveLength(2);
+    expect(brightStars).toHaveLength(1);
+    expect(stars.filter(star => StyleSheet.flatten(star.props.style).top === 0)).toHaveLength(1);
+    expect(stars.filter(star => StyleSheet.flatten(star.props.style).top === 8)).toHaveLength(1);
     const middleStar = stars.find(star => StyleSheet.flatten(star.props.style).top === 0)!;
     expect(StyleSheet.flatten(middleStar.props.style).left).toBe(22);
     const stage = button('Màn 4, Dễ, đã khóa');
     expect(StyleSheet.flatten(stage.props.style)).toMatchObject({ height: 84, top: 20 });
     expect(StyleSheet.flatten(stage.props.style).transform).toEqual([{ translateX: 36 }]);
+    const completedStage = button('Màn 1, Dễ, đã hoàn thành, 1 sao');
     const arcStyle = StyleSheet.flatten(arc.props.style);
-    const stageStyle = StyleSheet.flatten(stage.props.style);
+    const stageStyle = StyleSheet.flatten(completedStage.props.style);
     expect(arcStyle.marginLeft + arcStyle.width / 2).toBe(stageStyle.marginLeft + stageStyle.width / 2);
     const row = renderer.root.findAllByType(View).find(node => StyleSheet.flatten(node.props.style)?.height === 124);
     expect(row).toBeDefined();
-    expect(skia.__paths).toHaveLength(4);
+    expect(skia.__paths).toHaveLength(mockState.chapterMaps.length);
     const lowerEdge = skia.__paths[0].cubicTo.mock.calls[0];
     const nextRowStart = skia.__paths[1].moveTo.mock.calls[0];
     expect(lowerEdge.slice(4)).toEqual([nextRowStart[0], 124]);
     expect(nextRowStart[1]).toBe(0);
+  });
+
+  it('hides star placeholders for uncompleted map nodes', () => {
+    mount(React.createElement(MapScreen));
+    const ImageComponent = require('expo-image').Image;
+    const stars = renderer.root.findAllByType(ImageComponent).filter(node =>
+      node.props.source === ART.starBright || node.props.source === ART.starGray);
+    const arcs = renderer.root.findAllByType(View).filter(node => {
+      const style = StyleSheet.flatten(node.props.style);
+      return Boolean(style) && style.width === 68 && style.height === 36 && style.top === 20;
+    });
+    expect(stars).toHaveLength(0);
+    expect(arcs).toHaveLength(0);
+    expect(button('Màn 1, Dễ, màn hiện tại')).toBeDefined();
   });
 
   it('reduces horizontal node offset on a narrow map viewport', () => {

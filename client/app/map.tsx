@@ -68,7 +68,7 @@ const MapLevelItem = React.memo(function MapLevelItem({ levelId, difficulty, sta
         </Path>
         <Path path={connector} style="stroke" strokeWidth={3} color="#f2d58e" />
       </Canvas> : null}
-      <View pointerEvents="none" style={[styles.starArc, { transform: [{ translateX: shift }] }]}>
+      {completed ? <View pointerEvents="none" style={[styles.starArc, { transform: [{ translateX: shift }] }]}>
         {[0, 1, 2].map((starIndex) => (
           <Image
             key={starIndex}
@@ -82,7 +82,7 @@ const MapLevelItem = React.memo(function MapLevelItem({ levelId, difficulty, sta
             ]}
           />
         ))}
-      </View>
+      </View> : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Màn ${levelId}${difficultyName ? `, ${difficultyName}` : ''}${completed ? `, đã hoàn thành, ${stars} sao` : current ? ', màn hiện tại' : ', đã khóa'}`}

@@ -1,0 +1,248 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 13,
+    "id": 5,
+    "chapterId": "chapter-1",
+    "orderInChapter": 5,
+    "name": "Map 5",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-sword-4",
+        "type": "Collect",
+        "tileKind": 1,
+        "chargeTier": 4,
+        "target": 1
+      }
+    ],
+    "moves": 27,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 60,
+      "twoStarBelowPercent": 82
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 150,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 1149274464,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "easy",
+      "objective": "collect",
+      "index": 5,
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "starQuantile": 0.8,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword:4"
+      ],
+      "targets": [
+        1
+      ],
+      "fixedTargets": true,
+      "weights": {
+        "sword": 150
+      },
+      "seed": 1149274464,
+      "totalExp": 240,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": null,
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    },
+    "shape": {
+      "family": "wings",
+      "layout": [
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 6,
+        "height": 7,
+        "activeCells": 33,
+        "holes": 9,
+        "holeRatio": 0.21428571428571427
+      },
+      "key": "[[0,0,1,1,1,0,0],[0,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[0,0,1,1,1,0,0]]"
+    },
+    "sourceCatalogHash": "ede28cfbd21c851f01d0e30c699ce40780d2f270b53185e570cc645746cde1a3",
+    "authoringConfigVersion": 13
+  },
+  "hashes": {
+    "map": "6c3378ff48917f5b37ba277b00a2be99bb270850c6bbc01f4a6ca4aaec37384b",
+    "config": "bf40ce912c4e2c555fd4f5e571f5d1686168fb9f799fc676aef329e24c487678",
+    "engine": "21acc01fb348b404544745b3cd06234d5617a142cbf7281d7395d0cf8f4284a6",
+    "report": "d7ba84a818c90c621187af9968cfb7d39a975613ed16e25a97fe400f17ba926b"
+  }
+}

@@ -14,6 +14,7 @@ const HELP = `Generate and balance a local map (no Firestore writes).
 Required: --difficulty easy|medium|hard|very-hard --objective collect|battle|boss|break-rocks|break-seals
 Collect: --tiles sword,fire,lightning,spirit (default sword); optional :4/:5, e.g. sword:4,fire:5
          --target N or N,N; charged targets count activations, not creation
+Spawn:   --weights sword=150,fire=100 (unspecified normal tiles default to 100)
 BreakRocks: generates a connected cluster of 2–6 rocks; --target N fixes the rock count
 BreakSeals: generates a connected cluster of 2–6 seals; --target N fixes the seal count
 Enemy:   --enemy-id ID --enemy-name NAME --enemy-art beast --target HP
@@ -37,9 +38,23 @@ function collectionTile(value) {
   if (!match) throw new Error('--tiles must contain tile keys with optional :4 or :5');
   return { key: match[1], ...(match[2] ? { chargeTier: Number(match[2]) } : {}) };
 }
+function parseTileWeights(value) {
+  if (value === undefined) return {};
+  const result = {};
+  for (const entry of value.split(',')) {
+    const match = /^(sword|fire|lightning|spirit)=([0-9]+)$/.exec(entry.trim());
+    if (!match) throw new Error('--weights must contain normal tile keys and integer weights, e.g. sword=150');
+    const [, key, rawWeight] = match;
+    const weight = Number(rawWeight);
+    if (weight < 1 || weight > 10_000) throw new Error('--weights values must be integers from 1 to 10000');
+    if (result[key] !== undefined) throw new Error(`Duplicate tile weight: ${key}`);
+    result[key] = weight;
+  }
+  return result;
+}
 function parseRequest(args, nextIndex) {
   const opts = parseArgs(args, ['--difficulty', '--objective', '--tiles', '--target', '--index', '--name', '--seed', '--chapter', '--chapter-name',
-    '--enemy-id', '--enemy-name', '--enemy-art', '--min-moves', '--max-moves', '--win-rate', '--three-rate', '--total-exp', '--layouts',
+    '--enemy-id', '--enemy-name', '--enemy-art', '--min-moves', '--max-moves', '--win-rate', '--three-rate', '--total-exp', '--layouts', '--weights',
     '--training-seeds', '--validation-seeds', '--retry-seeds', '--retry-attempts', '--retry-win-median', '--retry-three-median'], ['--replace', '--help']);
   if (opts['--help']) return { help: true };
   const difficulty = opts['--difficulty'], objective = opts['--objective'];
@@ -56,6 +71,7 @@ function parseRequest(args, nextIndex) {
   tiles.forEach(collectionTile);
   if (new Set(tiles).size !== tiles.length) throw new Error('--tiles must contain distinct tile kind/tier pairs');
   if (objective !== 'collect' && opts['--tiles']) throw new Error('--tiles applies to collect only');
+  const weights = parseTileWeights(opts['--weights']);
   const targetMaximum = objective === 'collect' ? 30 : ['break-rocks', 'break-seals'].includes(objective) ? 56 : 1_000_000_000;
   const targets = opts['--target'] === undefined ? null : opts['--target'].split(',').map(n => positiveInteger(n, '--target', 1, targetMaximum));
   if (targets && targets.length !== 1 && (objective !== 'collect' || targets.length !== tiles.length)) throw new Error('--target must have one value or one per collected tile');
@@ -65,7 +81,7 @@ function parseRequest(args, nextIndex) {
   const defaultQuantiles = { easy: .8, medium: .5, hard: .1, 'very-hard': .04 };
   return { policyVersion: 2, difficulty, objective, index, bands,
     starQuantile: opts['--three-rate'] ? (bands.three[0] + bands.three[1]) / 2 : defaultQuantiles[difficulty],
-    winRateEnforced: false, minMoves, maxMoves, tiles, targets, fixedTargets: targets !== null,
+    winRateEnforced: false, minMoves, maxMoves, tiles, targets, fixedTargets: targets !== null, weights,
     seed: positiveInteger(opts['--seed'] ?? (randomBytes(4).readUInt32LE() || 1), '--seed', 1, 0xffffffff),
     totalExp: positiveInteger(opts['--total-exp'] ?? (index - 1) * 60, '--total-exp', 0, 10_000_000),
     layouts: positiveInteger(opts['--layouts'] ?? 8, '--layouts', 1, 24),
@@ -110,11 +126,15 @@ function mapTemplate(config, catalog, request, shape) {
     : request.objective === 'break-rocks' ? [{ id: 'break-rocks', type: 'BreakRocks', target: request.targets?.[0] ?? shape.rockCount }]
     : request.objective === 'break-seals' ? [{ id: 'break-seals', type: 'BreakSeals', target: request.targets?.[0] ?? shape.sealCount }]
     : [{ id: 'main', type: request.objective === 'boss' ? 'Boss' : 'Battle', target: request.targets?.[0] ?? 500, enemy: request.enemy }];
+  const weights = Object.fromEntries(config.normalTileIds.map(id => {
+    const key = config.tiles.find(tile => tile.id === id).key;
+    return [id, request.weights?.[key] ?? 100];
+  }));
   return versionMap({ contentVersion: config.version, id: request.index, chapterId: chapter.id,
     orderInChapter: request.index - chapter.firstLevelId + 1, name: request.name ?? existing?.name ?? `Map ${request.index}`, difficulty: request.difficulty,
     layout: shape.layout, initialSeals: shape.sealCells ?? [], objectives, moves: request.maxMoves, baseExp: config.levelBaseExp[request.index - 1],
     starThresholds: { mode: 'percentage', threeStarBelowPercent: 61, twoStarBelowPercent: 81 },
-    spawnPolicy: { weights: Object.fromEntries(config.normalTileIds.map(id => [id, 100])), collectionPressure: 0,
+    spawnPolicy: { weights, collectionPressure: 0,
       comboChance: .05, setupChance: .15, obstaclePressure: ['break-rocks', 'break-seals'].includes(request.objective) ? .15 : 0, candidates: 4 },
     retryAssistPolicy: { thresholds: [3, 5, 8], reductions: [.1, .2, .3] } }, config, (existing?.mapVersion ?? 0) + 1);
 }

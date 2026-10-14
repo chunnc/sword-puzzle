@@ -27,6 +27,10 @@ npm run maps:generate -- --difficulty medium --objective break-seals --index 5 \
 npm run maps:generate -- --difficulty easy --objective collect --tiles sword,lightning \
   --target 8,6 --min-moves 8 --max-moves 16
 
+# Bias spawned tiles toward sword while preserving the default weight for other tiles.
+npm run maps:generate -- --index 5 --difficulty easy --objective collect \
+  --tiles sword:4 --target 1 --weights sword=150
+
 # Explicit custom target bands (inclusive), reference power and retry expectation.
 # Retry band is total attempts: 4–10 attempts means 3–9 retries.
 npm run maps:generate -- --difficulty hard --objective boss \
@@ -51,6 +55,7 @@ npm run maps:generate -- --help
 | `--objective` | Required: `collect`, `battle`, `boss`, `break-rocks`, `break-seals` |
 | `--tiles` | `sword`; CSV tile keys, collection only |
 | `--target` | Automatic; one target per enemy/obstacle objective or one per collected tile; Collect 1–30, obstacles up to 56 |
+| `--weights` | Per-tile spawn weights as `key=weight` CSV; normal tile keys only, each 1–10,000; unspecified tiles default to 100 |
 | `--index` | Next contiguous local ID, maximum 1000 |
 | `--replace` | Explicitly revise an existing non-tutorial map |
 | `--name` | `Map INDEX` |

@@ -1,0 +1,2034 @@
+{
+  "status": "failed",
+  "request": {
+    "policyVersion": 2,
+    "difficulty": "easy",
+    "objective": "collect",
+    "index": 5,
+    "bands": {
+      "win": [
+        0.95,
+        1
+      ],
+      "three": [
+        0.8,
+        1
+      ],
+      "exclusiveWin": true,
+      "exclusiveThree": true
+    },
+    "starQuantile": 0.8,
+    "winRateEnforced": false,
+    "minMoves": 6,
+    "maxMoves": 30,
+    "tiles": [
+      "sword:4"
+    ],
+    "targets": [
+      1
+    ],
+    "fixedTargets": true,
+    "seed": 1409504305,
+    "totalExp": 240,
+    "layouts": 8,
+    "trainingSeeds": 150,
+    "validationSeeds": 1000,
+    "retrySeeds": 100,
+    "retryAttempts": 100,
+    "retryWinMedian": null,
+    "retryThreeMedian": null,
+    "name": null,
+    "replace": false,
+    "chapter": null,
+    "chapterName": null,
+    "enemy": null
+  },
+  "error": "VALIDATION_FAILED: First-attempt three-star rate outside requested band",
+  "details": {
+    "map": {
+      "contentVersion": 13,
+      "id": 5,
+      "chapterId": "chapter-1",
+      "orderInChapter": 5,
+      "name": "Map 5",
+      "difficulty": "easy",
+      "layout": [
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ]
+      ],
+      "initialSeals": [],
+      "objectives": [
+        {
+          "id": "collect-sword-4",
+          "type": "Collect",
+          "tileKind": 1,
+          "chargeTier": 4,
+          "target": 1
+        }
+      ],
+      "moves": 27,
+      "baseExp": 100,
+      "starThresholds": {
+        "mode": "percentage",
+        "threeStarBelowPercent": 60,
+        "twoStarBelowPercent": 82
+      },
+      "spawnPolicy": {
+        "weights": {
+          "1": 100,
+          "2": 100,
+          "3": 100,
+          "4": 100
+        },
+        "collectionPressure": 0,
+        "comboChance": 0.1,
+        "setupChance": 0.25,
+        "obstaclePressure": 0,
+        "candidates": 4
+      },
+      "retryAssistPolicy": {
+        "thresholds": [
+          3,
+          5,
+          8
+        ],
+        "reductions": [
+          0.1,
+          0.2,
+          0.3
+        ]
+      },
+      "mapVersion": 1,
+      "rulesMode": "modern",
+      "tileRegistry": {
+        "sword": 1,
+        "fire": 2,
+        "lightning": 3,
+        "spirit": 4,
+        "rock": 5
+      }
+    },
+    "config": {
+      "version": 13,
+      "levelCount": 5,
+      "qiCap": 100,
+      "expRates": [
+        30,
+        60,
+        80,
+        100
+      ],
+      "tiles": [
+        {
+          "id": 1,
+          "name": "Kiếm",
+          "damage": 10,
+          "qi": 1,
+          "key": "sword",
+          "role": "matchable",
+          "artKey": "tileSword"
+        },
+        {
+          "id": 2,
+          "name": "Hỏa",
+          "damage": 6,
+          "qi": 2,
+          "key": "fire",
+          "role": "matchable",
+          "artKey": "tileFire"
+        },
+        {
+          "id": 3,
+          "name": "Lôi",
+          "damage": 4,
+          "qi": 3,
+          "key": "lightning",
+          "role": "matchable",
+          "artKey": "tileLightning"
+        },
+        {
+          "id": 4,
+          "name": "Tụ Linh Châu",
+          "damage": 0,
+          "qi": 6,
+          "key": "spirit",
+          "role": "matchable",
+          "artKey": "tileSpiritOrb"
+        },
+        {
+          "id": 5,
+          "key": "rock",
+          "name": "Đá chắn",
+          "role": "obstacle",
+          "artKey": "tileRock",
+          "damage": 0,
+          "qi": 0
+        }
+      ],
+      "realms": [
+        {
+          "id": "LuyenKhi",
+          "name": "Luyện Khí",
+          "exp": 0
+        },
+        {
+          "id": "TrucCo",
+          "name": "Trúc Cơ",
+          "exp": 1500
+        },
+        {
+          "id": "KimDan",
+          "name": "Kim Đan",
+          "exp": 4000
+        },
+        {
+          "id": "NguyenAnh",
+          "name": "Nguyên Anh",
+          "exp": 8000
+        },
+        {
+          "id": "HoaThan",
+          "name": "Hóa Thần",
+          "exp": 14000
+        },
+        {
+          "id": "LuyenHu",
+          "name": "Luyện Hư",
+          "exp": 23000
+        },
+        {
+          "id": "HopThe",
+          "name": "Hợp Thể",
+          "exp": 36000
+        },
+        {
+          "id": "DaiThua",
+          "name": "Đại Thừa",
+          "exp": 54000
+        },
+        {
+          "id": "DoKiep",
+          "name": "Độ Kiếp",
+          "exp": 78000
+        },
+        {
+          "id": "ChanTien",
+          "name": "Chân Tiên",
+          "exp": 110000
+        }
+      ],
+      "skills": [
+        {
+          "id": "nhat-kiem",
+          "name": "Nhất Kiếm",
+          "description": "Chém một hàng ngang được chọn.",
+          "cost": 60,
+          "unlock": 0,
+          "price": 0,
+          "artKey": "iconSkillNhatKiem",
+          "acquisition": "retired"
+        },
+        {
+          "id": "ngu-kiem",
+          "name": "Ngự Kiếm",
+          "description": "Đổi hai ô cạnh nhau, ít nhất một ô Kiếm. Không cần tạo match.",
+          "cost": 30,
+          "unlock": 3,
+          "price": 150,
+          "artKey": "iconSkillNguKiem"
+        },
+        {
+          "id": "hoa-lien",
+          "name": "Hỏa Liên",
+          "description": "Nổ vùng 3×3 quanh ô chọn.",
+          "cost": 65,
+          "unlock": 5,
+          "price": 200,
+          "artKey": "iconSkillHoaLien"
+        },
+        {
+          "id": "dan-loi",
+          "name": "Dẫn Lôi",
+          "description": "Chọn ba ô thường khác Lôi để chuyển thành Lôi.",
+          "cost": 45,
+          "unlock": 8,
+          "price": 250,
+          "artKey": "iconSkillDanLoi"
+        },
+        {
+          "id": "pha-chuong",
+          "name": "Phá Chướng",
+          "description": "Gỡ đá và phong ấn trong vùng 3×3.",
+          "cost": 40,
+          "unlock": 12,
+          "price": 300,
+          "artKey": "iconSkillPhaChuong"
+        },
+        {
+          "id": "lien-kiem",
+          "name": "Liên Kiếm",
+          "description": "Chọn hai ô cường hóa để kích hoạt lần lượt.",
+          "cost": 80,
+          "unlock": 15,
+          "price": 350,
+          "artKey": "iconSkillLienKiem"
+        },
+        {
+          "id": "hoi-linh",
+          "name": "Hồi Linh",
+          "description": "Xáo các ô di chuyển được trong vùng 3×3.",
+          "cost": 35,
+          "unlock": 20,
+          "price": 450,
+          "artKey": "iconSkillHoiLinh"
+        },
+        {
+          "id": "van-kiem",
+          "name": "Vạn Kiếm",
+          "description": "Chọn một ô để xóa toàn bộ ô cùng loại.",
+          "cost": 100,
+          "unlock": 30,
+          "price": 500,
+          "artKey": "iconSkillVanKiem"
+        },
+        {
+          "id": "thu",
+          "name": "Thứ",
+          "description": "Chọn một ô: xóa ô thường, kích hoạt ô cường hóa hoặc phá một lớp đá/phong ấn.",
+          "cost": 60,
+          "unlock": 5,
+          "price": 0,
+          "artKey": "iconSkillThu",
+          "kind": "active",
+          "acquisition": "milestone",
+          "swordForm": 1
+        },
+        {
+          "id": "thieu",
+          "name": "Thiêu",
+          "description": "Bị động: mỗi ô ghép bị xóa nhận thêm 1 sát thương lên boss.",
+          "cost": 0,
+          "unlock": 8,
+          "price": 0,
+          "artKey": "iconSkillThieu",
+          "kind": "passive",
+          "acquisition": "milestone",
+          "swordForm": 2,
+          "bossDamagePerTile": 1
+        },
+        {
+          "id": "van",
+          "name": "Vân",
+          "description": "Bị động: mỗi ô ghép bị xóa nhận thêm 1 sát thương lên boss.",
+          "cost": 0,
+          "unlock": 10,
+          "price": 0,
+          "artKey": "iconSkillVan",
+          "kind": "passive",
+          "acquisition": "milestone",
+          "swordForm": 3,
+          "bossDamagePerTile": 1
+        }
+      ],
+      "swords": [
+        {
+          "id": "thanh-phong",
+          "name": "Thanh Phong",
+          "description": "Ô Kiếm nhận thêm 1 kiếm khí.",
+          "unlock": 0,
+          "price": 0,
+          "color": "#49c8e5",
+          "artKey": "iconSwordThanhPhong",
+          "acquisition": "retired"
+        },
+        {
+          "id": "trong-nhac",
+          "name": "Trọng Nhạc",
+          "description": "Sát thương ô Kiếm tăng 30%.",
+          "unlock": 3,
+          "price": 200,
+          "color": "#d7b76e",
+          "artKey": "iconSwordTrongNhac"
+        },
+        {
+          "id": "hoa-van",
+          "name": "Hỏa Vân",
+          "description": "Sát thương ô Hỏa tăng 50%.",
+          "unlock": 5,
+          "price": 200,
+          "color": "#e35646",
+          "artKey": "iconSwordHoaVan"
+        },
+        {
+          "id": "loi-minh",
+          "name": "Lôi Minh",
+          "description": "Ô Lôi nhận thêm 1 kiếm khí.",
+          "unlock": 8,
+          "price": 250,
+          "color": "#b79aff",
+          "artKey": "iconSwordLoiMinh"
+        },
+        {
+          "id": "tu-linh",
+          "name": "Tụ Linh",
+          "description": "Khí cơ bản của Tụ Linh Châu tăng thêm 2.",
+          "unlock": 12,
+          "price": 300,
+          "color": "#7ce4bd",
+          "artKey": "iconSwordTuLinh"
+        },
+        {
+          "id": "lien-tinh",
+          "name": "Liên Tinh",
+          "description": "Sát thương tăng 20% từ cascade thứ hai.",
+          "unlock": 15,
+          "price": 350,
+          "color": "#f2d58e",
+          "artKey": "iconSwordLienTinh"
+        },
+        {
+          "id": "pha-quan",
+          "name": "Phá Quân",
+          "description": "Ô bị xóa phá chướng ngại cạnh bên theo tám hướng.",
+          "unlock": 20,
+          "price": 400,
+          "color": "#efac82",
+          "artKey": "iconSwordPhaQuan"
+        },
+        {
+          "id": "huyen-co",
+          "name": "Huyền Cơ",
+          "description": "Giảm 10% chi phí kiếm thuật.",
+          "unlock": 30,
+          "price": 450,
+          "color": "#87c3dc",
+          "artKey": "iconSwordHuyenCo"
+        },
+        {
+          "id": "co-ban",
+          "name": "Thiết Kiếm",
+          "description": "Mỗi ô ghép bị xóa nhận thêm 1 sát thương.",
+          "unlock": 3,
+          "price": 0,
+          "color": "#d7b76e",
+          "artKey": "iconSwordCoBan",
+          "acquisition": "milestone",
+          "flatDamage": 1
+        }
+      ],
+      "rewards": {
+        "firstWinCoins": 100,
+        "replayWinCoins": 10,
+        "starBonus": [
+          0,
+          0,
+          25,
+          50
+        ]
+      },
+      "layoutCodes": {
+        "void": 0,
+        "random": -1
+      },
+      "normalTileIds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "levelBaseExp": [
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "chapters": [
+        {
+          "id": "chapter-1",
+          "name": "Vân Hải Tiên Sơn",
+          "order": 1,
+          "firstLevelId": 1,
+          "lastLevelId": 5
+        }
+      ],
+      "milestoneRewards": [
+        {
+          "levelId": 3,
+          "stars": 3,
+          "category": "sword",
+          "itemId": "co-ban"
+        },
+        {
+          "levelId": 5,
+          "stars": 3,
+          "category": "skill",
+          "itemId": "thu"
+        },
+        {
+          "levelId": 8,
+          "stars": 3,
+          "category": "skill",
+          "itemId": "thieu"
+        },
+        {
+          "levelId": 10,
+          "stars": 3,
+          "category": "skill",
+          "itemId": "van"
+        }
+      ]
+    },
+    "report": {
+      "format": 1,
+      "status": "failed",
+      "failures": [
+        "First-attempt three-star rate outside requested band"
+      ],
+      "hashes": {
+        "map": "d9153201904a3bdff22c8c140747e549b2bfa1779bb964f8dd0ac0b68bd097c3",
+        "config": "bf40ce912c4e2c555fd4f5e571f5d1686168fb9f799fc676aef329e24c487678",
+        "engine": "21acc01fb348b404544745b3cd06234d5617a142cbf7281d7395d0cf8f4284a6"
+      },
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "botModel": {
+        "version": 1,
+        "loadout": {
+          "sword": null,
+          "skills": []
+        },
+        "mistakeRates": {
+          "basic": 0.3,
+          "normal": 0.2,
+          "strategic": 0.1
+        },
+        "mistakeCandidateLimit": 3,
+        "mistakeSelection": "uniform-among-next-three-lower-ranked-moves"
+      },
+      "authoringPolicy": {
+        "version": 2,
+        "starQuantile": 0.8,
+        "totalMoves": 27,
+        "threeStarMaxMoves": 16,
+        "twoStarMaxMoves": 22,
+        "moveRatios": {
+          "threeStars": 0.6,
+          "twoStars": 0.8
+        },
+        "maxMoves": 30,
+        "winRateEnforced": false,
+        "chanceCaps": {
+          "comboChance": 0.15,
+          "setupChance": 0.35
+        },
+        "budgetRefinement": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 13,
+            "censored": false,
+            "derivedMoves": 22
+          },
+          {
+            "iteration": 2,
+            "testedMoves": 22,
+            "quantileMoves": 13,
+            "censored": false,
+            "derivedMoves": 22
+          },
+          {
+            "iteration": 1,
+            "testedMoves": 22,
+            "quantileMoves": 16,
+            "censored": false,
+            "derivedMoves": 27
+          },
+          {
+            "iteration": 2,
+            "testedMoves": 27,
+            "quantileMoves": 16,
+            "censored": false,
+            "derivedMoves": 27
+          }
+        ]
+      },
+      "powerModel": {
+        "expectedTotalExp": 240,
+        "minimumTotalExp": 0,
+        "strongTotalExp": 1900,
+        "loadout": {
+          "sword": null,
+          "skills": []
+        },
+        "extraMoves": false
+      },
+      "seedSuites": {
+        "generationSeed": 1409504305,
+        "training": 150,
+        "validation": 1000,
+        "retrySequences": 100,
+        "maxRetryAttempts": 100,
+        "selection": "training-only; one frozen validation pass"
+      },
+      "training": {
+        "passed": true,
+        "failures": [],
+        "loss": 0.006697379197379129,
+        "summary": {
+          "mapHash": "d9153201904a3bdff22c8c140747e549b2bfa1779bb964f8dd0ac0b68bd097c3",
+          "id": 5,
+          "difficulty": "easy",
+          "samples": 150,
+          "winRate": 0.9333333333333333,
+          "starRates": [
+            0.06666666666666667,
+            0.04666666666666667,
+            0.08,
+            0.8066666666666666
+          ],
+          "suboptimalChoices": 288,
+          "suboptimalChoiceRate": 0.1769041769041769,
+          "medianMoves": 9,
+          "actions": 1628,
+          "waveCounts": {
+            "1": 738,
+            "2": 631,
+            "3": 200,
+            "4": 59
+          },
+          "metrics": {
+            "seeded": 207,
+            "setups": 289,
+            "setupAttempts": 355,
+            "setupFallbacks": 66,
+            "setupUsed": 116,
+            "chargesCreated": 849,
+            "chargesActivated": 685,
+            "settlements": 8
+          },
+          "settlementRate": 0.004914004914004914,
+          "movesHistogram": {
+            "2": 5,
+            "3": 12,
+            "4": 9,
+            "5": 10,
+            "6": 15,
+            "7": 11,
+            "8": 7,
+            "9": 9,
+            "10": 10,
+            "11": 4,
+            "12": 10,
+            "13": 8,
+            "14": 5,
+            "15": 4,
+            "16": 2,
+            "17": 1,
+            "18": 4,
+            "19": 4,
+            "20": 2,
+            "21": 1,
+            "23": 4,
+            "24": 2,
+            "26": 1
+          },
+          "averageMoves": 9.7,
+          "averageProgress": 1,
+          "averageFailedProgress": 0,
+          "averageReshuffles": 0.006666666666666667,
+          "averageWaves": 18.906666666666666,
+          "maxChain": 4,
+          "bot": "normal",
+          "power": "expected",
+          "totalExp": 240,
+          "reshuffleRate": 0.0006142506142506142
+        }
+      },
+      "search": {
+        "shapes": 8,
+        "candidates": 3,
+        "refined": 3,
+        "coarseSeeds": 40,
+        "rejected": [
+          {
+            "shape": 1,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 25,
+                "censored": false,
+                "derivedMoves": 42
+              }
+            ]
+          },
+          {
+            "shape": 1,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 29,
+                "censored": false,
+                "derivedMoves": 49
+              }
+            ]
+          },
+          {
+            "shape": 1,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 21,
+                "censored": false,
+                "derivedMoves": 35
+              }
+            ]
+          },
+          {
+            "shape": 2,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 25,
+                "censored": false,
+                "derivedMoves": 42
+              }
+            ]
+          },
+          {
+            "shape": 2,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 22,
+                "censored": false,
+                "derivedMoves": 37
+              }
+            ]
+          },
+          {
+            "shape": 2,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 28,
+                "censored": false,
+                "derivedMoves": 47
+              }
+            ]
+          },
+          {
+            "shape": 3,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 20,
+                "censored": false,
+                "derivedMoves": 34
+              }
+            ]
+          },
+          {
+            "shape": 3,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 19,
+                "censored": false,
+                "derivedMoves": 32
+              }
+            ]
+          },
+          {
+            "shape": 4,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "censored",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": null,
+                "censored": true,
+                "derivedMoves": null
+              }
+            ]
+          },
+          {
+            "shape": 4,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "censored",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": null,
+                "censored": true,
+                "derivedMoves": null
+              }
+            ]
+          },
+          {
+            "shape": 4,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 25,
+                "censored": false,
+                "derivedMoves": 42
+              }
+            ]
+          },
+          {
+            "shape": 5,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "censored",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": null,
+                "censored": true,
+                "derivedMoves": null
+              }
+            ]
+          },
+          {
+            "shape": 5,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "censored",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": null,
+                "censored": true,
+                "derivedMoves": null
+              }
+            ]
+          },
+          {
+            "shape": 5,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 23,
+                "censored": false,
+                "derivedMoves": 39
+              }
+            ]
+          },
+          {
+            "shape": 6,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 23,
+                "censored": false,
+                "derivedMoves": 39
+              }
+            ]
+          },
+          {
+            "shape": 6,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 22,
+                "censored": false,
+                "derivedMoves": 37
+              }
+            ]
+          },
+          {
+            "shape": 7,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 23,
+                "censored": false,
+                "derivedMoves": 39
+              }
+            ]
+          },
+          {
+            "shape": 7,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 19,
+                "censored": false,
+                "derivedMoves": 32
+              }
+            ]
+          },
+          {
+            "shape": 8,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "censored",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": null,
+                "censored": true,
+                "derivedMoves": null
+              }
+            ]
+          },
+          {
+            "shape": 8,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "over-budget",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 28,
+                "censored": false,
+                "derivedMoves": 47
+              }
+            ]
+          },
+          {
+            "shape": 8,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "reason": "censored",
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": null,
+                "censored": true,
+                "derivedMoves": null
+              }
+            ]
+          }
+        ],
+        "policyVersion": 2,
+        "starQuantile": 0.8,
+        "selectedHistory": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 13,
+            "censored": false,
+            "derivedMoves": 22
+          },
+          {
+            "iteration": 2,
+            "testedMoves": 22,
+            "quantileMoves": 13,
+            "censored": false,
+            "derivedMoves": 22
+          },
+          {
+            "iteration": 1,
+            "testedMoves": 22,
+            "quantileMoves": 16,
+            "censored": false,
+            "derivedMoves": 27
+          },
+          {
+            "iteration": 2,
+            "testedMoves": 27,
+            "quantileMoves": 16,
+            "censored": false,
+            "derivedMoves": 27
+          }
+        ],
+        "adjustmentHistory": [
+          {
+            "shape": 1,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 25,
+                "censored": false,
+                "derivedMoves": 42
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 1,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 29,
+                "censored": false,
+                "derivedMoves": 49
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 1,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 21,
+                "censored": false,
+                "derivedMoves": 35
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 2,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 25,
+                "censored": false,
+                "derivedMoves": 42
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 2,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 22,
+                "censored": false,
+                "derivedMoves": 37
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 2,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 28,
+                "censored": false,
+                "derivedMoves": 47
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 3,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 20,
+                "censored": false,
+                "derivedMoves": 34
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 3,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 27,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 16,
+                "censored": false,
+                "derivedMoves": 27
+              },
+              {
+                "iteration": 2,
+                "testedMoves": 27,
+                "quantileMoves": 16,
+                "censored": false,
+                "derivedMoves": 27
+              }
+            ],
+            "status": "three-star-band-miss"
+          },
+          {
+            "shape": 3,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 19,
+                "censored": false,
+                "derivedMoves": 32
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 4,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": null,
+                "censored": true,
+                "derivedMoves": null
+              }
+            ],
+            "status": "censored"
+          },
+          {
+            "shape": 4,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": null,
+                "censored": true,
+                "derivedMoves": null
+              }
+            ],
+            "status": "censored"
+          },
+          {
+            "shape": 4,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 25,
+                "censored": false,
+                "derivedMoves": 42
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 5,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": null,
+                "censored": true,
+                "derivedMoves": null
+              }
+            ],
+            "status": "censored"
+          },
+          {
+            "shape": 5,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": null,
+                "censored": true,
+                "derivedMoves": null
+              }
+            ],
+            "status": "censored"
+          },
+          {
+            "shape": 5,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 23,
+                "censored": false,
+                "derivedMoves": 39
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 6,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 23,
+                "censored": false,
+                "derivedMoves": 39
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 6,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 22,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 13,
+                "censored": false,
+                "derivedMoves": 22
+              },
+              {
+                "iteration": 2,
+                "testedMoves": 22,
+                "quantileMoves": 13,
+                "censored": false,
+                "derivedMoves": 22
+              }
+            ],
+            "status": "three-star-band-miss"
+          },
+          {
+            "shape": 6,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 22,
+                "censored": false,
+                "derivedMoves": 37
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 7,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 23,
+                "censored": false,
+                "derivedMoves": 39
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 7,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 19,
+                "censored": false,
+                "derivedMoves": 32
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 7,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 27,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 16,
+                "censored": false,
+                "derivedMoves": 27
+              },
+              {
+                "iteration": 2,
+                "testedMoves": 27,
+                "quantileMoves": 16,
+                "censored": false,
+                "derivedMoves": 27
+              }
+            ],
+            "status": "candidate"
+          },
+          {
+            "shape": 8,
+            "policy": {
+              "comboChance": 0.05,
+              "setupChance": 0.15,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": null,
+                "censored": true,
+                "derivedMoves": null
+              }
+            ],
+            "status": "censored"
+          },
+          {
+            "shape": 8,
+            "policy": {
+              "comboChance": 0.1,
+              "setupChance": 0.25,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": 28,
+                "censored": false,
+                "derivedMoves": 47
+              }
+            ],
+            "status": "over-budget"
+          },
+          {
+            "shape": 8,
+            "policy": {
+              "comboChance": 0.15,
+              "setupChance": 0.35,
+              "collectionPressure": 0
+            },
+            "obstaclePressure": 0,
+            "target": 1,
+            "moves": 30,
+            "history": [
+              {
+                "iteration": 1,
+                "testedMoves": 30,
+                "quantileMoves": null,
+                "censored": true,
+                "derivedMoves": null
+              }
+            ],
+            "status": "censored"
+          }
+        ]
+      },
+      "validation": {
+        "passed": false,
+        "failures": [
+          "First-attempt three-star rate outside requested band"
+        ],
+        "loss": 0.08312238452427959,
+        "summary": {
+          "mapHash": "d9153201904a3bdff22c8c140747e549b2bfa1779bb964f8dd0ac0b68bd097c3",
+          "id": 5,
+          "difficulty": "easy",
+          "samples": 1000,
+          "winRate": 0.901,
+          "starRates": [
+            0.099,
+            0.067,
+            0.117,
+            0.717
+          ],
+          "suboptimalChoices": 2494,
+          "suboptimalChoiceRate": 0.19692064745361232,
+          "medianMoves": 10,
+          "actions": 12665,
+          "waveCounts": {
+            "1": 5893,
+            "2": 4718,
+            "3": 1611,
+            "4": 443
+          },
+          "metrics": {
+            "seeded": 1513,
+            "setups": 2223,
+            "setupAttempts": 2886,
+            "setupFallbacks": 663,
+            "setupUsed": 958,
+            "chargesCreated": 6375,
+            "chargesActivated": 5248,
+            "settlements": 113
+          },
+          "settlementRate": 0.008922226608764312,
+          "movesHistogram": {
+            "1": 6,
+            "2": 36,
+            "3": 47,
+            "4": 45,
+            "5": 62,
+            "6": 65,
+            "7": 56,
+            "8": 50,
+            "9": 55,
+            "10": 59,
+            "11": 53,
+            "12": 43,
+            "13": 35,
+            "14": 41,
+            "15": 29,
+            "16": 35,
+            "17": 21,
+            "18": 26,
+            "19": 21,
+            "20": 20,
+            "21": 18,
+            "22": 11,
+            "23": 23,
+            "24": 9,
+            "25": 14,
+            "26": 13,
+            "27": 8
+          },
+          "averageMoves": 11.089900110987791,
+          "averageProgress": 0.952,
+          "averageFailedProgress": 0,
+          "averageReshuffles": 0.031,
+          "averageWaves": 21.934,
+          "maxChain": 4,
+          "bot": "normal",
+          "power": "expected",
+          "totalExp": 240,
+          "reshuffleRate": 0.0024476904855902093
+        }
+      },
+      "retries": {
+        "bot": "normal",
+        "totalExp": 240,
+        "botModel": {
+          "version": 1,
+          "loadout": {
+            "sword": null,
+            "skills": []
+          },
+          "mistakeRates": {
+            "basic": 0.3,
+            "normal": 0.2,
+            "strategic": 0.1
+          },
+          "mistakeCandidateLimit": 3,
+          "mistakeSelection": "uniform-among-next-three-lower-ranked-moves"
+        },
+        "suboptimalChoices": 356,
+        "assistance": "consecutive-losses; reset after any win",
+        "assistCounts": {
+          "0": 140
+        },
+        "firstWin": {
+          "samples": 100,
+          "completed": 100,
+          "unfinished": 0,
+          "maxAttempts": 100,
+          "medianAttempts": 1,
+          "medianRetries": 0,
+          "p90Attempts": 2,
+          "meanCompletedAttempts": 1.17,
+          "byAttempt": [
+            {
+              "attempt": 1,
+              "retries": 0,
+              "cumulativeRate": 0.87
+            },
+            {
+              "attempt": 2,
+              "retries": 1,
+              "cumulativeRate": 0.96
+            },
+            {
+              "attempt": 3,
+              "retries": 2,
+              "cumulativeRate": 1
+            },
+            {
+              "attempt": 5,
+              "retries": 4,
+              "cumulativeRate": 1
+            },
+            {
+              "attempt": 10,
+              "retries": 9,
+              "cumulativeRate": 1
+            },
+            {
+              "attempt": 20,
+              "retries": 19,
+              "cumulativeRate": 1
+            },
+            {
+              "attempt": 30,
+              "retries": 29,
+              "cumulativeRate": 1
+            },
+            {
+              "attempt": 50,
+              "retries": 49,
+              "cumulativeRate": 1
+            },
+            {
+              "attempt": 100,
+              "retries": 99,
+              "cumulativeRate": 1
+            }
+          ]
+        },
+        "firstThreeStars": {
+          "samples": 100,
+          "completed": 100,
+          "unfinished": 0,
+          "maxAttempts": 100,
+          "medianAttempts": 1,
+          "medianRetries": 0,
+          "p90Attempts": 2,
+          "meanCompletedAttempts": 1.4,
+          "byAttempt": [
+            {
+              "attempt": 1,
+              "retries": 0,
+              "cumulativeRate": 0.71
+            },
+            {
+              "attempt": 2,
+              "retries": 1,
+              "cumulativeRate": 0.9
+            },
+            {
+              "attempt": 3,
+              "retries": 2,
+              "cumulativeRate": 0.99
+            },
+            {
+              "attempt": 5,
+              "retries": 4,
+              "cumulativeRate": 1
+            },
+            {
+              "attempt": 10,
+              "retries": 9,
+              "cumulativeRate": 1
+            },
+            {
+              "attempt": 20,
+              "retries": 19,
+              "cumulativeRate": 1
+            },
+            {
+              "attempt": 30,
+              "retries": 29,
+              "cumulativeRate": 1
+            },
+            {
+              "attempt": 50,
+              "retries": 49,
+              "cumulativeRate": 1
+            },
+            {
+              "attempt": 100,
+              "retries": 99,
+              "cumulativeRate": 1
+            }
+          ]
+        }
+      },
+      "diagnostics": [
+        {
+          "mapHash": "d9153201904a3bdff22c8c140747e549b2bfa1779bb964f8dd0ac0b68bd097c3",
+          "id": 5,
+          "difficulty": "easy",
+          "samples": 100,
+          "winRate": 0.9,
+          "starRates": [
+            0.1,
+            0.02,
+            0.11,
+            0.77
+          ],
+          "suboptimalChoices": 245,
+          "suboptimalChoiceRate": 0.2045075125208681,
+          "medianMoves": 10,
+          "actions": 1198,
+          "waveCounts": {
+            "1": 579,
+            "2": 452,
+            "3": 141,
+            "4": 26
+          },
+          "metrics": {
+            "seeded": 114,
+            "setups": 202,
+            "setupAttempts": 256,
+            "setupFallbacks": 54,
+            "setupUsed": 85,
+            "chargesCreated": 613,
+            "chargesActivated": 510,
+            "settlements": 7
+          },
+          "settlementRate": 0.005843071786310518,
+          "movesHistogram": {
+            "3": 6,
+            "4": 7,
+            "5": 7,
+            "6": 7,
+            "7": 4,
+            "8": 6,
+            "9": 6,
+            "10": 9,
+            "11": 5,
+            "12": 6,
+            "13": 8,
+            "14": 2,
+            "15": 2,
+            "16": 2,
+            "17": 2,
+            "18": 1,
+            "19": 3,
+            "21": 3,
+            "22": 2,
+            "23": 1,
+            "25": 1
+          },
+          "averageMoves": 10.311111111111112,
+          "averageProgress": 1,
+          "averageFailedProgress": 0,
+          "averageReshuffles": 0.01,
+          "averageWaves": 20.1,
+          "maxChain": 4,
+          "bot": "normal",
+          "power": "minimum"
+        },
+        {
+          "mapHash": "d9153201904a3bdff22c8c140747e549b2bfa1779bb964f8dd0ac0b68bd097c3",
+          "id": 5,
+          "difficulty": "easy",
+          "samples": 100,
+          "winRate": 0.9,
+          "starRates": [
+            0.1,
+            0.02,
+            0.11,
+            0.77
+          ],
+          "suboptimalChoices": 245,
+          "suboptimalChoiceRate": 0.2045075125208681,
+          "medianMoves": 10,
+          "actions": 1198,
+          "waveCounts": {
+            "1": 579,
+            "2": 452,
+            "3": 141,
+            "4": 26
+          },
+          "metrics": {
+            "seeded": 114,
+            "setups": 202,
+            "setupAttempts": 256,
+            "setupFallbacks": 54,
+            "setupUsed": 85,
+            "chargesCreated": 613,
+            "chargesActivated": 510,
+            "settlements": 7
+          },
+          "settlementRate": 0.005843071786310518,
+          "movesHistogram": {
+            "3": 6,
+            "4": 7,
+            "5": 7,
+            "6": 7,
+            "7": 4,
+            "8": 6,
+            "9": 6,
+            "10": 9,
+            "11": 5,
+            "12": 6,
+            "13": 8,
+            "14": 2,
+            "15": 2,
+            "16": 2,
+            "17": 2,
+            "18": 1,
+            "19": 3,
+            "21": 3,
+            "22": 2,
+            "23": 1,
+            "25": 1
+          },
+          "averageMoves": 10.311111111111112,
+          "averageProgress": 1,
+          "averageFailedProgress": 0,
+          "averageReshuffles": 0.01,
+          "averageWaves": 20.1,
+          "maxChain": 4,
+          "bot": "normal",
+          "power": "strong"
+        }
+      ]
+    }
+  }
+}

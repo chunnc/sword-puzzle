@@ -464,5 +464,122 @@
       "spirit": 4,
       "rock": 5
     }
+  },
+  {
+    "contentVersion": 13,
+    "id": 5,
+    "chapterId": "chapter-1",
+    "orderInChapter": 5,
+    "name": "Map 5",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-sword-4",
+        "type": "Collect",
+        "tileKind": 1,
+        "chargeTier": 4,
+        "target": 1
+      }
+    ],
+    "moves": 27,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 60,
+      "twoStarBelowPercent": 82
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 150,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
   }
 ]
