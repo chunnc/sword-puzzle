@@ -1,0 +1,252 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 17,
+    "id": 9,
+    "chapterId": "chapter-1",
+    "orderInChapter": 9,
+    "name": "Kiếm Hỏa Hợp Luyện",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-sword",
+        "type": "Collect",
+        "tileKind": 1,
+        "target": 1
+      },
+      {
+        "id": "collect-fire-4",
+        "type": "Collect",
+        "tileKind": 2,
+        "chargeTier": 4,
+        "target": 1
+      }
+    ],
+    "moves": 27,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 60,
+      "twoStarBelowPercent": 82
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 150,
+        "2": 150,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.1,
+      "setupChance": 0.25,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 900091,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "easy",
+      "objective": "collect",
+      "index": 9,
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "starQuantile": 0.8,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword",
+        "fire:4"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {
+        "sword": 150,
+        "fire": 150
+      },
+      "rockBlockers": null,
+      "minimumTarget": null,
+      "seed": 900091,
+      "totalExp": 480,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Kiếm Hỏa Hợp Luyện",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    },
+    "shape": {
+      "family": "chamfer",
+      "layout": [
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 7,
+        "height": 6,
+        "activeCells": 30,
+        "holes": 12,
+        "holeRatio": 0.2857142857142857
+      },
+      "key": "[[0,0,1,1,0,0],[0,1,1,1,1,0],[1,1,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1],[0,1,1,1,1,0],[0,0,1,1,0,0]]"
+    },
+    "sourceCatalogHash": "5959ee991d482f485e2d956edfb135fa6132f2d05f0873cdfd88961ab0f680c2",
+    "authoringConfigVersion": 17
+  },
+  "hashes": {
+    "map": "d270e7ee97c0bc1fe6262e4b6309e2a0f4fd3c4a89119e3e28f11b11a61b2e2f",
+    "config": "90196c66b876c25055d6ece1a254cca077d6cb99f9b1a487d7db7928590a2277",
+    "engine": "5d98cd2b155a325d169ddfe5c2eb5880299a0e66a4c1cd3041cb7f75e6d52404",
+    "report": "c41c8317b6c22b81842df890698a6ff37808634fddf0451a715dcfbb11101898"
+  }
+}

@@ -1,0 +1,274 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 16,
+    "id": 8,
+    "chapterId": "chapter-1",
+    "orderInChapter": 8,
+    "name": "Linh Cốc Đá Chắn",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        5,
+        -1,
+        -1
+      ],
+      [
+        0,
+        5,
+        5,
+        -1,
+        -1
+      ],
+      [
+        0,
+        5,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-fire",
+        "type": "Collect",
+        "tileKind": 2,
+        "target": 24
+      },
+      {
+        "id": "collect-lightning",
+        "type": "Collect",
+        "tileKind": 3,
+        "target": 24
+      }
+    ],
+    "moves": 30,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.1,
+      "setupChance": 0.25,
+      "obstaclePressure": 0.3,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 800081,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "easy",
+      "objective": "collect",
+      "index": 8,
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "starQuantile": 0.8,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "fire",
+        "lightning"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": [
+        2,
+        4
+      ],
+      "minimumTarget": null,
+      "seed": 800081,
+      "totalExp": 420,
+      "layouts": 4,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Linh Cốc Đá Chắn",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    },
+    "shape": {
+      "family": "stairs",
+      "layout": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          0,
+          5,
+          -1,
+          -1
+        ],
+        [
+          0,
+          5,
+          5,
+          -1,
+          -1
+        ],
+        [
+          0,
+          5,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 5,
+        "height": 8,
+        "activeCells": 24,
+        "holes": 16,
+        "holeRatio": 0.4
+      },
+      "key": "[[0,0,0,0,0,0,1,1],[0,0,0,0,1,1,1,1],[0,0,1,1,1,1,1,1],[0,0,1,1,1,1,1,1],[0,0,1,1,1,1,1,1]]",
+      "rockCount": 4,
+      "rockCells": [
+        {
+          "row": 3,
+          "column": 2
+        },
+        {
+          "row": 4,
+          "column": 1
+        },
+        {
+          "row": 4,
+          "column": 2
+        },
+        {
+          "row": 5,
+          "column": 1
+        }
+      ]
+    },
+    "sourceCatalogHash": "68e131a212e57c7e33317e220ebafb380a0c3849b8f494023a1f00c663d735c9",
+    "authoringConfigVersion": 16
+  },
+  "hashes": {
+    "map": "614514dfea3587ea9012122afd5e57a2fdf9b50214717f097bf3e13b94565391",
+    "config": "640d231a2f980b84e376e5ed0b1b2b9e39b88d36dea85cf5eaf03e16f39eff2e",
+    "engine": "5d98cd2b155a325d169ddfe5c2eb5880299a0e66a4c1cd3041cb7f75e6d52404",
+    "report": "216ef34e5d22d9c1358ae0aaf20fae728163810da474818826aea2ed21d7c7b8"
+  }
+}

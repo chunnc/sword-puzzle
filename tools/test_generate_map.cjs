@@ -45,6 +45,15 @@ test('automatic charged targets include one while ordinary targets keep their mi
   assert.deepEqual(targetChoices(charged, request, samples), [1, 2]);
 });
 
+test('automatic objective targets invert the target completion rate for easy and hard profiles', () => {
+  const template = { map: { objectives: [{ id: 'main', type: 'Collect' }] } };
+  const samples = Array.from({ length: 10 }, (_, i) => ({ objectiveProgress: { main: i + 1 } }));
+  const easy = parseRequest(['--difficulty', 'easy', '--objective', 'collect'], catalog.length + 1);
+  const hard = parseRequest(['--difficulty', 'hard', '--objective', 'collect'], catalog.length + 1);
+  assert.deepEqual(targetChoices(template, easy, samples), [3, 4]);
+  assert.deepEqual(targetChoices(template, hard, samples), [7, 8, 9, 10, 11]);
+});
+
 test('break-rocks builds valid connected rock clusters and selects their quantity from candidates', () => {
   const request = parseRequest(['--difficulty', 'easy', '--objective', 'break-rocks'], catalog.length + 1);
   const nextConfig = prepareCatalog(config, catalog, request);
@@ -69,6 +78,47 @@ test('break-rocks honors a fixed target and rejects incompatible CLI options', (
   assert.deepEqual(fixed.map(shape => shape.rockCount), [3, 3, 3]);
   assert.throws(() => parseRequest(['--difficulty', 'easy', '--objective', 'break-rocks', '--target', '57'], 4));
   assert.throws(() => parseRequest(['--difficulty', 'easy', '--objective', 'break-rocks', '--enemy-name', 'Wrong'], 4));
+});
+
+test('collect maps can include balanced rock blockers without a BreakRocks objective', () => {
+  const request = parseRequest(['--difficulty', 'easy', '--objective', 'collect', '--tiles', 'fire,lightning', '--rock-blockers', '2-4'], catalog.length + 1);
+  const nextConfig = prepareCatalog(config, catalog, request);
+  const layouts = generateLayouts(86420, 4, catalog);
+  const variants = [2, 3, 4].flatMap(count => addRockObstacles(layouts, 86420 ^ Math.imul(count, 0x9e3779b1), rockId, count));
+  assert.equal(variants.length, layouts.length * 3);
+  for (const shape of variants) {
+    const map = validateMap(mapTemplate(nextConfig, catalog, request, shape), nextConfig);
+    assert.deepEqual(map.objectives.map(objective => objective.type), ['Collect', 'Collect']);
+    assert.equal(map.objectives.some(objective => objective.type === 'BreakRocks'), false);
+    assert.equal(map.layout.flat().filter(tile => tile === rockId).length, shape.rockCount);
+    assert.equal(map.spawnPolicy.obstaclePressure, .15);
+  }
+  assert.deepEqual(pressureVariants('collect', true), [0, .15, .3]);
+  assert.equal(pressureSelectable('collect', 0, true), false);
+  assert.equal(pressureSelectable('collect', .15, true), true);
+});
+
+test('rock blocker and minimum HP options validate their objective and ranges', () => {
+  const collect = ['--difficulty', 'easy', '--objective', 'collect'];
+  assert.deepEqual(parseRequest([...collect, '--rock-blockers', '2-4'], 6).rockBlockers, [2, 4]);
+  assert.deepEqual(parseRequest([...collect, '--rock-blockers', '3'], 6).rockBlockers, [3, 3]);
+  for (const value of ['1-2', '4-2', '2-5', '2.5-3', '2-4-5']) {
+    assert.throws(() => parseRequest([...collect, '--rock-blockers', value], 6));
+  }
+  assert.throws(() => parseRequest(['--difficulty', 'easy', '--objective', 'battle', '--rock-blockers', '2-4'], 6));
+  assert.throws(() => parseRequest([...collect, '--min-target', '600'], 6));
+  assert.throws(() => parseRequest(['--difficulty', 'medium', '--objective', 'boss', '--target', '600', '--min-target', '601'], 6));
+});
+
+test('Battle/Boss target search respects a minimum target while remaining automatic', () => {
+  const request = parseRequest(['--difficulty', 'medium', '--objective', 'boss', '--min-target', '801'], catalog.length + 1);
+  const nextConfig = prepareCatalog(config, catalog, request);
+  const shape = generateLayouts(75319, 1, catalog)[0];
+  const map = mapTemplate(nextConfig, catalog, request, shape);
+  assert.equal(map.objectives[0].type, 'Boss');
+  assert.equal(map.objectives[0].target, 500);
+  const choices = targetChoices({ map }, request, [{ objectiveProgress: { main: 900 } }]);
+  assert.ok(choices.length > 0 && choices.every(target => target >= 801));
 });
 
 test('generated preview labels BreakRocks without expecting enemy metadata', () => {

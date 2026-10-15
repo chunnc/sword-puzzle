@@ -1,0 +1,285 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 15,
+    "id": 7,
+    "chapterId": "chapter-1",
+    "orderInChapter": 7,
+    "name": "Yêu Thú Canh Cốc",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "main",
+        "type": "Battle",
+        "target": 791,
+        "enemy": {
+          "id": "battle-7",
+          "name": "Yêu thú canh cốc",
+          "artKey": "beast"
+        }
+      }
+    ],
+    "moves": 30,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 700071,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "easy",
+      "objective": "battle",
+      "index": 7,
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "starQuantile": 0.8,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "minimumTarget": null,
+      "seed": 700071,
+      "totalExp": 360,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Yêu Thú Canh Cốc",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": {
+        "id": "battle-7",
+        "name": "Yêu thú canh cốc",
+        "artKey": "beast"
+      }
+    },
+    "shape": {
+      "family": "chamfer",
+      "layout": [
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          0,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 7,
+        "height": 8,
+        "activeCells": 42,
+        "holes": 14,
+        "holeRatio": 0.25
+      },
+      "key": "[[0,0,0,1,1,1,0,0],[0,1,1,1,1,1,1,0],[1,1,1,1,1,1,1,1],[1,1,0,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0]]"
+    },
+    "sourceCatalogHash": "0d6ae9da5e7af731d6660861934926dbf4f87598a6148f98c5c1203db263575c",
+    "authoringConfigVersion": 15
+  },
+  "hashes": {
+    "map": "0036d844a3dca1e299f2b0c27b34e8768c21d9f64c90081964442f3eff34f2f1",
+    "config": "7376129b96811667be2ce292be3dcfc52d7ed5b55a1244eed68209256ac1fdfd",
+    "engine": "5d98cd2b155a325d169ddfe5c2eb5880299a0e66a4c1cd3041cb7f75e6d52404",
+    "report": "07c7103e6dba85e71f50896ff9b0d5403cdc90fe4f07e78323bfa41937857b27"
+  }
+}

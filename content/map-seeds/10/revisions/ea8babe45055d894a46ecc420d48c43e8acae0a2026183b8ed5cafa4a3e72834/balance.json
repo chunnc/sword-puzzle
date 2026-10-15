@@ -1,0 +1,1735 @@
+{
+  "format": 1,
+  "status": "passed",
+  "failures": [],
+  "hashes": {
+    "map": "f65f1c7e72c665237e98bc15035afa730c6f2478dc297672d3766f30ae6f7377",
+    "config": "aa2dfe10be962f76ca17e0086242f13e17147e00b0d7591ec2187e43ffe8e4ff",
+    "engine": "5d98cd2b155a325d169ddfe5c2eb5880299a0e66a4c1cd3041cb7f75e6d52404"
+  },
+  "bands": {
+    "win": [
+      0.8,
+      1
+    ],
+    "three": [
+      0.45,
+      0.55
+    ],
+    "exclusiveWin": true,
+    "exclusiveThree": false
+  },
+  "botModel": {
+    "version": 1,
+    "loadout": {
+      "sword": null,
+      "skills": []
+    },
+    "mistakeRates": {
+      "basic": 0.3,
+      "normal": 0.2,
+      "strategic": 0.1
+    },
+    "mistakeCandidateLimit": 3,
+    "mistakeSelection": "uniform-among-next-three-lower-ranked-moves"
+  },
+  "authoringPolicy": {
+    "version": 2,
+    "starQuantile": 0.5,
+    "totalMoves": 30,
+    "threeStarMaxMoves": 18,
+    "twoStarMaxMoves": 24,
+    "moveRatios": {
+      "threeStars": 0.6,
+      "twoStars": 0.8
+    },
+    "maxMoves": 30,
+    "winRateEnforced": false,
+    "chanceCaps": {
+      "comboChance": 0.15,
+      "setupChance": 0.35
+    },
+    "budgetRefinement": [
+      {
+        "iteration": 1,
+        "testedMoves": 30,
+        "quantileMoves": 18,
+        "censored": false,
+        "derivedMoves": 30
+      },
+      {
+        "iteration": 1,
+        "testedMoves": 30,
+        "quantileMoves": 18,
+        "censored": false,
+        "derivedMoves": 30
+      }
+    ]
+  },
+  "powerModel": {
+    "expectedTotalExp": 540,
+    "minimumTotalExp": 0,
+    "strongTotalExp": 2400,
+    "loadout": {
+      "sword": null,
+      "skills": []
+    },
+    "extraMoves": false
+  },
+  "seedSuites": {
+    "generationSeed": 1000101,
+    "training": 150,
+    "validation": 1000,
+    "retrySequences": 100,
+    "maxRetryAttempts": 100,
+    "selection": "training-only; one frozen validation pass"
+  },
+  "training": {
+    "passed": true,
+    "failures": [],
+    "loss": 0,
+    "summary": {
+      "mapHash": "f65f1c7e72c665237e98bc15035afa730c6f2478dc297672d3766f30ae6f7377",
+      "id": 10,
+      "difficulty": "medium",
+      "samples": 150,
+      "winRate": 1,
+      "starRates": [
+        0,
+        0.03333333333333333,
+        0.4666666666666667,
+        0.5
+      ],
+      "suboptimalChoices": 570,
+      "suboptimalChoiceRate": 0.20212765957446807,
+      "medianMoves": 18.5,
+      "actions": 2820,
+      "waveCounts": {
+        "1": 1061,
+        "2": 1004,
+        "3": 489,
+        "4": 266
+      },
+      "metrics": {
+        "seeded": 154,
+        "setups": 326,
+        "setupAttempts": 406,
+        "setupFallbacks": 80,
+        "setupUsed": 93,
+        "chargesCreated": 1810,
+        "chargesActivated": 1529,
+        "settlements": 109
+      },
+      "settlementRate": 0.038652482269503546,
+      "movesHistogram": {
+        "12": 1,
+        "13": 7,
+        "14": 5,
+        "15": 12,
+        "16": 10,
+        "17": 18,
+        "18": 22,
+        "19": 12,
+        "20": 14,
+        "21": 19,
+        "22": 9,
+        "23": 10,
+        "24": 6,
+        "25": 4,
+        "26": 1
+      },
+      "averageMoves": 18.8,
+      "averageProgress": 1,
+      "averageFailedProgress": null,
+      "averageReshuffles": 0,
+      "averageWaves": 37.333333333333336,
+      "maxChain": 4,
+      "bot": "normal",
+      "power": "expected",
+      "totalExp": 540,
+      "reshuffleRate": 0
+    }
+  },
+  "search": {
+    "shapes": 8,
+    "candidates": 16,
+    "refined": 12,
+    "coarseSeeds": 40,
+    "rejected": [
+      {
+        "shape": 2,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 24,
+            "censored": false,
+            "derivedMoves": 40
+          }
+        ]
+      },
+      {
+        "shape": 2,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 22,
+            "censored": false,
+            "derivedMoves": 37
+          }
+        ]
+      },
+      {
+        "shape": 2,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 23,
+            "censored": false,
+            "derivedMoves": 39
+          }
+        ]
+      },
+      {
+        "shape": 3,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 30,
+            "censored": false,
+            "derivedMoves": 50
+          }
+        ]
+      },
+      {
+        "shape": 3,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 30,
+            "censored": false,
+            "derivedMoves": 50
+          }
+        ]
+      },
+      {
+        "shape": 3,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 28,
+            "censored": false,
+            "derivedMoves": 47
+          }
+        ]
+      },
+      {
+        "shape": 4,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "censored",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": null,
+            "censored": true,
+            "derivedMoves": null
+          }
+        ]
+      },
+      {
+        "shape": 4,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "censored",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": null,
+            "censored": true,
+            "derivedMoves": null
+          }
+        ]
+      },
+      {
+        "shape": 4,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 28,
+            "censored": false,
+            "derivedMoves": 47
+          }
+        ]
+      },
+      {
+        "shape": 5,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 27,
+            "censored": false,
+            "derivedMoves": 45
+          }
+        ]
+      },
+      {
+        "shape": 5,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 26,
+            "censored": false,
+            "derivedMoves": 44
+          }
+        ]
+      },
+      {
+        "shape": 5,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 25,
+            "censored": false,
+            "derivedMoves": 42
+          }
+        ]
+      },
+      {
+        "shape": 6,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 22,
+            "censored": false,
+            "derivedMoves": 37
+          }
+        ]
+      },
+      {
+        "shape": 6,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 20,
+            "censored": false,
+            "derivedMoves": 34
+          }
+        ]
+      },
+      {
+        "shape": 7,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 26,
+            "censored": false,
+            "derivedMoves": 44
+          }
+        ]
+      },
+      {
+        "shape": 7,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 24,
+            "censored": false,
+            "derivedMoves": 40
+          }
+        ]
+      },
+      {
+        "shape": 7,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 22,
+            "censored": false,
+            "derivedMoves": 37
+          }
+        ]
+      },
+      {
+        "shape": 8,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 23,
+            "censored": false,
+            "derivedMoves": 39
+          }
+        ]
+      },
+      {
+        "shape": 8,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 23,
+            "censored": false,
+            "derivedMoves": 39
+          }
+        ]
+      },
+      {
+        "shape": 8,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 21,
+            "censored": false,
+            "derivedMoves": 35
+          }
+        ]
+      }
+    ],
+    "policyVersion": 2,
+    "starQuantile": 0.5,
+    "selectedHistory": [
+      {
+        "iteration": 1,
+        "testedMoves": 30,
+        "quantileMoves": 18,
+        "censored": false,
+        "derivedMoves": 30
+      },
+      {
+        "iteration": 1,
+        "testedMoves": 30,
+        "quantileMoves": 18,
+        "censored": false,
+        "derivedMoves": 30
+      }
+    ],
+    "adjustmentHistory": [
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 986,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 987,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 988,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 989,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 990,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 918,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 919,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 920,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 921,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 922,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 1062,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 1063,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 1064,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 1065,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 1066,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 2,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 24,
+            "censored": false,
+            "derivedMoves": 40
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 2,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 22,
+            "censored": false,
+            "derivedMoves": 37
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 2,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 23,
+            "censored": false,
+            "derivedMoves": 39
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 3,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 30,
+            "censored": false,
+            "derivedMoves": 50
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 3,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 30,
+            "censored": false,
+            "derivedMoves": 50
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 3,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 28,
+            "censored": false,
+            "derivedMoves": 47
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 4,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": null,
+            "censored": true,
+            "derivedMoves": null
+          }
+        ],
+        "status": "censored"
+      },
+      {
+        "shape": 4,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": null,
+            "censored": true,
+            "derivedMoves": null
+          }
+        ],
+        "status": "censored"
+      },
+      {
+        "shape": 4,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 28,
+            "censored": false,
+            "derivedMoves": 47
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 5,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 27,
+            "censored": false,
+            "derivedMoves": 45
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 5,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 26,
+            "censored": false,
+            "derivedMoves": 44
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 5,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 25,
+            "censored": false,
+            "derivedMoves": 42
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 6,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 22,
+            "censored": false,
+            "derivedMoves": 37
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 6,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 20,
+            "censored": false,
+            "derivedMoves": 34
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 6,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 18,
+            "censored": false,
+            "derivedMoves": 30
+          }
+        ],
+        "status": "candidate"
+      },
+      {
+        "shape": 7,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 26,
+            "censored": false,
+            "derivedMoves": 44
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 7,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 24,
+            "censored": false,
+            "derivedMoves": 40
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 7,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 22,
+            "censored": false,
+            "derivedMoves": 37
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 8,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 23,
+            "censored": false,
+            "derivedMoves": 39
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 8,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 23,
+            "censored": false,
+            "derivedMoves": 39
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": 8,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0,
+        "target": 792,
+        "moves": 30,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 21,
+            "censored": false,
+            "derivedMoves": 35
+          }
+        ],
+        "status": "over-budget"
+      },
+      {
+        "shape": "chamfer",
+        "target": 989,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ],
+        "status": "refinement-over-budget"
+      },
+      {
+        "shape": "chamfer",
+        "target": 990,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ],
+        "status": "refinement-over-budget"
+      },
+      {
+        "shape": "chamfer",
+        "target": 1065,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ],
+        "status": "refinement-over-budget"
+      },
+      {
+        "shape": "chamfer",
+        "target": 1066,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ],
+        "status": "refinement-over-budget"
+      },
+      {
+        "shape": "chamfer",
+        "target": 792,
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 20,
+            "censored": false,
+            "derivedMoves": 34
+          }
+        ],
+        "status": "refinement-over-budget"
+      }
+    ]
+  },
+  "validation": {
+    "passed": true,
+    "failures": [],
+    "loss": 0.0020000000000000018,
+    "summary": {
+      "mapHash": "f65f1c7e72c665237e98bc15035afa730c6f2478dc297672d3766f30ae6f7377",
+      "id": 10,
+      "difficulty": "medium",
+      "samples": 1000,
+      "winRate": 1,
+      "starRates": [
+        0,
+        0.032,
+        0.466,
+        0.502
+      ],
+      "suboptimalChoices": 3756,
+      "suboptimalChoiceRate": 0.20063030821003153,
+      "medianMoves": 18,
+      "actions": 18721,
+      "waveCounts": {
+        "1": 6976,
+        "2": 6734,
+        "3": 3150,
+        "4": 1861
+      },
+      "metrics": {
+        "seeded": 968,
+        "setups": 2119,
+        "setupAttempts": 2667,
+        "setupFallbacks": 548,
+        "setupUsed": 565,
+        "chargesCreated": 11920,
+        "chargesActivated": 10003,
+        "settlements": 748
+      },
+      "settlementRate": 0.039955130601997756,
+      "movesHistogram": {
+        "11": 5,
+        "12": 8,
+        "13": 29,
+        "14": 44,
+        "15": 64,
+        "16": 89,
+        "17": 135,
+        "18": 128,
+        "19": 115,
+        "20": 103,
+        "21": 80,
+        "22": 70,
+        "23": 59,
+        "24": 39,
+        "25": 13,
+        "26": 10,
+        "27": 4,
+        "28": 3,
+        "29": 1,
+        "30": 1
+      },
+      "averageMoves": 18.721,
+      "averageProgress": 1,
+      "averageFailedProgress": null,
+      "averageReshuffles": 0,
+      "averageWaves": 37.338,
+      "maxChain": 4,
+      "bot": "normal",
+      "power": "expected",
+      "totalExp": 540,
+      "reshuffleRate": 0
+    }
+  },
+  "retries": {
+    "bot": "normal",
+    "totalExp": 540,
+    "botModel": {
+      "version": 1,
+      "loadout": {
+        "sword": null,
+        "skills": []
+      },
+      "mistakeRates": {
+        "basic": 0.3,
+        "normal": 0.2,
+        "strategic": 0.1
+      },
+      "mistakeCandidateLimit": 3,
+      "mistakeSelection": "uniform-among-next-three-lower-ranked-moves"
+    },
+    "suboptimalChoices": 858,
+    "assistance": "consecutive-losses; reset after any win",
+    "assistCounts": {
+      "0": 221
+    },
+    "firstWin": {
+      "samples": 100,
+      "completed": 100,
+      "unfinished": 0,
+      "maxAttempts": 100,
+      "medianAttempts": 1,
+      "medianRetries": 0,
+      "p90Attempts": 1,
+      "meanCompletedAttempts": 1,
+      "byAttempt": [
+        {
+          "attempt": 1,
+          "retries": 0,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 2,
+          "retries": 1,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 3,
+          "retries": 2,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 5,
+          "retries": 4,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 10,
+          "retries": 9,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 20,
+          "retries": 19,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 30,
+          "retries": 29,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 50,
+          "retries": 49,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 100,
+          "retries": 99,
+          "cumulativeRate": 1
+        }
+      ]
+    },
+    "firstThreeStars": {
+      "samples": 100,
+      "completed": 100,
+      "unfinished": 0,
+      "maxAttempts": 100,
+      "medianAttempts": 2,
+      "medianRetries": 1,
+      "p90Attempts": 4,
+      "meanCompletedAttempts": 2.21,
+      "byAttempt": [
+        {
+          "attempt": 1,
+          "retries": 0,
+          "cumulativeRate": 0.33
+        },
+        {
+          "attempt": 2,
+          "retries": 1,
+          "cumulativeRate": 0.66
+        },
+        {
+          "attempt": 3,
+          "retries": 2,
+          "cumulativeRate": 0.89
+        },
+        {
+          "attempt": 5,
+          "retries": 4,
+          "cumulativeRate": 0.99
+        },
+        {
+          "attempt": 10,
+          "retries": 9,
+          "cumulativeRate": 0.99
+        },
+        {
+          "attempt": 20,
+          "retries": 19,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 30,
+          "retries": 29,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 50,
+          "retries": 49,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 100,
+          "retries": 99,
+          "cumulativeRate": 1
+        }
+      ]
+    }
+  },
+  "diagnostics": [
+    {
+      "mapHash": "f65f1c7e72c665237e98bc15035afa730c6f2478dc297672d3766f30ae6f7377",
+      "id": 10,
+      "difficulty": "medium",
+      "samples": 100,
+      "winRate": 1,
+      "starRates": [
+        0,
+        0.03,
+        0.48,
+        0.49
+      ],
+      "suboptimalChoices": 396,
+      "suboptimalChoiceRate": 0.21210498125334762,
+      "medianMoves": 19,
+      "actions": 1867,
+      "waveCounts": {
+        "1": 707,
+        "2": 664,
+        "3": 295,
+        "4": 201
+      },
+      "metrics": {
+        "seeded": 107,
+        "setups": 227,
+        "setupAttempts": 269,
+        "setupFallbacks": 42,
+        "setupUsed": 73,
+        "chargesCreated": 1172,
+        "chargesActivated": 982,
+        "settlements": 75
+      },
+      "settlementRate": 0.04017139796464917,
+      "movesHistogram": {
+        "12": 1,
+        "13": 3,
+        "14": 4,
+        "15": 9,
+        "16": 9,
+        "17": 10,
+        "18": 13,
+        "19": 11,
+        "20": 12,
+        "21": 9,
+        "22": 10,
+        "23": 3,
+        "24": 3,
+        "25": 1,
+        "26": 1,
+        "27": 1
+      },
+      "averageMoves": 18.67,
+      "averageProgress": 1,
+      "averageFailedProgress": null,
+      "averageReshuffles": 0,
+      "averageWaves": 37.24,
+      "maxChain": 4,
+      "bot": "normal",
+      "power": "minimum"
+    },
+    {
+      "mapHash": "f65f1c7e72c665237e98bc15035afa730c6f2478dc297672d3766f30ae6f7377",
+      "id": 10,
+      "difficulty": "medium",
+      "samples": 100,
+      "winRate": 1,
+      "starRates": [
+        0,
+        0,
+        0.09,
+        0.91
+      ],
+      "suboptimalChoices": 309,
+      "suboptimalChoiceRate": 0.2055888223552894,
+      "medianMoves": 15,
+      "actions": 1503,
+      "waveCounts": {
+        "1": 561,
+        "2": 538,
+        "3": 241,
+        "4": 163
+      },
+      "metrics": {
+        "seeded": 78,
+        "setups": 183,
+        "setupAttempts": 217,
+        "setupFallbacks": 34,
+        "setupUsed": 59,
+        "chargesCreated": 954,
+        "chargesActivated": 746,
+        "settlements": 61
+      },
+      "settlementRate": 0.04058549567531603,
+      "movesHistogram": {
+        "9": 1,
+        "10": 3,
+        "11": 6,
+        "12": 8,
+        "13": 13,
+        "14": 12,
+        "15": 15,
+        "16": 14,
+        "17": 9,
+        "18": 10,
+        "19": 4,
+        "20": 1,
+        "21": 3,
+        "24": 1
+      },
+      "averageMoves": 15.03,
+      "averageProgress": 1,
+      "averageFailedProgress": null,
+      "averageReshuffles": 0,
+      "averageWaves": 30.12,
+      "maxChain": 4,
+      "bot": "normal",
+      "power": "strong"
+    }
+  ]
+}

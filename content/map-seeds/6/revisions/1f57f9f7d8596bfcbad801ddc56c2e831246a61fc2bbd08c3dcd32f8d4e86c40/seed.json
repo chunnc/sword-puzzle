@@ -1,0 +1,291 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 14,
+    "id": 6,
+    "chapterId": "chapter-1",
+    "orderInChapter": 6,
+    "name": "Phá Thạch Khai Lộ",
+    "difficulty": "medium",
+    "layout": [
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        5,
+        5,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        5,
+        -1,
+        -1,
+        0,
+        -1,
+        0,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "break-rocks",
+        "type": "BreakRocks",
+        "target": 3
+      }
+    ],
+    "moves": 25,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.1,
+      "setupChance": 0.25,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 600061,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "medium",
+      "objective": "break-rocks",
+      "index": 6,
+      "bands": {
+        "win": [
+          0.8,
+          1
+        ],
+        "three": [
+          0.45,
+          0.55
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.5,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "minimumTarget": null,
+      "seed": 600061,
+      "totalExp": 300,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Phá Thạch Khai Lộ",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    },
+    "shape": {
+      "family": "chamfer",
+      "layout": [
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          5,
+          5,
+          -1,
+          0,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          5,
+          -1,
+          -1,
+          0,
+          -1,
+          0,
+          -1
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          0,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 7,
+        "height": 8,
+        "activeCells": 43,
+        "holes": 13,
+        "holeRatio": 0.23214285714285715
+      },
+      "key": "[[0,0,1,1,0,1,1,0],[1,1,1,1,0,1,1,1],[1,0,1,1,1,1,1,1],[1,1,1,1,1,0,0,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,0,1,0],[0,1,1,0,1,1,1,0]]",
+      "rockCount": 3,
+      "rockCells": [
+        {
+          "row": 1,
+          "column": 0
+        },
+        {
+          "row": 1,
+          "column": 1
+        },
+        {
+          "row": 2,
+          "column": 0
+        }
+      ]
+    },
+    "sourceCatalogHash": "d88b86b42c445eea6e1c9e5d906bea2d81fcd725d00f15b1d6f7b7d76eafc7b6",
+    "authoringConfigVersion": 14
+  },
+  "hashes": {
+    "map": "bd96ba77eb4ecc21ddcb5deb9706bf47f74be88d002f5f14c8ec0612b186a6a9",
+    "config": "fb37c8b022df360a920767f85db0d443a78b3e928127a6db9d58d814f5cf7287",
+    "engine": "f65e380dbb29417aad2251c0cf787d14928e0c7baadbd6f3bc6ade27b179e730",
+    "report": "1af5496914c7f04295f9aa3d8d8ad321da61accf07c697a41a27de0a3fbccdef"
+  }
+}

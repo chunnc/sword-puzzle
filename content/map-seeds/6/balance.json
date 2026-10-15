@@ -1,0 +1,474 @@
+{
+  "format": 1,
+  "status": "passed",
+  "failures": [],
+  "hashes": {
+    "map": "bd96ba77eb4ecc21ddcb5deb9706bf47f74be88d002f5f14c8ec0612b186a6a9",
+    "config": "fb37c8b022df360a920767f85db0d443a78b3e928127a6db9d58d814f5cf7287",
+    "engine": "5d98cd2b155a325d169ddfe5c2eb5880299a0e66a4c1cd3041cb7f75e6d52404"
+  },
+  "bands": {
+    "win": [
+      0.8,
+      1
+    ],
+    "three": [
+      0.45,
+      0.55
+    ],
+    "exclusiveWin": true,
+    "exclusiveThree": false
+  },
+  "botModel": {
+    "version": 1,
+    "loadout": {
+      "sword": null,
+      "skills": []
+    },
+    "mistakeRates": {
+      "basic": 0.3,
+      "normal": 0.2,
+      "strategic": 0.1
+    },
+    "mistakeCandidateLimit": 3,
+    "mistakeSelection": "uniform-among-next-three-lower-ranked-moves"
+  },
+  "authoringPolicy": {
+    "version": 2,
+    "starQuantile": 0.5,
+    "totalMoves": 25,
+    "threeStarMaxMoves": 15,
+    "twoStarMaxMoves": 20,
+    "moveRatios": {
+      "threeStars": 0.6,
+      "twoStars": 0.8
+    },
+    "maxMoves": 30,
+    "winRateEnforced": false,
+    "chanceCaps": {
+      "comboChance": 0.15,
+      "setupChance": 0.35
+    },
+    "budgetRefinement": []
+  },
+  "powerModel": {
+    "expectedTotalExp": 300,
+    "minimumTotalExp": 0,
+    "strongTotalExp": 2000,
+    "loadout": {
+      "sword": null,
+      "skills": []
+    },
+    "extraMoves": false
+  },
+  "seedSuites": {
+    "generationSeed": 600061,
+    "training": 150,
+    "validation": 1000,
+    "retrySequences": 100,
+    "maxRetryAttempts": 100,
+    "selection": "training-only; one frozen validation pass"
+  },
+  "training": null,
+  "search": null,
+  "validation": {
+    "passed": true,
+    "failures": [],
+    "loss": 0.039012383900928774,
+    "summary": {
+      "mapHash": "bd96ba77eb4ecc21ddcb5deb9706bf47f74be88d002f5f14c8ec0612b186a6a9",
+      "id": 6,
+      "difficulty": "medium",
+      "samples": 1000,
+      "winRate": 0.696,
+      "starRates": [
+        0.304,
+        0.092,
+        0.143,
+        0.461
+      ],
+      "suboptimalChoices": 3198,
+      "suboptimalChoiceRate": 0.19801857585139318,
+      "medianMoves": 12,
+      "actions": 16150,
+      "waveCounts": {
+        "1": 7394,
+        "2": 5866,
+        "3": 2066,
+        "4": 824
+      },
+      "metrics": {
+        "seeded": 1272,
+        "setups": 2425,
+        "setupAttempts": 3833,
+        "setupFallbacks": 1408,
+        "setupUsed": 952,
+        "chargesCreated": 7990,
+        "chargesActivated": 6359,
+        "settlements": 249
+      },
+      "settlementRate": 0.01541795665634675,
+      "movesHistogram": {
+        "1": 9,
+        "2": 36,
+        "3": 30,
+        "4": 33,
+        "5": 39,
+        "6": 20,
+        "7": 28,
+        "8": 32,
+        "9": 39,
+        "10": 33,
+        "11": 38,
+        "12": 33,
+        "13": 26,
+        "14": 37,
+        "15": 28,
+        "16": 26,
+        "17": 27,
+        "18": 27,
+        "19": 29,
+        "20": 34,
+        "21": 17,
+        "22": 22,
+        "23": 18,
+        "24": 13,
+        "25": 22
+      },
+      "averageMoves": 12.28448275862069,
+      "averageProgress": 0.8206666666666674,
+      "averageFailedProgress": 0.41008771929824495,
+      "averageReshuffles": 0.004,
+      "averageWaves": 28.62,
+      "maxChain": 4,
+      "bot": "normal",
+      "power": "expected",
+      "totalExp": 300,
+      "reshuffleRate": 0.0002476780185758514
+    }
+  },
+  "retries": {
+    "bot": "normal",
+    "totalExp": 300,
+    "botModel": {
+      "version": 1,
+      "loadout": {
+        "sword": null,
+        "skills": []
+      },
+      "mistakeRates": {
+        "basic": 0.3,
+        "normal": 0.2,
+        "strategic": 0.1
+      },
+      "mistakeCandidateLimit": 3,
+      "mistakeSelection": "uniform-among-next-three-lower-ranked-moves"
+    },
+    "suboptimalChoices": 664,
+    "assistance": "consecutive-losses; reset after any win",
+    "assistCounts": {
+      "0": 201,
+      "0.1": 2,
+      "0.2": 1
+    },
+    "firstWin": {
+      "samples": 100,
+      "completed": 100,
+      "unfinished": 0,
+      "maxAttempts": 100,
+      "medianAttempts": 1,
+      "medianRetries": 0,
+      "p90Attempts": 2,
+      "meanCompletedAttempts": 1.49,
+      "byAttempt": [
+        {
+          "attempt": 1,
+          "retries": 0,
+          "cumulativeRate": 0.62
+        },
+        {
+          "attempt": 2,
+          "retries": 1,
+          "cumulativeRate": 0.92
+        },
+        {
+          "attempt": 3,
+          "retries": 2,
+          "cumulativeRate": 0.99
+        },
+        {
+          "attempt": 5,
+          "retries": 4,
+          "cumulativeRate": 0.99
+        },
+        {
+          "attempt": 10,
+          "retries": 9,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 20,
+          "retries": 19,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 30,
+          "retries": 29,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 50,
+          "retries": 49,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 100,
+          "retries": 99,
+          "cumulativeRate": 1
+        }
+      ]
+    },
+    "firstThreeStars": {
+      "samples": 100,
+      "completed": 100,
+      "unfinished": 0,
+      "maxAttempts": 100,
+      "medianAttempts": 2,
+      "medianRetries": 1,
+      "p90Attempts": 4,
+      "meanCompletedAttempts": 2.04,
+      "byAttempt": [
+        {
+          "attempt": 1,
+          "retries": 0,
+          "cumulativeRate": 0.47
+        },
+        {
+          "attempt": 2,
+          "retries": 1,
+          "cumulativeRate": 0.72
+        },
+        {
+          "attempt": 3,
+          "retries": 2,
+          "cumulativeRate": 0.85
+        },
+        {
+          "attempt": 5,
+          "retries": 4,
+          "cumulativeRate": 0.97
+        },
+        {
+          "attempt": 10,
+          "retries": 9,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 20,
+          "retries": 19,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 30,
+          "retries": 29,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 50,
+          "retries": 49,
+          "cumulativeRate": 1
+        },
+        {
+          "attempt": 100,
+          "retries": 99,
+          "cumulativeRate": 1
+        }
+      ]
+    }
+  },
+  "diagnostics": [
+    {
+      "mapHash": "bd96ba77eb4ecc21ddcb5deb9706bf47f74be88d002f5f14c8ec0612b186a6a9",
+      "id": 6,
+      "difficulty": "medium",
+      "samples": 100,
+      "winRate": 0.67,
+      "starRates": [
+        0.33,
+        0.07,
+        0.11,
+        0.49
+      ],
+      "suboptimalChoices": 290,
+      "suboptimalChoiceRate": 0.1829652996845426,
+      "medianMoves": 10,
+      "actions": 1585,
+      "waveCounts": {
+        "1": 721,
+        "2": 588,
+        "3": 193,
+        "4": 83
+      },
+      "metrics": {
+        "seeded": 138,
+        "setups": 229,
+        "setupAttempts": 359,
+        "setupFallbacks": 130,
+        "setupUsed": 89,
+        "chargesCreated": 777,
+        "chargesActivated": 624,
+        "settlements": 19
+      },
+      "settlementRate": 0.011987381703470032,
+      "movesHistogram": {
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 5,
+        "6": 3,
+        "7": 3,
+        "8": 6,
+        "9": 6,
+        "10": 4,
+        "11": 1,
+        "12": 5,
+        "13": 4,
+        "14": 1,
+        "15": 2,
+        "16": 3,
+        "17": 1,
+        "18": 2,
+        "19": 4,
+        "20": 1,
+        "22": 2,
+        "23": 2,
+        "24": 1,
+        "25": 2
+      },
+      "averageMoves": 11.343283582089553,
+      "averageProgress": 0.8266666666666667,
+      "averageFailedProgress": 0.4747474747474748,
+      "averageReshuffles": 0,
+      "averageWaves": 28.08,
+      "maxChain": 4,
+      "bot": "normal",
+      "power": "minimum"
+    },
+    {
+      "mapHash": "bd96ba77eb4ecc21ddcb5deb9706bf47f74be88d002f5f14c8ec0612b186a6a9",
+      "id": 6,
+      "difficulty": "medium",
+      "samples": 100,
+      "winRate": 0.67,
+      "starRates": [
+        0.33,
+        0.07,
+        0.11,
+        0.49
+      ],
+      "suboptimalChoices": 290,
+      "suboptimalChoiceRate": 0.1829652996845426,
+      "medianMoves": 10,
+      "actions": 1585,
+      "waveCounts": {
+        "1": 721,
+        "2": 588,
+        "3": 193,
+        "4": 83
+      },
+      "metrics": {
+        "seeded": 138,
+        "setups": 229,
+        "setupAttempts": 359,
+        "setupFallbacks": 130,
+        "setupUsed": 89,
+        "chargesCreated": 777,
+        "chargesActivated": 624,
+        "settlements": 19
+      },
+      "settlementRate": 0.011987381703470032,
+      "movesHistogram": {
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 3,
+        "5": 5,
+        "6": 3,
+        "7": 3,
+        "8": 6,
+        "9": 6,
+        "10": 4,
+        "11": 1,
+        "12": 5,
+        "13": 4,
+        "14": 1,
+        "15": 2,
+        "16": 3,
+        "17": 1,
+        "18": 2,
+        "19": 4,
+        "20": 1,
+        "22": 2,
+        "23": 2,
+        "24": 1,
+        "25": 2
+      },
+      "averageMoves": 11.343283582089553,
+      "averageProgress": 0.8266666666666667,
+      "averageFailedProgress": 0.4747474747474748,
+      "averageReshuffles": 0,
+      "averageWaves": 28.08,
+      "maxChain": 4,
+      "bot": "normal",
+      "power": "strong"
+    }
+  ],
+  "revalidation": {
+    "previousReportHash": "1af5496914c7f04295f9aa3d8d8ad321da61accf07c697a41a27de0a3fbccdef",
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "medium",
+      "objective": "break-rocks",
+      "index": 6,
+      "bands": {
+        "win": [
+          0.8,
+          1
+        ],
+        "three": [
+          0.45,
+          0.55
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.5,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "minimumTarget": null,
+      "seed": 600061,
+      "totalExp": 300,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Phá Thạch Khai Lộ",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    }
+  }
+}

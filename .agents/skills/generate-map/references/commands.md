@@ -27,6 +27,13 @@ npm run maps:generate -- --difficulty medium --objective break-seals --index 5 \
 npm run maps:generate -- --difficulty easy --objective collect --tiles sword,lightning \
   --target 8,6 --min-moves 8 --max-moves 16
 
+# Collect goals with rocks blocking the board; rocks are not an objective.
+npm run maps:generate -- --difficulty easy --objective collect --tiles fire,lightning \
+  --rock-blockers 2-4
+
+# Automatically proposed boss HP must be greater than a previous enemy's HP.
+npm run maps:generate -- --difficulty medium --objective boss --min-target 801
+
 # Bias spawned tiles toward sword while preserving the default weight for other tiles.
 npm run maps:generate -- --index 5 --difficulty easy --objective collect \
   --tiles sword:4 --target 1 --weights sword=150
@@ -55,6 +62,8 @@ npm run maps:generate -- --help
 | `--objective` | Required: `collect`, `battle`, `boss`, `break-rocks`, `break-seals` |
 | `--tiles` | `sword`; CSV tile keys, collection only |
 | `--target` | Automatic; one target per enemy/obstacle objective or one per collected tile; Collect 1–30, obstacles up to 56 |
+| `--min-target` | Minimum automatically proposed Battle/Boss HP; an explicit `--target` must meet the floor |
+| `--rock-blockers` | Optional Collect-map rock cluster size as `N` or `MIN-MAX`, from 2–4; adds no rock objective |
 | `--weights` | Per-tile spawn weights as `key=weight` CSV; normal tile keys only, each 1–10,000; unspecified tiles default to 100 |
 | `--index` | Next contiguous local ID, maximum 1000 |
 | `--replace` | Explicitly revise an existing non-tutorial map |
@@ -78,10 +87,11 @@ for easy/medium/hard/very-hard, respectively. The generator derives total moves 
 budgets above 30. All first-attempt losses remain right-censored in the quantile.
 First-attempt 3-star gates remain easy >80%, medium 45–55%, hard 5–15%, very-hard
 2–6%; first-attempt win rates are reported as diagnostics. Base chance caps are
-15% combo and 35% setup; retries retain server assistance. Rock and seal maps compare
-`obstaclePressure` at 0, 0.15 or 0.30; zero is a control measurement, saved obstacle
-maps use positive pressure, and retry assistance reduces its effect. Auto-generated
-obstacle placements and targets change together.
+15% combo and 35% setup; retries retain server assistance. Rock/seal objectives and
+Collect maps with `--rock-blockers` compare `obstaclePressure` at 0, 0.15 or 0.30;
+zero is a control measurement, saved obstacle maps use positive pressure, and retry
+assistance reduces its effect. Auto-generated BreakRocks/BreakSeals placements and
+targets change together.
 All bots use an empty loadout and no passive skills. They choose a lower-ranked move
 30% (basic), 20% (normal), and 10% (strategic) of the time, uniformly from up to
 the next three lower-ranked moves. Reports include the model version and observed

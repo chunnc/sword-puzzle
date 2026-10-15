@@ -68,8 +68,10 @@ only. Publishing to a shared project is a separate operation.
 
 Use `npm run maps:generate -- --difficulty medium --objective collect`,
 `--objective boss`, `--objective break-rocks`, or `--objective break-seals`. Rock and
-seal maps generate connected obstacle cells and keep placement and target count in
-sync. The generator
+seal objectives generate connected obstacle cells and keep placement and target count in
+sync. Collect maps may also use `--rock-blockers MIN-MAX` to place a connected blocker
+cluster without a BreakRocks goal; the candidates are calibrated with obstacle pressure.
+Battle and Boss maps may use `--min-target HP` to floor automatically proposed HP. The generator
 adds the next contiguous local ID, defaults to the last chapter, and produces a
 seed/config/report/preview bundle under `content/map-seeds/INDEX/`. Maps are bounded
 to 7 columns × 8 rows, contain 12–40% holes, and use random normal cells rather than
@@ -82,8 +84,8 @@ more than 30 moves. The 3-star acceptance bands are easy >80%, medium 45–55%, 
 5–15%, and very-hard 2–6%; first-attempt win rate is reported as a diagnostic.
 Training searches targets, chance and obstacle pressure, then a frozen candidate
 must pass at least 1000 independent validation seeds. Obstacle pressure compares
-0 as a control and saves rock/seal maps at 0.15 or 0.30; it discourages chains near
-obstacles and weakens with retry assistance. Generation and
+0 as a control and saves maps with rock/seal obstacles at 0.15 or 0.30; it discourages
+chains near obstacles and weakens with retry assistance. Generation and
 `maps:balance INDEX` also measure first-win and first-three-star retry sequences
 with the server's consecutive-failure reset semantics.
 

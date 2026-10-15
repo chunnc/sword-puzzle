@@ -76,9 +76,11 @@ function progressQuantile(results, map, probability) {
 }
 function targetChoices(template, request, results) {
   if (request.fixedTargets || ['break-rocks', 'break-seals'].includes(request.objective)) return [null];
-  const progress = Math.floor(progressQuantile(results, template.map, request.starQuantile));
+  // To let a fraction q of runs reach an objective, set its target near the
+  // (1-q) quantile of what runs can achieve within the reference move budget.
+  const progress = Math.floor(progressQuantile(results, template.map, 1 - request.starQuantile));
   const minimum = template.map.objectives.every(objective => objective.type === 'Collect')
-    ? template.map.objectives.some(objective => objective.chargeTier) ? 1 : 3 : 10;
+    ? template.map.objectives.some(objective => objective.chargeTier) ? 1 : 3 : Math.max(10, request.minimumTarget ?? 10);
   const maximum = template.map.objectives.every(objective => objective.type === 'Collect') ? 30 : 1_000_000_000;
   return [...new Set([-2, -1, 0, 1, 2].map(offset => Math.max(minimum, Math.min(maximum, progress + offset))))];
 }
@@ -87,11 +89,11 @@ function policyVariants(difficulty, objective) {
   return CHANCE_POLICIES.map(policy => ({ ...policy,
     collectionPressure: objective === 'collect' ? pressure : 0 }));
 }
-function pressureVariants(objective) {
-  return ['break-rocks', 'break-seals'].includes(objective) ? [0, .15, .3] : [0];
+function pressureVariants(objective, hasRockBlockers = false) {
+  return ['break-rocks', 'break-seals'].includes(objective) || hasRockBlockers ? [0, .15, .3] : [0];
 }
-function pressureSelectable(objective, obstaclePressure) {
-  return !['break-rocks', 'break-seals'].includes(objective) || obstaclePressure > 0;
+function pressureSelectable(objective, obstaclePressure, hasRockBlockers = false) {
+  return !(['break-rocks', 'break-seals'].includes(objective) || hasRockBlockers) || obstaclePressure > 0;
 }
 function calibrate(templates, config, request, progress = console.log) {
   installSnapshot(config, []);
@@ -99,7 +101,7 @@ function calibrate(templates, config, request, progress = console.log) {
   const coarseSeeds = Math.min(40, request.trainingSeeds);
   for (const [index, template] of templates.entries()) {
     const policies = policyVariants(template.map.difficulty, request.objective);
-    for (const obstaclePressure of pressureVariants(request.objective)) for (const policy of policies) {
+    for (const obstaclePressure of pressureVariants(request.objective, Boolean(request.rockBlockers))) for (const policy of policies) {
       try {
         const probe = structuredClone(template.map);
         probe.moves = Math.max(request.minMoves, Math.round(.6 * request.maxMoves));
@@ -123,7 +125,7 @@ function calibrate(templates, config, request, progress = console.log) {
             if (cutoffs) {
               map.starThresholds = cutoffs.thresholds;
               const report = assess(map, fit.measurement.results, request);
-              const selectable = pressureSelectable(request.objective, obstaclePressure);
+              const selectable = pressureSelectable(request.objective, obstaclePressure, Boolean(request.rockBlockers));
               if (selectable) shortlist.push({ map: structuredClone(map), shape: template.shape, coarse: report, history: fit.history });
               adjustmentHistory.push({ shape: index + 1, policy, obstaclePressure, target: map.objectives[0].target,
                 moves: fit.moves, history: fit.history, status: !selectable ? 'pressure-control-only' : report.passed ? 'candidate' : 'three-star-band-miss' });

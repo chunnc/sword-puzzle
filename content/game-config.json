@@ -1,6 +1,6 @@
 {
-  "version": 13,
-  "levelCount": 5,
+  "version": 18,
+  "levelCount": 10,
   "qiCap": 100,
   "expRates": [
     30,
@@ -331,6 +331,11 @@
     100,
     100,
     100,
+    100,
+    100,
+    100,
+    100,
+    100,
     100
   ],
   "chapters": [
@@ -339,7 +344,7 @@
       "name": "Vân Hải Tiên Sơn",
       "order": 1,
       "firstLevelId": 1,
-      "lastLevelId": 5
+      "lastLevelId": 10
     }
   ],
   "milestoneRewards": [

@@ -1,6 +1,6 @@
-# Ý tưởng 10 map đầu — Vân Hải Tiên Sơn
+# Mười map đầu — Vân Hải Tiên Sơn
 
-Tài liệu này giữ brief thiết kế cho mười map đầu. Map 1–3 ghi lại nội dung hiện có; map 4–10 là ý tưởng, chưa phải map playable, chưa có layout, số lượt hay mục tiêu cân bằng đã chốt.
+Catalog local hiện có 10 map chơi được. Map 1–2 là tutorial; map 3–10 có layout và mục tiêu trong `game-maps.json`. Map 6–10 có seed và báo cáo cân bằng trong `map-seeds/`; các tỷ lệ dưới đây là ước lượng bot từ holdout 1.000 lượt, không phải cam kết tỷ lệ thắng của người chơi.
 
 ## Nhịp chương và mốc thưởng
 
@@ -8,16 +8,16 @@ Hành trình đi từ học ghép ô đến khai thông đường núi, nhận k
 
 | Map | Trạng thái | Vai trò | Mốc thưởng |
 |---:|---|---|---|
-| 1 | Đã có | Học ghép 3 Kiếm | — |
-| 2 | Đã có | Tạo rồi kích hoạt ô Lôi cấp 4 | — |
-| 3 | Đã có | Thu thập Kiếm và Hỏa | Kiếm cơ bản |
-| 4 | Ý tưởng | Khai thông đường núi bằng cách phá đá chắn | — |
-| 5 | Ý tưởng | Thử thách tại Kiếm Bia; mở thức kiếm đầu tiên | Thứ |
-| 6 | Ý tưởng | Tình huống thực hành Thứ, vẫn có cách thắng bằng ghép ô | — |
-| 7 | Ý tưởng | Trận chiến đầu tiên kiểm tra sát thương và kiếm khí | — |
-| 8 | Ý tưởng | Boss giữa chương; hoàn tất chặng khai sơn | Thiêu |
-| 9 | Ý tưởng | Thử thách trước điện hộ sơn, phối hợp chiến đấu và phá phong ấn | — |
-| 10 | Ý tưởng | Boss cuối chương, khép lại hành trình nhập môn | Vân |
+| 1 | Chơi được | Học ghép 3 Kiếm | — |
+| 2 | Chơi được | Tạo rồi kích hoạt ô Lôi cấp 4 | — |
+| 3 | Chơi được | Thu thập Kiếm và Hỏa | Kiếm cơ bản |
+| 4 | Chơi được | Phá đá chắn để khai thông đường núi | — |
+| 5 | Chơi được | Thu thập ô Kiếm cấp 4 tại Kiếm Bia | Thứ |
+| 6 | Đã tạo và cân bằng | Phá đá chắn, độ khó trung bình | — |
+| 7 | Đã tạo và cân bằng | Trận Battle dễ với yêu thú canh cốc | — |
+| 8 | Đã tạo và cân bằng | Thu Hỏa/Lôi trên bàn có đá chắn | Thiêu |
+| 9 | Đã tạo và cân bằng | Thu Kiếm và ô Hỏa cấp 4 | — |
+| 10 | Đã tạo và cân bằng | Boss hộ sơn, mạnh hơn yêu thú map 7 | Vân |
 
 ## Brief từng map
 
@@ -38,63 +38,67 @@ Hành trình đi từ học ghép ô đến khai thông đường núi, nhận k
 ### Map 3 — Thu thập Kiếm và Hỏa *(đã có)*
 
 - **Vai trò:** Kiểm tra người chơi có thể theo dõi hai mục tiêu cùng lúc sau phần hướng dẫn.
-- **Mục tiêu/cơ chế:** Thu thập 14 Kiếm và 14 Hỏa. Map 6×5, 12 lượt.
+- **Mục tiêu/cơ chế:** Thu thập 12 Kiếm và 12 Hỏa. Map 6×7, 19 lượt.
 - **Người chơi học:** Quan sát mục tiêu còn thiếu và chọn match phù hợp thay vì chỉ ưu tiên một loại ô.
 - **Truyện/phần thưởng:** Vượt thử thách nhập môn để nhận **Kiếm cơ bản khi đạt 3 sao**. Kiếm cộng 1 sát thương cho mỗi ô bị xóa. Map 4 mở đường lên núi.
 
-### Map 4 — Đường đá chắn *(ý tưởng)*
+### Map 4 — Đường đá chắn *(đã có)*
 
 - **Vai trò:** Giới thiệu đá chắn như một chướng ngại cần dọn để đi tiếp.
-- **Mục tiêu/cơ chế:** Phá một số đá chắn bằng match ở cạnh; dùng mục tiêu `BreakRocks` hiện có.
+- **Mục tiêu/cơ chế:** Phá 5 đá chắn bằng match ở cạnh; dùng mục tiêu `BreakRocks`. Map 7×7, 12 lượt, dễ.
 - **Người chơi học:** Chọn vị trí match để vừa tiến mục tiêu vừa tạo sát thương hiệu quả.
 - **Truyện/phần thưởng:** Người chơi khai thông đường núi, phát hiện Kiếm Bia cổ. Map 5 là thử thách trước bia; không yêu cầu kiếm thưởng từ map 3.
 
-### Map 5 — Kiếm Bia thức thứ nhất *(ý tưởng)*
+### Map 5 — Kiếm Bia thức thứ nhất *(đã có)*
 
 - **Vai trò:** Đặt mốc học thức kiếm đầu tiên sau khi người chơi đã gặp chướng ngại.
-- **Mục tiêu/cơ chế:** Vượt một bài thử phá chướng ngại đơn giản, dùng `BreakRocks` hoặc `BreakSeals` hiện có; chưa yêu cầu Thứ.
-- **Người chơi học:** Ưu tiên đường mở mục tiêu, giữ đủ lượt cho các ô còn lại.
-- **Truyện/phần thưởng:** Kiếm Bia truyền thức **Thứ** nếu map đạt 3 sao. Map 6 cho cơ hội vận dụng chiêu vừa học.
+- **Mục tiêu/cơ chế:** Thu thập 1 ô Kiếm cấp 4. Map 6×7, 27 lượt, dễ.
+- **Người chơi học:** Tạo và kích hoạt ô cường hóa để hoàn thành mục tiêu.
+- **Truyện/phần thưởng:** Kiếm Bia truyền thức **Thứ** nếu map đạt 3 sao. Map 6 tiếp tục thử thách phá đá; Thứ không phải điều kiện thắng.
 
-### Map 6 — Thử thức Thứ *(ý tưởng)*
+### Map 6 — Phá Thạch Khai Lộ *(đã tạo)*
 
-- **Vai trò:** Cho người chơi hiểu cách chọn một ô để xử lý trực tiếp.
-- **Mục tiêu/cơ chế:** Một cụm đá hoặc phong ấn đặt tại vị trí dễ quan sát. Người có Thứ có thể dùng chiêu để xử lý một ô; người chưa học vẫn hoàn thành được bằng match.
-- **Người chơi học:** Thứ tốn 60 kiếm khí, không tiêu lượt; có thể tác động ô thường, ô cường hóa hoặc một lớp chướng ngại hợp lệ.
-- **Truyện/phần thưởng:** Vượt tầng mây để tiến vào khu vực có yêu thú canh giữ. Thứ là lựa chọn chiến thuật, không phải điều kiện mở map kế.
+- **Vai trò:** Mở rộng bài học đá chắn với một mục tiêu phá đá ở độ khó trung bình.
+- **Mục tiêu/cơ chế:** Phá 3 đá chắn; `BreakRocks`. Bàn 7×8, 25 lượt.
+- **Cân bằng:** Holdout 1.000 seed: thắng 69,6%, đạt 3 sao 46,1%. Trung vị số lượt thử để thắng là 1; để đạt 3 sao là 2.
+- **Seed và báo cáo:** [seed](map-seeds/6/seed.json), [balance](map-seeds/6/balance.json).
 
-### Map 7 — Yêu thú canh cốc *(ý tưởng)*
+### Map 7 — Yêu Thú Canh Cốc *(đã tạo)*
 
-- **Vai trò:** Lần đầu kiểm tra kỹ năng chiến đấu sau khi người chơi đã hiểu sát thương và kiếm khí.
-- **Mục tiêu/cơ chế:** Đánh bại một yêu thú bằng mục tiêu `Battle` hiện có; giữ bàn cờ tương đối thoáng, chưa thêm luật boss riêng.
-- **Người chơi học:** Ghép Kiếm/Hỏa/Lôi để gây sát thương và ghép Tụ Linh Châu để tích khí.
-- **Truyện/phần thưởng:** Trận thắng mở cửa vào cốc. Map 8 là cuộc đối đầu lớn hơn và trao thức bị động đầu tiên.
+- **Vai trò:** Trận Battle đầu tiên, độ khó dễ.
+- **Mục tiêu/cơ chế:** Đánh bại yêu thú canh cốc, HP 791. Bàn 7×8, 30 lượt.
+- **Cân bằng:** Holdout 1.000 seed: thắng 100%, đạt 3 sao 84,4%. Trung vị số lượt thử để thắng và đạt 3 sao đều là 1.
+- **Truyện/phần tiếp:** Trận thắng mở cửa vào cốc; map 8 chuyển sang thu thập trên bàn có đá chắn.
+- **Seed và báo cáo:** [seed](map-seeds/7/seed.json), [balance](map-seeds/7/balance.json).
 
-### Map 8 — Hổ linh nhiễm tà *(ý tưởng)*
+### Map 8 — Linh Cốc Đá Chắn *(đã tạo)*
 
-- **Vai trò:** Boss giữa chương, tổng hợp sát thương, kiếm khí và lựa chọn thời điểm dùng Thứ.
-- **Mục tiêu/cơ chế:** Đánh bại Hổ Linh bằng mục tiêu `Boss` hiện có; chỉ dùng một điểm nhấn cơ chế, chẳng hạn vài ô bị phong ấn để người chơi phá.
-- **Người chơi học:** Chia lượt giữa gây sát thương và xử lý bàn cờ; chiêu chủ động có thể giúp mở một ô nhưng không bắt buộc.
-- **Truyện/phần thưởng:** Thanh tẩy Hổ Linh; đạt 3 sao thì học bị động **Thiêu**, cộng 1 sát thương mỗi ô bị xóa lên boss từ map sau. Map 9 dẫn đến điện hộ sơn.
+- **Vai trò:** Màn thu thập dễ với đá chắn cản trở đường đi.
+- **Mục tiêu/cơ chế:** Thu 24 Hỏa và 24 Lôi. Có 4 ô đá chắn trên bàn 5×8; đá không phải mục tiêu. Map có 30 lượt.
+- **Cân bằng:** Holdout 1.000 seed: thắng 99,9%, đạt 3 sao 81,2%. Trung vị số lượt thử để thắng và đạt 3 sao đều là 1.
+- **Truyện/phần thưởng:** Đạt 3 sao nhận bị động **Thiêu**, cộng 1 sát thương mỗi ô bị xóa lên boss. Map 9 luyện kết hợp thu ô thường và ô cấp 4.
+- **Seed và báo cáo:** [seed](map-seeds/8/seed.json), [balance](map-seeds/8/balance.json).
 
-### Map 9 — Trận pháp trước điện hộ sơn *(ý tưởng)*
+### Map 9 — Kiếm Hỏa Hợp Luyện *(đã tạo)*
 
-- **Vai trò:** Ôn tập trước boss cuối và cho người chơi làm quen phong ấn trong bối cảnh chiến đấu.
-- **Mục tiêu/cơ chế:** Kết hợp `Boss` với một mục tiêu `BreakSeals` nhỏ; dùng hành vi phong ấn đã có, không thêm điều kiện phụ thuộc Thiêu.
-- **Người chơi học:** Cân bằng phá phong ấn và gây sát thương; Thiêu tăng tốc độ nếu đã học nhưng không phải điều kiện thắng.
-- **Truyện/phần thưởng:** Trận pháp mở cửa vào đỉnh núi. Map 10 khép lại chương bằng trận chiến hộ sơn.
+- **Vai trò:** Ôn tập hai mục tiêu thu thập, độ khó dễ.
+- **Mục tiêu/cơ chế:** Thu 1 Kiếm và 1 Hỏa cấp 4. Mục tiêu Kiếm không lọc cấp nên tính mọi cấp Kiếm; hai mục tiêu dùng loại ô khác nhau. Bàn 7×6, 27 lượt.
+- **Cân bằng:** Kiếm và Hỏa có trọng số xuất hiện 150. Holdout 1.000 seed: thắng 94,3%, đạt 3 sao 81,0%. Trung vị số lượt thử để thắng và đạt 3 sao đều là 1.
+- **Truyện/phần tiếp:** Vượt thử luyện để mở đường lên đỉnh. Map 10 khép lại chương bằng trận chiến hộ sơn.
+- **Seed và báo cáo:** [seed](map-seeds/9/seed.json), [balance](map-seeds/9/balance.json).
 
-### Map 10 — Boss hộ sơn *(ý tưởng)*
+### Map 10 — Hộ Sơn Yêu Vương *(đã tạo)*
 
-- **Vai trò:** Cao trào chương 1 và bài kiểm tra tổng hợp các kỹ năng cơ sở.
-- **Mục tiêu/cơ chế:** Đánh bại boss bằng mục tiêu `Boss`; có thể ghép một mục tiêu phá phong ấn để gắn với trận pháp map 9.
-- **Người chơi học:** Dùng combo, kiếm khí và Thứ khi hữu ích; Thiêu hỗ trợ nhưng không bắt buộc phải sở hữu.
-- **Truyện/phần thưởng:** Boss được thanh tẩy và đường lên tiên sơn được mở. Đạt 3 sao học bị động **Vân**, cộng thêm 1 sát thương mỗi ô bị xóa lên boss từ màn chơi sau hoặc khi chơi lại.
+- **Vai trò:** Boss cuối chương ở độ khó trung bình.
+- **Mục tiêu/cơ chế:** Đánh bại Hộ Sơn Yêu Vương, HP 987. Bàn 7×7, 30 lượt; HP cao hơn yêu thú map 7 (791).
+- **Cân bằng:** Holdout 1.000 seed: thắng 100%, đạt 3 sao 50,2%. Trung vị số lượt thử để thắng là 1; để đạt 3 sao là 2.
+- **Truyện/phần thưởng:** Thanh tẩy boss và mở đường lên tiên sơn. Đạt 3 sao nhận bị động **Vân**, cộng 1 sát thương mỗi ô bị xóa lên boss.
+- **Seed và báo cáo:** [seed](map-seeds/10/seed.json), [balance](map-seeds/10/balance.json).
 
 ## Nguyên tắc khi chuyển brief thành map
 
-- Map 4–10 là ý tưởng, chưa được thêm vào `content/game-maps.json` hay seed Firestore.
+- Map 6–10 đã có trong catalog local cùng seed và balance report; chưa publish các map này lên Firestore.
 - Các mốc thưởng giữ theo cấu hình: map 3 Kiếm cơ bản, map 5 Thứ, map 8 Thiêu, map 10 Vân; mỗi món cần 3 sao.
 - Thắng map mở tiếp tiến trình kể cả chưa đạt 3 sao. Không map nào yêu cầu sở hữu món thưởng từ map trước để hoàn thành.
-- Ưu tiên mục tiêu/cơ chế hiện có (`Collect`, `BreakRocks`, `BreakSeals`, `Battle`, `Boss`). Mọi cơ chế mới cần được ghi rõ là đề xuất riêng trước khi thiết kế map playable.
-- Layout, kích thước bàn, số lượt, độ khó và ngưỡng sao của map 4–10 để trống cho bước tạo và cân bằng map sau này.
+- Ưu tiên mục tiêu/cơ chế hiện có (`Collect`, `BreakRocks`, `BreakSeals`, `Battle`, `Boss`). Map 8 dùng đá chắn như vật cản nhưng không có mục tiêu `BreakRocks`.
+- Catalog local có 10 map liên tục trong chương `chapter-1`; thắng map mở tiếp tiến trình kể cả khi chưa đạt 3 sao.
