@@ -18,7 +18,7 @@ Yêu cầu Node.js 22.13+, Expo development build, Android Studio/Android SDK ch
 3. Chạy `npm run android` hoặc `npm run ios` để sinh native project theo Expo Prebuild, build và cài development app lên thiết bị/simulator.
 4. Sau khi cài development app, chạy `npm start` để mở Metro và nạp client.
 
-App cần internet và dữ liệu server trước khi mở game. Lần đầu tự tạo hồ sơ khách; các lần sau dùng lại session. Health check chỉ chạy lúc mở app và khi bấm Thử lại; mọi request client có timeout 12 giây, server có timeout chung 10 giây. API timeout (kể cả HTTP 504) hoặc lỗi mạng lập tức hiện dialog chặn thao tác; nút Thử lại chỉ đóng dialog sau khi kiểm tra kết nối và phục hồi hồ sơ/thao tác chờ hoàn tất. Quay lại app từ nền không tự ping server. Email/mật khẩu là tài khoản game; bản thử nghiệm chưa có xác minh email hoặc khôi phục mật khẩu.
+App cần internet và dữ liệu server trước khi mở game. Mỗi lần khởi động mới hiện scene Chơi/Lưu tiến trình; quay lại từ background giữ màn đang mở. Lần đầu tự tạo hồ sơ khách; các lần sau dùng lại session. Chỉ vào bản đồ khi bấm Chơi hoặc hoàn tất auth từ scene mở đầu. Health check chỉ chạy lúc mở app và khi bấm Thử lại; mọi request client có timeout 12 giây, server có timeout chung 10 giây. API timeout (kể cả HTTP 504) hoặc lỗi mạng lập tức hiện dialog chặn thao tác; nút Thử lại chỉ đóng dialog sau khi kiểm tra kết nối và phục hồi hồ sơ/thao tác chờ hoàn tất. Quay lại app từ nền không tự ping server. Email/mật khẩu là tài khoản game; bản thử nghiệm chưa có xác minh email hoặc khôi phục mật khẩu.
 
 Client không chứa Firebase Auth/Firestore SDK. Token chỉ được dùng làm bearer token tới Game API; session lưu trong iOS Keychain/Android Keystore, còn profile, ví, trang bị và tiến trình được lưu trên server. Journal cục bộ v4 giữ bàn đang chơi và request chờ xác nhận, có bản dự phòng. Save map trước content v8 bị bỏ qua; session đăng nhập lưu độc lập. API trả 401 sẽ refresh token chung; nếu refresh bị từ chối, thử khôi phục cùng UID bằng khóa thiết bị rồi gửi lại request một lần. Đăng nhập là tùy chọn.
 
@@ -75,7 +75,7 @@ khác, ví và tiến trình; chạy lại không ghi khi hồ sơ đã sạch. 
 
 ## Phiên thiết bị / client 1.8.0
 
-Mở game tự chơi khách, vẫn cần internet. Tạo tài khoản giữ tiến trình khách; đăng nhập tài khoản có sẵn dùng dữ liệu tài khoản đó, không gộp. Khách phải xác nhận nguy cơ mất tiến trình trước khi đổi tài khoản. Mỗi bản cài đặt chỉ dùng một UID; một tài khoản dùng được nhiều máy. Đăng xuất chỉ chuyển máy hiện tại sang khách mới.
+Mở game hiện scene phi kiếm với hai nút Chơi và Lưu tiến trình, vẫn cần internet. Chơi tiếp tục hồ sơ hiện tại mà không bắt buộc đăng nhập. Lưu tiến trình và nút tài khoản trong game mở cùng popup /account: tab Đăng nhập hoặc Tạo tài khoản có xác nhận mật khẩu. Đóng popup trở về màn trước; liên kết cùng hồ sơ trong game giữ màn trước, còn đổi hồ sơ hoặc khôi phục phiên trở về bản đồ. Tạo tài khoản giữ tiến trình khách; đăng nhập tài khoản có sẵn dùng dữ liệu tài khoản đó, không gộp. Khách phải xác nhận nguy cơ mất tiến trình trước khi đổi tài khoản. Mỗi bản cài đặt chỉ dùng một UID; một tài khoản dùng được nhiều máy. Đăng xuất chỉ chuyển máy hiện tại sang khách mới.
 
 Server cấp custom token Firebase có claims bản cài đặt và binding version. Production cần cấp quyền `iam.serviceAccounts.signBlob` cho service account chạy Functions. Phiên 1.2 còn hợp lệ được chuyển sang 1.3 giữ UID; khóa thiết bị chưa tồn tại thì không thể tự khôi phục khách có legacy token đã bị thu hồi. Gỡ app/xóa dữ liệu có thể làm mất khóa khách.
 

@@ -31,6 +31,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback,[callback]),
 }));
+jest.mock('expo-router/react-navigation', () => ({ usePreventRemove: jest.fn() }));
 jest.mock('../FloatingCultivator', () => ({ FloatingCultivator: require('react-native').View }));
 jest.mock('../../state/gameStore', () => ({
   useGameStore: Object.assign((selector?: (state: typeof mockState) => unknown) => selector ? selector(mockState) : mockState,{getState:()=>mockState}),
@@ -453,7 +454,7 @@ describe('scene navigation', () => {
       expect(mockRouter.replace).not.toHaveBeenCalled();
     } else {
       expect(mockRouter.replace).toHaveBeenCalledTimes(1);
-      expect(mockRouter.replace).toHaveBeenCalledWith('/map');
+      expect(mockRouter.replace).toHaveBeenCalledWith('/');
       expect(mockRouter.back).not.toHaveBeenCalled();
     }
   });

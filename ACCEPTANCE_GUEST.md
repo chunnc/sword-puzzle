@@ -29,7 +29,7 @@ node tools/acceptance-cdp.mjs --device DEVICE --expression '__swordAcceptance.st
 
 Bridge actions: `fresh()`, `recover()`, `initializeTwice()`, `register(email,password)`, `login(email,password,confirmed)`, `logout()`, `start(levelId)`, `purchase(category,id)`, `equip(loadout)`, `sync()`, `expire(refreshAlso)`, `rememberSession()`, `probeStale()`, `wrongKey()`, `legacy()`, `route(path)`.
 
-`route('/account')` opens the real account screen. Once mounted, `account.credentials(email,password)`, `account.login()`, `account.register()`, `account.switch()` invoke that screen's actual callbacks. `alert()` returns the native alert's title/body/action labels; `chooseAlert(label)` invokes the corresponding callback. The actual native alert is still shown; terminate/reopen the test app to dismiss it if native UI input is unavailable.
+`welcome.play()` enters the map from the cold-start scene; `welcome.saveProgress()` opens the real account popup with welcome context. `route('/account')` opens the same popup over the current scene. Once mounted, `account.mode('login'|'register')`, `account.credentials(email,password,confirmation)`, `account.login()`, `account.register()`, `account.switch()`, and `account.close()` invoke its actual callbacks. For registration, pass a matching third confirmation argument; mismatches must fail before any auth request. Switch modes before setting credentials because changing modes clears password fields. `alert()` returns the native alert's title/body/action labels; `chooseAlert(label)` invokes the corresponding callback. The actual native alert is still shown; terminate/reopen the test app to dismiss it if native UI input is unavailable.
 
 Restart without clearing data:
 

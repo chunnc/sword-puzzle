@@ -66,7 +66,7 @@ export default function RootLayout() {
               <Stack.Screen name="shop" />
             </Stack.Protected>
             <Stack.Protected guard={bootstrapLoaded}>
-              <Stack.Screen name="account" />
+              <Stack.Screen name="account" options={{ presentation: 'transparentModal', contentStyle: { backgroundColor: 'transparent' } }} />
             </Stack.Protected>
           </Stack>
           <ConnectionDialog />
