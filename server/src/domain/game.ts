@@ -316,7 +316,50 @@ export interface Loadout {
   skills: SkillId[];
   sword: SwordId | null;
 }
+export const ENERGY_CAP = 5;
+export const ENERGY_RECOVERY_MS = 30 * 60 * 1000;
+export interface EnergyState {
+  current: number;
+  nextRecoveryAt: number | null;
+  asOf: number;
+}
+export function fullEnergy(asOf = 0): EnergyState {
+  return { current: ENERGY_CAP, nextRecoveryAt: null, asOf };
+}
+export function normalizeEnergy(raw: unknown): EnergyState {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return fullEnergy();
+  const value = raw as Partial<EnergyState>;
+  if (!integer(value.current, 0, ENERGY_CAP) || !integer(value.asOf) || value.nextRecoveryAt !== null
+    && (!integer(value.nextRecoveryAt) || value.nextRecoveryAt < value.asOf)
+    || value.current === ENERGY_CAP && value.nextRecoveryAt !== null
+    || value.current < ENERGY_CAP && value.nextRecoveryAt === null) return fullEnergy();
+  return { current: value.current, nextRecoveryAt: value.nextRecoveryAt, asOf: value.asOf };
+}
+export function advanceEnergy(raw: unknown, now: number): EnergyState {
+  const energy = normalizeEnergy(raw);
+  if (!integer(now) || energy.current === ENERGY_CAP || energy.nextRecoveryAt === null || now < energy.nextRecoveryAt) {
+    return { ...energy, asOf: Math.max(energy.asOf, integer(now) ? now : energy.asOf) };
+  }
+  const recovered = Math.floor((now - energy.nextRecoveryAt) / ENERGY_RECOVERY_MS) + 1;
+  const current = Math.min(ENERGY_CAP, energy.current + recovered);
+  return {
+    current,
+    nextRecoveryAt: current === ENERGY_CAP ? null : energy.nextRecoveryAt + recovered * ENERGY_RECOVERY_MS,
+    asOf: now,
+  };
+}
+export function consumeEnergy(raw: unknown, now: number): EnergyState {
+  const energy = advanceEnergy(raw, now);
+  if (energy.current <= 0) return energy;
+  const current = energy.current - 1;
+  return {
+    current,
+    nextRecoveryAt: current === ENERGY_CAP ? null : energy.nextRecoveryAt ?? now + ENERGY_RECOVERY_MS,
+    asOf: now,
+  };
+}
 export interface PlayerProfile {
+  energy: EnergyState;
   rewardCredits?: Record<string, { exp: number; starBonus: number }>;
   levels: LevelResult[];
   coins: number;
@@ -362,6 +405,7 @@ export interface SyncResponse {
 }
 export function emptyProfile(): PlayerProfile {
   return {
+    energy: fullEnergy(),
     levels: [],
     coins: 0,
     ownedSkills: [],
@@ -448,6 +492,7 @@ export function normalizeProfile(raw: unknown, c = requireContent()): PlayerProf
   if (!p || !Array.isArray(p.levels) || !integer(p.coins) || !integer(p.totalExp) || !Array.isArray(p.ownedSkills) || !Array.isArray(p.ownedSwords)) return null;
   const result: PlayerProfile = {
     ...emptyProfile(),
+    energy: normalizeEnergy(p.energy),
     levels: normalizeLevels(p.levels, c),
     coins: p.coins,
     totalExp: p.totalExp,

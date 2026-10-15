@@ -33,8 +33,8 @@ test('zero stars unlock stages but no missing stages can be submitted',()=>{
  assert.equal(r.profile.totalExp,60);assert.equal(r.profile.coins,200);assert.equal(r.rejected[0].reason,'LEVEL_LOCKED');
 });
 test('legacy progress creates the wallet once, subsequent reads use profileV2',()=>{
- const migrated=profileFromDocument({stars:{1:2,2:0}});assert.equal(migrated.coins,225);assert.equal(migrated.totalExp,110);
- const again=profileFromDocument({stars:{1:2,2:0},profileV2:migrated});assert.deepEqual(again,migrated);
+ const migrated=profileFromDocument({stars:{1:2,2:0}},content,123456789);assert.equal(migrated.coins,225);assert.equal(migrated.totalExp,110);
+ const again=profileFromDocument({stars:{1:2,2:0},profileV2:migrated},content,123456789);assert.deepEqual(again,migrated);
  const imported=applyOperation(again,{id:'legacy_import',kind:'importProgress',levels:migrated.levels});assert.equal(imported.profile.coins,225);
 });
 test('merging guest inventory and balance computes EXP from max stars',()=>{

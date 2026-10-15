@@ -45,6 +45,7 @@ API gọi Firebase Auth REST qua backend. Khi chạy Emulator Suite, API tự d�
 
 - `npm --prefix client run typecheck` kiểm tra TypeScript; `npm --prefix client test` kiểm tra engine, map tutorial, catalog, EXP, cửa hàng, journal và refresh token.
 - `npm run api:test` chạy kiểm thử server hiện có.
+- Năng lượng dùng hồ sơ server: khởi đầu 5, mỗi lượt thua/bỏ cuộc mất một, hồi một sau 30 phút. Khi phát hành, deploy Functions trước client 1.9.0; cập nhật `gameConfig/current.minClientVersion` lên `1.9.0` sau khi client đã sẵn sàng cho người chơi.
 - `API_BASE_URL=http://127.0.0.1:5001/PROJECT_ID/asia-southeast1/gameApi npm --prefix server run test:integration` kiểm tra health/catalog, guest/email, EXP 0 sao, retry, objectives, catalog đổi phiên bản, mua cạnh tranh, đổi tài khoản không gộp dữ liệu và từ chối truy cập Firestore trực tiếp.
 - Trên thiết bị thật, kiểm tra vùng an toàn màn hình, vuốt/chọn ô, save sau khi đóng app, mất mạng → Retry → tiếp tục cùng bàn và rewarded ad test trên Android 9+ 3 GB RAM/iOS 16.4+.
 

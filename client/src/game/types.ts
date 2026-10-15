@@ -125,15 +125,17 @@ export interface WinSummary {
     realmAfter: number;
 }
 export interface SaveData {
-    pendingStart?: { runId: string; levelId: number; contentVersion?: number; previousRunId: string | null };
-    retiredRunId?: string;
-    pendingFinish?: { runId: string; levelId: number; contentVersion: number; report: RunReport };
-    schemaVersion: 4;
-    ownerId: string | null;
-    profile: PlayerProfile;
-    active: BoardSnapshot | null;
-    lastWin: WinSummary | null;
-    pending: { contentVersion: number; operation: PlayerOperation } | null;
+  pendingStart?: { runId: string; levelId: number; contentVersion?: number; previousRunId: string | null };
+  pendingEnergyLoss?: { runId: string; levelId: number; contentVersion: number; report: RunReport };
+  energyConsumedRunId?: string;
+  retiredRunId?: string;
+  pendingFinish?: { runId: string; levelId: number; contentVersion: number; report: RunReport };
+  schemaVersion: 4;
+  ownerId: string | null;
+  profile: PlayerProfile;
+  active: BoardSnapshot | null;
+  lastWin: WinSummary | null;
+  pending: { contentVersion: number; operation: PlayerOperation } | null;
 }
 export type ProgressResponse = {
     levels: LevelStar[];

@@ -26,7 +26,7 @@ jest.mock('../../services/api', () => ({
   registerAccount: jest.fn(),
   createAdIntent: jest.fn(),
   checkAdIntent: jest.fn(),
-  fetchChapterMaps: jest.fn(), startRun: jest.fn(), finishRun: jest.fn()
+  fetchChapterMaps: jest.fn(), startRun: jest.fn(), finishRun: jest.fn(), consumeRunEnergy: jest.fn()
 }));
 const guest: SessionData = {
   uid: 'player',
@@ -105,7 +105,7 @@ beforeEach(async () => {
   }));
   (api.startRun as jest.Mock).mockImplementation(async (_session, input) => {
     const map = domain.versionMap(require('../../../../content/game-maps.json')[input.levelId - 1], domain.CONTENT);
-    return { session: guest, value: { config: domain.contentWire(domain.CONTENT), run: {
+    return { session: guest, value: { config: domain.contentWire(domain.CONTENT), energy: { current: 5, nextRecoveryAt: null, asOf: Date.now() }, run: {
       runId: input.runId, configVersion: domain.CONTENT.version, mapVersion: map.mapVersion,
       map, seed: 123456, assistReduction: .1, attempt: 1, loadout: store.getState().save.profile.loadout, totalExp: store.getState().save.profile.totalExp
     } } };
@@ -114,6 +114,7 @@ beforeEach(async () => {
     profile: store.getState().save.profile, stars: report.outcome === 'won' ? 1 : 0,
     ...(report.outcome === 'won' ? { reward: { id: runId, expGained: 0, coinsGained: 0, bestStars: 1, realmBefore: 0, realmAfter: 0 } } : {})
   } }));
+  (api.consumeRunEnergy as jest.Mock).mockImplementation(async () => ({ session: guest, value: { energy: store.getState().save.profile.energy } }));
 });
 it('creates a guest once for simultaneous initialization and waits for profile', async () => {
   await session.clearSession();
@@ -193,7 +194,7 @@ it.each(['unfinished', 'won', 'lost'])('starts a fresh run instead of the previo
   expect(next.extraMovesUsed).toBe(false);
   expect(next.loadout).toEqual(profile.loadout);
   expect(store.getState().save.lastWin).toBeNull();
-  expect(store.getState().save.profile).toEqual(profile);
+  expect(store.getState().save.profile.energy.current).toBe(profile.energy.current);
   expect((await saveTools.loadSave(guest.uid)).active?.runId).toBe(next.runId);
 });
 it('settles a pending win during cold boot to the map without submitting it twice', async () => {
@@ -411,6 +412,27 @@ it('persists a final-swap loss with enough qi and returns it only after playback
   expect(new BoardEngine(restored.level, restored).lost).toBe(true);
   expect(restored.swordQi).toBeGreaterThanOrEqual(expected.cost('nhat-kiem'));
   expect(api.syncProfile).not.toHaveBeenCalled();
+  expect((api.consumeRunEnergy as jest.Mock).mock.calls[0][0].uid).toBe(guest.uid);
+  expect(api.consumeRunEnergy).toHaveBeenCalledWith(expect.anything(), snapshot.runId, expect.objectContaining({ outcome: 'lost' }));
+  expect(store.getState().save.energyConsumedRunId).toBe(snapshot.runId);
+});
+it('keeps an immediate energy charge request durable and retries it with the same run after reconnecting', async () => {
+  ready(); await store.getState().startLevel(1);
+  const { BoardEngine } = require('../../game/BoardEngine');
+  const move = finalWinningSwap(100000), snapshot = store.getState().save.active!;
+  snapshot.objectiveProgress.main = 0;
+  const expected = new BoardEngine(snapshot.level, snapshot);
+  expect(expected.trySwap(...move)).toBe(true);expect(expected.lost).toBe(true);
+  (api.consumeRunEnergy as jest.Mock).mockRejectedValueOnce(new api.GameApiError('TIMEOUT'));
+  expect((await store.getState().swap(...move)).lost).toBe(true);
+  expect(store.getState().save.pendingEnergyLoss?.runId).toBe(snapshot.runId);
+  expect((await saveTools.loadSave(guest.uid)).pendingEnergyLoss?.runId).toBe(snapshot.runId);
+  store.setState({ online: true, connectionFailed: false });
+  await store.getState().checkConnection();
+  expect(api.consumeRunEnergy).toHaveBeenCalledTimes(2);
+  expect((api.consumeRunEnergy as jest.Mock).mock.calls.map((call: any[]) => call[1])).toEqual([snapshot.runId, snapshot.runId]);
+  expect(store.getState().save.pendingEnergyLoss).toBeUndefined();
+  expect(store.getState().save.energyConsumedRunId).toBe(snapshot.runId);
 });
 it('runs winning animation while server confirmation is pending and never grants rewards early', async () => {
   ready(); await store.getState().startLevel(1);
@@ -583,7 +605,7 @@ function modernReady(profile: PlayerProfile = domain.emptyProfile()) {
   (api.fetchChapterMaps as jest.Mock).mockImplementation(async (_session, chapterId) => ({
     session: guest, value: { chapterId, contentVersion: content.version, maps: maps.filter((m: any) => m.chapterId === chapterId).map(domain.mapSummary) }
   }));
-  (api.startRun as jest.Mock).mockImplementation(async (_session, input) => ({ session: guest, value: { config:domain.contentWire(content), run: {
+  (api.startRun as jest.Mock).mockImplementation(async (_session, input) => ({ session: guest, value: { config:domain.contentWire(content), energy:{current:5,nextRecoveryAt:null,asOf:Date.now()}, run: {
     runId: input.runId, configVersion:content.version,mapVersion:domain.versionMap(maps[input.levelId-1],content).mapVersion,map: domain.versionMap(maps[input.levelId-1],content), seed: 123456, assistReduction: .1, attempt: 1,
     loadout: store.getState().save.profile.loadout, totalExp: store.getState().save.profile.totalExp
   } } }));
@@ -715,7 +737,7 @@ it('clears a superseded run receipt rather than blocking recovery forever', asyn
 it('uses server-selected config instead of bootstrap and keeps it when backgrounded',async()=>{
   const config=modernReady();
   const selected={...config,version:config.version+1,qiCap:200};
-  (api.startRun as jest.Mock).mockImplementation(async(_session,input)=>({session:guest,value:{config:domain.contentWire(selected),run:{
+  (api.startRun as jest.Mock).mockImplementation(async(_session,input)=>({session:guest,value:{config:domain.contentWire(selected),energy:{current:5,nextRecoveryAt:null,asOf:Date.now()},run:{
     runId:input.runId,mapVersion:44,configVersion:selected.version,map:domain.versionMap(require('../../../../content/game-maps.json')[0],selected,44),
     seed:11,assistReduction:0,attempt:1,loadout:domain.emptyProfile().loadout,totalExp:1500
   }}}));
@@ -750,7 +772,7 @@ it('manual healthy recovery drains an uncertain start without creating another a
 it('installs expanded catalog metadata while keeping an active run pinned and preserving progress',async()=>{
   const config=modernReady();await store.getState().startLevel(1);
   const active=store.getState().save.active!;
-  const expanded={...config,version:config.version+1,levelCount:5,levelBaseExp:[...config.levelBaseExp!,100],chapters:[
+  const expanded={...config,version:config.version+1,levelCount:5,levelBaseExp:[...config.levelBaseExp!.slice(0,4),100],chapters:[
     {...config.chapters![0],lastLevelId:4},{id:'chapter-2',name:'Vân Hải Tiên Sơn II',order:2,firstLevelId:5,lastLevelId:5}
   ]};
   const profile={...domain.emptyProfile(),totalExp:300,levels:Array.from({length:5},(_,i)=>({levelId:i+1,stars:1 as const}))};

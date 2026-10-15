@@ -26,18 +26,18 @@ test('new profiles start empty, and future reward milestones need no published m
 });
 
 test('normalization removes retired starters without a marker and backfills eligible rewards', () => {
-  const c = fixture();
+  const c = fixture(), now = Date.now();
   const old = { ...game.emptyProfile(), coins: 876, totalExp: 432, levels: Array.from({ length: 8 }, (_, i) => ({ levelId: i + 1, stars: 3 })), ownedSwords: ['thanh-phong', 'trong-nhac'], ownedSkills: ['nhat-kiem', 'ngu-kiem'], loadout: { sword: 'thanh-phong', skills: ['nhat-kiem', 'ngu-kiem'] } };
-  const p = profileFromDocument({ profileV2: old }, c);
+  const p = profileFromDocument({ profileV2: old }, c, now);
   assert.equal(p.coins, 876); assert.equal(p.totalExp, 432);
   assert.deepEqual(p.ownedSwords, ['trong-nhac', 'co-ban']);
   assert.deepEqual(p.ownedSkills, ['ngu-kiem', 'thu', 'thieu']);
   assert.equal(p.loadout.sword, 'co-ban');
   assert.deepEqual(p.loadout.skills, ['ngu-kiem']);
   assert.equal(Object.hasOwn(p, 'startingLoadoutVersion'), false);
-  assert.deepEqual(profileFromDocument({ profileV2: p }, c), p);
+  assert.deepEqual(profileFromDocument({ profileV2: p }, c, now), p);
   const reinjected = { ...p, ownedSwords: [...p.ownedSwords, 'thanh-phong'], ownedSkills: [...p.ownedSkills, 'nhat-kiem'] };
-  assert.deepEqual(profileFromDocument({ profileV2: reinjected }, c), p);
+  assert.deepEqual(profileFromDocument({ profileV2: reinjected }, c, now), p);
 });
 
 test('three-star milestones award once on improvement, and a receipt retry returns the same reward', () => {

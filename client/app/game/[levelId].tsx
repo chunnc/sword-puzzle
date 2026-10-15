@@ -155,7 +155,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
     if (!board || !level || !engine)
         return <ScreenFrame background="bgGame"><Text style={styles.body}>Không tìm thấy màn chơi.</Text><GameButton title="VỀ TIÊN LỘ" onPress={() => router.replace('/map')}/></ScreenFrame>;
     const content = engine.contentDefinition;
-    const locked = !store.online || !store.foreground || store.recovering || store.authRequired || Boolean(store.save.pending || store.save.pendingFinish || store.save.pendingStart);
+    const locked = !store.online || !store.foreground || store.recovering || store.authRequired || Boolean(store.save.pending || store.save.pendingFinish || store.save.pendingEnergyLoss || store.save.pendingStart);
     const available = engine.availableSkills();
     const skill = content.skills.find(s => s.id === targetSkill);
     const tutorial = !targetSkill ? board.level.mapDefinition?.tutorial : undefined;
@@ -353,7 +353,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
           </View>
           {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} onExtraMoves={displayResult.kind === 'lost' && store.adsEnabled && !board.extraMovesUsed ? () => void continueWithAd() : undefined} /> : null}
           <View pointerEvents="box-none" style={styles.noticeLayer}><Notice message={store.notice} onDismiss={() => store.setNotice('')} /></View>
-           {leave ? <GameplayLeaveDialog busy={busy} compact={(viewport.width || width) < 360} onContinue={() => setLeave(false)} onBack={() => {
+           {leave ? <GameplayLeaveDialog busy={busy} compact={(viewport.width || width) < 360} loseEnergy={store.save.energyConsumedRunId !== board.runId} onContinue={() => setLeave(false)} onBack={() => {
              if (busyRef.current) return;
              busyRef.current = true; setBusy(true);
              void store.leaveLevel().then(left => { if (left) navigate('/map'); })

@@ -3,6 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { BottomNav, TopHud } from '../Chrome';
+import { EnergyEmptyDialog } from '../EnergyDisplay';
 import { CollectionScreen } from '../CollectionScreen';
 import { navigateTab } from '../Navigation';
 import CharacterScreen from '../../../app/character';
@@ -53,9 +54,9 @@ jest.mock('../Art', () => {
 const mockRouter = { replace: jest.fn(), push: jest.fn(), back: jest.fn(), canGoBack: jest.fn() };
 let mockParams: Record<string, string> = {};
 const mockState = {
-  save: emptySave(), notice: '', session: null, online: false,foreground:true,
+  save: emptySave(), notice: '', session: null, online: false,foreground:true,energyClockOffsetMs:0,energyPrompt:false,
   chapterId: '', chapterMaps: [] as MapSummary[], chapterLoading: false, chapterError: '', selectChapter: jest.fn(),
-  startLevel: jest.fn(), register: jest.fn(), login: jest.fn(), setNotice: jest.fn(),
+  startLevel: jest.fn(), register: jest.fn(), login: jest.fn(), setNotice: jest.fn(),setEnergyPrompt:jest.fn(),syncEnergy:jest.fn(),
 };
 
 const win: WinSummary = {
@@ -408,8 +409,22 @@ describe('scene navigation', () => {
     expect(premium.props.onPress).toBeUndefined();
     expect(premium.findAllByType(View).some(node => node.props.source === ART.iconTienNgoc)).toBe(true);
     expect(renderer.root.findAllByType(View).some(node => node.props.source === ART.iconLinhThach)).toBe(true);
+    expect(renderer.root.findAllByType(View).some(node => node.props.source === ART.iconBolt)).toBe(true);
+    expect(renderer.root.findAllByType(View).some(node => node.props.accessibilityLabel === 'Năng lượng: 5 trên 5')).toBe(true);
     act(() => { button('Tài khoản').props.onPress(); });
     expect(onAccount).toHaveBeenCalledTimes(1);
+  });
+  it('shows a dedicated low-energy panel with a close action', () => {
+    mockState.energyPrompt = true;
+    const asOf = Date.now();
+    mockState.save.profile.energy = { current: 4, nextRecoveryAt: asOf + 30 * 60_000, asOf };
+    mount(React.createElement(EnergyEmptyDialog));
+    expect(hasText('Bạn đã hết năng lượng')).toBe(true);
+    expect(renderer.root.findAllByType(Text).some(node => String(node.props.children).includes('30 phút'))).toBe(true);
+    expect(hasText('Đầy')).toBe(false);
+    act(() => { button('Đóng').props.onPress(); });
+    expect(mockState.setEnergyPrompt).toHaveBeenCalledWith(false);
+    mockState.energyPrompt = false;
   });
 
   it.each(['skill', 'sword', 'invalid', undefined])('opens inventory with category %s', category => {

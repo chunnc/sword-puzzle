@@ -1,5 +1,5 @@
 import { applyOperation, newlyGrantedItems, assistForFailures, mapStars, mapToLevel, realmForExp,
-  type GameContent, type MapDefinition, type ObjectiveProgress, type PlayerProfile, type RunDefinition, type RunReport } from './game';
+  advanceEnergy, consumeEnergy, type GameContent, type MapDefinition, type ObjectiveProgress, type PlayerProfile, type RunDefinition, type RunReport } from './game';
 
 export interface MapStats {
   attemptsStarted: number; retryCount: number; wins: number; losses: number; abandoned: number;
@@ -7,7 +7,7 @@ export interface MapStats {
 }
 export interface StoredRun extends RunDefinition {
   installationId: string; previousRunId: string | null; status: 'active' | RunReport['outcome'];
-  createdAt: number; finishedAt?: number; report?: RunReport; receipt?: ReturnType<typeof completeRun>['receipt'];
+  createdAt: number; finishedAt?: number; energyConsumedAt?: number; report?: RunReport; receipt?: ReturnType<typeof completeRun>['receipt'];
 }
 export function emptyMapStats(): MapStats {
   return { attemptsStarted: 0, retryCount: 0, wins: 0, losses: 0, abandoned: 0,
@@ -47,6 +47,20 @@ export function completeRun(run: RunDefinition, report: RunReport, stats: MapSta
       realmBefore: realmForExp(profile.totalExp, profileContent).index, realmAfter: realmForExp(nextProfile.totalExp, profileContent).index };
   } else if (report.outcome === 'lost') { nextStats.losses++; nextStats.consecutiveFailures++; }
   else nextStats.abandoned++;
-  return { profile: nextProfile, stats: nextStats, receipt: { levelId: run.map.id, mapVersion: run.mapVersion ?? run.map.mapVersion ?? run.map.contentVersion, configVersion: run.configVersion ?? content.version, stars, ...(reward ? { reward } : {}) } };
+  const energyConsumedAt = 'energyConsumedAt' in run ? (run as StoredRun).energyConsumedAt : undefined;
+  const consumesNow = report.outcome !== 'won' && energyConsumedAt === undefined;
+  nextProfile = { ...nextProfile, energy: consumesNow
+    ? consumeEnergy(nextProfile.energy, now) : advanceEnergy(nextProfile.energy, now) };
+  return { profile: nextProfile, stats: nextStats, energyConsumedAt: energyConsumedAt ?? (consumesNow ? now : undefined), receipt: { levelId: run.map.id, mapVersion: run.mapVersion ?? run.map.mapVersion ?? run.map.contentVersion, configVersion: run.configVersion ?? content.version, stars, ...(reward ? { reward } : {}) } };
 }
 export { assistForFailures };
+
+export function closeAbandonedRun(run: StoredRun, stats: MapStats, profile: PlayerProfile, now: number) {
+  const nextStats = abandonedStats(stats);
+  const consumed = run.energyConsumedAt === undefined;
+  return {
+    stats: nextStats,
+    energyConsumedAt: run.energyConsumedAt ?? now,
+    profile: { ...profile, energy: consumed ? consumeEnergy(profile.energy, now) : advanceEnergy(profile.energy, now) },
+  };
+}

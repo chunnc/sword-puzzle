@@ -7,7 +7,7 @@ import { profileFields, profileFromDocument } from './domain/profile';
 import { API_TIMEOUT_MS, isTimeoutError } from './timeout';
 
 export class ApiError extends Error {
-  constructor(public status: number, public code: string) { super(code); }
+  constructor(public status: number, public code: string, public details?: Record<string, unknown>) { super(code); }
 }
 export type AuthenticatedRequest = Request & {
   playerId?: string; idToken?: string; installationId?: string; bindingVersion?: number;

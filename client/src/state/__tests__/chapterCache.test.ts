@@ -258,7 +258,7 @@ it('does not block starting a level while maps refresh', async () => {
   const refresh = store.getState().selectChapter('chapter-1', { force: true });
   jest.mocked(api.startRun).mockImplementation(async (_session, input) => {
     const map = structuredClone(require('../../../../content/game-maps.json')[0]);
-    return { session: session.getCurrentSession()!, value: { config: domain.contentWire(domain.CONTENT), run: {
+    return { session: session.getCurrentSession()!, value: { config: domain.contentWire(domain.CONTENT), energy: { current: 5, nextRecoveryAt: null, asOf: Date.now() }, run: {
       runId: input.runId, configVersion: domain.CONTENT.version, mapVersion: map.mapVersion, map,
       seed: 123456, assistReduction: 0, attempt: 1, totalExp: 0, loadout: store.getState().save.profile.loadout,
     } } };

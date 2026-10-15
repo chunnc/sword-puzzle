@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { BoardEngine, newId } from '../game/BoardEngine';
 import { BoardActionCancelled, runBoardAction } from '../game/boardAction';
-import { CONTENT, registerContent, highestUnlocked, installContent, isCompleted, normalizeProfile, type Loadout, type PlayerOperation, type SkillId, type MapSummary, type RunReport, chapterForLevel, mapStars, mapToLevel, validateMap } from '../game/domain';
+import { CONTENT, advanceEnergy, normalizeEnergy, registerContent, highestUnlocked, installContent, isCompleted, normalizeProfile, type EnergyState, type Loadout, type PlayerOperation, type SkillId, type MapSummary, type RunReport, chapterForLevel, mapStars, mapToLevel, validateMap } from '../game/domain';
 import { clearSave, emptySave, loadSave, persistSave } from '../game/save';
 import { toRunReportProgress } from '../game/objectiveProgress';
 import type { BoardActionAnimation, BoardActionPresenter, BoardActionStart, CellPosition, SaveData, Stars, WinSummary } from '../game/types';
-import { checkHealth, createGuest, fetchBootstrap, fetchProfile, GameApiError, isApiConfigured, isConnectionError, setConnectionErrorHandler, loginAccount, registerAccount, syncProfile, createAdIntent, checkAdIntent, deviceSession, logoutAccount, fetchChapterMaps, startRun, finishRun } from '../services/api';
+import { checkHealth, createGuest, fetchBootstrap, fetchProfile, GameApiError, isApiConfigured, isConnectionError, setConnectionErrorHandler, loginAccount, registerAccount, syncProfile, createAdIntent, checkAdIntent, deviceSession, logoutAccount, fetchChapterMaps, startRun, finishRun, consumeRunEnergy } from '../services/api';
 import { initializeRewardedAds, showRewardedForIntent } from '../services/ads';
 import { resetDeviceIdentity } from '../services/device';
 import { clearSession, getCurrentSession, getSessionGeneration, loadSession, saveSession, type SessionData } from '../services/session';
@@ -40,9 +40,13 @@ interface GameState {
   adsEnabled: boolean;
   adsLoading: boolean;
   notice: string;
+  energyPrompt: boolean;
+  energyClockOffsetMs: number;
   initialize: () => Promise<string>;
   checkConnection: () => Promise<void>;
   setForeground: (active: boolean) => void;
+  syncEnergy: () => Promise<void>;
+  setEnergyPrompt: (visible: boolean) => void;
   startLevel: (id: number, restart?: boolean) => Promise<boolean>;
   swap: (x1: number, y1: number, x2: number, y2: number, presenter?: BoardActionPresenter) => Promise<BoardActionResult>;
   castSkill: (id: SkillId, targets: CellPosition[], presenter?: BoardActionPresenter) => Promise<BoardActionResult>;
@@ -56,7 +60,7 @@ interface GameState {
   syncProgress: () => Promise<void>;
   setNotice: (notice: string) => void;
 }
-const CLIENT_VERSION = '1.8.0';
+const CLIENT_VERSION = '1.9.0';
 let startRequestInFlight = false;
 let recoveryInFlight: Promise<void> | null = null,
   mutationQueue = Promise.resolve(),
@@ -75,6 +79,9 @@ async function persistNext(save: SaveData) {
   useGameStore.setState({
     save
   });
+}
+function observeEnergyClock(energy: EnergyState) {
+  useGameStore.setState({ energyClockOffsetMs: energy.asOf - Date.now() });
 }
 const CHAPTER_CACHE_MS = 5 * 60 * 1000;
 interface ChapterCacheEntry {
@@ -183,8 +190,12 @@ async function recoverRunStart() {
   try { response = await startRun(session, pending); }
   catch (error) {
     if (epoch !== getSessionGeneration() || useGameStore.getState().save.ownerId !== session.uid) throw new GameApiError('SESSION_CHANGED');
-    if (error instanceof GameApiError && ['RUN_CONFLICT','RUN_FINISHED','LEVEL_LOCKED','INVALID_RUN','MAP_NOT_FOUND'].includes(error.code)) {
-      await persistNext({ ...useGameStore.getState().save, pendingStart: undefined });
+    if (error instanceof GameApiError && ['RUN_CONFLICT','RUN_FINISHED','LEVEL_LOCKED','INVALID_RUN','MAP_NOT_FOUND','INSUFFICIENT_ENERGY'].includes(error.code)) {
+      const save = useGameStore.getState().save;
+      const energy = error.details?.energy;
+      await persistNext({ ...save, pendingStart: undefined,
+        ...(error.code === 'INSUFFICIENT_ENERGY' && energy ? { profile: { ...save.profile, energy: normalizeEnergy(energy) } } : {}) });
+      if (error.code === 'INSUFFICIENT_ENERGY' && energy) observeEnergyClock(normalizeEnergy(energy));
     }
     throw error;
   }
@@ -199,8 +210,24 @@ async function recoverRunStart() {
   if (run.passiveSkills !== undefined && (!Array.isArray(run.passiveSkills) || new Set(run.passiveSkills).size !== run.passiveSkills.length || !run.passiveSkills.every(id => content.skills.some(s => s.id === id && s.kind === 'passive')))) throw new GameApiError('INVALID_RESPONSE');
   const active = new BoardEngine(mapToLevel(map, run.seed, run.assistReduction, content), null, { loadout: run.loadout, totalExp: run.totalExp, passiveSkills: run.passiveSkills }).snapshot();
   active.runId = run.runId;
-  await persistNext({ ...useGameStore.getState().save, active, pendingStart: undefined, retiredRunId: undefined, lastWin: null });
+  await persistNext({ ...useGameStore.getState().save, profile: { ...useGameStore.getState().save.profile, energy: normalizeEnergy(response.value.energy) },
+    active, pendingStart: undefined, pendingEnergyLoss: undefined, energyConsumedRunId: undefined, retiredRunId: undefined, lastWin: null });
+  observeEnergyClock(normalizeEnergy(response.value.energy));
   useGameStore.setState({ session: response.session });
+}
+async function submitEnergyLoss(): Promise<boolean> {
+  const state = useGameStore.getState(), pending = state.save.pendingEnergyLoss, session = getCurrentSession();
+  if (!pending) return true;
+  if (!session) throw new GameApiError('INVALID_SESSION', 401);
+  const epoch = getSessionGeneration();
+  const response = await consumeRunEnergy(session, pending.runId, pending.report);
+  if (epoch !== getSessionGeneration() || useGameStore.getState().save.ownerId !== session.uid
+    || useGameStore.getState().save.pendingEnergyLoss?.runId !== pending.runId) throw new GameApiError('SESSION_CHANGED');
+  const latest = useGameStore.getState().save, energy = normalizeEnergy(response.value.energy);
+  await persistNext({ ...latest, profile: { ...latest.profile, energy }, pendingEnergyLoss: undefined, energyConsumedRunId: pending.runId });
+  observeEnergyClock(energy);
+  useGameStore.setState({ session: response.session });
+  return true;
 }
 async function submitRunFinish(): Promise<boolean> {
   const state = useGameStore.getState(), pending = state.save.pendingFinish, session = getCurrentSession();
@@ -225,9 +252,11 @@ async function submitRunFinish(): Promise<boolean> {
   if (!profile || pending.report.outcome === 'won' && (!result.reward || result.reward.id !== pending.runId || ![1,2,3].includes(result.stars))) throw new GameApiError('INVALID_RESPONSE');
   const retired = useGameStore.getState().save.retiredRunId === pending.runId;
   await persistNext({ ...useGameStore.getState().save, profile, pendingFinish: undefined, retiredRunId: undefined,
+    pendingEnergyLoss: undefined, energyConsumedRunId: undefined,
     ...(pending.report.outcome !== 'won' || retired ? { active: null, lastWin: null } : {}),
     ...(pending.report.outcome === 'won' && !retired ? { lastWin: { ...result.reward!, runId: pending.runId, levelId: pending.levelId, stars: result.stars, totalExp: profile.totalExp } } : {}) });
   useGameStore.setState({ session: response.session });
+  observeEnergyClock(profile.energy);
   return true;
 }
 async function finishActive(outcome: RunReport['outcome']): Promise<boolean> {
@@ -289,13 +318,14 @@ export function apiErrorMessage(error: unknown): string {
     PROFILE_OWNER_MISMATCH: 'Vui lòng đăng nhập đúng tài khoản để xác nhận thao tác còn chờ.',
     RUN_CONFLICT: 'Ván chơi này đã kết thúc hoặc được thay thế. Hãy bắt đầu ván mới.',
     RUN_NOT_FOUND: 'Không tìm thấy phiên chơi. Hãy bắt đầu ván mới.',
-    RUN_FINISHED: 'Ván chơi này đã kết thúc. Hãy bắt đầu ván mới.'
+    RUN_FINISHED: 'Ván chơi này đã kết thúc. Hãy bắt đầu ván mới.',
+    INSUFFICIENT_ENERGY: 'Bạn đã hết năng lượng.'
   };
   return messages[code] ?? 'Không thể hoàn thành thao tác. Vui lòng thử lại.';
 }
 function available(includePending = false) {
   const s = useGameStore.getState();
-  return s.initialized && s.bootstrapLoaded && s.online && s.foreground && !s.recovering && !s.authRequired && (includePending || !s.save.pending && !s.save.pendingFinish && !s.save.pendingStart);
+  return s.initialized && s.bootstrapLoaded && s.online && s.foreground && !s.recovering && !s.authRequired && (includePending || !s.save.pending && !s.save.pendingFinish && !s.save.pendingEnergyLoss && !s.save.pendingStart);
 }
 function reportConnectionFailure(error: GameApiError) {
   if (!reportedConnectionErrors.has(error)) {
@@ -312,6 +342,10 @@ function reportConnectionFailure(error: GameApiError) {
 async function failure(error: unknown, loginAttempt = false) {
   const s = useGameStore.getState();
   const code = error instanceof Error ? error.message : '';
+  if (error instanceof GameApiError && error.code === 'INSUFFICIENT_ENERGY') {
+    useGameStore.setState({ energyPrompt: true, notice: '' });
+    return;
+  }
   const auth = error instanceof GameApiError && (error.status === 401 || ['DEVICE_KEY_MISSING', 'DEVICE_KEY_INVALID', 'DEVICE_REVOKED', 'DEVICE_REAUTH_REQUIRED', ...(!loginAttempt ? ['ACCOUNT_DISABLED', 'ACCOUNT_DELETED'] : [])].includes(error.code)) || ['INVALID_SESSION_STORAGE', 'INVALID_DEVICE_STORAGE'].includes(code);
   useGameStore.setState({
     notice: apiErrorMessage(error),
@@ -331,6 +365,7 @@ async function failure(error: unknown, loginAttempt = false) {
   });
 }
 async function submitPending(): Promise<boolean> {
+  if (useGameStore.getState().save.pendingEnergyLoss && !await submitEnergyLoss()) return false;
   if (useGameStore.getState().save.pendingFinish && !await submitRunFinish()) return false;
   const state = useGameStore.getState(),
     pending = state.save.pending;
@@ -343,6 +378,7 @@ async function submitPending(): Promise<boolean> {
   const profile = normalizeProfile(r.response.profile);
   const rejected = r.response.rejected.find(x => x.id === pending.operation.id);
   if (!profile || !r.response.acknowledged.includes(pending.operation.id) && !rejected) throw new GameApiError('INVALID_RESPONSE');
+  observeEnergyClock(profile.energy);
   const current = useGameStore.getState().save;
   if (current.ownerId !== session.uid || current.pending?.operation.id !== pending.operation.id) throw new GameApiError('SESSION_CHANGED');
   let lastWin = current.lastWin;
@@ -407,10 +443,15 @@ async function record(engine: BoardEngine, previous: SaveData): Promise<BoardAct
     return { changed: true, won: true, lost: false, stars, levelId, animation: engine.animation,
       summary: accepted ? useGameStore.getState().save.lastWin ?? undefined : undefined };
   }
-  await persistNext({
-    ...previous,
-    active: snapshot
-  });
+  if (engine.lost && snapshot.level.mapDefinition) {
+    const report: RunReport = { outcome: 'lost', movesUsed: engine.movesUsed,
+      objectiveProgress: toRunReportProgress(snapshot.level, snapshot.objectiveProgress), extraMovesUsed: snapshot.extraMovesUsed };
+    await persistNext({ ...previous, active: snapshot, pendingEnergyLoss: { runId: snapshot.runId, levelId,
+      contentVersion: snapshot.contentVersion, report } });
+    try { await submitEnergyLoss(); } catch (error) { await failure(error); }
+  } else {
+    await persistNext({ ...previous, active: snapshot });
+  }
   return {
     changed: true,
     won: false,
@@ -464,7 +505,7 @@ async function hydrate() {
   const current = useGameStore.getState().save;
   const loaded = current.ownerId === session.uid ? current : await loadSave(session.uid);
   const saved = loaded.active && loaded.active.contentVersion < 8
-    ? { ...loaded, active: null, lastWin: null, pendingStart: undefined, pendingFinish: undefined, retiredRunId: undefined }
+    ? { ...loaded, active: null, lastWin: null, pendingStart: undefined, pendingFinish: undefined, pendingEnergyLoss: undefined, energyConsumedRunId: undefined, retiredRunId: undefined }
     : loaded;
   if (epoch !== lifecycle) return;
   // Keep pending ownership visible even if authentication fails before profile fetch.
@@ -473,6 +514,7 @@ async function hydrate() {
   if (epoch !== lifecycle) return;
   const profile = normalizeProfile(remote.profile);
   if (!profile) throw new GameApiError('INVALID_RESPONSE');
+  observeEnergyClock(profile.energy);
   const active = saved.active;
   await persistNext({
     ...saved,
@@ -483,7 +525,11 @@ async function hydrate() {
   useGameStore.setState({
     session: remote.session
   });
-  await submitPending();
+  try { await submitPending(); }
+  catch (error) {
+    if (error instanceof GameApiError && error.code === 'INSUFFICIENT_ENERGY') useGameStore.setState({ energyPrompt: true });
+    else throw error;
+  }
   if (epoch !== lifecycle) return;
   if (useGameStore.getState().save.pendingStart) await recoverRunStart();
   const restored = useGameStore.getState().save.active;
@@ -499,6 +545,8 @@ async function hydrate() {
 }
 export const useGameStore = create<GameState>((set, get) => ({
   save: emptySave(),
+  energyPrompt: false,
+  energyClockOffsetMs: 0,
   chapterId: '', chapterMaps: [], chapterLoading: false, chapterError: '',
   selectChapter: async (id, options) => { if (available()) await loadChapter(id, options); },
   finishLevel: outcome => serialize(async () => {
@@ -506,10 +554,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     try { return await finishActive(outcome); } catch (error) { await failure(error); return false; }
   }),
   leaveLevel: () => serialize(async () => {
+    try { if (!await submitPending()) return false; }
+    catch (error) { await failure(error); return false; }
     const save = get().save, active = save.active;
     if (!active) return true;
     if (!active.level.mapDefinition || save.lastWin?.runId === active.runId) {
-      await persistNext({ ...save, active: null, lastWin: null, retiredRunId: undefined });
+      await persistNext({ ...save, active: null, pendingEnergyLoss: undefined, energyConsumedRunId: undefined, lastWin: null, retiredRunId: undefined });
       return true;
     }
     const engine = new BoardEngine(active.level, active);
@@ -557,7 +607,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         healthy = true;
         if (epoch !== lifecycle || !get().foreground) return;
         const recover = !get().online || !get().initialized || !get().bootstrapLoaded || get().authRequired || bindingChanged;
-        if (recover) await serialize(hydrate);else if (get().save.pending || get().save.pendingFinish || get().save.pendingStart) await serialize(submitPending);
+        if (recover) await serialize(hydrate);else if (get().save.pending || get().save.pendingFinish || get().save.pendingEnergyLoss || get().save.pendingStart) await serialize(submitPending);
         if (epoch === lifecycle && get().foreground && failureGeneration === connectionFailureGeneration) {
           set({ online: true, connectionFailed: false, bootError: '' });
         }
@@ -582,7 +632,23 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
     return recoveryInFlight;
   },
-  setForeground: active => set({ foreground: active }),
+  setForeground: active => {
+    set({ foreground: active });
+    if (active && get().initialized && get().online) void get().syncEnergy();
+  },
+  syncEnergy: () => serialize(async () => {
+    const session = getCurrentSession();
+    if (!session || !get().foreground || !get().online || get().authRequired) return;
+    try {
+      const remote = await fetchProfile(session), profile = normalizeProfile(remote.profile);
+      if (!profile || get().save.ownerId !== session.uid) throw new GameApiError('INVALID_RESPONSE');
+      const save = get().save;
+      await persistNext({ ...save, profile: { ...save.profile, energy: profile.energy } });
+      observeEnergyClock(profile.energy);
+      set({ session: remote.session });
+    } catch (error) { await failure(error); }
+  }),
+  setEnergyPrompt: visible => set({ energyPrompt: visible }),
   startLevel: levelId => {
     if (startRequestInFlight) return Promise.resolve(false);
     startRequestInFlight = true;
@@ -592,17 +658,29 @@ export const useGameStore = create<GameState>((set, get) => ({
         const uncertainStart = get().save.pendingStart;
         if (!await submitPending()) return false;
         if (uncertainStart) return uncertainStart.levelId === levelId;
-        const current = get().save;
+        let current = get().save;
         if (!Number.isInteger(levelId) || levelId < 1 || levelId > CONTENT.levelCount) return false;
-        const previousEngine = current.active ? new BoardEngine(current.active.level, current.active) : null;
+        const previousEngine = current.active && current.active.level.mapDefinition && current.lastWin?.runId !== current.active.runId
+          ? new BoardEngine(current.active.level, current.active) : null;
         if (previousEngine?.lost && !await finishActive('lost')) return false;
+        current = get().save;
+        const activeUnfinished = current.active?.level.mapDefinition && current.lastWin?.runId !== current.active.runId;
+        const energy = advanceEnergy(current.profile.energy, Date.now() + get().energyClockOffsetMs);
+        if (!activeUnfinished && energy.current <= 0) {
+          if (energy.asOf !== current.profile.energy.asOf) await persistNext({ ...current, profile: { ...current.profile, energy } });
+          set({ energyPrompt: true, notice: '' });
+          return false;
+        }
         await persistNext({ ...get().save, pendingStart: { runId: newId(), levelId,
           previousRunId: current.active?.level.mapDefinition ? current.active.runId : null } });
         await recoverRunStart();
         const ch = get().save.active!.level.mapDefinition!.chapterId;
         if (get().chapterId !== ch) set({ chapterId: ch, chapterMaps: chapterCache.get(ch)?.maps ?? [], chapterLoading: false, chapterError: '' });
         return true;
-      } catch (error) { await failure(error); return false; }
+      } catch (error) {
+        if (error instanceof GameApiError && error.code === 'INSUFFICIENT_ENERGY') { set({ energyPrompt: true, notice: '' }); return false; }
+        await failure(error); return false;
+      }
     }).finally(() => { startRequestInFlight = false; });
   },
   swap: (x1, y1, x2, y2, presenter) => serialize(async () => {
@@ -702,6 +780,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       const remote = await fetchProfile(session);
       const profile = normalizeProfile(remote.profile);
       if (!profile) throw new GameApiError('INVALID_RESPONSE');
+      observeEnergyClock(profile.energy);
       await persistNext({
         ...get().save,
         profile
@@ -720,15 +799,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!get().online || !get().foreground) throw new Error(apiErrorMessage(new Error('CONNECTION_REQUIRED')));
     try {
       // Recovery of the same owner is permitted when a pending request cannot yet authenticate.
-      if ((get().save.pending || get().save.pendingStart || get().save.pendingFinish) && !get().authRequired) await submitPending();
+      if ((get().save.pending || get().save.pendingStart || get().save.pendingFinish || get().save.pendingEnergyLoss) && !get().authRequired) await submitPending();
       const previous = get().save;
-      const hasPending = previous.pending || previous.pendingStart || previous.pendingFinish;
+      const hasPending = previous.pending || previous.pendingStart || previous.pendingFinish || previous.pendingEnergyLoss;
       const session = await loginAccount(email, password, getCurrentSession(), confirmedDiscardGuest, hasPending ? previous.ownerId ?? undefined : undefined);
       if (hasPending && previous.ownerId !== session.uid) throw new Error('PROFILE_OWNER_MISMATCH');
       await saveSession(session);
       set({ session });
       const remote = await fetchProfile(session), profile = normalizeProfile(remote.profile);
       if (!profile) throw new GameApiError('INVALID_RESPONSE');
+      observeEnergyClock(profile.energy);
       const saved = previous.ownerId === session.uid ? previous : emptySave();
       const active = saved.active;
       await persistNext({ ...saved, ownerId: session.uid, profile, active });
@@ -743,7 +823,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   logout: () => serialize(async () => {
     if (!get().online || !get().foreground) throw new Error(apiErrorMessage(new Error('CONNECTION_REQUIRED')));
     try {
-      if (get().save.pending || get().save.pendingStart || get().save.pendingFinish) await submitPending();
+      if (get().save.pending || get().save.pendingStart || get().save.pendingFinish || get().save.pendingEnergyLoss) await submitPending();
       const current = getCurrentSession();
       if (!current || current.isGuest) return;
       const session = await logoutAccount(current);

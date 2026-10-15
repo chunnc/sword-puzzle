@@ -3,9 +3,9 @@ import { Router, type RequestHandler } from 'express';
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
 import { ApiError, type AuthenticatedRequest } from './identity';
 import { latestChapterMaps, currentContent, loadContent } from './content';
-import { contentWire, learnedPassives, highestUnlocked, mapFromDocument, mapResourceFromDocument, mapToDocument, type GameContent } from './domain/game';
+import { consumeEnergy, contentWire, learnedPassives, highestUnlocked, mapFromDocument, mapResourceFromDocument, mapToDocument, type EnergyState, type GameContent } from './domain/game';
 import { profileFields, profileFromDocument } from './domain/profile';
-import { abandonedStats, assistForFailures, completeRun, emptyMapStats, parseRunReport, startedStats, type MapStats, type StoredRun } from './domain/runs';
+import { assistForFailures, closeAbandonedRun, completeRun, emptyMapStats, parseRunReport, startedStats, type MapStats, type StoredRun } from './domain/runs';
 
 export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, assertInstallation: (req: AuthenticatedRequest, tx: Transaction) => Promise<unknown>) {
   const router = Router();
@@ -46,7 +46,10 @@ export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, ass
           if (stored.map.id !== levelId || stored.installationId !== req.installationId || stored.previousRunId !== previousRunId
             || !serverSelected && content.version !== contentVersion) throw new ApiError(409, 'RUN_CONFLICT');
           if (stored.status !== 'active') throw new ApiError(409, 'RUN_FINISHED');
-          return { run: stored, content };
+          const now = Date.now(), player = await tx.get(playerRef);
+          const profile = profileFromDocument(player.data(), content, now);
+          tx.set(playerRef, profileFields(profile, player.data()?.stars, content), { merge: true });
+          return { run: stored, content, energy: profile.energy };
         }
         // Mutable pointers are in the read set: a concurrent publish retries selection.
         const settings = (await tx.get(db.collection('gameConfig').doc('current'))).data();
@@ -62,28 +65,77 @@ export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, ass
         const supersededRunId = installation.data()?.activeRunId ?? previousRunId;
         const [player, statsDoc, previousDoc] = await Promise.all([tx.get(playerRef), tx.get(statsRef),
           supersededRunId ? tx.get(playerRef.collection('runs').doc(supersededRunId)) : Promise.resolve(null)]);
-        const profile = profileFromDocument(player.data(), content);
+        let profile = profileFromDocument(player.data(), content, Date.now());
         if (levelId > highestUnlocked(profile.levels, content)) throw new ApiError(400, 'LEVEL_LOCKED');
         let stats = { ...emptyMapStats(), bestStars: profile.levels.find(l => l.levelId === levelId)?.stars ?? 0, ...statsDoc.data() } as MapStats;
         const previous = previousDoc?.data() as StoredRun | undefined;
-        let previousStatsRef, previousStats;
+        let previousStatsRef, previousStats: MapStats | undefined;
         if (previous?.status === 'active') {
           if (previous.installationId !== req.installationId) throw new ApiError(409, 'RUN_CONFLICT');
           previousStatsRef = playerRef.collection('mapStats').doc(String(previous.map.id));
-          if (previous.map.id === levelId) stats = abandonedStats(stats);
-          else previousStats = abandonedStats({ ...emptyMapStats(), ...(await tx.get(previousStatsRef)).data() } as MapStats);
+          const oldStats = previous.map.id === levelId ? stats
+            : { ...emptyMapStats(), ...(await tx.get(previousStatsRef)).data() } as MapStats;
+          const closed = closeAbandonedRun(previous, oldStats, profile, Date.now());
+          profile = { ...profile, energy: closed.profile.energy };
+          if (previous.map.id === levelId) stats = closed.stats;
+          else previousStats = closed.stats;
+          tx.update(previousDoc!.ref, { status: 'abandoned', energyConsumedAt: closed.energyConsumedAt, finishedAt: Date.now() });
+        }
+        if (profile.energy.current <= 0) {
+          if (previous?.status === 'active') tx.set(installationRef, { activeRunId: null }, { merge: true });
+          if (previous?.status === 'active' && previousStatsRef && previousStats) tx.set(previousStatsRef, previousStats);
+          else if (previous?.status === 'active' && previous.map.id === levelId) tx.set(statsRef, stats);
+          tx.set(playerRef, profileFields(profile, player.data()?.stars, content), { merge: true });
+          return { insufficientEnergy: true as const, energy: profile.energy };
         }
         const run: StoredRun = { runId, mapVersion: map.mapVersion ?? map.contentVersion, configVersion: content.version, seed: randomBytes(4).readUInt32LE() || 1, map,
           assistReduction: assistForFailures(map, stats.consecutiveFailures), attempt: stats.attemptsStarted + 1,
           loadout: profile.loadout, totalExp: profile.totalExp, passiveSkills: learnedPassives(profile, content), installationId: req.installationId!, previousRunId, status: 'active', createdAt: Date.now() };
-        if (previous?.status === 'active') tx.update(previousDoc!.ref, { status: 'abandoned', finishedAt: Date.now() });
         if (previousStatsRef && previousStats) tx.set(previousStatsRef, previousStats);
         tx.set(statsRef, startedStats(stats));
         tx.create(runRef, { ...run, map: mapToDocument(map) });
         tx.set(installationRef, { activeRunId: runId }, { merge: true });
-        return { run, content };
+        tx.set(playerRef, profileFields(profile, player.data()?.stars, content), { merge: true });
+        return { run, content, energy: profile.energy };
       });
-      res.json(startResponse(response.run, response.content));
+      if ('insufficientEnergy' in response && response.insufficientEnergy) {
+        res.status(403).json({ error: 'INSUFFICIENT_ENERGY', energy: response.energy });
+        return;
+      }
+      res.json(startResponse(response.run, response.content, response.energy));
+    } catch (error) { next(error); }
+  });
+  router.post('/v4/runs/:runId/energy-loss', requireAuth, async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const runId = String(req.params.runId);
+      if (!/^[a-zA-Z0-9_-]{8,120}$/.test(runId)) throw new ApiError(400, 'INVALID_RUN');
+      const playerRef = db.collection('players').doc(req.playerId!), runRef = playerRef.collection('runs').doc(runId);
+      const stored = await runRef.get();
+      if (!stored.exists) throw new ApiError(404, 'RUN_NOT_FOUND');
+      const initial = stored.data() as StoredRun;
+      const content = await loadContent(initial.configVersion ?? initial.map.contentVersion);
+      const map = mapFromDocument(initial.map, content);
+      let report;
+      try { report = parseRunReport(req.body, map); } catch { throw new ApiError(400, 'INVALID_RUN_REPORT'); }
+      if (report.outcome !== 'lost') throw new ApiError(400, 'INVALID_RUN_REPORT');
+      const energy = await db.runTransaction(async tx => {
+        await assertInstallation(req, tx);
+        const installationRef = db.collection('installations').doc(req.installationId!);
+        const [player, runDoc, installation] = await Promise.all([tx.get(playerRef), tx.get(runRef), tx.get(installationRef)]);
+        const run = runDoc.data() as StoredRun | undefined;
+        if (!run || run.installationId !== req.installationId) throw new ApiError(403, 'RUN_CONFLICT');
+        const now = Date.now(), profile = profileFromDocument(player.data(), content, now);
+        if (run.energyConsumedAt !== undefined) {
+          tx.set(playerRef, profileFields(profile, player.data()?.stars, content), { merge: true });
+          return profile.energy;
+        }
+        if (run.status !== 'active' || installation.data()?.activeRunId !== runId) throw new ApiError(409, 'RUN_FINISHED');
+        const next = { ...profile, energy: consumeEnergy(profile.energy, now) };
+        tx.update(runRef, { energyConsumedAt: now });
+        tx.set(playerRef, profileFields(next, player.data()?.stars, content), { merge: true });
+        return next.energy;
+      });
+      res.json({ energy });
     } catch (error) { next(error); }
   });
   router.post(['/v3/runs/:runId/finish', '/v4/runs/:runId/finish'], requireAuth, async (req: AuthenticatedRequest, res, next) => {
@@ -110,12 +162,14 @@ export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, ass
           if (!run.report || JSON.stringify(parseRunReport(run.report, map)) !== JSON.stringify(report)) throw new ApiError(409, 'RUN_CONFLICT');
           return { profile: profileFromDocument(player.data(), profileContent), ...run.receipt };
         }
+        const now = Date.now();
         const completed = completeRun(run, report, { ...emptyMapStats(), ...statsDoc.data() } as MapStats,
-          profileFromDocument(player.data(), profileContent), content, profileContent, Date.now());
-        tx.update(runRef, { status: report.outcome, report, receipt: completed.receipt, finishedAt: Date.now() });
+          profileFromDocument(player.data(), profileContent, now), content, profileContent, now);
+        tx.update(runRef, { status: report.outcome, report, receipt: completed.receipt, finishedAt: now,
+          ...(completed.energyConsumedAt !== undefined ? { energyConsumedAt: completed.energyConsumedAt } : {}) });
         tx.set(statsRef, completed.stats);
         if (installation.data()?.activeRunId === runId) tx.set(installationRef, { activeRunId: null }, { merge: true });
-        if (report.outcome === 'won') tx.set(playerRef, profileFields(completed.profile, player.data()?.stars, profileContent), { merge: true });
+        tx.set(playerRef, profileFields(completed.profile, player.data()?.stars, profileContent), { merge: true });
         return { profile: completed.profile, ...completed.receipt };
       });
       res.json({ ...result, profileConfig: contentWire(profileContent) });
@@ -123,9 +177,9 @@ export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, ass
   });
   return router;
 }
-function startResponse(run: StoredRun, content: GameContent) {
+function startResponse(run: StoredRun, content: GameContent, energy: EnergyState) {
   const { runId, seed, assistReduction, attempt, loadout, totalExp } = run;
   const map = run.map;
   return { run: { runId, mapVersion: run.mapVersion ?? map.mapVersion ?? map.contentVersion, configVersion: run.configVersion ?? content.version,
-    seed, map, assistReduction, attempt, loadout, totalExp, passiveSkills: run.passiveSkills ?? [] }, config: contentWire(content) };
+    seed, map, assistReduction, attempt, loadout, totalExp, passiveSkills: run.passiveSkills ?? [] }, config: contentWire(content), energy };
 }

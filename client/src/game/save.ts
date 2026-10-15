@@ -81,6 +81,17 @@ export function normalizeSave(raw: unknown): SaveData | null {
       || !report || !['won','lost','abandoned'].includes(report.outcome) || !Number.isSafeInteger(report.movesUsed) || report.movesUsed < 0 || report.movesUsed > active.level.moves + (active.extraMovesUsed ? 3 : 0)
       || report.extraMovesUsed !== active.extraMovesUsed || Object.keys(report.objectiveProgress ?? {}).length !== active.level.objectives.length || !active.level.objectives.every(o => report.objectiveProgress?.[o.id] === expectedProgress[o.id])) return null;
   }
+  if (value.pendingEnergyLoss) {
+    const pending = value.pendingEnergyLoss, report = pending.report;
+    if (!active?.level.mapDefinition || pending.runId !== active.runId || pending.levelId !== active.levelId
+      || pending.contentVersion !== active.contentVersion || !report || report.outcome !== 'lost'
+      || !Number.isSafeInteger(report.movesUsed) || report.movesUsed < active.level.moves + (report.extraMovesUsed ? 3 : 0)
+      || typeof report.extraMovesUsed !== 'boolean' || !report.objectiveProgress
+      || Object.keys(report.objectiveProgress).length !== active.level.objectives.length
+      || !active.level.objectives.every(o => Number.isSafeInteger(report.objectiveProgress[o.id])
+        && report.objectiveProgress[o.id] >= 0 && report.objectiveProgress[o.id] <= o.target
+        && report.objectiveProgress[o.id] < o.target)) return null;
+  }
   const validItems = w?.itemsGranted === undefined || Array.isArray(w.itemsGranted) && w.itemsGranted.every(item => item && ['skill', 'sword'].includes(item.category) && typeof item.itemId === 'string');
   const lastWin: WinSummary | null = w && validItems && typeof w.runId === 'string' && ['levelId', 'stars', 'bestStars', 'expGained', 'totalExp', 'coinsGained', 'realmBefore', 'realmAfter'].every(k => Number.isSafeInteger(w[k as keyof WinSummary]) && Number(w[k as keyof WinSummary]) >= 0) ? w : null;
   return {
@@ -90,6 +101,8 @@ export function normalizeSave(raw: unknown): SaveData | null {
     pending,
     lastWin,
     ...(value.pendingStart ? { pendingStart: { runId: value.pendingStart.runId, levelId: value.pendingStart.levelId, previousRunId: value.pendingStart.previousRunId } } : {}),
+    ...(value.pendingEnergyLoss ? { pendingEnergyLoss: value.pendingEnergyLoss } : {}),
+    ...(validId(value.energyConsumedRunId) && active?.runId === value.energyConsumedRunId ? { energyConsumedRunId: value.energyConsumedRunId } : {}),
     ...(value.pendingFinish ? { pendingFinish: value.pendingFinish } : {}),
     ...(value.retiredRunId && active?.runId === value.retiredRunId ? { retiredRunId: value.retiredRunId } : {})
   };

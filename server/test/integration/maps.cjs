@@ -20,16 +20,39 @@ after(async()=>{if(server)await new Promise(resolve=>server.close(resolve));});
 async function request(path,body,token){const r=await fetch(base+path,{method:body?'POST':'GET',headers:{'content-type':'application/json',...(token?{authorization:`Bearer ${token}`}:{})},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()};}
 async function guest(){const r=await request('/v2/auth/device-session',{installationId:randomBytes(16).toString('hex'),secret:randomBytes(32).toString('hex')});assert.equal(r.status,200,JSON.stringify(r.data));return r.data;}
 const start=(g,runId,levelId=1,previousRunId=null)=>request('/v3/runs/start',{runId,levelId,previousRunId,contentVersion:version},g.idToken);
+const stableEnergyPayload=value=>{const copy=structuredClone(value);if(copy.energy)copy.energy.asOf=0;if(copy.profile?.energy)copy.profile.energy.asOf=0;return copy;};
 test('bootstrap excludes maps and chapter endpoint returns only one ordered chapter', {skip:!enabled},async()=>{
  const boot=await request('/v3/bootstrap');assert.equal(boot.status,200);assert.equal(boot.data.content.levels,undefined);assert.equal(boot.data.content.chapters.length,1);
  const g=await guest(),list=await request(`/v4/chapters/chapter-1/maps`,undefined,g.idToken);
  assert.equal(list.status,200,JSON.stringify(list.data));assert.deepEqual(list.data.maps.map(m=>m.id),[1,2]);assert.equal(list.data.maps[0].layout,undefined);
 });
+test('players start with five energy and a loss request is idempotent through final defeat', {skip:!enabled},async()=>{
+ const g=await guest(),player=db.collection('players').doc(g.uid),profile=await request('/v2/profile',undefined,g.idToken);
+ assert.equal(profile.data.energy.current,5);assert.equal(profile.data.energy.nextRecoveryAt,null);
+ const run=(await start(g,randomUUID())).data.run;
+ const report={outcome:'lost',movesUsed:run.map.moves,objectiveProgress:{main:0},extraMovesUsed:false};
+ const first=await request(`/v4/runs/${run.runId}/energy-loss`,report,g.idToken);
+ assert.equal(first.status,200,JSON.stringify(first.data));assert.equal(first.data.energy.current,4);
+ const repeated=await request(`/v4/runs/${run.runId}/energy-loss`,report,g.idToken);
+ assert.equal(repeated.status,200);assert.equal(repeated.data.energy.current,4);
+ const finish=await request(`/v4/runs/${run.runId}/finish`,report,g.idToken);
+ assert.equal(finish.status,200,JSON.stringify(finish.data));assert.equal(finish.data.profile.energy.current,4);
+ const next=await start(g,randomUUID());assert.equal(next.status,200,JSON.stringify(next.data));assert.equal(next.data.energy.current,4);
+});
+test('server blocks a start at zero and allows a start after energy is restored', {skip:!enabled},async()=>{
+ const g=await guest(),player=db.collection('players').doc(g.uid),now=Date.now();
+ await player.update({'profileV2.energy':{current:0,nextRecoveryAt:now+30*60_000,asOf:now}});
+ const blocked=await start(g,randomUUID());assert.equal(blocked.status,403);assert.equal(blocked.data.error,'INSUFFICIENT_ENERGY');
+ assert.equal(blocked.data.energy.current,0);
+ await player.update({'profileV2.energy':{current:1,nextRecoveryAt:now+30*60_000,asOf:now}});
+ const allowed=await start(g,randomUUID());assert.equal(allowed.status,200,JSON.stringify(allowed.data));
+});
 test('repeated/concurrent starts count once, abandoned runs do not grant support and new seeds differ', {skip:!enabled},async()=>{
  const g=await guest(),id=randomUUID(),[a,b]=await Promise.all([start(g,id),start(g,id)]);
- assert.equal(a.status,200,JSON.stringify(a.data));assert.deepEqual(a.data,b.data);
+ assert.equal(a.status,200,JSON.stringify(a.data));assert.deepEqual(stableEnergyPayload(a.data),stableEnergyPayload(b.data));
  const next=await start(g,randomUUID(),1,null); // recover abandonment even if the local journal was lost
  assert.equal(next.status,200,JSON.stringify(next.data));
+ assert.equal(a.data.energy.current,5);assert.equal(next.data.energy.current,4);
  assert.notEqual(next.data.run.seed,a.data.run.seed);assert.equal(next.data.run.assistReduction,0);
  const stats=(await db.collection('players').doc(g.uid).collection('mapStats').doc('1').get()).data();assert.equal(stats.attemptsStarted,2);assert.equal(stats.retryCount,1);assert.equal(stats.abandoned,1);assert.equal(stats.consecutiveFailures,0);
  const stored=(await db.collection('players').doc(g.uid).collection('runs').doc(next.data.run.runId).get()).data();assert.equal(stored.map.layout,undefined);assert.ok(stored.map.layoutRows);
@@ -37,16 +60,18 @@ test('repeated/concurrent starts count once, abandoned runs do not grant support
 test('loss retries are idempotent, support is capped, and win rewards are graded by server', {skip:!enabled},async()=>{
  const g=await guest();let previous=null,run;
  for(let i=0;i<8;i++){
+  await db.collection('players').doc(g.uid).update({'profileV2.energy':{current:5,nextRecoveryAt:null,asOf:Date.now()}});
   const r=await start(g,randomUUID(),1,previous);assert.equal(r.status,200,JSON.stringify(r.data));run=r.data.run;
   assert.equal(run.assistReduction,i>=7?.3:i>=5?.2:i>=3?.1:0);
   const report={outcome:'lost',movesUsed:run.map.moves,objectiveProgress:{main:0},extraMovesUsed:false};
   const finish=await request(`/v3/runs/${run.runId}/finish`,report,g.idToken);assert.equal(finish.status,200,JSON.stringify(finish.data));
-  assert.deepEqual((await request(`/v3/runs/${run.runId}/finish`,report,g.idToken)).data,finish.data);previous=run.runId;
+  assert.deepEqual(stableEnergyPayload((await request(`/v3/runs/${run.runId}/finish`,report,g.idToken)).data),stableEnergyPayload(finish.data));previous=run.runId;
  }
+ await db.collection('players').doc(g.uid).update({'profileV2.energy':{current:5,nextRecoveryAt:null,asOf:Date.now()}});
  run=(await start(g,randomUUID(),1,previous)).data.run;
  const report={outcome:'won',movesUsed:Math.ceil(run.map.moves*.5)-1,objectiveProgress:{main:run.map.objectives[0].target},extraMovesUsed:false,stars:0};
  const finished=await request(`/v3/runs/${run.runId}/finish`,report,g.idToken);assert.equal(finished.status,200,JSON.stringify(finished.data));assert.equal(finished.data.stars,3);
- assert.deepEqual((await request(`/v3/runs/${run.runId}/finish`,report,g.idToken)).data,finished.data);
+ assert.deepEqual(stableEnergyPayload((await request(`/v3/runs/${run.runId}/finish`,report,g.idToken)).data),stableEnergyPayload(finished.data));
  const stats=(await db.collection('players').doc(g.uid).collection('mapStats').doc('1').get()).data();assert.equal(stats.losses,8);assert.equal(stats.wins,1);assert.equal(stats.consecutiveFailures,0);
  const conflict=await request(`/v3/runs/${run.runId}/finish`,{...report,movesUsed:run.map.moves},g.idToken);assert.equal(conflict.status,409);
 });
@@ -55,7 +80,7 @@ test('pins a started run and its start receipt across catalog changes', {skip:!e
  const c=structuredClone(require('../../../content/game-config.json'));c.version=version+1;
  await db.collection('gameContent').doc(String(version+1)).set(c);await db.collection('gameConfig').doc('current').update({contentVersion:version+1});
  try {
-  assert.deepEqual((await start(g,id)).data,initial.data);
+  assert.deepEqual(stableEnergyPayload((await start(g,id)).data),stableEnergyPayload(initial.data));
   const run=initial.data.run,won=await request(`/v3/runs/${id}/finish`,{outcome:'won',movesUsed:run.map.moves,objectiveProgress:{main:run.map.objectives[0].target},extraMovesUsed:false},g.idToken);
   assert.equal(won.status,200,JSON.stringify(won.data));assert.equal(won.data.stars,1);
  }finally{await db.collection('gameConfig').doc('current').update({contentVersion:version});}
@@ -73,14 +98,14 @@ test('versionless starts select latest, retries remain pinned and old results us
  const batch=db.batch();batch.set(ref,next);batch.set(db.doc(`gameContent/${nextVersion}`),game.contentWire(nextConfig));
  batch.set(db.doc('gameConfig/current'),{...settings,contentVersion:nextVersion,catalogRevision:settings.catalogRevision+1});await batch.commit();
  try {
-  const repeat=await request('/v4/runs/start',body,g.idToken);assert.deepEqual(repeat.data,initial.data);
+  const repeat=await request('/v4/runs/start',body,g.idToken);assert.deepEqual(stableEnergyPayload(repeat.data),stableEnergyPayload(initial.data));
   // The catalog can disappear temporarily; a granted run still completes from its trusted snapshot.
   await ref.delete();
   const report={outcome:'won',movesUsed:2,objectiveProgress:{main:initial.data.run.map.objectives[0].target},extraMovesUsed:false};
   const finish=await request(`/v4/runs/${id}/finish`,report,g.idToken);assert.equal(finish.status,200,JSON.stringify(finish.data));
   assert.equal(finish.data.mapVersion,original.latestVersion);assert.equal(finish.data.configVersion,version);
   await db.doc(`players/${g.uid}/runs/${id}`).update({report:{objectiveProgress:report.objectiveProgress,extraMovesUsed:report.extraMovesUsed,movesUsed:report.movesUsed,outcome:report.outcome}});
-  assert.deepEqual((await request(`/v4/runs/${id}/finish`,report,g.idToken)).data,finish.data);
+  assert.deepEqual(stableEnergyPayload((await request(`/v4/runs/${id}/finish`,report,g.idToken)).data),stableEnergyPayload(finish.data));
   await ref.set(next);
   const fresh=await request('/v4/runs/start',{runId:randomUUID(),levelId:1,previousRunId:id},g.idToken);
   assert.equal(fresh.status,200,JSON.stringify(fresh.data));assert.equal(fresh.data.run.mapVersion,next.latestVersion);
@@ -99,10 +124,10 @@ test('concurrent versionless starts and publication serialize into one coherent 
  try {
   const batch=db.batch();batch.set(ref,next);batch.set(db.doc('gameConfig/current'),{...settings,catalogRevision:settings.catalogRevision+1});
   const [a,b]=await Promise.all([request('/v4/runs/start',body,g.idToken),request('/v4/runs/start',body,g.idToken),batch.commit()]);
-  assert.equal(a.status,200,JSON.stringify(a.data));assert.deepEqual(a.data,b.data);
+  assert.equal(a.status,200,JSON.stringify(a.data));assert.deepEqual(stableEnergyPayload(a.data),stableEnergyPayload(b.data));
   assert.ok([original.latestVersion,next.latestVersion].includes(a.data.run.mapVersion));
   assert.equal(a.data.run.map.moves,a.data.run.mapVersion===next.latestVersion?10:8);
-  assert.deepEqual((await request('/v4/runs/start',body,g.idToken)).data,a.data);
+  assert.deepEqual(stableEnergyPayload((await request('/v4/runs/start',body,g.idToken)).data),stableEnergyPayload(a.data));
   const stats=(await db.doc(`players/${g.uid}/mapStats/1`).get()).data();assert.equal(stats.attemptsStarted,1);assert.equal(stats.abandoned,0);
  } finally {await ref.set(original);await db.doc('gameConfig/current').set(settings);}
 });

@@ -54,6 +54,7 @@ Có ít nhất một objective, ID duy nhất, tối đa một Battle/Boss. Các
 {
   "profileV2":{
     "coins":150,"totalExp":100,"revision":1,
+    "energy":{"current":4,"nextRecoveryAt":1791419400000,"asOf":1791417600000},
     "levels":[{"levelId":1,"stars":3}],
     "ownedSwords":["thanh-phong"],"ownedSkills":["nhat-kiem"],
     "loadout":{"sword":"thanh-phong","skills":["nhat-kiem"]}
@@ -64,6 +65,8 @@ Có ít nhất một objective, ID duy nhất, tối đa một Battle/Boss. Các
 ```
 
 `levels` giữ sao cao nhất; có bản ghi 0 sao cũng là đã thắng. stars/highestUnlocked/realm là bản chiếu tương thích do server cập nhật. `mergedInto` chỉ có trên hồ sơ khách đã gộp, chứa UID tài khoản nhận. Đọc hồ sơ không tự tính lại coins/totalExp đã lưu.
+
+`energy` là số lượt chơi còn lại (tối đa 5). `nextRecoveryAt` là mốc Unix milliseconds để hồi một năng lượng; hồi tiếp theo cách nhau 30 phút và dừng khi đủ. Khi đủ 5, `nextRecoveryAt` là `null`. `asOf` là Unix milliseconds tại lần server tính trạng thái gần nhất. Lượt chơi giữ `energyConsumedAt` để một lần thua hoặc bỏ cuộc chỉ bị tính một lần, kể cả khi gửi lại yêu cầu.
 
 ## players/{uid}/operations/{operationId}
 

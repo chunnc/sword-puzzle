@@ -1,17 +1,19 @@
 import { createHash } from 'node:crypto';
-import { applyOperation, grantMilestones, newlyGrantedItems, expForStars, starBonus, mergeProfiles, normalizeLevels, normalizeProfile, parseOperation, profileFromLegacy, realmForExp, highestUnlocked, type PlayerProfile, type PlayerOperation, type SyncResponse, type OperationReward, type GameContent, requireContent } from './game';
-export function profileFromDocument(data: Record<string, any> | undefined, content = requireContent()): PlayerProfile {
+import { advanceEnergy, applyOperation, grantMilestones, newlyGrantedItems, expForStars, starBonus, mergeProfiles, normalizeLevels, normalizeProfile, parseOperation, profileFromLegacy, realmForExp, highestUnlocked, type PlayerProfile, type PlayerOperation, type SyncResponse, type OperationReward, type GameContent, requireContent } from './game';
+export function profileFromDocument(data: Record<string, any> | undefined, content = requireContent(), now = Date.now()): PlayerProfile {
     // Frozen v3–v7 reward baseline. Never reprice an existing wallet on a config change.
     const historical: GameContent = { ...content, levelBaseExp: Array(content.levelCount).fill(100), expRates: [30,60,80,100],
         rewards: { firstWinCoins: 100, replayWinCoins: 10, starBonus: [0,0,25,50] } };
     const existing = normalizeProfile(data?.profileV2, content);
     if (existing) {
+        existing.energy = advanceEnergy(existing.energy, now);
         existing.rewardCredits ??= Object.fromEntries(existing.levels.map(l => [l.levelId, { exp: expForStars(l.stars, 100, historical), starBonus: starBonus(l.stars, historical) }]));
         return existing;
     }
     const stars = data?.stars && typeof data.stars === 'object' ? data.stars : {};
     const levels = normalizeLevels(Object.entries(stars).map(([levelId, stars]) => ({ levelId: Number(levelId), stars })), content);
     const migrated = profileFromLegacy(levels, historical);
+    migrated.energy = advanceEnergy(migrated.energy, now);
     migrated.rewardCredits = Object.fromEntries(levels.map(l => [l.levelId, { exp: expForStars(l.stars, 100, historical), starBonus: starBonus(l.stars, historical) }]));
     grantMilestones(migrated, content);
     return migrated;

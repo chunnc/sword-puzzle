@@ -72,6 +72,23 @@ it('never transmits map/config versions from migrated start or finish journals',
   await api.finishRun(initial,'versionless_run',{outcome:'lost',movesUsed:8,objectiveProgress:{main:0},extraMovesUsed:false,mapVersion:42,configVersion:8} as any);
   expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({outcome:'lost',movesUsed:8,objectiveProgress:{main:0},extraMovesUsed:false});
 });
+it('posts a durable lost-run energy request using the run report without config metadata', async () => {
+  fetchMock.mockResolvedValueOnce(response({ energy: { current: 4, nextRecoveryAt: 1_800_001_800_000, asOf: 1_800_000_000_000 } }));
+  const result = await api.consumeRunEnergy(initial, 'energy_run_0001', {
+    outcome: 'lost', movesUsed: 8, objectiveProgress: { main: 0 }, extraMovesUsed: false,
+  });
+  expect(fetchMock.mock.calls[0][0]).toContain('/v4/runs/energy_run_0001/energy-loss');
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+    outcome: 'lost', movesUsed: 8, objectiveProgress: { main: 0 }, extraMovesUsed: false,
+  });
+  expect(result.value.energy.current).toBe(4);
+});
+it('preserves authoritative energy details when the server blocks a new run', async () => {
+  const energy = { current: 0, nextRecoveryAt: 1_800_001_800_000, asOf: 1_800_000_000_000 };
+  fetchMock.mockResolvedValueOnce(response({ error: 'INSUFFICIENT_ENERGY', energy }, 403));
+  await expect(api.startRun(initial, { runId: 'blocked_run_0001', levelId: 1, previousRunId: null }))
+    .rejects.toMatchObject({ code: 'INSUFFICIENT_ENERGY', details: { energy } });
+});
 it('deduplicates concurrent refreshes', async () => {
   let finish!: (r: unknown) => void;
   fetchMock.mockImplementation((url, options) => url.endsWith('/refresh') ? new Promise(resolve => {

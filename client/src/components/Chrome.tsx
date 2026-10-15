@@ -10,11 +10,14 @@ import type { BottomNavId } from './Navigation';
 import { formatHudAmount } from './hudPresentation';
 import { Pressable } from 'react-native';
 import { useSfxPress } from '../audio/useSfxPress';
+import { energyMinutes, useEnergyDisplay } from './EnergyDisplay';
 
 export function TopHud({ onAccount }: { onAccount: () => void }) {
   const sfxPress = useSfxPress();
   const { width } = useWindowDimensions();
   const profile = useGameStore(state => state.save.profile);
+  const energyOffset = useGameStore(state => state.energyClockOffsetMs);
+  const energy = useEnergyDisplay(profile.energy, energyOffset);
   const router = useRouter();
 
   return (
@@ -27,6 +30,15 @@ export function TopHud({ onAccount }: { onAccount: () => void }) {
         <Pressable accessibilityRole="button" accessibilityLabel={`Linh Thạch: ${profile.coins}, mở Cửa Hàng`} onPress={sfxPress(() => router.push('/shop'))} style={styles.currency}>
           <HudStat image="iconLinhThach" value={formatHudAmount(profile.coins)} />
         </Pressable>
+        <View accessible accessibilityRole="text" accessibilityLabel={`Năng lượng: ${energy.current} trên 5${energy.nextRecoveryAt !== null ? `, hồi sau ${energyMinutes(energy, Date.now() + energyOffset)}` : ''}`} style={styles.currency}>
+          <View style={styles.energyStat}>
+            <Art image="iconBolt" style={styles.energyIcon} />
+            <View style={styles.energyLabels}>
+              <Text accessible={false} numberOfLines={1} maxFontSizeMultiplier={1.1} style={styles.energyValue}>{energy.current}/5</Text>
+              {energy.nextRecoveryAt !== null ? <Text accessible={false} numberOfLines={1} maxFontSizeMultiplier={1.1} style={styles.energyTime}>{energyMinutes(energy, Date.now() + energyOffset)}</Text> : null}
+            </View>
+          </View>
+        </View>
         <View accessible accessibilityRole="text" accessibilityLabel="Tiên Ngọc: 0" style={styles.currency}>
           <HudStat image="iconTienNgoc" value="0" />
         </View>
@@ -115,6 +127,11 @@ const styles = StyleSheet.create({
   statDisplay: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
   statIcon: { width: 30, height: 30, flexShrink: 0 },
   statValue: { ...type.body, color: colors.ivory, fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'], flexShrink: 1 },
+  energyStat: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
+  energyIcon: { width: 27, height: 27, flexShrink: 0 },
+  energyLabels: { minWidth: 0, alignItems: 'center' },
+  energyValue: { ...type.body, color: colors.goldBright, fontSize: 12, lineHeight: 15, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  energyTime: { color: colors.ivory, fontSize: 8, lineHeight: 10, fontWeight: '700', fontVariant: ['tabular-nums'] },
   menu: { width: 48, height: 48, flexShrink: 0, justifyContent: 'center', alignItems: 'center' },
   menuImage: { width: 36, height: 36 },
   nav: {

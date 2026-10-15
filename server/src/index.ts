@@ -148,7 +148,7 @@ app.get("/v1/ads/admob-ssv", async (req, res, next) => {
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const problem = isTimeoutError(error) ? new ApiError(504, 'TIMEOUT') : error instanceof ApiError ? error : error instanceof Error && error.message === "CONTENT_MISMATCH" ? new ApiError(409, "CONTENT_MISMATCH") : error instanceof Error && error.message === "CONTENT_NOT_CONFIGURED" ? new ApiError(503, "CONTENT_NOT_CONFIGURED") : new ApiError(500, "INTERNAL_ERROR");
   if (problem.status >= 500) console.error("API failure", error);
-  res.status(problem.status).json({ error: problem.code });
+  res.status(problem.status).json({ error: problem.code, ...(problem.details ?? {}) });
 });
 
 export const gameApi = onRequest({ region: "asia-southeast1", maxInstances: 20, timeoutSeconds: API_TIMEOUT_SECONDS }, app);

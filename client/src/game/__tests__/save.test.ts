@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BoardEngine } from '../BoardEngine';
+import { CONTENT } from '../domain';
 import { getLevel } from '../levels';
 import { emptySave, loadSave, normalizeSave, normalizeSnapshot, persistSave } from '../save';
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
@@ -51,7 +52,7 @@ describe('server-backed journal v4', () => {
       ...emptySave(),
       ownerId: 'player',
       pending: {
-        contentVersion: 12,
+        contentVersion: CONTENT.version,
         operation: {
           id: 'win_zero_123',
           kind: 'win' as const,

@@ -1,6 +1,6 @@
 import { getCurrentSession, getSessionGeneration, saveRefreshedSession, type SessionData } from './session';
 import { loadDeviceIdentity, markDeviceProvisioned, identityOperation, clearIdentityOperation } from './device';
-import { requireContent, type GameContentWire, type MapSummary, type RunDefinition, type RunReport, type PlayerOperation, type PlayerProfile, type SyncResponse, type OperationReward, type Stars } from '../game/domain';
+import { requireContent, type EnergyState, type GameContentWire, type MapSummary, type RunDefinition, type RunReport, type PlayerOperation, type PlayerProfile, type SyncResponse, type OperationReward, type Stars } from '../game/domain';
 export interface BootstrapResponse {
   contentVersion: number;
   catalogRevision?: number;
@@ -15,7 +15,7 @@ export interface AdIntent {
   expiresAt: number;
 }
 export class GameApiError extends Error {
-  constructor(readonly code: string, readonly status = 0) {
+  constructor(readonly code: string, readonly status = 0, readonly details?: Record<string, unknown>) {
     super(code);
     this.name = 'GameApiError';
   }
@@ -59,7 +59,7 @@ async function request<T>(path: string, options: RequestInit = {}, session?: Ses
       try {
         payload = text ? JSON.parse(text) : null;
       } catch {/* Invalid successful payloads are rejected below. */}
-      if (!response.ok) throw new GameApiError(typeof payload?.error === 'string' ? payload.error : 'NETWORK_ERROR', response.status);
+      if (!response.ok) throw new GameApiError(typeof payload?.error === 'string' ? payload.error : 'NETWORK_ERROR', response.status, payload);
       if (payload === null) throw new GameApiError('INVALID_RESPONSE');
       return payload as T;
     })()]);
@@ -140,7 +140,11 @@ export async function fetchChapterMaps(session: SessionData, chapterId: string) 
 }
 export async function startRun(session: SessionData, body: { runId: string; levelId: number; previousRunId: string | null }) {
   const { runId, levelId, previousRunId } = body;
-  return authorized<{ run: RunDefinition; config: GameContentWire }>(session, 'POST', '/v4/runs/start', { runId, levelId, previousRunId });
+  return authorized<{ run: RunDefinition; config: GameContentWire; energy: EnergyState }>(session, 'POST', '/v4/runs/start', { runId, levelId, previousRunId });
+}
+export async function consumeRunEnergy(session: SessionData, runId: string, report: RunReport) {
+  const {outcome,movesUsed,objectiveProgress,extraMovesUsed}=report;
+  return authorized<{ energy: EnergyState }>(session, 'POST', `/v4/runs/${encodeURIComponent(runId)}/energy-loss`, {outcome,movesUsed,objectiveProgress,extraMovesUsed});
 }
 export async function finishRun(session: SessionData, runId: string, report: RunReport) {
   const {outcome,movesUsed,objectiveProgress,extraMovesUsed}=report;

@@ -4,7 +4,8 @@ import { colors } from '../theme';
 import { GameplayDialogButton } from './GameplayDialogButton';
 import { InventoryDialogPanel } from './InventoryDialogPanel';
 
-export function GameplayLeaveDialog({ busy, compact, onContinue, onBack }: {
+export function GameplayLeaveDialog({ busy, compact, loseEnergy = true, onContinue, onBack }: {
+  loseEnergy?: boolean;
   busy: boolean; compact: boolean; onContinue: () => void; onBack: () => void;
 }) {
   const [panelWidth, setPanelWidth] = useState(0);
@@ -13,7 +14,7 @@ export function GameplayLeaveDialog({ busy, compact, onContinue, onBack }: {
     <InventoryDialogPanel testID="game-leave-panel">
       <View style={[styles.content, compact && styles.compactContent]} onLayout={event => setPanelWidth(event.nativeEvent.layout.width)}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.2} style={styles.title}>Rời màn chơi?</Text>
-        <Text maxFontSizeMultiplier={1.2} style={styles.body}>Lượt chơi này sẽ kết thúc. Khi vào lại, bạn sẽ bắt đầu lượt mới với bản đồ mới nhất.</Text>
+        <Text maxFontSizeMultiplier={1.2} style={styles.body}>{loseEnergy ? 'Thoát màn này sẽ mất 1 năng lượng. Lượt chơi sẽ kết thúc và khi vào lại, bạn sẽ bắt đầu lượt mới với bản đồ mới nhất.' : 'Lượt chơi này sẽ kết thúc. Khi vào lại, bạn sẽ bắt đầu lượt mới với bản đồ mới nhất.'}</Text>
         <View testID="game-leave-actions" style={styles.actions}>
           <GameplayDialogButton title="Tiếp tục" art="buttonPrimary" width={buttonWidth} disabled={busy} onPress={onContinue} />
           <GameplayDialogButton title="Về Tiên Lộ" art="buttonSecondary" width={buttonWidth} disabled={busy} onPress={onBack} />

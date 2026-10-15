@@ -10,6 +10,7 @@ import { ConnectionDialog } from '../src/components/ConnectionDialog';
 import { colors } from '../src/theme';
 import { installAcceptanceBridge } from '../src/services/acceptance';
 import { SfxProvider } from '../src/audio/SfxProvider';
+import { EnergyEmptyDialog } from '../src/components/EnergyDisplay';
 
 export default function RootLayout() {
   useEffect(() => { installAcceptanceBridge(); }, []);
@@ -69,6 +70,7 @@ export default function RootLayout() {
             </Stack.Protected>
           </Stack>
           <ConnectionDialog />
+          <EnergyEmptyDialog />
         </SfxProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
