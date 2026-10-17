@@ -13,6 +13,8 @@ import MapScreen from '../../../app/map';
 import { installContent, mapSummary, REALMS, SKILLS, SWORDS, type MapSummary } from '../../game/domain';
 import { ART, SKILL_ART, SWORD_ART } from '../../assets';
 import { emptySave } from '../../game/save';
+import { gameplaySnapshot } from './fixtures/gameplay';
+import { getLevel } from '../../game/levels';
 import type { SaveData, WinSummary } from '../../game/types';
 
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
@@ -101,6 +103,15 @@ describe('scene navigation', () => {
     await act(async () => { finish(success); });
     if (success) expect(mockRouter.push).toHaveBeenCalledWith('/game/1');
     else expect(mockRouter.push).not.toHaveBeenCalled();
+  });
+  it('passes the new run ID to the objective intro after opening a map', async () => {
+    mockState.startLevel.mockImplementation(async () => {
+      mockState.save.active = gameplaySnapshot(getLevel(1));
+      return true;
+    });
+    mount(React.createElement(MapScreen));
+    await act(async () => { button('Màn 1, Dễ, màn hiện tại').props.onPress(); });
+    expect(mockRouter.push).toHaveBeenCalledWith(`/game/1?introRunId=${encodeURIComponent(mockState.save.active!.runId)}`);
   });
   it('does not create a second attempt for rapid duplicate map presses',async()=>{
     let finish!: (value:boolean)=>void;

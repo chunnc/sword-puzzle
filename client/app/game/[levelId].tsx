@@ -13,23 +13,26 @@ import { GameplayDock, GameplayHeader, GameplayInfo } from '../../src/components
 import { GameTileImageProvider } from '../../src/components/GameTileImages';
 import { GameplayResultPopup, type GameplayResult } from '../../src/components/GameplayResultPopup';
 import { GameplayLeaveDialog } from '../../src/components/GameplayLeaveDialog';
+import { GameplayObjectiveIntro } from '../../src/components/GameplayObjectiveIntro';
 import { GameButton, ScreenFrame } from '../../src/components/Art';
 import { Notice } from '../../src/components/Notice';
 import { useSfx } from '../../src/audio/SfxProvider';
 import { BoardEngine } from '../../src/game/BoardEngine';
+import { gameRoute } from '../../src/game/gameRoute';
 import { skillTarget } from '../../src/game/skillTargets';
 import { tileId, CONTENT, SKILLS, realmForExp, type SkillId } from '../../src/game/domain';
 import { type BoardActionPresenter, type BoardSnapshot, type CellPosition } from '../../src/game/types';
 import { useGameStore, type BoardActionResult } from '../../src/state/gameStore';
 import { colors } from '../../src/theme';
 export default function GameScreen() {
-    const { levelId: rawId } = useLocalSearchParams<{
+    const { levelId: rawId, introRunId } = useLocalSearchParams<{
         levelId: string;
+        introRunId?: string;
     }>();
-    return <GameTileImageProvider><GameplaySession key={rawId} levelId={Number(rawId)} /></GameTileImageProvider>;
+    return <GameTileImageProvider><GameplaySession key={rawId} levelId={Number(rawId)} routeIntroRunId={introRunId} /></GameTileImageProvider>;
 }
 
-function GameplaySession({ levelId }: { levelId: number }) {
+function GameplaySession({ levelId, routeIntroRunId }: { levelId: number; routeIntroRunId?: string }) {
     const router = useRouter(), { width } = useWindowDimensions();
     const store = useGameStore();
     const playSfx = useSfx();
@@ -48,6 +51,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
     const [dismissedTutorialKey, setDismissedTutorialKey] = useState<string | null>(null);
     const [leave, setLeave] = useState(false);
     const [result, setResult] = useState<GameplayResult | null>(null);
+    const [introRunId, setIntroRunId] = useState<string | null>(routeIntroRunId || null);
     const [collectProgress, setCollectProgress] = useState<BoardSnapshot['objectiveProgress'] | null>(null);
     const resultRef = useRef<GameplayResult | null>(null), resultReady = useRef(false);
     const busyRef = useRef(false), alive = useRef(true), effectId = useRef(0);
@@ -62,6 +66,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
             const path=pendingNavigation.current;pendingNavigation.current=null;router.replace(path as never);
         }
     }, [store.foreground,router]);
+    useEffect(() => { setIntroRunId(routeIntroRunId || null); }, [routeIntroRunId]);
     const reduceMotion = useReducedMotion();
     const sceneRef = useRef<View>(null), gridRef = useRef<View>(null), qiBarRef = useRef<View>(null);
     const measureId = useRef(0);
@@ -104,6 +109,11 @@ function GameplaySession({ levelId }: { levelId: number }) {
     }, [store.foreground]);
     useEffect(() => { activeAction.current?.playback.setReduceMotion(reduceMotion); }, [reduceMotion]);
     const engine = useMemo(() => board && level ? new BoardEngine(level, board) : null, [board, level]);
+    const introOpen = Boolean(introRunId && board?.runId === introRunId && !result);
+    const dismissIntro = useCallback(() => {
+        setIntroRunId(null);
+        router.setParams({ introRunId: '' });
+    }, [router]);
     const openResult = useCallback((next: GameplayResult) => {
         if (resultRef.current?.runId === next.runId) return;
         resultRef.current = next;
@@ -204,7 +214,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
         CellPosition,
         CellPosition
     ]) => {
-        if (busyRef.current || resultRef.current || locked)
+        if (busyRef.current || resultRef.current || introOpen || locked)
             return;
         busyRef.current = true;
         setBusy(true);
@@ -268,7 +278,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
         void perform(presenter => store.swap(x1, y1, x2, y2, presenter), [{ x: x1, y: y1 }, { x: x2, y: y2 }]);
     };
     const tap = (x: number, y: number) => {
-        if (busyRef.current || resultRef.current || locked)
+        if (busyRef.current || resultRef.current || introOpen || locked)
             return;
         if (targetSkill) {
             const tile = board.tiles[y * level.board.width + x];
@@ -295,11 +305,12 @@ function GameplaySession({ levelId }: { levelId: number }) {
             if (completed.kind === 'won') {
                 if (levelId === content.levelCount) { navigate('/map'); navigating = true; return; }
                 if (!await store.startLevel(levelId + 1)) throw new Error('START_FAILED');
-                if (alive.current) { navigate(`/game/${levelId + 1}`); navigating = true; }
+                if (alive.current) { navigate(gameRoute(levelId + 1, useGameStore.getState().save.active?.runId)); navigating = true; }
             } else {
                 if (!await store.startLevel(levelId, true)) throw new Error('START_FAILED');
                 if (alive.current) {
                     setBoard(useGameStore.getState().save.active);
+                    setIntroRunId(useGameStore.getState().save.active?.runId ?? null);
                     resultRef.current = null;
                     resultReady.current = false;
                     setResult(null);
@@ -324,7 +335,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
             }
         } finally { busyRef.current = false; if (alive.current) setBusy(false); }
     };
-    const overlayOpen = leave || Boolean(result);
+    const overlayOpen = leave || Boolean(result) || introOpen;
     const displayResult = result?.kind === 'won' && store.save.lastWin?.runId === result.runId
         ? { ...result, summary: store.save.lastWin } : result;
     const boardSize = boardLayout(boardViewport.width || (viewport.width || width) - 24, height - 6, level.board);
@@ -332,7 +343,7 @@ function GameplaySession({ levelId }: { levelId: number }) {
       <ScreenFrame background={level.objectives.some(o => o.type === 'Boss') ? 'bgBoss' : 'bgGame'}>
         <View testID="game-content" style={styles.gameContent} onLayout={event => setViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
           <View ref={sceneRef} collapsable={false} testID="game-scene" onLayout={measureFlightLayout} style={styles.scene} pointerEvents={overlayOpen ? 'none' : 'auto'} accessibilityElementsHidden={overlayOpen} importantForAccessibility={overlayOpen ? 'no-hide-descendants' : 'auto'}>
-            <GameplayHeader moves={board.moves} busy={busy || Boolean(result) || locked} compact={compact} onBack={requestLeave} />
+            <GameplayHeader moves={board.moves} busy={busy || overlayOpen || locked} compact={compact} onBack={requestLeave} />
             <GameplayInfo level={level} board={board} compact={compact} reduceMotion={reduceMotion} collectProgress={collectProgress}
                 duration={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects, effect.sourceActivation) : BOARD_CLEAR_MS} />
             <View testID="game-board-space" style={styles.boardSpace} onLayout={event => setBoardViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
@@ -342,15 +353,16 @@ function GameplaySession({ levelId }: { levelId: number }) {
                   motionSession={spiritMotion} gridRef={gridRef} onGridLayout={measureFlightLayout} />
               </View>
             </View>
-            <GameplayDock board={board} skillSlots={realmForExp(board.totalExpAtStart ?? store.save.profile.totalExp, content).skillSlots} available={available} cost={id => engine.cost(id)} targetSkill={targetSkill} targetCount={required} canCast={targets.length === required} busy={busy || Boolean(result) || locked} compact={compact}
+            <GameplayDock board={board} skillSlots={realmForExp(board.totalExpAtStart ?? store.save.profile.totalExp, content).skillSlots} available={available} cost={id => engine.cost(id)} targetSkill={targetSkill} targetCount={required} canCast={targets.length === required} busy={busy || overlayOpen || locked} compact={compact}
               qiBarRef={qiBarRef} onQiBarLayout={measureFlightLayout}
-              onSkill={id => { if (!busyRef.current && !resultRef.current) { setTargetSkill(id); setTargets([]); setSelected(null); } }}
-              onCancel={() => { if (!busyRef.current && !resultRef.current) { setTargetSkill(null); setTargets([]); } }}
+              onSkill={id => { if (!busyRef.current && !resultRef.current && !introOpen) { setTargetSkill(id); setTargets([]); setSelected(null); } }}
+              onCancel={() => { if (!busyRef.current && !resultRef.current && !introOpen) { setTargetSkill(null); setTargets([]); } }}
               onCast={() => { if (targetSkill) void perform(presenter => store.castSkill(targetSkill, targets, presenter)); }} />
             {spiritMotion && flightLayout && store.foreground && !overlayOpen ? <SpiritQiFlightOverlay key={`${board.runId}:${effect!.id}`}
               cues={spiritCues} geometry={level.board} layout={flightLayout} progress={spiritMotion.progress}
               durationMs={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects, effect.sourceActivation) : BOARD_CLEAR_MS} /> : null}
           </View>
+          {introOpen && !leave ? <GameplayObjectiveIntro board={board} onStart={dismissIntro} onBack={requestLeave} /> : null}
           {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} onExtraMoves={displayResult.kind === 'lost' && store.adsEnabled && !board.extraMovesUsed ? () => void continueWithAd() : undefined} /> : null}
           <View pointerEvents="box-none" style={styles.noticeLayer}><Notice message={store.notice} onDismiss={() => store.setNotice('')} /></View>
            {leave ? <GameplayLeaveDialog busy={busy} compact={(viewport.width || width) < 360} loseEnergy={store.save.energyConsumedRunId !== board.runId} onContinue={() => setLeave(false)} onBack={() => {

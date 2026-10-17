@@ -10,7 +10,7 @@ import { GameplayResultPopup } from '../GameplayResultPopup';
 import { BOARD_COLLECTION_STEP_MS, BOARD_FIRE_CHARGE_MS, BOARD_SPIRIT_EMIT_AT_MS, BOARD_SPIRIT_MS } from '../boardVisuals';
 import { BoardEngine } from '../../game/BoardEngine';
 import { getLevel } from '../../game/levels';
-import { CONTENT, installContent, mapToLevel, tileId, validateMap } from '../../game/domain';
+import { CONTENT, installContent, mapToLevel, tileId, validateMap, type ObjectiveDefinition } from '../../game/domain';
 import { normalizeSnapshot } from '../../game/save';
 import { emptySave } from '../../game/save';
 import type { BoardActionResult } from '../../state/gameStore';
@@ -62,9 +62,9 @@ jest.mock('../Art', () => {
   };
 });
 
-const mockParams = { levelId: '15' };
+const mockParams: { levelId: string; introRunId?: string } = { levelId: '15' };
 let mockReduceMotion = true;
-const mockRouter = { push: jest.fn(), replace: jest.fn() };
+const mockRouter = { push: jest.fn(), replace: jest.fn(), setParams: jest.fn() };
 const mockState = { save: emptySave(), notice: '', online: true, foreground: true, initialized: true, recovering: false, authRequired: false, adsEnabled: false, session: null, setNotice: jest.fn(), swap: jest.fn(), castSkill: jest.fn(), startLevel: jest.fn(), leaveLevel:jest.fn(), requestExtraMoves: jest.fn() };
 
 describe('gameplay presentation and exit behavior', () => {
@@ -113,7 +113,7 @@ describe('gameplay presentation and exit behavior', () => {
     await act(async () => { board().props.onSwipe(0, 0, 1, 0); });
   }
   beforeEach(() => {
-    jest.clearAllMocks(); mockReduceMotion = true; mockParams.levelId = '15'; mockState.save = emptySave();
+    jest.clearAllMocks(); mockReduceMotion = true; mockParams.levelId = '15'; delete mockParams.introRunId; mockState.save = emptySave();
     mockState.save.active = gameplaySnapshot(); mockState.save.active.swordQi = 100;
     mockState.startLevel.mockResolvedValue(true);
     mockState.leaveLevel.mockResolvedValue(true);
@@ -122,6 +122,84 @@ describe('gameplay presentation and exit behavior', () => {
     jest.spyOn(Native.BackHandler, 'addEventListener').mockImplementation((_event, handler) => { hardwareBack = handler as () => boolean; return { remove: removeBack }; });
   });
   afterEach(() => { act(() => { renderer?.unmount(); }); jest.restoreAllMocks(); jest.useRealTimers(); });
+
+  it('shows the intro only for the matching new run and locks play until Start', () => {
+    mockParams.introRunId = mockState.save.active!.runId;
+    mount();
+    expect(view('game-objective-intro')).toBeDefined();
+    expect(board().props.locked).toBe(true);
+    expect(button('Nhất Kiếm, 60 kiếm khí').props.disabled).toBe(true);
+    act(() => { board().props.onSwipe(0, 0, 1, 0); board().props.onCellPress(0, 0); });
+    expect(mockState.swap).not.toHaveBeenCalled();
+    expect(mockState.castSkill).not.toHaveBeenCalled();
+    act(() => { button('BẮT ĐẦU').props.onPress(); });
+    expect(view('game-objective-intro')).toBeUndefined();
+    expect(board().props.locked).toBe(false);
+    expect(mockRouter.setParams).toHaveBeenCalledWith({ introRunId: '' });
+  });
+
+  it('skips the intro when reopening a run or receiving an old run marker', () => {
+    mockParams.introRunId = 'previous-run';
+    mount();
+    expect(view('game-objective-intro')).toBeUndefined();
+    expect(board().props.locked).toBe(false);
+    act(() => { renderer.unmount(); });
+    delete mockParams.introRunId;
+    mount();
+    expect(view('game-objective-intro')).toBeUndefined();
+  });
+
+  it('keeps the intro visible when the player cancels leaving', () => {
+    mockParams.introRunId = mockState.save.active!.runId;
+    mount();
+    act(() => { button('QUAY VỀ').props.onPress(); });
+    expect(view('game-leave-confirmation')).toBeDefined();
+    act(() => { button('Tiếp tục').props.onPress(); });
+    expect(view('game-objective-intro')).toBeDefined();
+    act(() => { hardwareBack(); });
+    expect(view('game-leave-confirmation')).toBeDefined();
+    act(() => { hardwareBack(); });
+    expect(view('game-objective-intro')).toBeDefined();
+  });
+
+  it.each(Object.values(GoalKind))('describes the %s goal before play', goal => {
+    const level = goalLevel(goal);
+    mockState.save.active = gameplaySnapshot(level);
+    mockParams.introRunId = mockState.save.active.runId;
+    mount();
+    const objective = view('intro-objective-main');
+    expect(objective.props.accessibilityLabel).toContain(goal === GoalKind.Boss ? 'Yêu vương' : goal === GoalKind.Battle ? 'Yêu thú' : goal === GoalKind.BreakRocks ? 'Phá đá' : String(goal) === 'ActivateNodes' ? 'Kích hoạt Trận Nhãn' : goal === GoalKind.BreakSeals ? 'Phá phong ấn' : 'Thu');
+    expect(objective.props.accessibilityLabel).toContain(String(level.objectives[0].target));
+    expect(renderer.root.findAllByType(Native.ScrollView).some(node => node.props.testID === 'game-objective-intro-list')).toBe(true);
+  });
+
+  it('lists every objective in a scrollable panel on a short screen', () => {
+    const objectives: ObjectiveDefinition[] = [
+      { id: 'collect', type: 'Collect', tileKind: tileId('sword', CONTENT), target: 12 },
+      { id: 'rocks', type: 'BreakRocks', target: 3 },
+      { id: 'seals', type: 'BreakSeals', target: 2 },
+    ];
+    if (Object.values(GoalKind).some(kind => String(kind) === 'ActivateNodes'))
+      objectives.push({ id: 'nodes', type: 'ActivateNodes', target: 1 } as unknown as ObjectiveDefinition);
+    const level = { ...getLevel(15), objectives };
+    mockState.save.active = gameplaySnapshot(level);
+    mockParams.introRunId = mockState.save.active.runId;
+    mount();
+    act(() => { view('game-content').props.onLayout({ nativeEvent: { layout: { width: 320, height: 490 } } }); });
+    for (const { id } of objectives) expect(view(`intro-objective-${id}`)).toBeDefined();
+    const list = renderer.root.findAllByType(Native.ScrollView).find(node => node.props.testID === 'game-objective-intro-list')!;
+    expect(Native.StyleSheet.flatten(list.props.style)).toMatchObject({ flex: 1, minHeight: 0 });
+  });
+
+  it('uses the charged tile artwork for a charged collection goal', () => {
+    const level = goalLevel('Collect');
+    level.objectives = [{ ...level.objectives[0], type: 'Collect', tileKind: tileId('sword', CONTENT), chargeTier: 5, target: 2 }];
+    mockState.save.active = gameplaySnapshot(level);
+    mockParams.introRunId = mockState.save.active.runId;
+    mount();
+    expect(view('intro-objective-main').props.accessibilityLabel).toContain('cấp 5');
+    expect(view('intro-objective-main').findAllByType(Native.View).some(node => node.props.source === ART.tileSword5)).toBe(true);
+  });
 
   it('dismisses only the current tutorial step, then restores the next step and a new run', async () => {
     const authored = mapToLevel(validateMap(require('../../../../content/game-maps.json')[1], CONTENT), 24680, 0, CONTENT);
@@ -512,8 +590,10 @@ describe('gameplay presentation and exit behavior', () => {
     expect(mockState.startLevel).toHaveBeenCalledWith(16);
     expect(popup().props.busy).toBe(true);
     expect(mockRouter.replace).not.toHaveBeenCalled();
+    mockState.save.active = gameplaySnapshot(getLevel(16));
+    const nextRunId = mockState.save.active.runId;
     await act(async () => { finish(true); });
-    expect(mockRouter.replace).toHaveBeenCalledWith('/game/16');
+    expect(mockRouter.replace).toHaveBeenCalledWith(`/game/16?introRunId=${encodeURIComponent(nextRunId)}`);
   });
 
   it('keeps the popup available if starting the next level fails', async () => {
@@ -549,6 +629,9 @@ describe('gameplay presentation and exit behavior', () => {
     expect(mockState.startLevel).toHaveBeenCalledWith(15, true);
     expect(renderer.root.findAllByType(GameplayResultPopup).filter(node => node.props.result)).toHaveLength(0);
     expect(board().props.snapshot.runId).not.toBe(runId);
+    expect(view('game-objective-intro')).toBeDefined();
+    expect(board().props.locked).toBe(true);
+    act(() => { button('BẮT ĐẦU').props.onPress(); });
     expect(board().props.locked).toBe(false);
     expect(mockRouter.replace).not.toHaveBeenCalled();
   });

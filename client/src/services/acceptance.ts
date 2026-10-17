@@ -6,6 +6,7 @@ import { getCurrentSession, saveSession, clearSession } from './session';
 import { forgetDeviceCacheForTesting } from './device';
 import { loadDeviceIdentity } from './device';
 import { clearSave } from '../game/save';
+import { gameRoute } from '../game/gameRoute';
 
 // No production UI or production backend can activate this bridge.
 export function installAcceptanceBridge() {
@@ -49,7 +50,7 @@ export function installAcceptanceBridge() {
     async register(email: string, password: string) { await useGameStore.getState().register(email, password); return state(); },
     async login(email: string, password: string, confirmed = false) { await useGameStore.getState().login(email, password, confirmed); return state(); },
     async logout() { await useGameStore.getState().logout(); router.dismissTo('/'); return state(); },
-    async start(levelId = 1) { await useGameStore.getState().startLevel(levelId); router.replace(`/game/${levelId}`); return state(); },
+    async start(levelId = 1) { await useGameStore.getState().startLevel(levelId); router.replace(gameRoute(levelId, useGameStore.getState().save.active?.runId) as never); return state(); },
     async purchase(category: 'skill' | 'sword', id: string) { await useGameStore.getState().purchase(category, id); return state(); },
     async equip(loadout: Parameters<ReturnType<typeof useGameStore.getState>['equip']>[0]) { await useGameStore.getState().equip(loadout); return state(); },
     async sync() { await useGameStore.getState().syncProgress(); return state(); },

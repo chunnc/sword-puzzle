@@ -8,6 +8,7 @@ import { BottomNav, TopHud } from '../src/components/Chrome';
 import { ArtPanel, ScreenFrame } from '../src/components/Art';
 import { Notice } from '../src/components/Notice';
 import { CONTENT, type ChapterDefinition, type MapSummary } from '../src/game/domain';
+import { gameRoute } from '../src/game/gameRoute';
 import { navigateTab, type BottomNavId } from '../src/components/Navigation';
 import { getHighestUnlocked, getLevelStars, getLevelCompleted, useGameStore } from '../src/state/gameStore';
 import { useSfxPress } from '../src/audio/useSfxPress';
@@ -139,7 +140,7 @@ export default function MapScreen() {
   useEffect(() => {
     if (foreground && pendingNavigation.current !== null) {
       const id=pendingNavigation.current;pendingNavigation.current=null;
-      router.push(`/game/${id}` as never);
+      router.push(gameRoute(id, useGameStore.getState().save.active?.runId) as never);
     }
   }, [foreground, router]);
   const focusCurrentProgress = useCallback(() => {
@@ -187,7 +188,7 @@ export default function MapScreen() {
     try {
       if (await startLevel(levelId)) {
         if (!focused.current) return;
-        if (useGameStore.getState().foreground) router.push(`/game/${levelId}` as never);
+        if (useGameStore.getState().foreground) router.push(gameRoute(levelId, useGameStore.getState().save.active?.runId) as never);
         else pendingNavigation.current=levelId;
       }
     } finally { opening.current = false; }
