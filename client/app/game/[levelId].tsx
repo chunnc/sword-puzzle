@@ -17,6 +17,7 @@ import { GameplayObjectiveIntro } from '../../src/components/GameplayObjectiveIn
 import { GameButton, ScreenFrame } from '../../src/components/Art';
 import { Notice } from '../../src/components/Notice';
 import { useSfx } from '../../src/audio/SfxProvider';
+import { useMusic } from '../../src/audio/MusicProvider';
 import { BoardEngine } from '../../src/game/BoardEngine';
 import { gameRoute } from '../../src/game/gameRoute';
 import { skillTarget } from '../../src/game/skillTargets';
@@ -36,6 +37,7 @@ function GameplaySession({ levelId, routeIntroRunId }: { levelId: number; routeI
     const router = useRouter(), { width } = useWindowDimensions();
     const store = useGameStore();
     const playSfx = useSfx();
+    const { playResultMusic, resumeGameplayMusic } = useMusic();
     const persisted = store.save.active?.levelId === levelId && store.save.retiredRunId !== store.save.active.runId ? store.save.active : null;
     const [board, setBoard] = useState<BoardSnapshot | null>(persisted);
     const level = useMemo(() => persisted?.level ?? board?.level ?? null, [persisted?.level, board?.level]);
@@ -56,6 +58,10 @@ function GameplaySession({ levelId, routeIntroRunId }: { levelId: number; routeI
     const resultRef = useRef<GameplayResult | null>(null), resultReady = useRef(false);
     const busyRef = useRef(false), alive = useRef(true), effectId = useRef(0);
     const pendingNavigation = useRef<string | null>(null);
+    useEffect(() => {
+        if (result) playResultMusic(result.kind, result.runId);
+        else resumeGameplayMusic();
+    }, [playResultMusic, resumeGameplayMusic, result?.kind, result?.runId]);
     const navigate = useCallback((path: string) => {
         if (!alive.current) return;
         if (useGameStore.getState().foreground) router.replace(path as never);

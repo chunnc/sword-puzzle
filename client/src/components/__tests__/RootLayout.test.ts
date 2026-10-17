@@ -13,8 +13,18 @@ jest.mock('expo-router', () => {
     Screen: () => null,
     Protected: ({ guard, children }: any) => guard ? React.createElement(View, null, children) : null,
   });
-  return { Stack };
+  return { Stack, usePathname: () => '/map' };
 });
+jest.mock('expo-audio', () => ({
+  preload: jest.fn(() => Promise.resolve()),
+  createAudioPlayer: jest.fn(() => ({
+    loop: false,
+    play: jest.fn(),
+    pause: jest.fn(),
+    remove: jest.fn(),
+    addListener: () => ({ remove: jest.fn() }),
+  })),
+}));
 jest.mock('../../state/gameStore', () => ({
   useGameStore: Object.assign((selector: (state: typeof mockState) => unknown) => selector(mockState), { getState: () => mockState }),
 }));

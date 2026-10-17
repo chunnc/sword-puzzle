@@ -2,7 +2,7 @@ import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import React, { useEffect, useState } from 'react';
 import { AccessibilityInfo, AppState, Platform, StatusBar, StyleSheet } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useGameStore } from '../src/state/gameStore';
@@ -10,9 +10,11 @@ import { ConnectionDialog } from '../src/components/ConnectionDialog';
 import { colors } from '../src/theme';
 import { installAcceptanceBridge } from '../src/services/acceptance';
 import { SfxProvider } from '../src/audio/SfxProvider';
+import { MusicProvider } from '../src/audio/MusicProvider';
 import { EnergyEmptyDialog } from '../src/components/EnergyDisplay';
 
 export default function RootLayout() {
+  const pathname = usePathname();
   useEffect(() => { installAcceptanceBridge(); }, []);
   const initialized = useGameStore(s => s.initialized);
   const bootstrapLoaded = useGameStore(s => s.bootstrapLoaded);
@@ -48,29 +50,31 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.fill}>
       <SafeAreaProvider>
         <SfxProvider>
-          <StatusBar hidden />
-          <Stack screenOptions={{
-            headerShown: false,
-            animation: reduceMotion ? 'none' : 'fade',
-            animationTypeForReplace: 'push',
-            animationDuration: Platform.OS === 'ios' ? 150 : undefined,
-            contentStyle: { backgroundColor: colors.ink },
-            gestureEnabled: false,
-          }}>
-            <Stack.Screen name="index" />
-            <Stack.Protected guard={initialized}>
-              <Stack.Screen name="map" />
-              <Stack.Screen name="game/[levelId]" />
-              <Stack.Screen name="character" />
-              <Stack.Screen name="inventory" />
-              <Stack.Screen name="shop" />
-            </Stack.Protected>
-            <Stack.Protected guard={bootstrapLoaded}>
-              <Stack.Screen name="account" options={{ presentation: 'transparentModal', contentStyle: { backgroundColor: 'transparent' } }} />
-            </Stack.Protected>
-          </Stack>
-          <ConnectionDialog />
-          <EnergyEmptyDialog />
+          <MusicProvider pathname={pathname}>
+            <StatusBar hidden />
+            <Stack screenOptions={{
+              headerShown: false,
+              animation: reduceMotion ? 'none' : 'fade',
+              animationTypeForReplace: 'push',
+              animationDuration: Platform.OS === 'ios' ? 150 : undefined,
+              contentStyle: { backgroundColor: colors.ink },
+              gestureEnabled: false,
+            }}>
+              <Stack.Screen name="index" />
+              <Stack.Protected guard={initialized}>
+                <Stack.Screen name="map" />
+                <Stack.Screen name="game/[levelId]" />
+                <Stack.Screen name="character" />
+                <Stack.Screen name="inventory" />
+                <Stack.Screen name="shop" />
+              </Stack.Protected>
+              <Stack.Protected guard={bootstrapLoaded}>
+                <Stack.Screen name="account" options={{ presentation: 'transparentModal', contentStyle: { backgroundColor: 'transparent' } }} />
+              </Stack.Protected>
+            </Stack>
+            <ConnectionDialog />
+            <EnergyEmptyDialog />
+          </MusicProvider>
         </SfxProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
