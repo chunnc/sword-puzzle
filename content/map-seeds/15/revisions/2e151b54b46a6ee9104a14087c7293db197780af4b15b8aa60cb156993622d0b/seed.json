@@ -1,0 +1,325 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 23,
+    "id": 15,
+    "chapterId": "chapter-2",
+    "orderInChapter": 5,
+    "name": "Luyện Thu Linh Khí",
+    "difficulty": "medium",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 0,
+        "column": 1
+      },
+      {
+        "row": 0,
+        "column": 2
+      },
+      {
+        "row": 1,
+        "column": 2
+      },
+      {
+        "row": 1,
+        "column": 3
+      },
+      {
+        "row": 1,
+        "column": 4
+      },
+      {
+        "row": 2,
+        "column": 3
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 2,
+        "column": 4
+      }
+    ],
+    "objectives": [
+      {
+        "id": "collect-lightning",
+        "type": "Collect",
+        "tileKind": 3,
+        "target": 30
+      },
+      {
+        "id": "collect-spirit",
+        "type": "Collect",
+        "tileKind": 4,
+        "target": 30
+      }
+    ],
+    "moves": 30,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0.1,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 21515,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "medium",
+      "objective": "collect",
+      "index": 15,
+      "bands": {
+        "win": [
+          0.8,
+          1
+        ],
+        "three": [
+          0.45,
+          0.55
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.5,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "lightning",
+        "spirit"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": [
+        1,
+        1
+      ],
+      "sealBlockers": [
+        6,
+        6
+      ],
+      "minimumTarget": null,
+      "seed": 21515,
+      "totalExp": 840,
+      "layouts": 2,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 20,
+      "retryAttempts": 10,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Luyện Thu Linh Khí",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    },
+    "shape": {
+      "family": "stairs",
+      "layout": [
+        [
+          -1,
+          -1,
+          -1,
+          0,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          -1,
+          -1,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 6,
+        "height": 7,
+        "activeCells": 30,
+        "holes": 12,
+        "holeRatio": 0.2857142857142857
+      },
+      "key": "[[0,0,0,0,0,1,1],[0,0,0,1,1,1,1],[0,1,1,1,1,1,1],[1,1,1,1,1,1,0],[1,1,1,1,1,1,1],[0,0,1,1,1,1,1]]",
+      "sealCount": 6,
+      "sealCells": [
+        {
+          "row": 0,
+          "column": 1
+        },
+        {
+          "row": 0,
+          "column": 2
+        },
+        {
+          "row": 1,
+          "column": 2
+        },
+        {
+          "row": 1,
+          "column": 3
+        },
+        {
+          "row": 1,
+          "column": 4
+        },
+        {
+          "row": 2,
+          "column": 3
+        }
+      ],
+      "nodeCount": 1,
+      "nodeCells": [
+        {
+          "row": 2,
+          "column": 4
+        }
+      ]
+    },
+    "sourceCatalogHash": "85a8ee95638cd4e983c6b5ab3e1eef79e4ca3b4e13b699f77356db5cd33a27ab",
+    "authoringConfigVersion": 23
+  },
+  "hashes": {
+    "map": "27a6c7475ba64f74bdf8063fea8d16bd952a625b7b3064721950e9f7d69c00aa",
+    "config": "8356b2186824e5d48382989dcd1169730b6f2bfed34c7fa33a11ae81eb6a956f",
+    "engine": "46c662339798ad2305b715019b9937ac83eba4a9566b88e6f5bd339661850a9a",
+    "report": "1ef7969a6d3185158cfcb05b62b94526c49e39ad8079596ebec90a24eef833a2"
+  }
+}

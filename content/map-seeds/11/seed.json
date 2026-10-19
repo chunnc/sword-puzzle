@@ -1,0 +1,330 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 19,
+    "id": 11,
+    "chapterId": "chapter-2",
+    "orderInChapter": 1,
+    "name": "Thử Thách Nhập Môn",
+    "difficulty": "easy",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        0,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 0,
+        "column": 4
+      },
+      {
+        "row": 0,
+        "column": 5
+      },
+      {
+        "row": 1,
+        "column": 4
+      },
+      {
+        "row": 1,
+        "column": 5
+      }
+    ],
+    "objectives": [
+      {
+        "id": "break-seals",
+        "type": "BreakSeals",
+        "target": 4
+      }
+    ],
+    "moves": 19,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 58,
+      "twoStarBelowPercent": 79
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.1,
+      "setupChance": 0.25,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 21101,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "easy",
+      "objective": "break-seals",
+      "index": 11,
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "starQuantile": 0.8,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": [
+        4
+      ],
+      "fixedTargets": true,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": null,
+      "minimumTarget": null,
+      "seed": 21101,
+      "totalExp": 600,
+      "layouts": 2,
+      "trainingSeeds": 40,
+      "validationSeeds": 1000,
+      "retrySeeds": 20,
+      "retryAttempts": 10,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Thử Thách Nhập Môn",
+      "replace": false,
+      "chapter": "chapter-2",
+      "chapterName": "Khảo Hạch Tông Môn",
+      "enemy": null
+    },
+    "shape": {
+      "family": "waist",
+      "layout": [
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          -1,
+          0,
+          0,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 6,
+        "height": 7,
+        "activeCells": 29,
+        "holes": 13,
+        "holeRatio": 0.30952380952380953
+      },
+      "key": "[[1,1,0,0,0,1,1],[1,1,0,0,0,1,1],[1,1,0,1,1,1,1],[1,1,1,1,1,1,1],[1,1,0,0,0,1,1],[1,1,0,0,0,1,1]]",
+      "sealCount": 4,
+      "sealCells": [
+        {
+          "row": 0,
+          "column": 4
+        },
+        {
+          "row": 0,
+          "column": 5
+        },
+        {
+          "row": 1,
+          "column": 4
+        },
+        {
+          "row": 1,
+          "column": 5
+        }
+      ]
+    },
+    "sourceCatalogHash": "7ad108a8db466cfb3a49ec52f2c1c16d6e49f26d809f9899de315ce7a0b1c034",
+    "authoringConfigVersion": 19
+  },
+  "hashes": {
+    "map": "c6d773284b006881f5d61dbcb19ca8f51d3df285c871a1beeeae88ebd86b20b1",
+    "config": "fd99434f1e3d4fe453d08de849d13993cfac964cfcbd5c6984bafbcb00250adf",
+    "engine": "46c662339798ad2305b715019b9937ac83eba4a9566b88e6f5bd339661850a9a",
+    "report": "9c40db8185980ef2347e5c811700f5b76104b17f60faa0e76bf2d213c6e4c485"
+  },
+  "verificationRequest": {
+    "policyVersion": 2,
+    "difficulty": "easy",
+    "objective": "break-seals",
+    "index": 11,
+    "bands": {
+      "win": [
+        0.95,
+        1
+      ],
+      "three": [
+        0.8,
+        1
+      ],
+      "exclusiveWin": true,
+      "exclusiveThree": true
+    },
+    "starQuantile": 0.8,
+    "winRateEnforced": false,
+    "minMoves": 6,
+    "maxMoves": 30,
+    "tiles": [
+      "sword"
+    ],
+    "targets": [
+      4
+    ],
+    "fixedTargets": true,
+    "weights": {},
+    "rockBlockers": null,
+    "nodeBlockers": null,
+    "minimumTarget": null,
+    "seed": 21101,
+    "totalExp": 600,
+    "layouts": 2,
+    "trainingSeeds": 40,
+    "validationSeeds": 1000,
+    "retrySeeds": 20,
+    "retryAttempts": 10,
+    "retryWinMedian": null,
+    "retryThreeMedian": null,
+    "name": "Thử Thách Nhập Môn",
+    "replace": false,
+    "chapter": "chapter-2",
+    "chapterName": "Khảo Hạch Tông Môn",
+    "enemy": null
+  }
+}

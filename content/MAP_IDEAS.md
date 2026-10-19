@@ -1,6 +1,6 @@
-# Mười map đầu — Vân Hải Tiên Sơn
+# Hai chương đầu — Vân Hải Tiên Sơn và Khảo Hạch Tông Môn
 
-Catalog local hiện có 10 map chơi được. Map 1–2 là tutorial; map 3–10 có layout và mục tiêu trong `game-maps.json`. Map 6–10 có seed và báo cáo cân bằng trong `map-seeds/`; các tỷ lệ dưới đây là ước lượng bot từ holdout 1.000 lượt, không phải cam kết tỷ lệ thắng của người chơi.
+Catalog local hiện có 20 map chơi được trong hai chương. Map 1–2 là tutorial; map 3–20 có layout và mục tiêu trong `game-maps.json`. Map 6–20 có seed và báo cáo cân bằng trong `map-seeds/`; các tỷ lệ dưới đây là ước lượng bot từ holdout 1.000 lượt, không phải cam kết tỷ lệ thắng của người chơi.
 
 ## Nhịp chương và mốc thưởng
 
@@ -97,8 +97,30 @@ Hành trình đi từ học ghép ô đến khai thông đường núi, nhận k
 
 ## Nguyên tắc khi chuyển brief thành map
 
-- Map 6–10 đã có trong catalog local cùng seed và balance report; chưa publish các map này lên Firestore.
+- Map 11–20 hiện nằm trong catalog local cùng seed và balance report; chưa publish chương 2 lên Firestore.
 - Các mốc thưởng giữ theo cấu hình: map 3 Kiếm cơ bản, map 5 Thứ, map 8 Thiêu, map 10 Vân; mỗi món cần 3 sao.
 - Thắng map mở tiếp tiến trình kể cả chưa đạt 3 sao. Không map nào yêu cầu sở hữu món thưởng từ map trước để hoàn thành.
-- Ưu tiên mục tiêu/cơ chế hiện có (`Collect`, `BreakRocks`, `BreakSeals`, `Battle`, `Boss`). Map 8 dùng đá chắn như vật cản nhưng không có mục tiêu `BreakRocks`.
-- Catalog local có 10 map liên tục trong chương `chapter-1`; thắng map mở tiếp tiến trình kể cả khi chưa đạt 3 sao.
+- Ưu tiên mục tiêu/cơ chế hiện có (`Collect`, `BreakRocks`, `BreakSeals`, `ActivateNodes`, `Battle`, `Boss`). Map 8 dùng đá chắn như vật cản nhưng không có mục tiêu `BreakRocks`.
+- Catalog local có map 1–10 trong `chapter-1` và map 11–20 trong `chapter-2`; thắng map mở tiếp tiến trình kể cả khi chưa đạt 3 sao.
+- Map 11–20 hiện mới nằm trong catalog local, chưa publish lên Firestore.
+
+## Chương 2 — Khảo Hạch Tông Môn
+
+Chương 2 đưa người chơi vào tông môn để vượt thử thách nhập môn, luyện trận pháp, nhận nhiệm vụ và thi đấu với đồng môn trước khi đối đầu Trận Linh Hộ Tông. Trận Nhãn xuất hiện ở map 13 dưới dạng cơ quan hỗ trợ; map 14 yêu cầu kích hoạt hai Trận Nhãn; map 15 trở lại mục tiêu thu thập khi người chơi đã thấy cơ quan kết hợp với phong ấn.
+
+Trận Nhãn đứng trên một ô thường, không thể đổi hoặc ghép. Mỗi nước đổi hoặc kỹ năng chạm vào nó hay xóa ô kề trực tiếp sẽ nạp tối đa một lần. Đủ ba nấc thì nó phá một nửa số phong ấn còn lại, làm tròn lên; ưu tiên phong ấn gần nó nhất, rồi từ trên xuống và trái sang phải khi bằng khoảng cách. Ô bên dưới được lộ ra. Giao diện hiển thị nấc nạp và viền những phong ấn sắp bị phá.
+
+| Map | Tên | Độ khó | Mục tiêu và cơ chế chính | Thắng / 3 sao |
+|---:|---|---|---|---:|
+| 11 | Thử Thách Nhập Môn | Dễ | Phá 4 phong ấn | 97,3% / 83,7% |
+| 12 | Bài Thi Linh Thạch | Dễ | Thu 12 Kiếm và 12 Hỏa | 100% / 88,2% |
+| 13 | Phá Ấn Trận Nhãn | Dễ | Phá 4 phong ấn; Trận Nhãn có thể phá giúp một nửa | 99,8% / 93,4% |
+| 14 | Thử Trận Nhãn Song Trận | Trung bình | Kích hoạt 2 Trận Nhãn trên bàn có 8 phong ấn | 90,1% / 51,6% |
+| 15 | Luyện Thu Linh Khí | Trung bình | Thu 30 Lôi và 30 Tụ Linh Châu; có Trận Nhãn, 6 phong ấn | 99,8% / 47,9% |
+| 16 | Nhiệm Vụ Khai Lộ | Dễ | Phá 3 đá chắn; có thêm 4 phong ấn và Trận Nhãn | 96,7% / 82,3% |
+| 17 | Đấu Trường Nội Môn | Trung bình | Đánh bại Luyện Kiếm Sư Huynh, HP 675; có phong ấn và Trận Nhãn | 100% / 52,2% |
+| 18 | Kiếm Lệnh Linh Khí | Trung bình | Thu 1 Kiếm cấp 4; bàn có 2 đá, 4 phong ấn và Trận Nhãn | 79,8% / 53,4% |
+| 19 | Thi Đấu Tranh Tài | Trung bình | Đánh bại Đệ Tử Thách Đấu, HP 705 | 100% / 53,4% |
+| 20 | Hộ Tông Trận Linh | Khó | Boss HP 631; có 6 phong ấn và Trận Nhãn | 97,0% / 7,5% |
+
+Các tỷ lệ là ước lượng bot normal, không dùng kiếm hoặc kỹ năng. Seed, lượt chơi lại và phân phối chi tiết nằm trong `content/map-seeds/ID/` tương ứng.

@@ -1218,5 +1218,1392 @@
       "spirit": 4,
       "rock": 5
     }
+  },
+  {
+    "contentVersion": 19,
+    "id": 11,
+    "chapterId": "chapter-2",
+    "orderInChapter": 1,
+    "name": "Thử Thách Nhập Môn",
+    "difficulty": "easy",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        0,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 0,
+        "column": 4
+      },
+      {
+        "row": 0,
+        "column": 5
+      },
+      {
+        "row": 1,
+        "column": 4
+      },
+      {
+        "row": 1,
+        "column": 5
+      }
+    ],
+    "objectives": [
+      {
+        "id": "break-seals",
+        "type": "BreakSeals",
+        "target": 4
+      }
+    ],
+    "moves": 19,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 58,
+      "twoStarBelowPercent": 79
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.1,
+      "setupChance": 0.25,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 20,
+    "id": 12,
+    "chapterId": "chapter-2",
+    "orderInChapter": 2,
+    "name": "Bài Thi Linh Thạch",
+    "difficulty": "easy",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-sword",
+        "type": "Collect",
+        "tileKind": 1,
+        "target": 12
+      },
+      {
+        "id": "collect-fire",
+        "type": "Collect",
+        "tileKind": 2,
+        "target": 12
+      }
+    ],
+    "moves": 19,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 58,
+      "twoStarBelowPercent": 79
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 21,
+    "id": 13,
+    "chapterId": "chapter-2",
+    "orderInChapter": 3,
+    "name": "Phá Ấn Trận Nhãn",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 1,
+        "column": 1
+      },
+      {
+        "row": 1,
+        "column": 2
+      },
+      {
+        "row": 1,
+        "column": 3
+      },
+      {
+        "row": 1,
+        "column": 4
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 3,
+        "column": 1
+      }
+    ],
+    "objectives": [
+      {
+        "id": "break-seals",
+        "type": "BreakSeals",
+        "target": 4
+      }
+    ],
+    "moves": 9,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 56,
+      "twoStarBelowPercent": 78
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 22,
+    "id": 14,
+    "chapterId": "chapter-2",
+    "orderInChapter": 4,
+    "name": "Thử Trận Nhãn Song Trận",
+    "difficulty": "medium",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 0,
+        "column": 5
+      },
+      {
+        "row": 0,
+        "column": 6
+      },
+      {
+        "row": 1,
+        "column": 5
+      },
+      {
+        "row": 1,
+        "column": 6
+      },
+      {
+        "row": 2,
+        "column": 5
+      },
+      {
+        "row": 2,
+        "column": 6
+      },
+      {
+        "row": 3,
+        "column": 4
+      },
+      {
+        "row": 3,
+        "column": 5
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 0,
+        "column": 1
+      },
+      {
+        "row": 4,
+        "column": 3
+      }
+    ],
+    "objectives": [
+      {
+        "id": "activate-nodes",
+        "type": "ActivateNodes",
+        "target": 2
+      }
+    ],
+    "moves": 12,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 59,
+      "twoStarBelowPercent": 84
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0.3,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 23,
+    "id": 15,
+    "chapterId": "chapter-2",
+    "orderInChapter": 5,
+    "name": "Luyện Thu Linh Khí",
+    "difficulty": "medium",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 0,
+        "column": 1
+      },
+      {
+        "row": 0,
+        "column": 2
+      },
+      {
+        "row": 1,
+        "column": 2
+      },
+      {
+        "row": 1,
+        "column": 3
+      },
+      {
+        "row": 1,
+        "column": 4
+      },
+      {
+        "row": 2,
+        "column": 3
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 2,
+        "column": 4
+      }
+    ],
+    "objectives": [
+      {
+        "id": "collect-lightning",
+        "type": "Collect",
+        "tileKind": 3,
+        "target": 30
+      },
+      {
+        "id": "collect-spirit",
+        "type": "Collect",
+        "tileKind": 4,
+        "target": 30
+      }
+    ],
+    "moves": 30,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0.1,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 24,
+    "id": 16,
+    "chapterId": "chapter-2",
+    "orderInChapter": 6,
+    "name": "Nhiệm Vụ Khai Lộ",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        5,
+        5,
+        5,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 2,
+        "column": 0
+      },
+      {
+        "row": 2,
+        "column": 1
+      },
+      {
+        "row": 3,
+        "column": 1
+      },
+      {
+        "row": 3,
+        "column": 2
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 2,
+        "column": 3
+      }
+    ],
+    "objectives": [
+      {
+        "id": "break-rocks",
+        "type": "BreakRocks",
+        "target": 3
+      }
+    ],
+    "moves": 10,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 25,
+    "id": 17,
+    "chapterId": "chapter-2",
+    "orderInChapter": 7,
+    "name": "Đấu Trường Nội Môn",
+    "difficulty": "medium",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        -1,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 3,
+        "column": 1
+      },
+      {
+        "row": 4,
+        "column": 1
+      },
+      {
+        "row": 5,
+        "column": 1
+      },
+      {
+        "row": 5,
+        "column": 2
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 1,
+        "column": 4
+      }
+    ],
+    "objectives": [
+      {
+        "id": "main",
+        "type": "Battle",
+        "target": 675,
+        "enemy": {
+          "id": "battle-17",
+          "name": "Luyện Kiếm Sư Huynh",
+          "artKey": "beast"
+        }
+      }
+    ],
+    "moves": 29,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 59,
+      "twoStarBelowPercent": 80
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 26,
+    "id": 18,
+    "chapterId": "chapter-2",
+    "orderInChapter": 8,
+    "name": "Kiếm Lệnh Linh Khí",
+    "difficulty": "medium",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        5,
+        5,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        0
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 3,
+        "column": 3
+      },
+      {
+        "row": 3,
+        "column": 4
+      },
+      {
+        "row": 3,
+        "column": 5
+      },
+      {
+        "row": 4,
+        "column": 4
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 1,
+        "column": 6
+      }
+    ],
+    "objectives": [
+      {
+        "id": "collect-sword-4",
+        "type": "Collect",
+        "tileKind": 1,
+        "chargeTier": 4,
+        "target": 1
+      }
+    ],
+    "moves": 17,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 59,
+      "twoStarBelowPercent": 83
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0.1,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 27,
+    "id": 19,
+    "chapterId": "chapter-2",
+    "orderInChapter": 9,
+    "name": "Thi Đấu Tranh Tài",
+    "difficulty": "medium",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        0,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "main",
+        "type": "Battle",
+        "target": 705,
+        "enemy": {
+          "id": "battle-19",
+          "name": "Đệ Tử Thách Đấu",
+          "artKey": "beast"
+        }
+      }
+    ],
+    "moves": 30,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 28,
+    "id": 20,
+    "chapterId": "chapter-2",
+    "orderInChapter": 10,
+    "name": "Hộ Tông Trận Linh",
+    "difficulty": "hard",
+    "layout": [
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        0,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 0,
+        "column": 4
+      },
+      {
+        "row": 1,
+        "column": 3
+      },
+      {
+        "row": 1,
+        "column": 4
+      },
+      {
+        "row": 1,
+        "column": 5
+      },
+      {
+        "row": 1,
+        "column": 6
+      },
+      {
+        "row": 2,
+        "column": 5
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 2,
+        "column": 0
+      }
+    ],
+    "objectives": [
+      {
+        "id": "main",
+        "type": "Boss",
+        "target": 631,
+        "enemy": {
+          "id": "boss-20",
+          "name": "Trận Linh Hộ Tông",
+          "artKey": "beast"
+        }
+      }
+    ],
+    "moves": 30,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.1,
+      "setupChance": 0.25,
+      "obstaclePressure": 0.3,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
   }
 ]

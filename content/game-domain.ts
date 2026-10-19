@@ -37,7 +37,7 @@ export type ObjectiveDefinition = {
   target: number;
 } | {
   id: string;
-  type: 'BreakRocks' | 'BreakSeals';
+  type: 'BreakRocks' | 'BreakSeals' | 'ActivateNodes';
   target: number;
 } | {
   id: string;
@@ -63,6 +63,8 @@ export interface MapDefinition {
   tileRegistry?: Record<TileKey, number>;
   contentVersion: number; id: number; chapterId: string; orderInChapter: number; name: string; tutorial?: MapTutorial;
   difficulty: Difficulty; layout: number[][]; initialSeals: { row: number; column: number }[];
+  /** Optional fixed Trận Nhãn positions, top-first coordinates. */
+  initialNodes?: { row: number; column: number }[];
   objectives: ObjectiveDefinition[]; moves: number; baseExp: number;
   starThresholds: StarThresholds;
   spawnPolicy: { weights: Record<string, number>; collectionPressure: number; comboChance: number; setupChance: number; obstaclePressure: number; candidates: number };
@@ -92,6 +94,7 @@ export interface LevelDefinition {
   obstacles: {
     rocks: number;
     seals: number;
+    nodes?: number;
   };
 }
 export interface GameContent {
@@ -204,6 +207,7 @@ export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
   const width = m.layout[0].length, rock = tileId('rock', c);
   if (m.layout.some(row => !Array.isArray(row) || row.length !== width || row.some(id => !Number.isSafeInteger(id) || id !== 0 && id !== -1 && !c.tiles.some(t => t.id === id))) || !m.layout.flat().some(id => id !== 0)) return bad();
   if (!Array.isArray(m.initialSeals) || m.initialSeals.some(p => !p || !integer(p.row, 0, m.layout.length - 1) || !integer(p.column, 0, width - 1) || [0, rock].includes(m.layout[p.row][p.column])) || new Set(m.initialSeals.map(p => `${p.row}:${p.column}`)).size !== m.initialSeals.length) return bad();
+  if (m.initialNodes !== undefined && (!Array.isArray(m.initialNodes) || m.initialNodes.some(p => !p || !integer(p.row, 0, m.layout.length - 1) || !integer(p.column, 0, width - 1) || m.layout[p.row][p.column] !== -1 || m.initialSeals.some(seal => seal.row === p.row && seal.column === p.column)) || new Set(m.initialNodes.map(p => `${p.row}:${p.column}`)).size !== m.initialNodes.length)) return bad();
   // Explicit pieces cannot create a match before the player makes a move.
   for (let row = 0; row < m.layout.length; row++) for (let col = 0; col < width; col++) {
     const id = m.layout[row][col];
@@ -213,6 +217,7 @@ export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
   if (!Array.isArray(m.objectives) || !m.objectives.length || !unique(m.objectives) || m.objectives.filter(o => o.type === 'Battle' || o.type === 'Boss').length > 1) return bad();
   const rocks = m.layout.flat().filter(id => id === rock).length;
   const seals = m.initialSeals.length;
+  const nodes = m.initialNodes?.length ?? 0;
   for (const o of m.objectives) {
     if (!text(o.id) || !/^[a-zA-Z0-9_-]{1,80}$/.test(o.id) || !integer(o.target, 1)) return bad();
     if (o.type === 'Collect') {
@@ -221,6 +226,7 @@ export function validateMap(raw: unknown, c = requireContent()): MapDefinition {
     else if (o.type === 'Battle' || o.type === 'Boss') { if (!o.enemy || !text(o.enemy.id) || !text(o.enemy.name) || !text(o.enemy.artKey)) return bad(); }
     else if (o.type === 'BreakRocks') { if (o.target > rocks) return bad(); }
     else if (o.type === 'BreakSeals') { if (o.target > seals) return bad(); }
+    else if (o.type === 'ActivateNodes') { if (o.target > nodes) return bad(); }
     else return bad();
   }
   const s = m.starThresholds, p = m.spawnPolicy, a = m.retryAssistPolicy;
@@ -267,7 +273,7 @@ export function mapToLevel(m: MapDefinition, seed: number, assistReduction = 0, 
   return { id: m.id, contentVersion: c.version, ...(m.mapVersion === undefined ? {} : { mapVersion: m.mapVersion, configVersion: c.version }), mapDefinition: m, assistReduction, seed,
     chapter: chapterForLevel(m.id, c).name, moves: m.moves, baseExp: m.baseExp,
     board: { width, height, activeCells: [...m.layout].reverse().flat().map(id => id !== 0) },
-    objectives: m.objectives, obstacles: { rocks: m.layout.flat().filter(id => id === tileId('rock',c)).length, seals: m.initialSeals.length } };
+    objectives: m.objectives, obstacles: { rocks: m.layout.flat().filter(id => id === tileId('rock',c)).length, seals: m.initialSeals.length, nodes: m.initialNodes?.length ?? 0 } };
 }
 export function mapStars(map: MapDefinition, movesUsed: number): Stars {
   const thresholds = map.starThresholds;

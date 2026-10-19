@@ -1,0 +1,392 @@
+{
+  "version": 27,
+  "levelCount": 19,
+  "qiCap": 100,
+  "expRates": [
+    30,
+    60,
+    80,
+    100
+  ],
+  "tiles": [
+    {
+      "id": 1,
+      "name": "Kiếm",
+      "damage": 10,
+      "qi": 1,
+      "key": "sword",
+      "role": "matchable",
+      "artKey": "tileSword"
+    },
+    {
+      "id": 2,
+      "name": "Hỏa",
+      "damage": 6,
+      "qi": 2,
+      "key": "fire",
+      "role": "matchable",
+      "artKey": "tileFire"
+    },
+    {
+      "id": 3,
+      "name": "Lôi",
+      "damage": 4,
+      "qi": 3,
+      "key": "lightning",
+      "role": "matchable",
+      "artKey": "tileLightning"
+    },
+    {
+      "id": 4,
+      "name": "Tụ Linh Châu",
+      "damage": 0,
+      "qi": 6,
+      "key": "spirit",
+      "role": "matchable",
+      "artKey": "tileSpiritOrb"
+    },
+    {
+      "id": 5,
+      "key": "rock",
+      "name": "Đá chắn",
+      "role": "obstacle",
+      "artKey": "tileRock",
+      "damage": 0,
+      "qi": 0
+    }
+  ],
+  "realms": [
+    {
+      "id": "LuyenKhi",
+      "name": "Luyện Khí",
+      "exp": 0
+    },
+    {
+      "id": "TrucCo",
+      "name": "Trúc Cơ",
+      "exp": 1500
+    },
+    {
+      "id": "KimDan",
+      "name": "Kim Đan",
+      "exp": 4000
+    },
+    {
+      "id": "NguyenAnh",
+      "name": "Nguyên Anh",
+      "exp": 8000
+    },
+    {
+      "id": "HoaThan",
+      "name": "Hóa Thần",
+      "exp": 14000
+    },
+    {
+      "id": "LuyenHu",
+      "name": "Luyện Hư",
+      "exp": 23000
+    },
+    {
+      "id": "HopThe",
+      "name": "Hợp Thể",
+      "exp": 36000
+    },
+    {
+      "id": "DaiThua",
+      "name": "Đại Thừa",
+      "exp": 54000
+    },
+    {
+      "id": "DoKiep",
+      "name": "Độ Kiếp",
+      "exp": 78000
+    },
+    {
+      "id": "ChanTien",
+      "name": "Chân Tiên",
+      "exp": 110000
+    }
+  ],
+  "skills": [
+    {
+      "id": "nhat-kiem",
+      "name": "Nhất Kiếm",
+      "description": "Chém một hàng ngang được chọn.",
+      "cost": 60,
+      "unlock": 0,
+      "price": 0,
+      "artKey": "iconSkillNhatKiem",
+      "acquisition": "retired"
+    },
+    {
+      "id": "ngu-kiem",
+      "name": "Ngự Kiếm",
+      "description": "Đổi hai ô cạnh nhau, ít nhất một ô Kiếm. Không cần tạo match.",
+      "cost": 30,
+      "unlock": 3,
+      "price": 150,
+      "artKey": "iconSkillNguKiem"
+    },
+    {
+      "id": "hoa-lien",
+      "name": "Hỏa Liên",
+      "description": "Nổ vùng 3×3 quanh ô chọn.",
+      "cost": 65,
+      "unlock": 5,
+      "price": 200,
+      "artKey": "iconSkillHoaLien"
+    },
+    {
+      "id": "dan-loi",
+      "name": "Dẫn Lôi",
+      "description": "Chọn ba ô thường khác Lôi để chuyển thành Lôi.",
+      "cost": 45,
+      "unlock": 8,
+      "price": 250,
+      "artKey": "iconSkillDanLoi"
+    },
+    {
+      "id": "pha-chuong",
+      "name": "Phá Chướng",
+      "description": "Gỡ đá và phong ấn trong vùng 3×3.",
+      "cost": 40,
+      "unlock": 12,
+      "price": 300,
+      "artKey": "iconSkillPhaChuong"
+    },
+    {
+      "id": "lien-kiem",
+      "name": "Liên Kiếm",
+      "description": "Chọn hai ô cường hóa để kích hoạt lần lượt.",
+      "cost": 80,
+      "unlock": 15,
+      "price": 350,
+      "artKey": "iconSkillLienKiem"
+    },
+    {
+      "id": "hoi-linh",
+      "name": "Hồi Linh",
+      "description": "Xáo các ô di chuyển được trong vùng 3×3.",
+      "cost": 35,
+      "unlock": 20,
+      "price": 450,
+      "artKey": "iconSkillHoiLinh"
+    },
+    {
+      "id": "van-kiem",
+      "name": "Vạn Kiếm",
+      "description": "Chọn một ô để xóa toàn bộ ô cùng loại.",
+      "cost": 100,
+      "unlock": 30,
+      "price": 500,
+      "artKey": "iconSkillVanKiem"
+    },
+    {
+      "id": "thu",
+      "name": "Thứ",
+      "description": "Chọn một ô: xóa ô thường, kích hoạt ô cường hóa hoặc phá một lớp đá/phong ấn.",
+      "cost": 60,
+      "unlock": 5,
+      "price": 0,
+      "artKey": "iconSkillThu",
+      "kind": "active",
+      "acquisition": "milestone",
+      "swordForm": 1
+    },
+    {
+      "id": "thieu",
+      "name": "Thiêu",
+      "description": "Bị động: mỗi ô ghép bị xóa nhận thêm 1 sát thương lên boss.",
+      "cost": 0,
+      "unlock": 8,
+      "price": 0,
+      "artKey": "iconSkillThieu",
+      "kind": "passive",
+      "acquisition": "milestone",
+      "swordForm": 2,
+      "bossDamagePerTile": 1
+    },
+    {
+      "id": "van",
+      "name": "Vân",
+      "description": "Bị động: mỗi ô ghép bị xóa nhận thêm 1 sát thương lên boss.",
+      "cost": 0,
+      "unlock": 10,
+      "price": 0,
+      "artKey": "iconSkillVan",
+      "kind": "passive",
+      "acquisition": "milestone",
+      "swordForm": 3,
+      "bossDamagePerTile": 1
+    }
+  ],
+  "swords": [
+    {
+      "id": "thanh-phong",
+      "name": "Thanh Phong",
+      "description": "Ô Kiếm nhận thêm 1 kiếm khí.",
+      "unlock": 0,
+      "price": 0,
+      "color": "#49c8e5",
+      "artKey": "iconSwordThanhPhong",
+      "acquisition": "retired"
+    },
+    {
+      "id": "trong-nhac",
+      "name": "Trọng Nhạc",
+      "description": "Sát thương ô Kiếm tăng 30%.",
+      "unlock": 3,
+      "price": 200,
+      "color": "#d7b76e",
+      "artKey": "iconSwordTrongNhac"
+    },
+    {
+      "id": "hoa-van",
+      "name": "Hỏa Vân",
+      "description": "Sát thương ô Hỏa tăng 50%.",
+      "unlock": 5,
+      "price": 200,
+      "color": "#e35646",
+      "artKey": "iconSwordHoaVan"
+    },
+    {
+      "id": "loi-minh",
+      "name": "Lôi Minh",
+      "description": "Ô Lôi nhận thêm 1 kiếm khí.",
+      "unlock": 8,
+      "price": 250,
+      "color": "#b79aff",
+      "artKey": "iconSwordLoiMinh"
+    },
+    {
+      "id": "tu-linh",
+      "name": "Tụ Linh",
+      "description": "Khí cơ bản của Tụ Linh Châu tăng thêm 2.",
+      "unlock": 12,
+      "price": 300,
+      "color": "#7ce4bd",
+      "artKey": "iconSwordTuLinh"
+    },
+    {
+      "id": "lien-tinh",
+      "name": "Liên Tinh",
+      "description": "Sát thương tăng 20% từ cascade thứ hai.",
+      "unlock": 15,
+      "price": 350,
+      "color": "#f2d58e",
+      "artKey": "iconSwordLienTinh"
+    },
+    {
+      "id": "pha-quan",
+      "name": "Phá Quân",
+      "description": "Ô bị xóa phá chướng ngại cạnh bên theo tám hướng.",
+      "unlock": 20,
+      "price": 400,
+      "color": "#efac82",
+      "artKey": "iconSwordPhaQuan"
+    },
+    {
+      "id": "huyen-co",
+      "name": "Huyền Cơ",
+      "description": "Giảm 10% chi phí kiếm thuật.",
+      "unlock": 30,
+      "price": 450,
+      "color": "#87c3dc",
+      "artKey": "iconSwordHuyenCo"
+    },
+    {
+      "id": "co-ban",
+      "name": "Thiết Kiếm",
+      "description": "Mỗi ô ghép bị xóa nhận thêm 1 sát thương.",
+      "unlock": 3,
+      "price": 0,
+      "color": "#d7b76e",
+      "artKey": "iconSwordCoBan",
+      "acquisition": "milestone",
+      "flatDamage": 1
+    }
+  ],
+  "rewards": {
+    "firstWinCoins": 100,
+    "replayWinCoins": 10,
+    "starBonus": [
+      0,
+      0,
+      25,
+      50
+    ]
+  },
+  "layoutCodes": {
+    "void": 0,
+    "random": -1
+  },
+  "normalTileIds": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "levelBaseExp": [
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100
+  ],
+  "chapters": [
+    {
+      "id": "chapter-1",
+      "name": "Vân Hải Tiên Sơn",
+      "order": 1,
+      "firstLevelId": 1,
+      "lastLevelId": 10
+    },
+    {
+      "id": "chapter-2",
+      "name": "Khảo Hạch Tông Môn",
+      "order": 2,
+      "firstLevelId": 11,
+      "lastLevelId": 19
+    }
+  ],
+  "milestoneRewards": [
+    {
+      "levelId": 3,
+      "stars": 3,
+      "category": "sword",
+      "itemId": "co-ban"
+    },
+    {
+      "levelId": 5,
+      "stars": 3,
+      "category": "skill",
+      "itemId": "thu"
+    },
+    {
+      "levelId": 8,
+      "stars": 3,
+      "category": "skill",
+      "itemId": "thieu"
+    },
+    {
+      "levelId": 10,
+      "stars": 3,
+      "category": "skill",
+      "itemId": "van"
+    }
+  ]
+}

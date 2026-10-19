@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  BlurMask, Canvas, DashPathEffect, FontWeight, Group, Image, Paint, Paragraph, Path, RoundedRect, Skia, useImage,
+  BlurMask, Canvas, Circle, DashPathEffect, FontWeight, Group, Image, Paint, Paragraph, Path, RoundedRect, Skia, useImage,
   type SkImage, type SkParagraph,
 } from '@shopify/react-native-skia';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -196,6 +196,20 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
     [motion, frame],
   );
   const labels = useBoardLabels(Math.max(0, side / geometry.width - 2), targets.length);
+  const forecastSeals = useMemo(() => {
+    const locked = new Set(snapshot.tiles.flatMap((tile, index) => tile?.locked ? [index] : []));
+    const forecast = new Set<number>();
+    const nodes = snapshot.tiles.flatMap((tile, index) => tile?.nodeCharge === 2 ? [index] : []);
+    for (const node of nodes) {
+      const distance = (index: number) => Math.abs(index % geometry.width - node % geometry.width)
+        + Math.abs(Math.floor(index / geometry.width) - Math.floor(node / geometry.width));
+      [...locked].sort((a, b) => distance(a) - distance(b)
+        || Math.floor(b / geometry.width) - Math.floor(a / geometry.width)
+        || a % geometry.width - b % geometry.width)
+        .slice(0, Math.ceil(locked.size / 2)).forEach(index => { forecast.add(index); locked.delete(index); });
+    }
+    return forecast;
+  }, [snapshot.tiles, geometry.width]);
   const guideGeometry = useMemo(() => tutorialMove ? tutorialGeometry(tutorialMove, side, geometry) : null,
     [tutorialMove?.key, tutorialMove?.from.x, tutorialMove?.from.y, tutorialMove?.to.x, tutorialMove?.to.y, side, geometry]);
   const tutorialActive = !!tutorialMove && !locked && !targetingHint;
@@ -278,6 +292,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
                 opacity={visuals[index].flashAt === null ? motion.flash : cellMotion?.flashOpacity ?? 0} /> : null}
               {preview.includes(index) ? <RoundedRect {...bounds} r={5} color="rgba(242,213,142,.16)" /> : null}
               {highlighted ? <RoundedRect x={bounds.x + 1} y={bounds.y + 1} width={bounds.width - 2} height={bounds.height - 2} r={4} color={colors.goldBright} style="stroke" strokeWidth={2} /> : null}
+              {forecastSeals.has(index) ? <RoundedRect x={bounds.x + 2} y={bounds.y + 2} width={bounds.width - 4} height={bounds.height - 4} r={5} color="#ffd86b" style="stroke" strokeWidth={3} opacity={.95} /> : null}
               {targetLabel ? <Group>
                 <RoundedRect x={bounds.x + 2} y={bounds.y + 1} width={targetLabel.width + 6} height={targetLabel.height} r={6} color="#6a4c22" />
                 <Paragraph paragraph={targetLabel.paragraph} x={bounds.x + 5} y={bounds.y + 1} width={targetLabel.width} />
@@ -302,7 +317,8 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
           const tile = snapshot.tiles[index]!, x = index % geometry.width, y = Math.floor(index / geometry.width);
           const bounds = cellBounds(index, side, geometry);
           const name = content.tiles.find(def => def.id === tile.kind)?.name ?? 'Đá chắn';
-          return <Pressable key={index} accessibilityRole="button" accessibilityLabel={`${name}${tile.chargeTier ? `, cường hóa ${tile.chargeTier}` : ''}${tile.locked ? ', phong ấn' : ''}, hàng ${y + 1}, cột ${x + 1}`} accessibilityState={{ disabled: locked }} disabled={locked} onPress={sfxPress(() => onCellPress(x, y), !locked)} style={[styles.touchCell, { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }]} />;
+          const node = tile.nodeCharge !== undefined;
+          return <Pressable key={index} accessibilityRole="button" accessibilityLabel={`${node ? `Trận Nhãn, nạp ${tile.nodeCharge}/3` : name}${tile.chargeTier ? `, cường hóa ${tile.chargeTier}` : ''}${tile.locked ? ', phong ấn' : ''}, hàng ${y + 1}, cột ${x + 1}`} accessibilityState={{ disabled: locked }} disabled={locked} onPress={sfxPress(() => onCellPress(x, y), !locked)} style={[styles.touchCell, { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }]} />;
         }) : null}
         {side > geometry.width * 2 && tutorialMove && guideGeometry ? <TutorialGuide key={tutorialMove.key}
           geometry={guideGeometry} text={tutorialMove.text} visible={tutorialActive && tutorialPromptVisible} reduceMotion={reduceMotion} /> : null}
@@ -344,7 +360,21 @@ function TileArtwork({ tile, bounds, image, labels, particlePhase, idleAnimation
       <RoundedRect x={bounds.x + 1} y={bounds.y + 1} width={bounds.width - 2} height={bounds.height - 2} r={4} style="stroke" strokeWidth={2} color="#ae97cd" />
       <Paragraph paragraph={labels.seal.paragraph} x={bounds.x + (bounds.width - labels.seal.width) / 2} y={bounds.y + (bounds.height - labels.seal.height) / 2} width={labels.seal.width} />
     </Group> : null}
+    {tile.nodeCharge !== undefined ? <Group>
+      <RoundedRect {...bounds} r={5} color="rgba(31,21,57,.86)" />
+      <Circle cx={bounds.x + bounds.width / 2} cy={bounds.y + bounds.height * .43} r={Math.min(bounds.width, bounds.height) * .27}
+        color="#e2ba68" style="stroke" strokeWidth={Math.max(1.5, bounds.width * .055)} />
+      <Path path={nodeDiamond(bounds)} color="#f4d58b" style="stroke" strokeWidth={Math.max(1, bounds.width * .035)} />
+      {[0, 1, 2].map(index => <Circle key={`node-charge-${index}`} cx={bounds.x + bounds.width * (.34 + index * .16)}
+        cy={bounds.y + bounds.height * .82} r={Math.max(1.5, bounds.width * .045)}
+        color={index < tile.nodeCharge! ? '#ffe37c' : 'rgba(238,224,255,.32)'} />)}
+    </Group> : null}
   </Group>;
+}
+
+function nodeDiamond(bounds: ReturnType<typeof cellBounds>) {
+  const x = bounds.x + bounds.width / 2, y = bounds.y + bounds.height * .43, r = Math.min(bounds.width, bounds.height) * .16;
+  return Skia.Path.Make().moveTo(x, y - r).lineTo(x + r, y).lineTo(x, y + r).lineTo(x - r, y).close();
 }
 
 const styles = StyleSheet.create({

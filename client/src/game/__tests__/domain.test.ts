@@ -3,7 +3,7 @@ import { getLevel } from '../levels';
 function progress(count: number, stars: 0 | 1 | 2 | 3 = 3): PlayerProfile { const p = emptyProfile(); p.levels = Array.from({ length: count }, (_, i) => ({ levelId: i + 1, stars })); p.totalExp = totalExp(p.levels); p.coins = 10000; return p; }
 const fortyLevelRules = { ...CONTENT, levelCount: 40, levelBaseExp: Array(40).fill(100) } as GameContent;
 describe('content and cultivation', () => {
-    it('has the complete published catalog and legal level goals', () => { expect([CONTENT.tiles.length, SKILLS.length, SWORDS.length, REALMS.length, CONTENT.levelCount]).toEqual([5, 11, 9, 10, 10]); for (let id = 1; id <= CONTENT.levelCount; id++) {
+    it('has the complete local two-chapter catalog and legal level goals', () => { expect([CONTENT.tiles.length, SKILLS.length, SWORDS.length, REALMS.length, CONTENT.levelCount]).toEqual([5, 11, 9, 10, 20]); expect(CONTENT.chapters).toMatchObject([{ id: 'chapter-1', firstLevelId: 1, lastLevelId: 10 }, { id: 'chapter-2', firstLevelId: 11, lastLevelId: 20 }]); for (let id = 1; id <= CONTENT.levelCount; id++) {
         const l = getLevel(id);
         expect(l.baseExp).toBe(100);
         expect(l.obstacles.rocks + l.obstacles.seals).toBeLessThan(49);

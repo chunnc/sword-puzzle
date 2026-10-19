@@ -12,6 +12,7 @@ export enum GoalKind {
     Collect = 'Collect',
     BreakSeals = 'BreakSeals',
     BreakRocks = 'BreakRocks',
+    ActivateNodes = 'ActivateNodes',
     Battle = 'Battle',
     Boss = 'Boss'
 }
@@ -19,6 +20,8 @@ export interface Tile {
     kind: number;
     chargeTier: 0 | 4 | 5;
     locked: boolean;
+    /** Present while this cell is occupied by an unactivated Trận Nhãn. */
+    nodeCharge?: 0 | 1 | 2;
 }
 export interface CellPosition {
     x: number;

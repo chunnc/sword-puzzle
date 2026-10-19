@@ -85,7 +85,7 @@ describe('scene navigation', () => {
     mockState.save = emptySave();
     mockState.foreground = true;
     installContent(require('../../../../content/game-config.json'));
-    mockState.chapterId='chapter-1';mockState.chapterMaps=require('../../../../content/game-maps.json').map(mapSummary);
+    mockState.chapterId='chapter-1';mockState.chapterMaps=require('../../../../content/game-maps.json').map(mapSummary).filter((map: MapSummary)=>map.chapterId==='chapter-1');
     mockState.chapterLoading=false;mockState.chapterError='';mockState.notice='';mockState.selectChapter.mockResolvedValue(undefined);
     mockRouter.canGoBack.mockReturnValue(true);
     mockState.startLevel.mockResolvedValue(true);

@@ -1,0 +1,379 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 22,
+    "id": 14,
+    "chapterId": "chapter-2",
+    "orderInChapter": 4,
+    "name": "Thử Trận Nhãn Song Trận",
+    "difficulty": "medium",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 0,
+        "column": 5
+      },
+      {
+        "row": 0,
+        "column": 6
+      },
+      {
+        "row": 1,
+        "column": 5
+      },
+      {
+        "row": 1,
+        "column": 6
+      },
+      {
+        "row": 2,
+        "column": 5
+      },
+      {
+        "row": 2,
+        "column": 6
+      },
+      {
+        "row": 3,
+        "column": 4
+      },
+      {
+        "row": 3,
+        "column": 5
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 0,
+        "column": 1
+      },
+      {
+        "row": 4,
+        "column": 3
+      }
+    ],
+    "objectives": [
+      {
+        "id": "activate-nodes",
+        "type": "ActivateNodes",
+        "target": 2
+      }
+    ],
+    "moves": 12,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 59,
+      "twoStarBelowPercent": 84
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0.3,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 21414,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "medium",
+      "objective": "activate-nodes",
+      "index": 14,
+      "bands": {
+        "win": [
+          0.8,
+          1
+        ],
+        "three": [
+          0.45,
+          0.55
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.5,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": [
+        2
+      ],
+      "fixedTargets": true,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": null,
+      "minimumTarget": null,
+      "seed": 21414,
+      "totalExp": 780,
+      "layouts": 2,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 20,
+      "retryAttempts": 10,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Thử Trận Nhãn Song Trận",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    },
+    "shape": {
+      "family": "stairs",
+      "layout": [
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 7,
+        "height": 6,
+        "activeCells": 31,
+        "holes": 11,
+        "holeRatio": 0.2619047619047619
+      },
+      "key": "[[0,0,0,0,1,1],[0,0,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1],[1,1,1,0,1,1],[0,0,1,1,1,1],[0,0,1,1,1,1]]",
+      "sealCount": 8,
+      "sealCells": [
+        {
+          "row": 0,
+          "column": 5
+        },
+        {
+          "row": 0,
+          "column": 6
+        },
+        {
+          "row": 1,
+          "column": 5
+        },
+        {
+          "row": 1,
+          "column": 6
+        },
+        {
+          "row": 2,
+          "column": 5
+        },
+        {
+          "row": 2,
+          "column": 6
+        },
+        {
+          "row": 3,
+          "column": 4
+        },
+        {
+          "row": 3,
+          "column": 5
+        }
+      ],
+      "nodeCount": 2,
+      "nodeCells": [
+        {
+          "row": 0,
+          "column": 1
+        },
+        {
+          "row": 4,
+          "column": 3
+        }
+      ]
+    },
+    "sourceCatalogHash": "54ca03addbcb4b3432253e989ff430d4e1616625d0abebe726264a67005be7a1",
+    "authoringConfigVersion": 22
+  },
+  "hashes": {
+    "map": "c4c0db1a78f55ec5a9207236414813f8f49ffbd8d3938b84425d59a9589f9e38",
+    "config": "2a152f9653fb7f9580b7d36ffad1238d9c703142f016a2e052ec248e7811e8ed",
+    "engine": "46c662339798ad2305b715019b9937ac83eba4a9566b88e6f5bd339661850a9a",
+    "report": "b9c689ca61a780bf0fc424373f7ee18eddbec437b06bf642a889ee8e21e04633"
+  },
+  "verificationRequest": {
+    "policyVersion": 2,
+    "difficulty": "medium",
+    "objective": "activate-nodes",
+    "index": 14,
+    "bands": {
+      "win": [
+        0.8,
+        1
+      ],
+      "three": [
+        0.45,
+        0.55
+      ],
+      "exclusiveWin": true,
+      "exclusiveThree": false
+    },
+    "starQuantile": 0.5,
+    "winRateEnforced": false,
+    "minMoves": 6,
+    "maxMoves": 30,
+    "tiles": [
+      "sword"
+    ],
+    "targets": [
+      2
+    ],
+    "fixedTargets": true,
+    "weights": {},
+    "rockBlockers": null,
+    "nodeBlockers": null,
+    "minimumTarget": null,
+    "seed": 21414,
+    "totalExp": 780,
+    "layouts": 2,
+    "trainingSeeds": 150,
+    "validationSeeds": 1000,
+    "retrySeeds": 20,
+    "retryAttempts": 10,
+    "retryWinMedian": null,
+    "retryThreeMedian": null,
+    "name": "Thử Trận Nhãn Song Trận",
+    "replace": false,
+    "chapter": null,
+    "chapterName": null,
+    "enemy": null
+  }
+}

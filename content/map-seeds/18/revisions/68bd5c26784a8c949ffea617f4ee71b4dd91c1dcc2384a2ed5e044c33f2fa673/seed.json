@@ -1,0 +1,349 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 26,
+    "id": 18,
+    "chapterId": "chapter-2",
+    "orderInChapter": 8,
+    "name": "Kiếm Lệnh Linh Khí",
+    "difficulty": "medium",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        5,
+        5,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        0
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 3,
+        "column": 3
+      },
+      {
+        "row": 3,
+        "column": 4
+      },
+      {
+        "row": 3,
+        "column": 5
+      },
+      {
+        "row": 4,
+        "column": 4
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 1,
+        "column": 6
+      }
+    ],
+    "objectives": [
+      {
+        "id": "collect-sword-4",
+        "type": "Collect",
+        "tileKind": 1,
+        "chargeTier": 4,
+        "target": 1
+      }
+    ],
+    "moves": 17,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 59,
+      "twoStarBelowPercent": 83
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0.1,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 21818,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "medium",
+      "objective": "collect",
+      "index": 18,
+      "bands": {
+        "win": [
+          0.8,
+          1
+        ],
+        "three": [
+          0.45,
+          0.55
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.5,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword:4"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": [
+        2,
+        2
+      ],
+      "nodeBlockers": [
+        1,
+        1
+      ],
+      "sealBlockers": [
+        4,
+        4
+      ],
+      "minimumTarget": null,
+      "seed": 21818,
+      "totalExp": 1020,
+      "layouts": 2,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 20,
+      "retryAttempts": 10,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Kiếm Lệnh Linh Khí",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    },
+    "shape": {
+      "family": "stairs",
+      "layout": [
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          5,
+          5,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          0,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 7,
+        "height": 8,
+        "activeCells": 42,
+        "holes": 14,
+        "holeRatio": 0.25
+      },
+      "key": "[[0,0,0,0,0,0,1,1],[0,0,0,0,1,1,1,1],[0,0,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,0,1,1,1,1,1,1]]",
+      "rockCount": 2,
+      "rockCells": [
+        {
+          "row": 2,
+          "column": 1
+        },
+        {
+          "row": 2,
+          "column": 2
+        }
+      ],
+      "sealCount": 4,
+      "sealCells": [
+        {
+          "row": 3,
+          "column": 3
+        },
+        {
+          "row": 3,
+          "column": 4
+        },
+        {
+          "row": 3,
+          "column": 5
+        },
+        {
+          "row": 4,
+          "column": 4
+        }
+      ],
+      "nodeCount": 1,
+      "nodeCells": [
+        {
+          "row": 1,
+          "column": 6
+        }
+      ]
+    },
+    "sourceCatalogHash": "8eb75515c5cce1654b9edb5e308f41a2732eeef121b5fee8b6a3d041c24ec39f",
+    "authoringConfigVersion": 26
+  },
+  "hashes": {
+    "map": "72a066908c476452c89dbb6dcc88af57a56648d06da04fc27e6aa68f45d3536a",
+    "config": "0262953f2c0ad89d7e9d8b86c6e2f153ce1842e8e2aa2c7df7c5a8b65386d94d",
+    "engine": "46c662339798ad2305b715019b9937ac83eba4a9566b88e6f5bd339661850a9a",
+    "report": "f607adc944174cbce0a33b75f326aa89188fc05451b7051e4d31a905b07c8d34"
+  }
+}

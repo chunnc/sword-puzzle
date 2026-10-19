@@ -1,0 +1,363 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 21,
+    "id": 13,
+    "chapterId": "chapter-2",
+    "orderInChapter": 3,
+    "name": "Phá Ấn Trận Nhãn",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 1,
+        "column": 1
+      },
+      {
+        "row": 1,
+        "column": 2
+      },
+      {
+        "row": 1,
+        "column": 3
+      },
+      {
+        "row": 1,
+        "column": 4
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 3,
+        "column": 1
+      }
+    ],
+    "objectives": [
+      {
+        "id": "break-seals",
+        "type": "BreakSeals",
+        "target": 4
+      }
+    ],
+    "moves": 9,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 56,
+      "twoStarBelowPercent": 78
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 21313,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "easy",
+      "objective": "break-seals",
+      "index": 13,
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "starQuantile": 0.8,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": [
+        4
+      ],
+      "fixedTargets": true,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": [
+        1,
+        1
+      ],
+      "minimumTarget": null,
+      "seed": 21313,
+      "totalExp": 720,
+      "layouts": 2,
+      "trainingSeeds": 40,
+      "validationSeeds": 1000,
+      "retrySeeds": 20,
+      "retryAttempts": 10,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Phá Ấn Trận Nhãn",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    },
+    "shape": {
+      "family": "stairs",
+      "layout": [
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 7,
+        "height": 7,
+        "activeCells": 38,
+        "holes": 11,
+        "holeRatio": 0.22448979591836735
+      },
+      "key": "[[0,0,0,0,0,1,1],[0,0,0,1,1,1,1],[0,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[0,0,1,1,1,1,1]]",
+      "sealCount": 4,
+      "sealCells": [
+        {
+          "row": 1,
+          "column": 1
+        },
+        {
+          "row": 1,
+          "column": 2
+        },
+        {
+          "row": 1,
+          "column": 3
+        },
+        {
+          "row": 1,
+          "column": 4
+        }
+      ],
+      "nodeCount": 1,
+      "nodeCells": [
+        {
+          "row": 3,
+          "column": 1
+        }
+      ]
+    },
+    "sourceCatalogHash": "b4a53bbff31206c2c2d718d6999dd815fbfe9c1eb88fb12b51b4dcddaa1486f1",
+    "authoringConfigVersion": 21
+  },
+  "hashes": {
+    "map": "b39709b7b1f66e9d54478ddbe9a46e791144292fbba6fb448e7e92a01b21f60d",
+    "config": "8ed03b885734e9f38216ba2f20a3e1be35950752464551883d063c15ed19fb5f",
+    "engine": "46c662339798ad2305b715019b9937ac83eba4a9566b88e6f5bd339661850a9a",
+    "report": "db0eb04407b1691f050eb81575315d1a1cb703972aa43b73f3b5296772bfaa73"
+  },
+  "verificationRequest": {
+    "policyVersion": 2,
+    "difficulty": "easy",
+    "objective": "break-seals",
+    "index": 13,
+    "bands": {
+      "win": [
+        0.95,
+        1
+      ],
+      "three": [
+        0.8,
+        1
+      ],
+      "exclusiveWin": true,
+      "exclusiveThree": true
+    },
+    "starQuantile": 0.8,
+    "winRateEnforced": false,
+    "minMoves": 6,
+    "maxMoves": 30,
+    "tiles": [
+      "sword"
+    ],
+    "targets": [
+      4
+    ],
+    "fixedTargets": true,
+    "weights": {},
+    "rockBlockers": null,
+    "nodeBlockers": [
+      1,
+      1
+    ],
+    "minimumTarget": null,
+    "seed": 21313,
+    "totalExp": 720,
+    "layouts": 2,
+    "trainingSeeds": 40,
+    "validationSeeds": 1000,
+    "retrySeeds": 20,
+    "retryAttempts": 10,
+    "retryWinMedian": null,
+    "retryThreeMedian": null,
+    "name": "Phá Ấn Trận Nhãn",
+    "replace": false,
+    "chapter": null,
+    "chapterName": null,
+    "enemy": null
+  }
+}

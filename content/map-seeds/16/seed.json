@@ -1,0 +1,296 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 24,
+    "id": 16,
+    "chapterId": "chapter-2",
+    "orderInChapter": 6,
+    "name": "Nhiệm Vụ Khai Lộ",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        5,
+        5,
+        5,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 2,
+        "column": 0
+      },
+      {
+        "row": 2,
+        "column": 1
+      },
+      {
+        "row": 3,
+        "column": 1
+      },
+      {
+        "row": 3,
+        "column": 2
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 2,
+        "column": 3
+      }
+    ],
+    "objectives": [
+      {
+        "id": "break-rocks",
+        "type": "BreakRocks",
+        "target": 3
+      }
+    ],
+    "moves": 10,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 21616,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "easy",
+      "objective": "break-rocks",
+      "index": 16,
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "starQuantile": 0.8,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": [
+        3
+      ],
+      "fixedTargets": true,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": [
+        1,
+        1
+      ],
+      "sealBlockers": [
+        4,
+        4
+      ],
+      "minimumTarget": null,
+      "seed": 21616,
+      "totalExp": 900,
+      "layouts": 2,
+      "trainingSeeds": 100,
+      "validationSeeds": 1000,
+      "retrySeeds": 20,
+      "retryAttempts": 10,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Nhiệm Vụ Khai Lộ",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    },
+    "shape": {
+      "family": "stairs",
+      "layout": [
+        [
+          0,
+          5,
+          5,
+          5,
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          0,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 7,
+        "height": 5,
+        "activeCells": 27,
+        "holes": 8,
+        "holeRatio": 0.22857142857142856
+      },
+      "key": "[[0,0,0,1,1],[0,1,1,1,1],[1,1,1,1,1],[1,1,1,0,1],[1,1,1,1,1],[1,1,1,1,1],[0,0,1,1,0]]",
+      "rockCount": 3,
+      "rockCells": [
+        {
+          "row": 0,
+          "column": 1
+        },
+        {
+          "row": 0,
+          "column": 2
+        },
+        {
+          "row": 0,
+          "column": 3
+        }
+      ],
+      "sealCount": 4,
+      "sealCells": [
+        {
+          "row": 2,
+          "column": 0
+        },
+        {
+          "row": 2,
+          "column": 1
+        },
+        {
+          "row": 3,
+          "column": 1
+        },
+        {
+          "row": 3,
+          "column": 2
+        }
+      ],
+      "nodeCount": 1,
+      "nodeCells": [
+        {
+          "row": 2,
+          "column": 3
+        }
+      ]
+    },
+    "sourceCatalogHash": "f647f6ff12428153b4917677f7682f58ffaa9a62568521d6762394387a7979ab",
+    "authoringConfigVersion": 24
+  },
+  "hashes": {
+    "map": "2e4aea0f223a173a36f3d4c8b312436b7723f87897456af7af917b2dd27e9b68",
+    "config": "ac6aca1c77f4b2f2c8df5b1df171632ac03619f7611863f2dcabb28f48e6c94f",
+    "engine": "46c662339798ad2305b715019b9937ac83eba4a9566b88e6f5bd339661850a9a",
+    "report": "c46e649ce1fa6f41fa0f8b040f20048c19429d30c7d19d012c3f48256122d290"
+  }
+}

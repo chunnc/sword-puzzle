@@ -33,6 +33,25 @@ it('preserves explicit starting tiles and seals across seeds and resumes RNG/dir
     expect(other.snapshot()).toEqual(engine.snapshot());
   }
 });
+it('validates, serializes and restores Trận Nhãn map positions and charge state', () => {
+  const m=map();
+  m.layout[2][2]=-1;
+  m.initialNodes=[{row:2,column:2}];
+  m.objectives=[{id:'nodes',type:'ActivateNodes',target:1}];
+  const valid=validateMap(mapFromDocument(mapToDocument(m),content),content);
+  const level=mapToLevel(valid,12345,0,content), engine=new BoardEngine(level), snapshot=engine.snapshot();
+  const index=(level.board.height-1-2)*level.board.width+2;
+  expect(snapshot.tiles[index]?.nodeCharge).toBe(0);
+  expect(level.obstacles.nodes).toBe(1);
+  snapshot.tiles[index]!.nodeCharge=2;
+  expect(normalizeSnapshot(snapshot)?.tiles[index]?.nodeCharge).toBe(2);
+  const duplicate=clone(m);duplicate.initialNodes=[{row:2,column:2},{row:2,column:2}];
+  expect(()=>validateMap(duplicate,content)).toThrow('INVALID_MAP');
+  const sealed=clone(m);sealed.initialSeals=[{row:2,column:2}];
+  expect(()=>validateMap(sealed,content)).toThrow('INVALID_MAP');
+  const impossible=clone(m);impossible.objectives[0].target=2;
+  expect(()=>validateMap(impossible,content)).toThrow('INVALID_MAP');
+});
 it('uses a sparse shuffled ID registry for initialization, effects and collection', () => {
   const c = clone(config), ids: Record<number,number> = { 1:11, 2:123, 3:37, 4:90, 5:400 };
   c.tiles.forEach((t:any) => { t.id=ids[t.id]; }); c.tiles.reverse(); c.normalTileIds=c.normalTileIds.map((id:number)=>ids[id]);
@@ -76,7 +95,9 @@ it('bootstrap has metadata and no maps; percentage stars and capped retry suppor
   expect(contentWire(content)).not.toHaveProperty('levels');
   expect(content.levels).toEqual([]);
   expect(chapterForLevel(2,content).id).toBe('chapter-1');
-  expect(chapterForLevel(content.levelCount,content).id).toBe('chapter-1');
+  expect(chapterForLevel(10,content).id).toBe('chapter-1');
+  expect(chapterForLevel(11,content).id).toBe('chapter-2');
+  expect(chapterForLevel(content.levelCount,content).id).toBe('chapter-2');
   expect(() => chapterForLevel(content.levelCount + 1,content)).toThrow('INVALID_CHAPTER');
   const m=map();
   expect(mapStars(m,3)).toBe(3);

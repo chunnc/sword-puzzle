@@ -3,7 +3,7 @@ const path = require('node:path');
 const { randomBytes } = require('node:crypto');
 const { validateContent, validateMap, versionMap, chapterForLevel, contentWire } = require('./game-runtime.cjs');
 const { ROOT, PROFILES, hash, readJSON, writeJSON, engineHash, positiveInteger, band, parseArgs,
-  generateLayouts, addRockObstacles, addSealObstacles, artifactDir, withAuthoringLock } = require('./map_generation.cjs');
+  generateLayouts, addRockObstacles, addSealObstacles, addNodeObstacles, artifactDir, withAuthoringLock } = require('./map_generation.cjs');
 const { calibrate, verify } = require('./generate_map_balance.cjs');
 const { renderGeneratedMap } = require('./render_generated_map.cjs');
 
@@ -11,13 +11,16 @@ const HELP = `Generate and balance a local map (no Firestore writes).
   npm run maps:generate -- --difficulty medium --objective collect --tiles sword,fire
   npm run maps:generate -- --difficulty hard --objective boss --index 3 --seed 12345
 
-Required: --difficulty easy|medium|hard|very-hard --objective collect|battle|boss|break-rocks|break-seals
+Required: --difficulty easy|medium|hard|very-hard --objective collect|battle|boss|break-rocks|break-seals|activate-nodes
 Collect: --tiles sword,fire,lightning,spirit (default sword); optional :4/:5, e.g. sword:4,fire:5
          --target N or N,N; charged targets count activations, not creation
          --rock-blockers MIN-MAX places rocks on Collect maps without a BreakRocks objective
+         --seal-blockers N places optional seals; --node-blockers N places optional Trận Nhãn
 Spawn:   --weights sword=150,fire=100 (unspecified normal tiles default to 100)
 BreakRocks: generates a connected cluster of 2–6 rocks; --target N fixes the rock count
 BreakSeals: generates a connected cluster of 2–6 seals; --target N fixes the seal count
+ActivateNodes: generates a Trận Nhãn and seals; --target N fixes the node count
+Other objectives: --node-blockers N adds optional Trận Nhãn cells without a node goal
 Enemy:   --enemy-id ID --enemy-name NAME --enemy-art beast --target HP
          --min-target HP sets a lower bound for automatically proposed Battle/Boss HP
 Author:  --index N (default next) --name NAME --seed UINT32 --replace
@@ -63,12 +66,12 @@ function parseIntegerRange(value, label, min, max) {
 }
 function parseRequest(args, nextIndex) {
   const opts = parseArgs(args, ['--difficulty', '--objective', '--tiles', '--target', '--index', '--name', '--seed', '--chapter', '--chapter-name',
-    '--enemy-id', '--enemy-name', '--enemy-art', '--min-target', '--rock-blockers', '--min-moves', '--max-moves', '--win-rate', '--three-rate', '--total-exp', '--layouts', '--weights',
+    '--enemy-id', '--enemy-name', '--enemy-art', '--min-target', '--rock-blockers', '--seal-blockers', '--node-blockers', '--min-moves', '--max-moves', '--win-rate', '--three-rate', '--total-exp', '--layouts', '--weights',
     '--training-seeds', '--validation-seeds', '--retry-seeds', '--retry-attempts', '--retry-win-median', '--retry-three-median'], ['--replace', '--help']);
   if (opts['--help']) return { help: true };
   const difficulty = opts['--difficulty'], objective = opts['--objective'];
   if (!PROFILES[difficulty]) throw new Error('--difficulty must be easy, medium, hard or very-hard');
-  if (!['collect', 'battle', 'boss', 'break-rocks', 'break-seals'].includes(objective)) throw new Error('--objective must be collect, battle, boss, break-rocks or break-seals');
+  if (!['collect', 'battle', 'boss', 'break-rocks', 'break-seals', 'activate-nodes'].includes(objective)) throw new Error('--objective must be collect, battle, boss, break-rocks, break-seals or activate-nodes');
   const index = positiveInteger(opts['--index'] ?? nextIndex, '--index', 1, 1000);
   const bands = structuredClone(PROFILES[difficulty]);
   if (opts['--win-rate']) { bands.win = band(opts['--win-rate'], '--win-rate'); bands.exclusiveWin = false; }
@@ -81,11 +84,15 @@ function parseRequest(args, nextIndex) {
   if (new Set(tiles).size !== tiles.length) throw new Error('--tiles must contain distinct tile kind/tier pairs');
   if (objective !== 'collect' && opts['--tiles']) throw new Error('--tiles applies to collect only');
   const weights = parseTileWeights(opts['--weights']);
-  const targetMaximum = objective === 'collect' ? 30 : ['break-rocks', 'break-seals'].includes(objective) ? 56 : 1_000_000_000;
+  const targetMaximum = objective === 'collect' ? 30 : ['break-rocks', 'break-seals'].includes(objective) ? 56 : objective === 'activate-nodes' ? 3 : 1_000_000_000;
   const targets = opts['--target'] === undefined ? null : opts['--target'].split(',').map(n => positiveInteger(n, '--target', 1, targetMaximum));
   if (targets && targets.length !== 1 && (objective !== 'collect' || targets.length !== tiles.length)) throw new Error('--target must have one value or one per collected tile');
   const rockBlockers = opts['--rock-blockers'] === undefined ? null : parseIntegerRange(opts['--rock-blockers'], '--rock-blockers', 2, 4);
   if (rockBlockers && objective !== 'collect') throw new Error('--rock-blockers applies to collect only');
+  const nodeBlockers = opts['--node-blockers'] === undefined ? null : parseIntegerRange(opts['--node-blockers'], '--node-blockers', 1, 3);
+  if (nodeBlockers && objective === 'activate-nodes') throw new Error('--node-blockers is for optional nodes; use --target with activate-nodes');
+  const sealBlockers = opts['--seal-blockers'] === undefined ? null : parseIntegerRange(opts['--seal-blockers'], '--seal-blockers', 2, 10);
+  if (sealBlockers && ['break-seals', 'activate-nodes'].includes(objective)) throw new Error('--seal-blockers is for optional seals; choose another objective');
   const minimumTarget = opts['--min-target'] === undefined ? null : positiveInteger(opts['--min-target'], '--min-target', 1, 1_000_000_000);
   if (minimumTarget !== null && !['battle', 'boss'].includes(objective)) throw new Error('--min-target applies to battle/boss only');
   if (minimumTarget !== null && targets && targets[0] < minimumTarget) throw new Error('--target must be at least --min-target');
@@ -96,7 +103,7 @@ function parseRequest(args, nextIndex) {
   return { policyVersion: 2, difficulty, objective, index, bands,
     starQuantile: opts['--three-rate'] ? (bands.three[0] + bands.three[1]) / 2 : defaultQuantiles[difficulty],
     winRateEnforced: false, minMoves, maxMoves, tiles, targets, fixedTargets: targets !== null, weights,
-    rockBlockers, minimumTarget,
+    rockBlockers, nodeBlockers, sealBlockers, minimumTarget,
     seed: positiveInteger(opts['--seed'] ?? (randomBytes(4).readUInt32LE() || 1), '--seed', 1, 0xffffffff),
     totalExp: positiveInteger(opts['--total-exp'] ?? (index - 1) * 60, '--total-exp', 0, 10_000_000),
     layouts: positiveInteger(opts['--layouts'] ?? 8, '--layouts', 1, 24),
@@ -140,6 +147,7 @@ function mapTemplate(config, catalog, request, shape) {
   })
     : request.objective === 'break-rocks' ? [{ id: 'break-rocks', type: 'BreakRocks', target: request.targets?.[0] ?? shape.rockCount }]
     : request.objective === 'break-seals' ? [{ id: 'break-seals', type: 'BreakSeals', target: request.targets?.[0] ?? shape.sealCount }]
+    : request.objective === 'activate-nodes' ? [{ id: 'activate-nodes', type: 'ActivateNodes', target: request.targets?.[0] ?? shape.nodeCount ?? 1 }]
     : [{ id: 'main', type: request.objective === 'boss' ? 'Boss' : 'Battle', target: request.targets?.[0] ?? 500, enemy: request.enemy }];
   const weights = Object.fromEntries(config.normalTileIds.map(id => {
     const key = config.tiles.find(tile => tile.id === id).key;
@@ -147,11 +155,11 @@ function mapTemplate(config, catalog, request, shape) {
   }));
   return versionMap({ contentVersion: config.version, id: request.index, chapterId: chapter.id,
     orderInChapter: request.index - chapter.firstLevelId + 1, name: request.name ?? existing?.name ?? `Map ${request.index}`, difficulty: request.difficulty,
-    layout: shape.layout, initialSeals: shape.sealCells ?? [], objectives, moves: request.maxMoves, baseExp: config.levelBaseExp[request.index - 1],
+    layout: shape.layout, initialSeals: shape.sealCells ?? [], ...(shape.nodeCells ? { initialNodes: shape.nodeCells } : {}), objectives, moves: request.maxMoves, baseExp: config.levelBaseExp[request.index - 1],
     starThresholds: { mode: 'percentage', threeStarBelowPercent: 61, twoStarBelowPercent: 81 },
     spawnPolicy: { weights, collectionPressure: 0,
       comboChance: .05, setupChance: .15,
-      obstaclePressure: ['break-rocks', 'break-seals'].includes(request.objective) || request.rockBlockers ? .15 : 0, candidates: 4 },
+      obstaclePressure: ['break-rocks', 'break-seals', 'activate-nodes'].includes(request.objective) || request.rockBlockers || request.sealBlockers || request.nodeBlockers ? .15 : 0, candidates: 4 },
     retryAssistPolicy: { thresholds: [3, 5, 8], reductions: [.1, .2, .3] } }, config, (existing?.mapVersion ?? 0) + 1);
 }
 function saveArtifacts(directory, seed, config, report) {
@@ -192,6 +200,30 @@ function main(args = process.argv.slice(2)) {
         const variants = [];
         for (const shape of layouts) for (const count of counts) {
           try { variants.push(...addSealObstacles([shape], request.seed, count)); } catch {}
+        }
+        layouts.splice(0, layouts.length, ...variants);
+      } else if (request.objective === 'activate-nodes') {
+        const nodeCounts = request.fixedTargets ? [request.targets[0]] : [1, 2, 3];
+        const variants = [];
+        for (const shape of layouts) for (const sealCount of [4, 6, 8]) for (const nodeCount of nodeCounts) {
+          try {
+            const sealed = addSealObstacles([shape], request.seed ^ Math.imul(sealCount, 0x85ebca6b), sealCount);
+            variants.push(...addNodeObstacles(sealed, request.seed ^ Math.imul(nodeCount, 0xc2b2ae35), nodeCount));
+          } catch {}
+        }
+        layouts.splice(0, layouts.length, ...variants);
+      }
+      if (request.sealBlockers) {
+        const variants = [];
+        for (const shape of layouts) for (let count = request.sealBlockers[0]; count <= request.sealBlockers[1]; count++) {
+          try { variants.push(...addSealObstacles([shape], request.seed ^ Math.imul(count, 0x85ebca6b), count)); } catch {}
+        }
+        layouts.splice(0, layouts.length, ...variants);
+      }
+      if (request.nodeBlockers) {
+        const variants = [];
+        for (const shape of layouts) for (let count = request.nodeBlockers[0]; count <= request.nodeBlockers[1]; count++) {
+          try { variants.push(...addNodeObstacles([shape], request.seed ^ Math.imul(count, 0xc2b2ae35), count)); } catch {}
         }
         layouts.splice(0, layouts.length, ...variants);
       }

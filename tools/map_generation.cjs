@@ -22,7 +22,8 @@ function writeJSON(file, value) {
 }
 function engineHash() {
   return hash(['client/src/game/BoardEngine.ts', 'client/src/game/domain.ts', 'content/game-domain.ts',
-    'tools/simulate_maps.cjs', 'tools/generate_map_balance.cjs', 'tools/map_generation.cjs'].map(file => [file, fs.readFileSync(path.join(ROOT, file), 'utf8')]));
+    'tools/simulate_maps.cjs', 'tools/generate_map_balance.cjs', 'tools/map_generation.cjs',
+    'tools/generate_map.cjs', 'tools/render_generated_map.cjs'].map(file => [file, fs.readFileSync(path.join(ROOT, file), 'utf8')]));
 }
 function positiveInteger(value, label, min = 1, max = 10000) {
   const n = Number(value);
@@ -195,6 +196,25 @@ function addSealObstacles(layouts, seed, fixedCount = null) {
     return { ...shape, sealCount: count, sealCells };
   });
 }
+function addNodeObstacles(layouts, seed, fixedCount = 1) {
+  return layouts.map((shape, shapeIndex) => {
+    const width = shape.layout[0].length, height = shape.layout.length;
+    const occupied = new Set((shape.sealCells ?? []).map(position => position.row * width + position.column));
+    const available = shape.layout.flatMap((row, y) => row.flatMap((cell, x) => {
+      const index = y * width + x;
+      return cell === -1 && !occupied.has(index) ? [index] : [];
+    }));
+    if (!Number.isSafeInteger(fixedCount) || fixedCount < 1 || fixedCount > available.length) throw new Error('NODE_TARGET_EXCEEDS_LAYOUT');
+    const random = randomFor((seed ^ Math.imul(shapeIndex + 1, 0xc2b2ae35)) >>> 0 || 1);
+    const cells = [];
+    while (cells.length < fixedCount) {
+      const position = available.splice(Math.floor(random() * available.length), 1)[0];
+      if (position === undefined) throw new Error('NODE_TARGET_EXCEEDS_LAYOUT');
+      cells.push({ row: Math.floor(position / width), column: position % width });
+    }
+    return { ...shape, nodeCount: fixedCount, nodeCells: cells.sort((a, b) => a.row * width + a.column - (b.row * width + b.column)) };
+  });
+}
 function artifactDir(index) { return path.join(ROOT, 'content', 'map-seeds', String(index)); }
 function loadArtifact(index, { checkEngine = true } = {}) {
   const directory = artifactDir(index), seed = readJSON(path.join(directory, 'seed.json'));
@@ -216,5 +236,5 @@ function withAuthoringLock(callback) {
   finally { fs.closeSync(descriptor); fs.unlinkSync(file); }
 }
 module.exports = { ROOT, PROFILES, hash, readJSON, writeJSON, engineHash, positiveInteger, band, parseArgs,
-  randomFor, gameplaySeed, inBand, shapeKey, shapeChecks, generateLayouts, addRockObstacles, addSealObstacles,
+  randomFor, gameplaySeed, inBand, shapeKey, shapeChecks, generateLayouts, addRockObstacles, addSealObstacles, addNodeObstacles,
   artifactDir, loadArtifact, withAuthoringLock };

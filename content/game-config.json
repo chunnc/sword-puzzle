@@ -1,6 +1,6 @@
 {
-  "version": 18,
-  "levelCount": 10,
+  "version": 28,
+  "levelCount": 20,
   "qiCap": 100,
   "expRates": [
     30,
@@ -336,6 +336,16 @@
     100,
     100,
     100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
     100
   ],
   "chapters": [
@@ -345,6 +355,13 @@
       "order": 1,
       "firstLevelId": 1,
       "lastLevelId": 10
+    },
+    {
+      "id": "chapter-2",
+      "name": "Khảo Hạch Tông Môn",
+      "order": 2,
+      "firstLevelId": 11,
+      "lastLevelId": 20
     }
   ],
   "milestoneRewards": [

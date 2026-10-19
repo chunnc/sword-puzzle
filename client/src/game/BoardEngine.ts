@@ -94,7 +94,7 @@ export class BoardEngine {
     private advance(type: string, amount: number, tileKind?: number, chargeTier?: Tile['chargeTier']): void {
         for (const o of this.level.objectives) if (o.type === type && (o.type !== 'Collect' || o.tileKind === tileKind && (o.chargeTier === undefined || o.chargeTier === chargeTier))) {
             const next = this.objectiveProgress[o.id] + amount;
-            this.objectiveProgress[o.id] = o.type === 'Battle' || o.type === 'Boss' ? Math.min(o.target, next) : next;
+            this.objectiveProgress[o.id] = o.type === 'Battle' || o.type === 'Boss' || o.type === 'ActivateNodes' ? Math.min(o.target, next) : next;
         }
     }
     get lost(): boolean { return this.moves <= 0 && !this.won; }
@@ -236,6 +236,7 @@ export class BoardEngine {
     }
     private *resolve(groups: number[][], animation: BoardActionStart, anchors: number[] = [], initial?: number[], obstacleOnly = false): Generator<BoardResolutionStep, void> {
         let chain = 0;
+        const nodesHitThisAction = new Set<number>();
         let mutation = animation.kind === 'skill' && !initial ? anchors : [];
         do {
             chain++;
@@ -253,6 +254,46 @@ export class BoardEngine {
             const scheduled = new Set<number>();
             const direct = new Set<number>();
             let waveDamage = 0;
+            const chargeNearbyNodes = (cells: number[]) => {
+                const hitNodes = new Set<number>();
+                for (const i of cells) {
+                    const node = this.tiles[i];
+                    if (node?.nodeCharge !== undefined) hitNodes.add(i);
+                    const x = i % this.width, y = Math.floor(i / this.width);
+                    for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+                        if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height) continue;
+                        const index = ny * this.width + nx;
+                        if (this.tiles[index]?.nodeCharge !== undefined) hitNodes.add(index);
+                    }
+                }
+                for (const index of [...hitNodes].sort((a, b) => a - b)) {
+                    if (nodesHitThisAction.has(index)) continue;
+                    nodesHitThisAction.add(index);
+                    const node = this.tiles[index];
+                    if (!node || node.nodeCharge === undefined) continue;
+                    if (node.nodeCharge < 2) {
+                        this.tiles[index] = { ...node, nodeCharge: (node.nodeCharge + 1) as 1 | 2 };
+                        changed.add(index);
+                        continue;
+                    }
+                    const { nodeCharge: _charge, ...revealedTile } = node;
+                    this.tiles[index] = revealedTile;
+                    changed.add(index);
+                    this.advance('ActivateNodes', 1);
+                    const seals = this.tiles.flatMap((tile, sealIndex) => tile?.locked ? [sealIndex] : []);
+                    seals.sort((a, b) => this.distance(a, index) - this.distance(b, index)
+                        || Math.floor(b / this.width) - Math.floor(a / this.width)
+                        || a % this.width - b % this.width);
+                    for (const sealIndex of seals.slice(0, Math.ceil(seals.length / 2))) {
+                        const tile = this.tiles[sealIndex];
+                        if (!tile?.locked) continue;
+                        this.tiles[sealIndex] = { ...tile, locked: false };
+                        changed.add(sealIndex);
+                        unlocked.add(sealIndex);
+                        this.advance('BreakSeals', 1);
+                    }
+                }
+            };
             for (const group of groups) {
                 const charged = group.some(i => this.tiles[i]!.chargeTier > 0);
                 if (!charged && group.length >= 4) {
@@ -301,6 +342,7 @@ export class BoardEngine {
                     const tile = this.tiles[i];
                     if (!tile || cleared.has(i) || unlocked.has(i) || tile.kind === this.kind('rock'))
                         continue;
+                    if (tile.nodeCharge !== undefined) continue;
                     if (protectedCells.has(i)) {
                         // A retained match anchor still breaks adjacent obstacles.
                         weaken(i);
@@ -338,6 +380,7 @@ export class BoardEngine {
                     this.score += 10 * chain;
                     weaken(i);
                 }
+                chargeNearbyNodes(cells);
             };
             const record = (kind: BoardAnimationEffect['kind'], cells: number[], source?: number, bonus?: () => void, swordChargeTier?: 4 | 5, spiritChargeTier?: 4 | 5, origin: BoardAnimationEffect['origin'] = 'charged') => {
                 const rocksBefore = new Set(brokenRocks);
@@ -366,6 +409,7 @@ export class BoardEngine {
                         this.advance('BreakSeals', 1);
                     }
                 }
+                chargeNearbyNodes(initial);
                 effects.push({ kind: 'skill', origin: 'skill', skillId: animation.skillId, brokenRocks: [...brokenRocks], cells: initial, damage: 0, qi: 0, objectiveProgressAfter: { ...this.objectiveProgress } });
             }
             else if (initial)
@@ -456,7 +500,7 @@ export class BoardEngine {
         if (id === 'van-kiem')
             return this.tiles[indices[0]]!.kind !== this.kind('rock');
         if (id === 'pha-chuong')
-            return this.area(indices[0], 1).some(i => this.tiles[i]!.kind === this.kind('rock') || this.tiles[i]!.locked);
+            return this.area(indices[0], 1).some(i => this.tiles[i]!.kind === this.kind('rock') || this.tiles[i]!.locked || this.tiles[i]!.nodeCharge !== undefined);
         if (id === 'hoi-linh') {
             const cells = this.area(indices[0], 1).filter(i => this.movable(i));
             return cells.length > 1 && new Set(cells.map(i => `${this.tiles[i]!.kind}:${this.tiles[i]!.chargeTier}`)).size > 1;
@@ -477,7 +521,7 @@ export class BoardEngine {
     }
     private inside(p: CellPosition): boolean { return p.x >= 0 && p.y >= 0 && p.x < this.width && p.y < this.height && this.level.board.activeCells[this.indexOf(p)]; }
     private adjacent(a: CellPosition, b: CellPosition): boolean { return this.inside(a) && this.inside(b) && Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1; }
-    private movable(i: number): boolean { const t = this.tiles[i]; return !!t && t.kind !== this.kind('rock') && !t.locked; }
+    private movable(i: number): boolean { const t = this.tiles[i]; return !!t && t.kind !== this.kind('rock') && !t.locked && t.nodeCharge === undefined; }
     private row(y: number): number[] { return Array.from({ length: this.width }, (_, x) => y * this.width + x); }
     private column(x: number): number[] { return Array.from({ length: this.height }, (_, y) => y * this.width + x); }
     private distance(a: number, b: number): number { return Math.abs(a % this.width - b % this.width) + Math.abs(Math.floor(a / this.width) - Math.floor(b / this.width)); }
@@ -497,9 +541,10 @@ export class BoardEngine {
             for (let start = 0; start < line.length;) {
                 const tile = this.tiles[line[start]];
                 let end = start + 1;
-                while (end < line.length && tile && tile.kind !== this.kind('rock') && this.tiles[line[end]]?.kind === tile.kind)
+                while (end < line.length && tile && tile.kind !== this.kind('rock') && tile.nodeCharge === undefined
+                    && this.tiles[line[end]]?.kind === tile.kind && this.tiles[line[end]]?.nodeCharge === undefined)
                     end++;
-                if (tile && tile.kind !== this.kind('rock') && end - start >= 3) {
+                if (tile && tile.kind !== this.kind('rock') && tile.nodeCharge === undefined && end - start >= 3) {
                     const set = new Set(line.slice(start, end));
                     for (let g = groups.length - 1; g >= 0; g--)
                         if ([...groups[g]].some(i => set.has(i))) {
@@ -605,7 +650,7 @@ export class BoardEngine {
     }
     private obstacleScore(groups: number[][], board: (Tile | null)[]): number {
         return groups.reduce((sum, group) => sum + group.filter(index =>
-            this.area(index, 1).some(nearby => board[nearby]?.kind === this.kind('rock') || board[nearby]?.locked)).length, 0);
+            this.area(index, 1).some(nearby => board[nearby]?.kind === this.kind('rock') || board[nearby]?.locked || board[nearby]?.nodeCharge !== undefined)).length, 0);
     }
     private rejectObstacleCombo(groups: number[][], board: (Tile | null)[]): boolean {
         const policy = this.level.mapDefinition?.spawnPolicy;
@@ -679,7 +724,7 @@ export class BoardEngine {
             for (let boundary = 0; boundary <= this.height; boundary++) {
                 const i = boundary * this.width + x;
                 const t = boundary < this.height ? this.tiles[i] : null;
-                if (boundary < this.height && this.level.board.activeCells[i] && !(t && (t.kind === this.kind('rock') || t.locked))) continue;
+                if (boundary < this.height && this.level.board.activeCells[i] && !(t && (t.kind === this.kind('rock') || t.locked || t.nodeCharge !== undefined))) continue;
                 let write = start;
                 for (let y = start; y < boundary; y++) {
                     const tile = this.tiles[y * this.width + x];
@@ -706,14 +751,15 @@ export class BoardEngine {
         return this.applyRefill(this.refillPositions());
     }
     private matchesAt(index: number): boolean {
-        const kind = this.tiles[index]?.kind;
-        if (kind === undefined || kind === this.kind('rock')) return false;
+        const tile = this.tiles[index], kind = tile?.kind;
+        if (kind === undefined || kind === this.kind('rock') || tile?.nodeCharge !== undefined) return false;
         const x = index % this.width, y = Math.floor(index / this.width);
         for (const [dx,dy] of [[1,0],[0,1]]) {
             let count = 1;
             for (const direction of [-1,1]) for (let step = 1; step <= 2; step++) {
                 const nx = x + dx * step * direction, ny = y + dy * step * direction;
-                if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height || this.tiles[ny*this.width+nx]?.kind !== kind) break;
+                const neighbor = ny * this.width + nx;
+                if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height || this.tiles[neighbor]?.kind !== kind || this.tiles[neighbor]?.nodeCharge !== undefined) break;
                 count++;
             }
             if (count >= 3) return true;
@@ -858,6 +904,7 @@ export class BoardEngine {
                 this.tiles.push(plain(kind));
             }
             for (const seal of map.initialSeals) this.tiles[(this.height-1-seal.row)*this.width+seal.column]!.locked = true;
+            for (const node of map.initialNodes ?? []) this.tiles[(this.height-1-node.row)*this.width+node.column]!.nodeCharge = 0;
             if (!this.findGroups().length && this.legalMoves().length) return;
         }
         throw new Error('NO_PLAYABLE_LAYOUT');

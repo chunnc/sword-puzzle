@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { validateContent, validateMap, contentWire } = require('./game-runtime.cjs');
-const { readJSON, generateLayouts, addRockObstacles, addSealObstacles, shapeKey, hash, engineHash } = require('./map_generation.cjs');
+const { readJSON, generateLayouts, addRockObstacles, addSealObstacles, addNodeObstacles, shapeKey, hash, engineHash } = require('./map_generation.cjs');
 const { parseRequest, prepareCatalog, mapTemplate } = require('./generate_map.cjs');
 const { renderGeneratedMap } = require('./render_generated_map.cjs');
 const { moveCutoffs, percentile, firstAttemptQuantile, targetChoices, convergeBudget, policyVariants, pressureVariants, pressureSelectable } = require('./generate_map_balance.cjs');
@@ -160,6 +160,43 @@ test('break-seals creates connected seal clusters and a valid BreakSeals objecti
   assert.throws(() => parseRequest(['--difficulty', 'easy', '--objective', 'break-seals', '--enemy-name', 'Wrong'], 4));
 });
 
+test('activate-nodes generates non-overlapping Trận Nhãn cells and a validated objective', () => {
+  const request = parseRequest(['--difficulty', 'easy', '--objective', 'activate-nodes', '--target', '1'], catalog.length + 1);
+  const nextConfig = prepareCatalog(config, catalog, request);
+  const layout = generateLayouts(97531, 1, catalog);
+  const sealed = addSealObstacles(layout, 97531, 5);
+  const shape = addNodeObstacles(sealed, 97531, 1)[0];
+  const map = validateMap(mapTemplate(nextConfig, catalog, request, shape), nextConfig);
+  assert.deepEqual(map.objectives, [{ id: 'activate-nodes', type: 'ActivateNodes', target: 1 }]);
+  assert.equal(map.initialNodes.length, 1);
+  assert.equal(map.initialSeals.length, 5);
+  assert.equal(map.initialNodes.some(node => map.initialSeals.some(seal => seal.row === node.row && seal.column === node.column)), false);
+  assert.equal(map.spawnPolicy.obstaclePressure, .15);
+});
+
+test('optional node blockers can support other objective types and validate their range', () => {
+  const request = parseRequest(['--difficulty', 'medium', '--objective', 'battle', '--node-blockers', '1-2'], catalog.length + 1);
+  assert.deepEqual(request.nodeBlockers, [1, 2]);
+  const nextConfig = prepareCatalog(config, catalog, request);
+  const shape = addNodeObstacles(generateLayouts(86421, 1, catalog), 86421, 2)[0];
+  const map = validateMap(mapTemplate(nextConfig, catalog, request, shape), nextConfig);
+  assert.equal(map.initialNodes.length, 2);
+  assert.equal(map.objectives[0].type, 'Battle');
+  assert.throws(() => parseRequest(['--difficulty', 'easy', '--objective', 'activate-nodes', '--node-blockers', '1'], catalog.length + 1));
+  assert.throws(() => parseRequest(['--difficulty', 'easy', '--objective', 'battle', '--node-blockers', '1-4'], catalog.length + 1));
+});
+
+test('optional seal blockers can support battle and boss maps without becoming goals', () => {
+  const request = parseRequest(['--difficulty', 'medium', '--objective', 'boss', '--seal-blockers', '4-6'], catalog.length + 1);
+  const nextConfig = prepareCatalog(config, catalog, request);
+  const shape = addSealObstacles(generateLayouts(75310, 1, catalog), 75310, 6)[0];
+  const map = validateMap(mapTemplate(nextConfig, catalog, request, shape), nextConfig);
+  assert.equal(map.objectives[0].type, 'Boss');
+  assert.equal(map.initialSeals.length, 6);
+  assert.equal(map.spawnPolicy.obstaclePressure, .15);
+  assert.throws(() => parseRequest(['--difficulty', 'easy', '--objective', 'break-seals', '--seal-blockers', '4'], catalog.length + 1));
+});
+
 test('generation caps budgets at 30 and uses rounded inclusive star move cutoffs', () => {
   const request = parseRequest(['--difficulty', 'easy', '--objective', 'collect'], catalog.length + 1);
   assert.equal(request.maxMoves, 30);
@@ -195,6 +232,9 @@ test('budget convergence caps at 30, records censoring, and rejects a cycle', ()
   assert.deepEqual(policyVariants('easy', 'break-rocks').map(policy => [policy.comboChance, policy.setupChance]),
     [[.05, .15], [.1, .25], [.15, .35]]);
   assert.deepEqual(pressureVariants('break-seals'), [0, .15, .3]);
+  assert.deepEqual(pressureVariants('battle', false, false, true), [0, .15, .3]);
+  assert.equal(pressureSelectable('battle', 0, false, false, true), false);
+  assert.equal(pressureSelectable('battle', .15, false, false, true), true);
   assert.equal(pressureSelectable('break-seals', 0), false);
   assert.equal(pressureSelectable('break-seals', .15), true);
   assert.equal(pressureSelectable('collect', 0), true);

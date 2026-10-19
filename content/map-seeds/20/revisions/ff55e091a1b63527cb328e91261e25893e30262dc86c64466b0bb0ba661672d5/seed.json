@@ -1,0 +1,304 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 28,
+    "id": 20,
+    "chapterId": "chapter-2",
+    "orderInChapter": 10,
+    "name": "Hộ Tông Trận Linh",
+    "difficulty": "hard",
+    "layout": [
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        0,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 0,
+        "column": 4
+      },
+      {
+        "row": 1,
+        "column": 3
+      },
+      {
+        "row": 1,
+        "column": 4
+      },
+      {
+        "row": 1,
+        "column": 5
+      },
+      {
+        "row": 1,
+        "column": 6
+      },
+      {
+        "row": 2,
+        "column": 5
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 2,
+        "column": 0
+      }
+    ],
+    "objectives": [
+      {
+        "id": "main",
+        "type": "Boss",
+        "target": 631,
+        "enemy": {
+          "id": "boss-20",
+          "name": "Trận Linh Hộ Tông",
+          "artKey": "beast"
+        }
+      }
+    ],
+    "moves": 30,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.1,
+      "setupChance": 0.25,
+      "obstaclePressure": 0.3,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 22020,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "hard",
+      "objective": "boss",
+      "index": 20,
+      "bands": {
+        "win": [
+          0.25,
+          0.4
+        ],
+        "three": [
+          0.05,
+          0.15
+        ],
+        "exclusiveWin": false,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.1,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": [
+        1,
+        1
+      ],
+      "sealBlockers": [
+        6,
+        6
+      ],
+      "minimumTarget": null,
+      "seed": 22020,
+      "totalExp": 1140,
+      "layouts": 2,
+      "trainingSeeds": 100,
+      "validationSeeds": 1000,
+      "retrySeeds": 20,
+      "retryAttempts": 10,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Hộ Tông Trận Linh",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": {
+        "id": "boss-20",
+        "name": "Trận Linh Hộ Tông",
+        "artKey": "beast"
+      }
+    },
+    "shape": {
+      "family": "courtyard",
+      "layout": [
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          0,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          0,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          0,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          0,
+          0,
+          -1,
+          -1,
+          -1
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 7,
+        "height": 5,
+        "activeCells": 27,
+        "holes": 8,
+        "holeRatio": 0.22857142857142856
+      },
+      "key": "[[0,0,1,1,1],[1,1,1,1,1],[1,0,1,1,0],[1,1,0,0,0],[1,1,1,1,1],[1,1,1,1,1],[1,1,0,1,1]]",
+      "sealCount": 6,
+      "sealCells": [
+        {
+          "row": 0,
+          "column": 4
+        },
+        {
+          "row": 1,
+          "column": 3
+        },
+        {
+          "row": 1,
+          "column": 4
+        },
+        {
+          "row": 1,
+          "column": 5
+        },
+        {
+          "row": 1,
+          "column": 6
+        },
+        {
+          "row": 2,
+          "column": 5
+        }
+      ],
+      "nodeCount": 1,
+      "nodeCells": [
+        {
+          "row": 2,
+          "column": 0
+        }
+      ]
+    },
+    "sourceCatalogHash": "79cd818e44a72bdf817252d3380a72324315cfd84894dff9ac052cda6809bee7",
+    "authoringConfigVersion": 28
+  },
+  "hashes": {
+    "map": "a51d892fcd5403148dfc6b60602451a6108a27e44bbe970d8b06b6eac31bdbe0",
+    "config": "96b2b43302e2608a5d413041f027c5cbcee6b6d7b4f50c191124659072e4845a",
+    "engine": "46c662339798ad2305b715019b9937ac83eba4a9566b88e6f5bd339661850a9a",
+    "report": "155a91f5a47d888d7a9eb23c566d2e16fe90c03c3c14ed2fa1ec73e3ee8625fa"
+  }
+}

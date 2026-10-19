@@ -1,0 +1,228 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 20,
+    "id": 12,
+    "chapterId": "chapter-2",
+    "orderInChapter": 2,
+    "name": "Bài Thi Linh Thạch",
+    "difficulty": "easy",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-sword",
+        "type": "Collect",
+        "tileKind": 1,
+        "target": 12
+      },
+      {
+        "id": "collect-fire",
+        "type": "Collect",
+        "tileKind": 2,
+        "target": 12
+      }
+    ],
+    "moves": 19,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 58,
+      "twoStarBelowPercent": 79
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 21212,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "easy",
+      "objective": "collect",
+      "index": 12,
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "starQuantile": 0.8,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword",
+        "fire"
+      ],
+      "targets": [
+        12,
+        12
+      ],
+      "fixedTargets": true,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": null,
+      "minimumTarget": null,
+      "seed": 21212,
+      "totalExp": 660,
+      "layouts": 2,
+      "trainingSeeds": 40,
+      "validationSeeds": 1000,
+      "retrySeeds": 20,
+      "retryAttempts": 10,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Bài Thi Linh Thạch",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null
+    },
+    "shape": {
+      "family": "stairs",
+      "layout": [
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 5,
+        "height": 6,
+        "activeCells": 22,
+        "holes": 8,
+        "holeRatio": 0.26666666666666666
+      },
+      "key": "[[0,0,0,0,1,1],[0,0,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1],[0,0,1,1,1,1]]"
+    },
+    "sourceCatalogHash": "71882d7496e7b6d37bcb8a38c5c89f4c8f62ada741b8e765dee49538eeacdef6",
+    "authoringConfigVersion": 20
+  },
+  "hashes": {
+    "map": "fdb91a73fc85ac08cb4550066a0c0d33444800571581ce3645f0e661e82746f4",
+    "config": "8759047d011661f9436e4534a0bf696c5852320a759bc94f535be9681d206d64",
+    "engine": "bef89de711496b87dfdee36ce50e569ac0c63ab31c50ceb1be6aaa52c7b36366",
+    "report": "80c7db691d01bbb7f70149ac5b7b33b5cbc2d38a0ccd8586fab0a59885657c22"
+  }
+}

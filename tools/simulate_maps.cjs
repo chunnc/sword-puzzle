@@ -35,8 +35,8 @@ function matched(snapshot, move) {
   for (const [start,step,len] of [...Array.from({length:h},(_,y)=>[y*w,1,w]), ...Array.from({length:w},(_,x)=>[x,w,h])]) {
     for (let i=0;i<len;) {
       const t = tiles[start+i*step]; let end=i+1;
-      while (end<len && t && t.kind!==rock && tiles[start+end*step]?.kind===t.kind) end++;
-      if (t && t.kind!==rock && end-i>=3) for(let n=i;n<end;n++) result.add(start+n*step);
+      while (end<len && t && t.kind!==rock && t.nodeCharge===undefined && tiles[start+end*step]?.kind===t.kind && tiles[start+end*step]?.nodeCharge===undefined) end++;
+      if (t && t.kind!==rock && t.nodeCharge===undefined && end-i>=3) for(let n=i;n<end;n++) result.add(start+n*step);
       i=end;
     }
   }
@@ -48,6 +48,7 @@ function clearValue(snapshot, cells, tiles=snapshot.tiles) {
   for(const i of cells) {
     const tile=tiles[i]; if(!tile)continue;
     value += .08 + (tile.chargeTier ? tile.chargeTier*.25 : 0);
+    if(tile.locked)value+=.6;
     for(const o of snapshot.level.objectives) {
       if(snapshot.objectiveProgress[o.id]>=o.target)continue;
       if(o.type==='Collect' && tile.kind===o.tileKind && (o.chargeTier===undefined || o.chargeTier===tile.chargeTier && !tile.locked))value+=1;
@@ -61,6 +62,27 @@ function clearValue(snapshot, cells, tiles=snapshot.tiles) {
       }
     }
     value+=(content.tiles.find(t=>t.id===tile.kind)?.qi??0)*.08;
+  }
+  const hitNodes=new Set();
+  for(const i of cells) {
+    if(tiles[i]?.nodeCharge!==undefined)hitNodes.add(i);
+    const x=i%w,y=Math.floor(i/w);
+    for(const [dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]) {
+      const nx=x+dx,ny=y+dy;
+      if(nx<0||nx>=w||ny<0||ny>=h)continue;
+      const index=ny*w+nx;
+      if(tiles[index]?.nodeCharge!==undefined)hitNodes.add(index);
+    }
+  }
+  for(const index of hitNodes) {
+    const node=tiles[index], goal=snapshot.level.objectives.find(o=>o.type==='ActivateNodes'&&snapshot.objectiveProgress[o.id]<o.target);
+    const remainingSeals=tiles.filter(tile=>tile?.locked).length;
+    if(goal)value+=node.nodeCharge===2?5:1.5;
+    else value+=node.nodeCharge===2?Math.ceil(remainingSeals/2)*.8:.2;
+    if(node.nodeCharge===2)for(const o of snapshot.level.objectives.filter(o=>o.type==='BreakSeals'&&snapshot.objectiveProgress[o.id]<o.target)) {
+      const locked=tiles.flatMap(tile=>tile?.locked?[tile]:[]);
+      value+=Math.min(Math.ceil(locked.length/2),o.target-snapshot.objectiveProgress[o.id])*1.4;
+    }
   }
   return value;
 }

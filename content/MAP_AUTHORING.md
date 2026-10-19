@@ -1,12 +1,23 @@
-# Map authoring · content v8
+# Map authoring · local content catalog
 
 `game-config.json` stores global progression and registry data. `game-maps.json` stores
 one map per numeric ID. The local catalog currently starts with two tutorial maps.
 
 Layouts are top-first matrices: `0` is a permanent hole, `-1` draws a random ordinary
 tile and positive values refer to `tiles[].id`. Explicit pieces cannot form a match before
-the player acts. Seals use zero-based top-first coordinates; engine board coordinates have
-their origin at the bottom. Firestore encodes layouts as `layoutRows: [{cells: [...]}]`.
+the player acts. Seals and Trận Nhãn use zero-based top-first coordinates; engine board
+coordinates have their origin at the bottom. Firestore encodes layouts as
+`layoutRows: [{cells: [...]}]`.
+
+`initialNodes` overlays Trận Nhãn on random (`-1`) cells and cannot overlap a seal. A node
+cell is fixed until activated: it cannot be swapped, matched, or moved by gravity. Each
+successful swap or skill action that clears a piece in its orthogonal neighborhood, or
+hits the node itself, adds at most one charge to each touched node. At three charges, the
+node reveals its underlying piece and breaks `ceil(remainingSeals / 2)` seals. It selects
+the nearest seals by Manhattan distance, then top-to-bottom and left-to-right for ties.
+Breaking seals this way advances `BreakSeals` progress. `ActivateNodes` objectives count
+one per activated node. The current charge (`0`–`2`) is optional tile state in the run
+snapshot, so existing saves remain valid.
 
 Every map belongs to one chapter and has an immutable `mapVersion`, a tile registry, a
 percentage star rule and spawn/retry policies. New versions go into `gameMaps/{mapId}`;
@@ -67,11 +78,14 @@ only. Publishing to a shared project is a separate operation.
 ## Generated maps after the tutorials
 
 Use `npm run maps:generate -- --difficulty medium --objective collect`,
-`--objective boss`, `--objective break-rocks`, or `--objective break-seals`. Rock and
-seal objectives generate connected obstacle cells and keep placement and target count in
-sync. Collect maps may also use `--rock-blockers MIN-MAX` to place a connected blocker
-cluster without a BreakRocks goal; the candidates are calibrated with obstacle pressure.
-Battle and Boss maps may use `--min-target HP` to floor automatically proposed HP. The generator
+`--objective boss`, `--objective break-rocks`, `--objective break-seals`, or
+`--objective activate-nodes`. Rock and seal objectives generate connected obstacle cells
+and keep placement and target count in sync. Collect maps may also use
+`--rock-blockers MIN-MAX`; collect, battle, boss and BreakRocks maps may use
+`--seal-blockers N` and any map except an ActivateNodes map may use `--node-blockers N`
+for optional board elements. These
+obstacles are calibrated with obstacle pressure. Battle and Boss maps may use
+`--min-target HP` to floor automatically proposed HP. The generator
 adds the next contiguous local ID, defaults to the last chapter, and produces a
 seed/config/report/preview bundle under `content/map-seeds/INDEX/`. Maps are bounded
 to 7 columns × 8 rows, contain 12–40% holes, and use random normal cells rather than

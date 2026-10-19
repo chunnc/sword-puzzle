@@ -75,7 +75,7 @@ function progressQuantile(results, map, probability) {
   return percentile(values, probability);
 }
 function targetChoices(template, request, results) {
-  if (request.fixedTargets || ['break-rocks', 'break-seals'].includes(request.objective)) return [null];
+  if (request.fixedTargets || ['break-rocks', 'break-seals', 'activate-nodes'].includes(request.objective)) return [null];
   // To let a fraction q of runs reach an objective, set its target near the
   // (1-q) quantile of what runs can achieve within the reference move budget.
   const progress = Math.floor(progressQuantile(results, template.map, 1 - request.starQuantile));
@@ -89,11 +89,11 @@ function policyVariants(difficulty, objective) {
   return CHANCE_POLICIES.map(policy => ({ ...policy,
     collectionPressure: objective === 'collect' ? pressure : 0 }));
 }
-function pressureVariants(objective, hasRockBlockers = false) {
-  return ['break-rocks', 'break-seals'].includes(objective) || hasRockBlockers ? [0, .15, .3] : [0];
+function pressureVariants(objective, hasRockBlockers = false, hasNodeBlockers = false, hasSealBlockers = false) {
+  return ['break-rocks', 'break-seals', 'activate-nodes'].includes(objective) || hasRockBlockers || hasNodeBlockers || hasSealBlockers ? [0, .15, .3] : [0];
 }
-function pressureSelectable(objective, obstaclePressure, hasRockBlockers = false) {
-  return !(['break-rocks', 'break-seals'].includes(objective) || hasRockBlockers) || obstaclePressure > 0;
+function pressureSelectable(objective, obstaclePressure, hasRockBlockers = false, hasNodeBlockers = false, hasSealBlockers = false) {
+  return !(['break-rocks', 'break-seals', 'activate-nodes'].includes(objective) || hasRockBlockers || hasNodeBlockers || hasSealBlockers) || obstaclePressure > 0;
 }
 function calibrate(templates, config, request, progress = console.log) {
   installSnapshot(config, []);
@@ -101,12 +101,12 @@ function calibrate(templates, config, request, progress = console.log) {
   const coarseSeeds = Math.min(40, request.trainingSeeds);
   for (const [index, template] of templates.entries()) {
     const policies = policyVariants(template.map.difficulty, request.objective);
-    for (const obstaclePressure of pressureVariants(request.objective, Boolean(request.rockBlockers))) for (const policy of policies) {
+    for (const obstaclePressure of pressureVariants(request.objective, Boolean(request.rockBlockers), Boolean(request.nodeBlockers), Boolean(request.sealBlockers))) for (const policy of policies) {
       try {
         const probe = structuredClone(template.map);
         probe.moves = Math.max(request.minMoves, Math.round(.6 * request.maxMoves));
         Object.assign(probe.spawnPolicy, policy, { obstaclePressure });
-        if (!request.fixedTargets && !['break-rocks', 'break-seals'].includes(request.objective)) {
+        if (!request.fixedTargets && !['break-rocks', 'break-seals', 'activate-nodes'].includes(request.objective)) {
           probe.objectives.forEach(objective => { objective.target = objective.type === 'Collect' ? 30 : 1_000_000_000; });
         }
         const capacity = samples(probe, coarseSeeds, 'training', request);
@@ -125,7 +125,7 @@ function calibrate(templates, config, request, progress = console.log) {
             if (cutoffs) {
               map.starThresholds = cutoffs.thresholds;
               const report = assess(map, fit.measurement.results, request);
-              const selectable = pressureSelectable(request.objective, obstaclePressure, Boolean(request.rockBlockers));
+              const selectable = pressureSelectable(request.objective, obstaclePressure, Boolean(request.rockBlockers), Boolean(request.nodeBlockers), Boolean(request.sealBlockers));
               if (selectable) shortlist.push({ map: structuredClone(map), shape: template.shape, coarse: report, history: fit.history });
               adjustmentHistory.push({ shape: index + 1, policy, obstaclePressure, target: map.objectives[0].target,
                 moves: fit.moves, history: fit.history, status: !selectable ? 'pressure-control-only' : report.passed ? 'candidate' : 'three-star-band-miss' });

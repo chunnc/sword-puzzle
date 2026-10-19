@@ -1,0 +1,1600 @@
+{
+  "status": "failed",
+  "request": {
+    "policyVersion": 2,
+    "difficulty": "medium",
+    "objective": "battle",
+    "index": 19,
+    "bands": {
+      "win": [
+        0.8,
+        1
+      ],
+      "three": [
+        0.45,
+        0.55
+      ],
+      "exclusiveWin": true,
+      "exclusiveThree": false
+    },
+    "starQuantile": 0.5,
+    "winRateEnforced": false,
+    "minMoves": 6,
+    "maxMoves": 30,
+    "tiles": [
+      "sword"
+    ],
+    "targets": null,
+    "fixedTargets": false,
+    "weights": {},
+    "rockBlockers": null,
+    "nodeBlockers": [
+      1,
+      1
+    ],
+    "sealBlockers": [
+      6,
+      6
+    ],
+    "minimumTarget": null,
+    "seed": 21919,
+    "totalExp": 1080,
+    "layouts": 2,
+    "trainingSeeds": 100,
+    "validationSeeds": 1000,
+    "retrySeeds": 20,
+    "retryAttempts": 10,
+    "retryWinMedian": null,
+    "retryThreeMedian": null,
+    "name": "Thi Đấu Tranh Tài",
+    "replace": false,
+    "chapter": null,
+    "chapterName": null,
+    "enemy": {
+      "id": "battle-19",
+      "name": "Đệ Tử Thách Đấu",
+      "artKey": "beast"
+    }
+  },
+  "error": "NO_BALANCED_CANDIDATE: training constraints were not relaxed",
+  "details": {
+    "candidates": 40,
+    "evaluated": 36,
+    "rejected": [
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 985,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 986,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 987,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 988,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 989,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 993,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 994,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 1050,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 1051,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.3,
+        "target": 985,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.3,
+        "target": 986,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.3,
+        "target": 987,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.3,
+        "target": 988,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 1,
+        "policy": {
+          "comboChance": 0.05,
+          "setupChance": 0.15,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.3,
+        "target": 989,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 2,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 634,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 2,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 635,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 2,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 628,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 2,
+        "policy": {
+          "comboChance": 0.15,
+          "setupChance": 0.35,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.15,
+        "target": 629,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 2,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.3,
+        "target": 637,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      },
+      {
+        "shape": 2,
+        "policy": {
+          "comboChance": 0.1,
+          "setupChance": 0.25,
+          "collectionPressure": 0
+        },
+        "obstaclePressure": 0.3,
+        "target": 638,
+        "reason": "over-budget",
+        "history": [
+          {
+            "iteration": 1,
+            "testedMoves": 30,
+            "quantileMoves": 19,
+            "censored": false,
+            "derivedMoves": 32
+          }
+        ]
+      }
+    ],
+    "closest": [
+      {
+        "map": {
+          "contentVersion": 27,
+          "id": 19,
+          "chapterId": "chapter-2",
+          "orderInChapter": 9,
+          "name": "Thi Đấu Tranh Tài",
+          "difficulty": "medium",
+          "layout": [
+            [
+              0,
+              0,
+              -1,
+              -1,
+              0,
+              0
+            ],
+            [
+              0,
+              -1,
+              -1,
+              -1,
+              -1,
+              0
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              0,
+              -1,
+              -1,
+              -1,
+              -1,
+              0
+            ],
+            [
+              0,
+              0,
+              -1,
+              -1,
+              0,
+              0
+            ]
+          ],
+          "initialSeals": [
+            {
+              "row": 2,
+              "column": 4
+            },
+            {
+              "row": 2,
+              "column": 5
+            },
+            {
+              "row": 3,
+              "column": 2
+            },
+            {
+              "row": 3,
+              "column": 3
+            },
+            {
+              "row": 3,
+              "column": 4
+            },
+            {
+              "row": 3,
+              "column": 5
+            }
+          ],
+          "initialNodes": [
+            {
+              "row": 3,
+              "column": 0
+            }
+          ],
+          "objectives": [
+            {
+              "id": "main",
+              "type": "Battle",
+              "target": 990,
+              "enemy": {
+                "id": "battle-19",
+                "name": "Đệ Tử Thách Đấu",
+                "artKey": "beast"
+              }
+            }
+          ],
+          "moves": 30,
+          "baseExp": 100,
+          "starThresholds": {
+            "mode": "percentage",
+            "threeStarBelowPercent": 61,
+            "twoStarBelowPercent": 81
+          },
+          "spawnPolicy": {
+            "weights": {
+              "1": 100,
+              "2": 100,
+              "3": 100,
+              "4": 100
+            },
+            "collectionPressure": 0,
+            "comboChance": 0.1,
+            "setupChance": 0.25,
+            "obstaclePressure": 0.15,
+            "candidates": 4
+          },
+          "retryAssistPolicy": {
+            "thresholds": [
+              3,
+              5,
+              8
+            ],
+            "reductions": [
+              0.1,
+              0.2,
+              0.3
+            ]
+          },
+          "mapVersion": 1,
+          "rulesMode": "modern",
+          "tileRegistry": {
+            "sword": 1,
+            "fire": 2,
+            "lightning": 3,
+            "spirit": 4,
+            "rock": 5
+          }
+        },
+        "assessment": {
+          "passed": true,
+          "failures": [],
+          "loss": 0,
+          "summary": {
+            "mapHash": "ac60c1a78097248eed6084f2e31599f8887fd009eca986783d24878c68c34198",
+            "id": 19,
+            "difficulty": "medium",
+            "samples": 40,
+            "winRate": 1,
+            "starRates": [
+              0,
+              0.125,
+              0.375,
+              0.5
+            ],
+            "suboptimalChoices": 165,
+            "suboptimalChoiceRate": 0.2185430463576159,
+            "medianMoves": 18.5,
+            "actions": 755,
+            "waveCounts": {
+              "1": 292,
+              "2": 262,
+              "3": 122,
+              "4": 79
+            },
+            "metrics": {
+              "seeded": 61,
+              "setups": 148,
+              "setupAttempts": 189,
+              "setupFallbacks": 41,
+              "setupUsed": 39,
+              "chargesCreated": 495,
+              "chargesActivated": 400,
+              "settlements": 28
+            },
+            "settlementRate": 0.03708609271523179,
+            "movesHistogram": {
+              "11": 1,
+              "12": 2,
+              "13": 2,
+              "15": 1,
+              "16": 2,
+              "17": 4,
+              "18": 8,
+              "19": 2,
+              "20": 7,
+              "21": 4,
+              "22": 1,
+              "24": 1,
+              "25": 3,
+              "26": 2
+            },
+            "averageMoves": 18.875,
+            "averageProgress": 1,
+            "averageFailedProgress": null,
+            "averageReshuffles": 0,
+            "averageWaves": 37.45,
+            "maxChain": 4,
+            "bot": "normal",
+            "power": "expected",
+            "totalExp": 1080,
+            "reshuffleRate": 0
+          }
+        }
+      },
+      {
+        "map": {
+          "contentVersion": 27,
+          "id": 19,
+          "chapterId": "chapter-2",
+          "orderInChapter": 9,
+          "name": "Thi Đấu Tranh Tài",
+          "difficulty": "medium",
+          "layout": [
+            [
+              0,
+              0,
+              -1,
+              -1,
+              0,
+              0
+            ],
+            [
+              0,
+              -1,
+              -1,
+              -1,
+              -1,
+              0
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              0,
+              -1,
+              -1,
+              -1,
+              -1,
+              0
+            ],
+            [
+              0,
+              0,
+              -1,
+              -1,
+              0,
+              0
+            ]
+          ],
+          "initialSeals": [
+            {
+              "row": 2,
+              "column": 4
+            },
+            {
+              "row": 2,
+              "column": 5
+            },
+            {
+              "row": 3,
+              "column": 2
+            },
+            {
+              "row": 3,
+              "column": 3
+            },
+            {
+              "row": 3,
+              "column": 4
+            },
+            {
+              "row": 3,
+              "column": 5
+            }
+          ],
+          "initialNodes": [
+            {
+              "row": 3,
+              "column": 0
+            }
+          ],
+          "objectives": [
+            {
+              "id": "main",
+              "type": "Battle",
+              "target": 991,
+              "enemy": {
+                "id": "battle-19",
+                "name": "Đệ Tử Thách Đấu",
+                "artKey": "beast"
+              }
+            }
+          ],
+          "moves": 30,
+          "baseExp": 100,
+          "starThresholds": {
+            "mode": "percentage",
+            "threeStarBelowPercent": 61,
+            "twoStarBelowPercent": 81
+          },
+          "spawnPolicy": {
+            "weights": {
+              "1": 100,
+              "2": 100,
+              "3": 100,
+              "4": 100
+            },
+            "collectionPressure": 0,
+            "comboChance": 0.1,
+            "setupChance": 0.25,
+            "obstaclePressure": 0.15,
+            "candidates": 4
+          },
+          "retryAssistPolicy": {
+            "thresholds": [
+              3,
+              5,
+              8
+            ],
+            "reductions": [
+              0.1,
+              0.2,
+              0.3
+            ]
+          },
+          "mapVersion": 1,
+          "rulesMode": "modern",
+          "tileRegistry": {
+            "sword": 1,
+            "fire": 2,
+            "lightning": 3,
+            "spirit": 4,
+            "rock": 5
+          }
+        },
+        "assessment": {
+          "passed": true,
+          "failures": [],
+          "loss": 0,
+          "summary": {
+            "mapHash": "2a4b78ae15ec6b6c2b669f19c1b6a2fe3730b814bf406f33d4e59fbdf7848b5d",
+            "id": 19,
+            "difficulty": "medium",
+            "samples": 40,
+            "winRate": 1,
+            "starRates": [
+              0,
+              0.125,
+              0.375,
+              0.5
+            ],
+            "suboptimalChoices": 165,
+            "suboptimalChoiceRate": 0.21825396825396826,
+            "medianMoves": 18.5,
+            "actions": 756,
+            "waveCounts": {
+              "1": 293,
+              "2": 262,
+              "3": 122,
+              "4": 79
+            },
+            "metrics": {
+              "seeded": 61,
+              "setups": 148,
+              "setupAttempts": 189,
+              "setupFallbacks": 41,
+              "setupUsed": 39,
+              "chargesCreated": 495,
+              "chargesActivated": 400,
+              "settlements": 28
+            },
+            "settlementRate": 0.037037037037037035,
+            "movesHistogram": {
+              "11": 1,
+              "12": 2,
+              "13": 2,
+              "15": 1,
+              "16": 2,
+              "17": 4,
+              "18": 8,
+              "19": 1,
+              "20": 8,
+              "21": 4,
+              "22": 1,
+              "24": 1,
+              "25": 3,
+              "26": 2
+            },
+            "averageMoves": 18.9,
+            "averageProgress": 1,
+            "averageFailedProgress": null,
+            "averageReshuffles": 0,
+            "averageWaves": 37.475,
+            "maxChain": 4,
+            "bot": "normal",
+            "power": "expected",
+            "totalExp": 1080,
+            "reshuffleRate": 0
+          }
+        }
+      },
+      {
+        "map": {
+          "contentVersion": 27,
+          "id": 19,
+          "chapterId": "chapter-2",
+          "orderInChapter": 9,
+          "name": "Thi Đấu Tranh Tài",
+          "difficulty": "medium",
+          "layout": [
+            [
+              0,
+              0,
+              -1,
+              -1,
+              0,
+              0
+            ],
+            [
+              0,
+              -1,
+              -1,
+              -1,
+              -1,
+              0
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              0,
+              -1,
+              -1,
+              -1,
+              -1,
+              0
+            ],
+            [
+              0,
+              0,
+              -1,
+              -1,
+              0,
+              0
+            ]
+          ],
+          "initialSeals": [
+            {
+              "row": 2,
+              "column": 4
+            },
+            {
+              "row": 2,
+              "column": 5
+            },
+            {
+              "row": 3,
+              "column": 2
+            },
+            {
+              "row": 3,
+              "column": 3
+            },
+            {
+              "row": 3,
+              "column": 4
+            },
+            {
+              "row": 3,
+              "column": 5
+            }
+          ],
+          "initialNodes": [
+            {
+              "row": 3,
+              "column": 0
+            }
+          ],
+          "objectives": [
+            {
+              "id": "main",
+              "type": "Battle",
+              "target": 992,
+              "enemy": {
+                "id": "battle-19",
+                "name": "Đệ Tử Thách Đấu",
+                "artKey": "beast"
+              }
+            }
+          ],
+          "moves": 30,
+          "baseExp": 100,
+          "starThresholds": {
+            "mode": "percentage",
+            "threeStarBelowPercent": 61,
+            "twoStarBelowPercent": 81
+          },
+          "spawnPolicy": {
+            "weights": {
+              "1": 100,
+              "2": 100,
+              "3": 100,
+              "4": 100
+            },
+            "collectionPressure": 0,
+            "comboChance": 0.1,
+            "setupChance": 0.25,
+            "obstaclePressure": 0.15,
+            "candidates": 4
+          },
+          "retryAssistPolicy": {
+            "thresholds": [
+              3,
+              5,
+              8
+            ],
+            "reductions": [
+              0.1,
+              0.2,
+              0.3
+            ]
+          },
+          "mapVersion": 1,
+          "rulesMode": "modern",
+          "tileRegistry": {
+            "sword": 1,
+            "fire": 2,
+            "lightning": 3,
+            "spirit": 4,
+            "rock": 5
+          }
+        },
+        "assessment": {
+          "passed": true,
+          "failures": [],
+          "loss": 0,
+          "summary": {
+            "mapHash": "2b7faf4288a465d4f944c26741681b50dd7e7f0efe07efbae6b487bc6029f8e2",
+            "id": 19,
+            "difficulty": "medium",
+            "samples": 40,
+            "winRate": 1,
+            "starRates": [
+              0,
+              0.125,
+              0.375,
+              0.5
+            ],
+            "suboptimalChoices": 165,
+            "suboptimalChoiceRate": 0.21796565389696168,
+            "medianMoves": 18.5,
+            "actions": 757,
+            "waveCounts": {
+              "1": 293,
+              "2": 262,
+              "3": 122,
+              "4": 80
+            },
+            "metrics": {
+              "seeded": 61,
+              "setups": 148,
+              "setupAttempts": 189,
+              "setupFallbacks": 41,
+              "setupUsed": 39,
+              "chargesCreated": 495,
+              "chargesActivated": 401,
+              "settlements": 28
+            },
+            "settlementRate": 0.036988110964332896,
+            "movesHistogram": {
+              "11": 1,
+              "12": 2,
+              "13": 2,
+              "15": 1,
+              "16": 2,
+              "17": 4,
+              "18": 8,
+              "19": 1,
+              "20": 7,
+              "21": 5,
+              "22": 1,
+              "24": 1,
+              "25": 3,
+              "26": 2
+            },
+            "averageMoves": 18.925,
+            "averageProgress": 1,
+            "averageFailedProgress": null,
+            "averageReshuffles": 0,
+            "averageWaves": 37.575,
+            "maxChain": 4,
+            "bot": "normal",
+            "power": "expected",
+            "totalExp": 1080,
+            "reshuffleRate": 0
+          }
+        }
+      },
+      {
+        "map": {
+          "contentVersion": 27,
+          "id": 19,
+          "chapterId": "chapter-2",
+          "orderInChapter": 9,
+          "name": "Thi Đấu Tranh Tài",
+          "difficulty": "medium",
+          "layout": [
+            [
+              0,
+              0,
+              -1,
+              -1,
+              0,
+              0
+            ],
+            [
+              0,
+              -1,
+              -1,
+              -1,
+              -1,
+              0
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              0,
+              -1,
+              -1,
+              -1,
+              -1,
+              0
+            ],
+            [
+              0,
+              0,
+              -1,
+              -1,
+              0,
+              0
+            ]
+          ],
+          "initialSeals": [
+            {
+              "row": 2,
+              "column": 4
+            },
+            {
+              "row": 2,
+              "column": 5
+            },
+            {
+              "row": 3,
+              "column": 2
+            },
+            {
+              "row": 3,
+              "column": 3
+            },
+            {
+              "row": 3,
+              "column": 4
+            },
+            {
+              "row": 3,
+              "column": 5
+            }
+          ],
+          "initialNodes": [
+            {
+              "row": 3,
+              "column": 0
+            }
+          ],
+          "objectives": [
+            {
+              "id": "main",
+              "type": "Battle",
+              "target": 1047,
+              "enemy": {
+                "id": "battle-19",
+                "name": "Đệ Tử Thách Đấu",
+                "artKey": "beast"
+              }
+            }
+          ],
+          "moves": 30,
+          "baseExp": 100,
+          "starThresholds": {
+            "mode": "percentage",
+            "threeStarBelowPercent": 61,
+            "twoStarBelowPercent": 81
+          },
+          "spawnPolicy": {
+            "weights": {
+              "1": 100,
+              "2": 100,
+              "3": 100,
+              "4": 100
+            },
+            "collectionPressure": 0,
+            "comboChance": 0.15,
+            "setupChance": 0.35,
+            "obstaclePressure": 0.15,
+            "candidates": 4
+          },
+          "retryAssistPolicy": {
+            "thresholds": [
+              3,
+              5,
+              8
+            ],
+            "reductions": [
+              0.1,
+              0.2,
+              0.3
+            ]
+          },
+          "mapVersion": 1,
+          "rulesMode": "modern",
+          "tileRegistry": {
+            "sword": 1,
+            "fire": 2,
+            "lightning": 3,
+            "spirit": 4,
+            "rock": 5
+          }
+        },
+        "assessment": {
+          "passed": true,
+          "failures": [],
+          "loss": 0,
+          "summary": {
+            "mapHash": "4a94dfbf3bd971859bd2f5274d38c1970f6a72ae776cb44d275903c49dc45d1d",
+            "id": 19,
+            "difficulty": "medium",
+            "samples": 40,
+            "winRate": 1,
+            "starRates": [
+              0,
+              0.075,
+              0.425,
+              0.5
+            ],
+            "suboptimalChoices": 164,
+            "suboptimalChoiceRate": 0.21354166666666666,
+            "medianMoves": 18.5,
+            "actions": 768,
+            "waveCounts": {
+              "1": 302,
+              "2": 260,
+              "3": 127,
+              "4": 79
+            },
+            "metrics": {
+              "seeded": 88,
+              "setups": 193,
+              "setupAttempts": 260,
+              "setupFallbacks": 67,
+              "setupUsed": 62,
+              "chargesCreated": 518,
+              "chargesActivated": 426,
+              "settlements": 31
+            },
+            "settlementRate": 0.040364583333333336,
+            "movesHistogram": {
+              "13": 1,
+              "14": 3,
+              "15": 4,
+              "16": 3,
+              "17": 3,
+              "18": 6,
+              "19": 2,
+              "20": 4,
+              "21": 4,
+              "22": 1,
+              "23": 4,
+              "24": 2,
+              "25": 1,
+              "28": 1,
+              "29": 1
+            },
+            "averageMoves": 19.2,
+            "averageProgress": 1,
+            "averageFailedProgress": null,
+            "averageReshuffles": 0,
+            "averageWaves": 37.975,
+            "maxChain": 4,
+            "bot": "normal",
+            "power": "expected",
+            "totalExp": 1080,
+            "reshuffleRate": 0
+          }
+        }
+      },
+      {
+        "map": {
+          "contentVersion": 27,
+          "id": 19,
+          "chapterId": "chapter-2",
+          "orderInChapter": 9,
+          "name": "Thi Đấu Tranh Tài",
+          "difficulty": "medium",
+          "layout": [
+            [
+              0,
+              0,
+              -1,
+              -1,
+              0,
+              0
+            ],
+            [
+              0,
+              -1,
+              -1,
+              -1,
+              -1,
+              0
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              -1,
+              -1,
+              -1,
+              -1,
+              -1,
+              -1
+            ],
+            [
+              0,
+              -1,
+              -1,
+              -1,
+              -1,
+              0
+            ],
+            [
+              0,
+              0,
+              -1,
+              -1,
+              0,
+              0
+            ]
+          ],
+          "initialSeals": [
+            {
+              "row": 2,
+              "column": 4
+            },
+            {
+              "row": 2,
+              "column": 5
+            },
+            {
+              "row": 3,
+              "column": 2
+            },
+            {
+              "row": 3,
+              "column": 3
+            },
+            {
+              "row": 3,
+              "column": 4
+            },
+            {
+              "row": 3,
+              "column": 5
+            }
+          ],
+          "initialNodes": [
+            {
+              "row": 3,
+              "column": 0
+            }
+          ],
+          "objectives": [
+            {
+              "id": "main",
+              "type": "Battle",
+              "target": 1048,
+              "enemy": {
+                "id": "battle-19",
+                "name": "Đệ Tử Thách Đấu",
+                "artKey": "beast"
+              }
+            }
+          ],
+          "moves": 30,
+          "baseExp": 100,
+          "starThresholds": {
+            "mode": "percentage",
+            "threeStarBelowPercent": 61,
+            "twoStarBelowPercent": 81
+          },
+          "spawnPolicy": {
+            "weights": {
+              "1": 100,
+              "2": 100,
+              "3": 100,
+              "4": 100
+            },
+            "collectionPressure": 0,
+            "comboChance": 0.15,
+            "setupChance": 0.35,
+            "obstaclePressure": 0.15,
+            "candidates": 4
+          },
+          "retryAssistPolicy": {
+            "thresholds": [
+              3,
+              5,
+              8
+            ],
+            "reductions": [
+              0.1,
+              0.2,
+              0.3
+            ]
+          },
+          "mapVersion": 1,
+          "rulesMode": "modern",
+          "tileRegistry": {
+            "sword": 1,
+            "fire": 2,
+            "lightning": 3,
+            "spirit": 4,
+            "rock": 5
+          }
+        },
+        "assessment": {
+          "passed": true,
+          "failures": [],
+          "loss": 0,
+          "summary": {
+            "mapHash": "0ce2689d56d55f063a95530fe0fb3501ab2871d31deea1fe63bdc18590a2d0a2",
+            "id": 19,
+            "difficulty": "medium",
+            "samples": 40,
+            "winRate": 1,
+            "starRates": [
+              0,
+              0.075,
+              0.425,
+              0.5
+            ],
+            "suboptimalChoices": 164,
+            "suboptimalChoiceRate": 0.21354166666666666,
+            "medianMoves": 18.5,
+            "actions": 768,
+            "waveCounts": {
+              "1": 302,
+              "2": 260,
+              "3": 127,
+              "4": 79
+            },
+            "metrics": {
+              "seeded": 88,
+              "setups": 193,
+              "setupAttempts": 260,
+              "setupFallbacks": 67,
+              "setupUsed": 62,
+              "chargesCreated": 518,
+              "chargesActivated": 426,
+              "settlements": 31
+            },
+            "settlementRate": 0.040364583333333336,
+            "movesHistogram": {
+              "13": 1,
+              "14": 3,
+              "15": 4,
+              "16": 3,
+              "17": 3,
+              "18": 6,
+              "19": 2,
+              "20": 4,
+              "21": 4,
+              "22": 1,
+              "23": 4,
+              "24": 2,
+              "25": 1,
+              "28": 1,
+              "29": 1
+            },
+            "averageMoves": 19.2,
+            "averageProgress": 1,
+            "averageFailedProgress": null,
+            "averageReshuffles": 0,
+            "averageWaves": 37.975,
+            "maxChain": 4,
+            "bot": "normal",
+            "power": "expected",
+            "totalExp": 1080,
+            "reshuffleRate": 0
+          }
+        }
+      }
+    ]
+  }
+}

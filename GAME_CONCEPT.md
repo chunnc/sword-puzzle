@@ -6,7 +6,7 @@ Kiến trúc và hướng dẫn chạy prototype: [SYSTEM_ARCHITECTURE.md](SYSTE
 
 ![Ảnh preview gồm bản đồ, màn khám phá, trận boss và đột phá tu vi](assets/ui-preview.png)
 
-> **Catalog hiện tại v11:** Client Expo/React Native có bốn map, trong đó hai map hướng dẫn ghép ô, bốn loại ô, cường hóa, kiếm thuật chủ động/bị động, bảo kiếm và tu vi theo EXP. Map 1 dạy ghép 3 Kiếm; map 2 dạy tạo rồi kích hoạt ô Lôi cấp 4. Map 3 thu Kiếm và Hỏa; map 4 phá cụm đá chắn.
+> **Catalog local content v28:** Có 20 map trong hai chương, bốn loại ô ghép, cường hóa, kiếm thuật chủ động/bị động, bảo kiếm và tu vi theo EXP. Chương 1 dạy luật ghép, phá đá, thu thập và boss. Chương 2 kể về khảo hạch tông môn, giới thiệu Trận Nhãn, cơ quan nạp ba lần để phá một nửa phong ấn còn lại gần nó.
 
 ## 1. Tầm nhìn
 

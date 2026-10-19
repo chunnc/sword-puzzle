@@ -21,6 +21,27 @@ function matching(size: number, kind: TileKind, tier: 0 | 4 | 5 = 0) {
     expect(b.trySwap(size - 1, 4, size - 1, 3)).toBe(true);
     return b;
 }
+function nodeFixture(nodeCharge: 0 | 1 | 2 = 0) {
+    const s = fixture(), node = { x: 3, y: 3 };
+    const initialSeals = [
+        { row: 2, column: 3 }, { row: 3, column: 2 }, { row: 3, column: 4 },
+        { row: 4, column: 3 }, { row: 3, column: 1 },
+    ];
+    const objectives = [
+        { id: 'nodes', type: 'ActivateNodes' as const, target: 1 },
+        { id: 'seals', type: 'BreakSeals' as const, target: 3 },
+    ];
+    const layout = s.level.mapDefinition!.layout.map(row => [...row]);
+    layout[3][3] = -1;
+    const mapDefinition = { ...s.level.mapDefinition!, layout, initialSeals, initialNodes: [{ row: 3, column: 3 }], objectives };
+    s.level = { ...s.level, mapDefinition, objectives };
+    s.objectiveProgress = { nodes: 0, seals: 0 };
+    s.tiles[node.y * 7 + node.x] = { ...tile(0), nodeCharge };
+    for (const seal of initialSeals) s.tiles[(6 - seal.row) * 7 + seal.column] = { ...s.tiles[(6 - seal.row) * 7 + seal.column]!, locked: true };
+    s.swordQi = 100;
+    s.loadout = { sword: null, skills: ['thu', 'nhat-kiem'] };
+    return { snapshot: s, node };
+}
 describe('board rules v2', () => {
     it('resolves incrementally with identical waves and RNG across all stages', () => {
         for (let id = 1; id <= 40; id++) {
@@ -70,6 +91,47 @@ describe('board rules v2', () => {
     it('restores the complete snapshot and deterministic RNG', () => { const a = new BoardEngine(getLevel(5)); const snap = a.snapshot(); const b = new BoardEngine(getLevel(5), snap); expect(b.snapshot()).toEqual(snap); const move = a.legalMoves()[0]; a.trySwap(...move); b.trySwap(...move); expect(a.snapshot()).toEqual(b.snapshot()); expect(a.animation).toEqual(b.animation); });
     it('rejects invalid and non-matching swaps without changes, even with a charged piece', () => { const s = fixture(); s.tiles[0]!.chargeTier = 5; const b = new BoardEngine(getLevel(5), s); const old = b.snapshot(); expect(b.trySwap(0, 0, 2, 0)).toBe(false); expect(b.trySwap(0, 0, 1, 0)).toBe(false); expect(b.snapshot()).toEqual(old); });
     it.each([0, 1, 2, 3])('match 3 type %i has no elemental effect', (kind) => { const b = matching(3, kind); expect(b.animation!.steps[0].effects.every(e => e.kind === 'skill')).toBe(true); expect(b.animation!.steps[0].cleared.length).toBe(3); });
+    it('keeps Trận Nhãn fixed and charges it at most once when one action hits its whole row', () => {
+        const { snapshot, node } = nodeFixture(0), b = new BoardEngine(snapshot.level, snapshot);
+        snapshot.tiles[node.y * 7] = tile(TileKind.Sword, 4);
+        const charged = new BoardEngine(snapshot.level, snapshot);
+        expect(b.trySwap(node.x, node.y, node.x + 1, node.y)).toBe(false);
+        expect(charged.trySkill('nhat-kiem', [{ x: 0, y: node.y }])).toBe(true);
+        const index = node.y * 7 + node.x;
+        expect(charged.animation!.steps[0].cleared).not.toContain(index);
+        expect(charged.animation!.steps[0].effects.some(effect => effect.source === node.y * 7 && effect.kind === 'slash')).toBe(true);
+        expect(charged.snapshot().tiles[index]?.nodeCharge).toBe(1);
+        expect(charged.snapshot().objectiveProgress.nodes).toBe(0);
+    });
+    it('charges a node at most once across direct skill, charged effect and cascade waves', () => {
+        let cascaded: BoardEngine | null = null;
+        for (let seed = 1; seed <= 40 && !cascaded; seed++) {
+            const { snapshot, node } = nodeFixture(0);
+            snapshot.level.seed = seed;
+            snapshot.randomState = seed;
+            snapshot.level.mapDefinition!.spawnPolicy.comboChance = 1;
+            snapshot.level.mapDefinition!.spawnPolicy.setupChance = 0;
+            snapshot.tiles[node.y * 7] = tile(TileKind.Sword, 4);
+            const engine = new BoardEngine(snapshot.level, snapshot);
+            engine.trySkill('nhat-kiem', [{ x: 0, y: node.y }]);
+            if (engine.animation!.steps.length > 1) cascaded = engine;
+        }
+        expect(cascaded).not.toBeNull();
+        expect(cascaded!.animation!.steps.length).toBeGreaterThan(1);
+        expect(cascaded!.snapshot().tiles[24]?.nodeCharge).toBe(1);
+    });
+    it('activates Trận Nhãn by breaking half of remaining seals, rounding up and using nearest top-first ties', () => {
+        const { snapshot, node } = nodeFixture(2), b = new BoardEngine(snapshot.level, snapshot);
+        expect(b.trySkill('thu', [node])).toBe(true);
+        const after = b.snapshot(), index = (y: number, x: number) => y * 7 + x;
+        expect(after.objectiveProgress).toMatchObject({ nodes: 1, seals: 3 });
+        expect(after.tiles[index(4, 3)]!.locked).toBe(false); // nearest tie, upper row on screen
+        expect(after.tiles[index(3, 2)]!.locked).toBe(false); // then left to right
+        expect(after.tiles[index(3, 4)]!.locked).toBe(false);
+        expect(after.tiles[index(2, 3)]!.locked).toBe(true);
+        expect(after.tiles[index(3, 1)]!.locked).toBe(true);
+        expect(after.tiles[index(node.y, node.x)]?.nodeCharge).toBeUndefined();
+    });
     it.each([0, 1, 2, 3])('match 4 type %i retains a charged piece', (kind) => { const b = matching(4, kind); expect(b.animation!.steps[0].after.tiles.some(t => t!.kind === normalKinds[kind] && t!.chargeTier === 4)).toBe(true); expect(b.animation!.steps[0].cleared.length).toBe(3); });
     it.each([0, 1, 2, 3])('match 5 type %i retains tier 5', (kind) => { const b = matching(5, kind); expect(b.animation!.steps[0].after.tiles.some(t => t!.kind === normalKinds[kind] && t!.chargeTier === 5)).toBe(true); });
     it.each([[0, 4, 'slash'], [0, 5, 'cross'], [1, 4, 'fire'], [1, 5, 'fire'], [2, 4, 'lightning'], [2, 5, 'lightning'], [3, 4, 'spirit'], [3, 5, 'spirit']] as const)('matched charge %i/%i activates %s', (kind, tier, effect) => { const b = matching(3, kind, tier); expect(b.animation!.steps[0].effects.some(e => e.kind === effect)).toBe(true); expect(b.animation!.steps[0].after.tiles.some(t => t!.chargeTier > 0 && t!.kind === normalKinds[kind])).toBe(false); });
