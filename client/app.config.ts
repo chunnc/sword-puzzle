@@ -15,6 +15,13 @@ const config: ExpoConfig = {
     deploymentTarget: '16.4',
     supportsTablet: false,
     config: { usesNonExemptEncryption: false },
+    infoPlist: {
+      NSAppTransportSecurity: {
+        NSExceptionDomains: {
+          'macbook-air.tail2624c4.ts.net': { NSExceptionAllowsInsecureHTTPLoads: true },
+        },
+      },
+    },
   },
   android: {
     package: 'com.kiemkhaitienlo',
