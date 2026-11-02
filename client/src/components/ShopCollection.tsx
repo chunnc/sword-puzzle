@@ -178,7 +178,7 @@ export function ShopCollection({ initialCategory = 'sword' }: { initialCategory?
       </ScrollView>
       <BottomNav active="shop" onSelect={id => navigateTab(router, id)} />
       <Notice message={store.notice} onDismiss={() => store.setNotice('')} />
-      <Modal visible={Boolean(selectedItem)} transparent animationType="none" onRequestClose={closeModal}>
+      <Modal visible={Boolean(selectedItem)} transparent animationType="none" presentationStyle="overFullScreen" statusBarTranslucent navigationBarTranslucent onRequestClose={closeModal}>
         <View style={[styles.modalOverlay, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20, paddingLeft: insets.left + 20, paddingRight: insets.right + 20 }]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Đóng chi tiết vật phẩm" accessibilityState={{ disabled: working }} disabled={working} onPress={sfxPress(closeModal, !working)} style={StyleSheet.absoluteFill} />
           {selectedItem ? (

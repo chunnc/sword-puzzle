@@ -10,9 +10,10 @@ import { useSfxPress } from '../audio/useSfxPress';
 export function ScreenFrame({
   background,
   children,
+  overlay,
   tint,
   style,
-}: PropsWithChildren<{ background: Artwork; tint?: string; style?: StyleProp<ViewStyle> }>) {
+}: PropsWithChildren<{ background: Artwork; overlay?: React.ReactNode; tint?: string; style?: StyleProp<ViewStyle> }>) {
   return (
     <View style={[styles.screen, style]}>
       <Image source={ART[background]} contentFit="cover" style={StyleSheet.absoluteFill} cachePolicy="memory-disk" />
@@ -20,6 +21,7 @@ export function ScreenFrame({
       <SafeAreaView style={styles.safeContent} edges={['top', 'bottom']}>
         {children}
       </SafeAreaView>
+      {overlay ? <View pointerEvents="box-none" style={styles.overlayHost}>{overlay}</View> : null}
     </View>
   );
 }
@@ -123,6 +125,7 @@ export function BackdropDivider() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.ink },
   safeContent: { flex: 1, paddingHorizontal: 12 },
+  overlayHost: { ...StyleSheet.absoluteFill, zIndex: 100 },
   artPanel: { justifyContent: 'center', alignItems: 'center', overflow: 'visible' },
   button: {
     minHeight: 48,

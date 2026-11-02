@@ -346,7 +346,20 @@ function GameplaySession({ levelId, routeIntroRunId }: { levelId: number; routeI
         ? { ...result, summary: store.save.lastWin } : result;
     const boardSize = boardLayout(boardViewport.width || (viewport.width || width) - 24, height - 6, level.board);
     return (
-      <ScreenFrame background={level.objectives.some(o => o.type === 'Boss') ? 'bgBoss' : 'bgGame'}>
+      <ScreenFrame
+        background={level.objectives.some(o => o.type === 'Boss') ? 'bgBoss' : 'bgGame'}
+        overlay={<>
+          {introOpen && !leave ? <GameplayObjectiveIntro board={board} onStart={dismissIntro} onBack={requestLeave} /> : null}
+          {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} onExtraMoves={displayResult.kind === 'lost' && store.adsEnabled && !board.extraMovesUsed ? () => void continueWithAd() : undefined} /> : null}
+          <View pointerEvents="box-none" style={styles.noticeLayer}><Notice message={store.notice} onDismiss={() => store.setNotice('')} /></View>
+          {leave ? <GameplayLeaveDialog busy={busy} compact={(viewport.width || width) < 360} loseEnergy={store.save.energyConsumedRunId !== board.runId} onContinue={() => setLeave(false)} onBack={() => {
+            if (busyRef.current) return;
+            busyRef.current = true; setBusy(true);
+            void store.leaveLevel().then(left => { if (left) navigate('/map'); })
+              .finally(() => { busyRef.current = false; if (alive.current) setBusy(false); });
+          }} /> : null}
+        </>}
+      >
         <View testID="game-content" style={styles.gameContent} onLayout={event => setViewport({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}>
           <View ref={sceneRef} collapsable={false} testID="game-scene" onLayout={measureFlightLayout} style={styles.scene} pointerEvents={overlayOpen ? 'none' : 'auto'} accessibilityElementsHidden={overlayOpen} importantForAccessibility={overlayOpen ? 'no-hide-descendants' : 'auto'}>
             <GameplayHeader moves={board.moves} busy={busy || overlayOpen || locked} compact={compact} onBack={requestLeave} />
@@ -368,15 +381,6 @@ function GameplaySession({ levelId, routeIntroRunId }: { levelId: number; routeI
               cues={spiritCues} geometry={level.board} layout={flightLayout} progress={spiritMotion.progress}
               durationMs={effect?.kind === 'clear' ? boardClearDurationMs(effect.effects, effect.sourceActivation) : BOARD_CLEAR_MS} /> : null}
           </View>
-          {introOpen && !leave ? <GameplayObjectiveIntro board={board} onStart={dismissIntro} onBack={requestLeave} /> : null}
-          {displayResult ? <GameplayResultPopup key={displayResult.runId} result={displayResult} busy={busy} reduceMotion={reduceMotion} onReady={() => { if (resultRef.current?.runId === displayResult.runId) resultReady.current = true; }} onContinue={() => void continueResult()} onBack={requestLeave} onExtraMoves={displayResult.kind === 'lost' && store.adsEnabled && !board.extraMovesUsed ? () => void continueWithAd() : undefined} /> : null}
-          <View pointerEvents="box-none" style={styles.noticeLayer}><Notice message={store.notice} onDismiss={() => store.setNotice('')} /></View>
-           {leave ? <GameplayLeaveDialog busy={busy} compact={(viewport.width || width) < 360} loseEnergy={store.save.energyConsumedRunId !== board.runId} onContinue={() => setLeave(false)} onBack={() => {
-             if (busyRef.current) return;
-             busyRef.current = true; setBusy(true);
-             void store.leaveLevel().then(left => { if (left) navigate('/map'); })
-               .finally(() => { busyRef.current = false; if (alive.current) setBusy(false); });
-           }} /> : null}
         </View>
       </ScreenFrame>
     );

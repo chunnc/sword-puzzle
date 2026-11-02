@@ -9,7 +9,7 @@ import { useGameStore } from '../../state/gameStore';
 
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('react-native-reanimated', () => ({ __esModule: true, default: { View: require('react-native').View }, useAnimatedStyle: jest.fn(), useSharedValue: jest.fn(), withTiming: jest.fn() }));
-jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View }));
+jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter, usePathname: () => mockPathname }));
 jest.mock('../../state/gameStore', () => {

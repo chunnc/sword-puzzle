@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Canvas, ColorMatrix, Image as SkiaImage, useImage, type SkImage } from '@shopify/react-native-skia';
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useDerivedValue, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { runOnJS } from 'react-native-worklets';
@@ -35,6 +36,7 @@ export function GameplayResultPopup({ result, busy, reduceMotion, onReady, onCon
   onReady: () => void; onContinue: () => void; onBack: () => void;
   onExtraMoves?: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const won = result.kind === 'won', stars = won ? result.summary.stars : 0;
   const exp = won ? result.summary.expGained : 0, coins = won ? result.summary.coinsGained : 0;
   const items = won ? result.summary.itemsGranted ?? [] : [];
@@ -77,7 +79,7 @@ export function GameplayResultPopup({ result, busy, reduceMotion, onReady, onCon
   const compact = panelWidth < 350;
   const buttonWidth = Math.min(compact ? 168 : 184, panelWidth > 0 ? Math.max(0, panelWidth - 48) : 168);
 
-  return <View testID="game-result-popup" accessibilityViewIsModal style={styles.overlay}>
+  return <View testID="game-result-popup" accessibilityViewIsModal style={[styles.overlay, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }]}>
     <Animated.View pointerEvents="none" style={[styles.veil, veilMotion]} />
     <Animated.View testID="result-panel-motion" onLayout={event => setPanelWidth(event.nativeEvent.layout.width)} style={[styles.panel, panelMotion]}>
       <InventoryDialogPanel testID="result-panel">

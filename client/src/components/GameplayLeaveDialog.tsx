@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 import { GameplayDialogButton } from './GameplayDialogButton';
 import { InventoryDialogPanel } from './InventoryDialogPanel';
@@ -8,9 +9,10 @@ export function GameplayLeaveDialog({ busy, compact, loseEnergy = true, onContin
   loseEnergy?: boolean;
   busy: boolean; compact: boolean; onContinue: () => void; onBack: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [panelWidth, setPanelWidth] = useState(0);
   const buttonWidth = Math.min(panelWidth < 350 ? 168 : 184, panelWidth > 0 ? Math.max(0, panelWidth - 48) : 168);
-  return <View testID="game-leave-confirmation" accessibilityViewIsModal style={styles.overlay}>
+  return <View testID="game-leave-confirmation" accessibilityViewIsModal style={[styles.overlay, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }]}>
     <InventoryDialogPanel testID="game-leave-panel">
       <View style={[styles.content, compact && styles.compactContent]} onLayout={event => setPanelWidth(event.nativeEvent.layout.width)}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.2} style={styles.title}>Rời màn chơi?</Text>

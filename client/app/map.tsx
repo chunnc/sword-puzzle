@@ -3,6 +3,7 @@ import { BlurMask, Canvas, Path, Skia } from '@shopify/react-native-skia';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ART, type Artwork } from '../src/assets';
 import { BottomNav, TopHud } from '../src/components/Chrome';
 import { ArtPanel, ScreenFrame } from '../src/components/Art';
@@ -106,6 +107,7 @@ const MapLevelItem = React.memo(function MapLevelItem({ levelId, difficulty, sta
 
 export default function MapScreen() {
   const sfxPress = useSfxPress();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const chapterId = useGameStore(state => state.chapterId);
   const maps = useGameStore(state => state.chapterMaps);
@@ -234,8 +236,8 @@ export default function MapScreen() {
       </View>
       <BottomNav active="map" onSelect={nav} onReselect={focusCurrentProgress} />
       <Notice message={notice} onDismiss={() => setNotice('')} />
-      <Modal visible={chapterPickerOpen} transparent animationType="fade" onRequestClose={() => setChapterPickerOpen(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={chapterPickerOpen} transparent animationType="fade" presentationStyle="overFullScreen" statusBarTranslucent navigationBarTranslucent onRequestClose={() => setChapterPickerOpen(false)}>
+        <View style={[styles.modalOverlay, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24, paddingLeft: insets.left + 24, paddingRight: insets.right + 24 }]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Đóng danh sách chương" onPress={() => setChapterPickerOpen(false)} style={StyleSheet.absoluteFill} />
           <View accessibilityViewIsModal style={styles.chapterDialog}>
             <Image source={ART.inventoryDialog} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />

@@ -18,6 +18,7 @@ import { GoalKind, TileKind, type BoardActionAnimation, type BoardResolutionStep
 import { gameplaySnapshot, goalLevel } from './fixtures/gameplay';
 
 jest.mock('expo-image', () => ({ Image: require('react-native').View }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('../GameplayObjectivePanel', () => ({ GameplayObjectivePanel: require('react-native').View }));
 jest.mock('../CollectionTileIcons', () => ({ CollectionTileIcons: require('react-native').View, CHARGED_GOAL_ICON_WIDTH: 36 }));
 jest.mock('../GameTileImages', () => ({ GameTileImageProvider: ({ children }: { children: React.ReactNode }) => children }));
@@ -57,7 +58,7 @@ jest.mock('../Board', () => {
 jest.mock('../GameplayResultPopup', () => ({ GameplayResultPopup: require('react-native').View }));
 jest.mock('../Art', () => {
   const React = require('react'), { View, Pressable, Text } = require('react-native');
-  return { ScreenFrame: View, ArtPanel: View, ProgressBar: View,
+  return { ScreenFrame: ({ children, overlay }: { children: React.ReactNode; overlay?: React.ReactNode }) => React.createElement(View, null, children, overlay), ArtPanel: View, ProgressBar: View,
     GameButton: ({ title, accessibilityLabel, onPress, disabled, style }: { title: string; accessibilityLabel?: string; onPress: () => void; disabled?: boolean; style: unknown }) => React.createElement(Pressable, { accessibilityRole: 'button', accessibilityLabel: accessibilityLabel ?? title, onPress: disabled ? undefined : onPress, disabled, style }, React.createElement(Text, null, title)),
   };
 });

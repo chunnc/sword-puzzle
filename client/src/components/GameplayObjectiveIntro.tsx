@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Image } from 'expo-image';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ART, tileArtwork } from '../assets';
 import { getContentVersion, semanticTileKind, type ObjectiveDefinition } from '../game/domain';
 import { TileKind, type BoardSnapshot } from '../game/types';
@@ -30,11 +31,12 @@ function objectiveDetails(objective: ObjectiveDefinition, content: ReturnType<ty
 export function GameplayObjectiveIntro({ board, onStart, onBack }: {
   board: BoardSnapshot; onStart: () => void; onBack: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [panelWidth, setPanelWidth] = useState(0);
   const buttonWidth = Math.min(panelWidth < 350 ? 168 : 184, panelWidth > 0 ? Math.max(0, panelWidth - 48) : 168);
   const content = getContentVersion(board.contentVersion);
   const level = board.level;
-  return <View testID="game-objective-intro" accessibilityViewIsModal style={styles.overlay}>
+  return <View testID="game-objective-intro" accessibilityViewIsModal style={[styles.overlay, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }]}>
     <InventoryDialogPanel testID="game-objective-intro-panel">
       <View style={styles.content} onLayout={event => setPanelWidth(event.nativeEvent.layout.width)}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.2} style={styles.title}>MỤC TIÊU MÀN {level.id}</Text>

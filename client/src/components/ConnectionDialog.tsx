@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname, useRouter } from 'expo-router';
 import { ArtPanel, GameButton } from './Art';
 import { DIALOG_PANEL_METADATA } from '../assets';
@@ -49,6 +50,7 @@ const ConnectionModal = memo(function ConnectionModal({ mode, onLogin }: {
   mode: DialogMode;
   onLogin: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const lastVisibleMode = useRef<VisibleDialogMode>('network');
   useLayoutEffect(() => {
     if (mode !== 'hidden') lastVisibleMode.current = mode;
@@ -57,8 +59,8 @@ const ConnectionModal = memo(function ConnectionModal({ mode, onLogin }: {
   // Preserve the contents throughout the native Modal's closing animation.
   const displayedMode = mode === 'hidden' ? lastVisibleMode.current : mode;
   return (
-    <Modal visible={mode !== 'hidden'} transparent animationType="fade" onRequestClose={ignoreClose} accessibilityViewIsModal>
-      <View style={styles.backdrop}>
+    <Modal visible={mode !== 'hidden'} transparent animationType="fade" presentationStyle="overFullScreen" statusBarTranslucent navigationBarTranslucent onRequestClose={ignoreClose} accessibilityViewIsModal>
+      <View style={[styles.backdrop, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24, paddingLeft: insets.left + 24, paddingRight: insets.right + 24 }]}>
         <ConnectionPanel mode={displayedMode} onLogin={onLogin} />
       </View>
     </Modal>

@@ -146,40 +146,42 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
       </ScrollView>
       <BottomNav active="bag" onSelect={id => navigateTab(router, id)} />
       <Notice message={store.notice} onDismiss={() => store.setNotice('')} />
-      <Modal visible={Boolean(selectedSkill)} transparent animationType="none" onRequestClose={closeModal}>
-        <SafeAreaView style={styles.modalOverlay}>
+      <Modal visible={Boolean(selectedSkill)} transparent animationType="none" presentationStyle="overFullScreen" statusBarTranslucent navigationBarTranslucent onRequestClose={closeModal}>
+        <View style={styles.modalBackdrop}>
           <Pressable accessibilityRole="button" accessibilityLabel="Đóng bảng chọn ô" disabled={working} onPress={sfxPress(closeModal, !working)} style={StyleSheet.absoluteFill} />
-          {selectedSkill ? (
-            <View accessibilityViewIsModal style={styles.dialog}>
-              <Image source={ART.inventoryDialog} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />
-              <ScrollView contentContainerStyle={styles.dialogContent} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
-                <Text accessibilityRole="header" style={styles.dialogTitle}>Trang bị {selectedSkill.name}</Text>
-                <Text style={styles.dialogCaption}>Chọn ô trang bị</Text>
-                {Array.from({ length: realm.skillSlots }, (_, slot) => {
-                  const current = SKILLS.find(skill => skill.id === profile.loadout.skills[slot]);
-                  const selected = current?.id === selectedSkill.id;
-                  const unavailableMove = !current && profile.loadout.skills.includes(selectedSkill.id);
-                  const disabled = working || selected || unavailableMove;
-                  return (
-                    <Pressable key={slot} accessibilityRole="button" accessibilityLabel={`Trang bị ${selectedSkill.name} vào ô ${slot + 1}, ${current ? current.name : 'ô trống'}`} accessibilityState={{ disabled, selected }} disabled={disabled} onPress={sfxPress(() => void equipSkill(selectedSkill.id, slot), !disabled)} style={({ pressed }) => [styles.slotRow, selected && styles.selectedSlot, disabled && !selected && styles.disabledSlot, pressed && styles.pressed]}>
-                      <EquipmentArt art={current ? SKILL_ART[current.id] : undefined} skill empty={!current} />
-                      <View style={styles.slotCopy}>
-                        <Text style={styles.slotNumber}>Ô {slot + 1}</Text>
-                        <Text style={styles.slotName}>{current?.name ?? 'Ô trống'}</Text>
-                      </View>
-                      {selected ? <Text style={styles.slotState}>Đang dùng</Text> : null}
-                    </Pressable>
-                  );
-                })}
-                {working ? <Text accessibilityLiveRegion="polite" style={styles.dialogCaption}>Đang lưu…</Text> : null}
-                {modalError ? <Text accessibilityRole="alert" style={styles.modalError}>{modalError}</Text> : null}
-                <Pressable accessibilityRole="button" accessibilityLabel="Hủy trang bị" accessibilityState={{ disabled: working }} disabled={working} onPress={sfxPress(closeModal, !working)} style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}>
-                  <Text style={styles.cancelText}>HỦY</Text>
-                </Pressable>
-              </ScrollView>
-            </View>
-          ) : null}
-        </SafeAreaView>
+          <SafeAreaView pointerEvents="box-none" style={styles.modalOverlay} edges={['top', 'bottom', 'left', 'right']}>
+            {selectedSkill ? (
+              <View accessibilityViewIsModal style={styles.dialog}>
+                <Image source={ART.inventoryDialog} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />
+                <ScrollView contentContainerStyle={styles.dialogContent} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
+                  <Text accessibilityRole="header" style={styles.dialogTitle}>Trang bị {selectedSkill.name}</Text>
+                  <Text style={styles.dialogCaption}>Chọn ô trang bị</Text>
+                  {Array.from({ length: realm.skillSlots }, (_, slot) => {
+                    const current = SKILLS.find(skill => skill.id === profile.loadout.skills[slot]);
+                    const selected = current?.id === selectedSkill.id;
+                    const unavailableMove = !current && profile.loadout.skills.includes(selectedSkill.id);
+                    const disabled = working || selected || unavailableMove;
+                    return (
+                      <Pressable key={slot} accessibilityRole="button" accessibilityLabel={`Trang bị ${selectedSkill.name} vào ô ${slot + 1}, ${current ? current.name : 'ô trống'}`} accessibilityState={{ disabled, selected }} disabled={disabled} onPress={sfxPress(() => void equipSkill(selectedSkill.id, slot), !disabled)} style={({ pressed }) => [styles.slotRow, selected && styles.selectedSlot, disabled && !selected && styles.disabledSlot, pressed && styles.pressed]}>
+                        <EquipmentArt art={current ? SKILL_ART[current.id] : undefined} skill empty={!current} />
+                        <View style={styles.slotCopy}>
+                          <Text style={styles.slotNumber}>Ô {slot + 1}</Text>
+                          <Text style={styles.slotName}>{current?.name ?? 'Ô trống'}</Text>
+                        </View>
+                        {selected ? <Text style={styles.slotState}>Đang dùng</Text> : null}
+                      </Pressable>
+                    );
+                  })}
+                  {working ? <Text accessibilityLiveRegion="polite" style={styles.dialogCaption}>Đang lưu…</Text> : null}
+                  {modalError ? <Text accessibilityRole="alert" style={styles.modalError}>{modalError}</Text> : null}
+                  <Pressable accessibilityRole="button" accessibilityLabel="Hủy trang bị" accessibilityState={{ disabled: working }} disabled={working} onPress={sfxPress(closeModal, !working)} style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}>
+                    <Text style={styles.cancelText}>HỦY</Text>
+                  </Pressable>
+                </ScrollView>
+              </View>
+            ) : null}
+          </SafeAreaView>
+        </View>
       </Modal>
     </ScreenFrame>
   );
@@ -205,7 +207,8 @@ const styles = StyleSheet.create({
   equipText: { color: colors.ivory, fontSize: 11, fontWeight: '800', letterSpacing: 0.2 },
   disabledText: { color: colors.ivory },
   pressed: { opacity: 0.85 },
-  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(1,18,23,0.76)', padding: 24 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(1,18,23,0.76)' },
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   dialog: { width: '100%', maxWidth: 340, maxHeight: '90%' },
   dialogContent: { padding: 20, gap: 8 },
   dialogTitle: { color: colors.ivory, fontSize: 20, lineHeight: 26, fontWeight: '800', textAlign: 'center' },

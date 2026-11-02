@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { advanceEnergy, type EnergyState } from '../game/domain';
 import { useGameStore } from '../state/gameStore';
 import { colors, type } from '../theme';
@@ -27,6 +28,7 @@ export function EnergyEmptyDialog() {
 }
 
 function EnergyEmptyDialogPanel() {
+  const insets = useSafeAreaInsets();
   const visible = useGameStore(state => state.energyPrompt);
   const close = useGameStore(state => state.setEnergyPrompt);
   const energy = useGameStore(state => state.save.profile.energy);
@@ -34,8 +36,8 @@ function EnergyEmptyDialogPanel() {
   const display = useEnergyDisplay(energy, offset, false);
   const [width, setWidth] = useState(0);
   const buttonWidth = Math.min(220, width > 0 ? width - 40 : 220);
-  return <Modal visible={visible} transparent animationType="fade" onRequestClose={() => close(false)} accessibilityViewIsModal>
-    <View style={styles.backdrop}>
+  return <Modal visible={visible} transparent animationType="fade" presentationStyle="overFullScreen" statusBarTranslucent navigationBarTranslucent onRequestClose={() => close(false)} accessibilityViewIsModal>
+    <View style={[styles.backdrop, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20, paddingLeft: insets.left + 20, paddingRight: insets.right + 20 }]}>
       <InventoryDialogPanel testID="energy-empty-panel">
         <View style={styles.content} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
           <Text accessibilityRole="header" maxFontSizeMultiplier={1.2} style={styles.title}>Bạn đã hết năng lượng</Text>
