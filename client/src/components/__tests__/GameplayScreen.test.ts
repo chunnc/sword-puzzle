@@ -127,6 +127,11 @@ describe('gameplay presentation and exit behavior', () => {
     mockParams.introRunId = mockState.save.active!.runId;
     mount();
     expect(view('game-objective-intro')).toBeDefined();
+    const textContent = renderer.root.findAllByType(Native.Text).map(node =>
+      React.Children.toArray(node.props.children).filter(part => typeof part === 'string' || typeof part === 'number').join(''));
+    expect(textContent).toContain('MỤC TIÊU MÀN 15');
+    const mapName = mockState.save.active!.level.mapDefinition?.name ?? `Màn ${mockState.save.active!.level.id}`;
+    expect(textContent).not.toContain(mapName);
     expect(board().props.locked).toBe(true);
     expect(button('Nhất Kiếm, 60 kiếm khí').props.disabled).toBe(true);
     act(() => { board().props.onSwipe(0, 0, 1, 0); board().props.onCellPress(0, 0); });
@@ -171,6 +176,36 @@ describe('gameplay presentation and exit behavior', () => {
     expect(objective.props.accessibilityLabel).toContain(goal === GoalKind.Boss ? 'Yêu vương' : goal === GoalKind.Battle ? 'Yêu thú' : goal === GoalKind.BreakRocks ? 'Phá đá' : String(goal) === 'ActivateNodes' ? 'Kích hoạt Trận Nhãn' : goal === GoalKind.BreakSeals ? 'Phá phong ấn' : 'Thu');
     expect(objective.props.accessibilityLabel).toContain(String(level.objectives[0].target));
     expect(renderer.root.findAllByType(Native.ScrollView).some(node => node.props.testID === 'game-objective-intro-list')).toBe(true);
+  });
+
+  it('uses roomier rows with larger icons and a clear current/total hierarchy', () => {
+    mockState.save.active = gameplaySnapshot(goalLevel('Collect'));
+    mockParams.introRunId = mockState.save.active!.runId;
+    mount();
+    const title = renderer.root.findAllByType(Native.Text).find(node => node.props.accessibilityRole === 'header')!;
+    expect(Native.StyleSheet.flatten(title.parent!.props.style)).toMatchObject({ paddingHorizontal: 32, paddingVertical: 22 });
+
+    const objective = view('intro-objective-main');
+    const [icon, name, target] = objective.props.children;
+    expect(Native.StyleSheet.flatten(objective.props.style)).toMatchObject({ minHeight: 48, gap: 10 });
+    expect(Native.StyleSheet.flatten(icon.props.style)).toMatchObject({ width: 40, height: 40 });
+    expect(Native.StyleSheet.flatten(name.props.style)).toMatchObject({ fontSize: 14 });
+    expect(Native.StyleSheet.flatten(target.props.style)).toMatchObject({ fontSize: 18 });
+    const targetParts = Array.isArray(target.props.children) ? target.props.children : [target.props.children];
+    expect(targetParts.map((part: React.ReactElement<{ children?: React.ReactNode }>) => React.Children.toArray(part.props.children)
+      .filter(value => typeof value === 'string' || typeof value === 'number').join('')))
+      .toEqual(['0', `/${mockState.save.active!.level.objectives[0].target}`]);
+  });
+
+  it('keeps the HP unit secondary for enemy objectives', () => {
+    mockState.save.active = gameplaySnapshot(goalLevel(GoalKind.Boss));
+    mockParams.introRunId = mockState.save.active.runId;
+    mount();
+    const target = view('intro-objective-main').props.children[2];
+    const [amount, unit] = target.props.children;
+    expect(amount.props.children).toBe(mockState.save.active.level.objectives[0].target);
+    expect(unit.props.children).toBe(' HP');
+    expect(Native.StyleSheet.flatten(unit.props.style)).toMatchObject({ fontSize: 13 });
   });
 
   it('lists every objective in a scrollable panel on a short screen', () => {

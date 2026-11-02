@@ -38,15 +38,21 @@ export function GameplayObjectiveIntro({ board, onStart, onBack }: {
     <InventoryDialogPanel testID="game-objective-intro-panel">
       <View style={styles.content} onLayout={event => setPanelWidth(event.nativeEvent.layout.width)}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.2} style={styles.title}>MỤC TIÊU MÀN {level.id}</Text>
-        <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={styles.levelName}>{level.mapDefinition?.name ?? `Màn ${level.id}`}</Text>
         <ScrollView testID="game-objective-intro-list" style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator keyboardShouldPersistTaps="handled">
           {level.objectives.map(objective => {
             const { name, icon } = objectiveDetails(objective, content);
-            const label = objective.type === 'Battle' || objective.type === 'Boss' ? `Hạ ${name}, ${objective.target} máu` : `${name}, ${objective.target}`;
+            const enemy = objective.type === 'Battle' || objective.type === 'Boss';
+            const label = enemy ? `Hạ ${name}, ${objective.target} máu` : `${name}, ${objective.target}`;
             return <View key={objective.id} testID={`intro-objective-${objective.id}`} accessible accessibilityRole="text" accessibilityLabel={label} style={styles.objective}>
               <Image source={icon} contentFit="contain" accessible={false} style={styles.icon} />
-              <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={styles.objectiveName}>{objective.type === 'Battle' || objective.type === 'Boss' ? `Hạ ${name}` : name}</Text>
-              <Text maxFontSizeMultiplier={1.2} style={styles.target}>{objective.type === 'Battle' || objective.type === 'Boss' ? `${objective.target} HP` : `0/${objective.target}`}</Text>
+              <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={styles.objectiveName}>{enemy ? `Hạ ${name}` : name}</Text>
+              {enemy
+                ? <Text maxFontSizeMultiplier={1.2} style={styles.target}>
+                    <Text style={styles.targetCurrent}>{objective.target}</Text><Text style={styles.targetSecondary}> HP</Text>
+                  </Text>
+                : <Text maxFontSizeMultiplier={1.2} style={styles.target}>
+                    <Text style={styles.targetCurrent}>0</Text><Text style={styles.targetSecondary}>/{objective.target}</Text>
+                  </Text>}
             </View>;
           })}
         </ScrollView>
@@ -61,14 +67,15 @@ export function GameplayObjectiveIntro({ board, onStart, onBack }: {
 
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFill, zIndex: 20, backgroundColor: colors.veil, padding: 16, alignItems: 'center', justifyContent: 'center' },
-  content: { flex: 1, width: '100%', paddingHorizontal: 22, paddingVertical: 14, alignItems: 'center', gap: 5 },
+  content: { flex: 1, width: '100%', paddingHorizontal: 32, paddingVertical: 22, alignItems: 'center', gap: 5 },
   title: { color: colors.goldBright, fontSize: 18, lineHeight: 24, fontWeight: '900', textAlign: 'center' },
-  levelName: { color: colors.ivory, fontSize: 12, lineHeight: 16, fontWeight: '700', textAlign: 'center' },
   list: { width: '100%', flex: 1, minHeight: 0 },
-  listContent: { paddingVertical: 4, gap: 4 },
-  objective: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  icon: { width: 30, height: 30, flexShrink: 0 },
-  objectiveName: { color: colors.ivory, fontSize: 12, lineHeight: 15, fontWeight: '800', flex: 1 },
-  target: { color: colors.goldBright, fontSize: 12, lineHeight: 16, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  listContent: { paddingVertical: 4, gap: 8 },
+  objective: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  icon: { width: 40, height: 40, flexShrink: 0 },
+  objectiveName: { color: colors.ivory, fontSize: 14, lineHeight: 18, fontWeight: '800', flex: 1 },
+  target: { fontSize: 18, lineHeight: 22, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  targetCurrent: { color: colors.goldBright },
+  targetSecondary: { color: colors.parchment, fontSize: 13, lineHeight: 18, fontWeight: '700' },
   actions: { width: '100%', alignItems: 'center', gap: 2 },
 });
