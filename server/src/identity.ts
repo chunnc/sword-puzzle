@@ -16,6 +16,7 @@ type AuthResult = { idToken: string; refreshToken: string; expiresIn: string; lo
 type Installation = {
   secretHash: string; playerUid: string; bindingVersion: number; status: 'active' | 'revoked';
   authValidAfter: number; isGuest: boolean; createdAt: number; updatedAt: number;
+  activeRunId?: string | null;
   registration?: { id: string; email: string };
 };
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');

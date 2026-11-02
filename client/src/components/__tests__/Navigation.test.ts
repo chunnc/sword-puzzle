@@ -45,7 +45,8 @@ jest.mock('../Art', () => {
   const React = require('react');
   const { Pressable, Text, View } = require('react-native');
   return {
-    ScreenFrame: View,
+    ScreenFrame: ({ children, overlay }: { children: React.ReactNode; overlay?: React.ReactNode }) =>
+      React.createElement(View, null, children, overlay),
     ArtPanel: View,
     ProgressBar: View,
     TitleBanner: ({ title }: { title: string }) => React.createElement(Text, null, title),
@@ -90,7 +91,7 @@ describe('scene navigation', () => {
     mockRouter.canGoBack.mockReturnValue(true);
     mockState.startLevel.mockResolvedValue(true);
   });
-  afterEach(() => { act(() => { renderer?.unmount(); }); installContent(require('../../../../content/game-config.json')); });
+  afterEach(() => { act(() => { renderer?.unmount(); }); installContent(require('../../../../content/game-config.json')); jest.useRealTimers(); });
 
   it.each([true, false])('requests a new run from the map and navigates only after success=%s', async (success) => {
     let finish!: (result: boolean) => void;
@@ -120,6 +121,29 @@ describe('scene navigation', () => {
     act(()=>{button(`Màn 1, ${{ easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[mockState.chapterMaps[0].difficulty]}, màn hiện tại`).props.onPress();button(`Màn 1, ${{ easy: 'Dễ', medium: 'Vừa', hard: 'Khó', 'very-hard': 'Rất khó' }[mockState.chapterMaps[0].difficulty]}, màn hiện tại`).props.onPress();});
     expect(mockState.startLevel).toHaveBeenCalledTimes(1);
     await act(async()=>{finish(true);});expect(mockRouter.push).toHaveBeenCalledTimes(1);
+  });
+  it('shows a centered themed loading overlay only after a short wait and updates its copy after three seconds', async () => {
+    jest.useFakeTimers();
+    let finish!: (result: boolean) => void;
+    mockState.startLevel.mockImplementation(() => new Promise<boolean>(resolve => { finish = resolve; }));
+    mount(React.createElement(MapScreen));
+    act(() => { button('Màn 1, Dễ, màn hiện tại').props.onPress(); });
+    expect(renderer.root.findAllByProps({ testID: 'map-level-loading-overlay' })).toHaveLength(0);
+    expect(button('Màn 1, Dễ, màn hiện tại, đang mở').props.accessibilityState.busy).toBe(true);
+
+    await act(async () => { jest.advanceTimersByTime(199); });
+    expect(renderer.root.findAllByProps({ testID: 'map-level-loading-overlay' })).toHaveLength(0);
+    await act(async () => { jest.advanceTimersByTime(1); });
+    const overlay = renderer.root.findByProps({ testID: 'map-level-loading-overlay' });
+    expect(overlay.props.accessibilityRole).toBe('progressbar');
+    expect(overlay.props.accessibilityLabel).toBe('Đang khai mở Tiên Lộ…');
+    expect(renderer.root.findByProps({ testID: 'map-level-loading-title' }).props.children).toBe('Đang khai mở Tiên Lộ…');
+
+    await act(async () => { jest.advanceTimersByTime(2800); });
+    expect(renderer.root.findByProps({ testID: 'map-level-loading-detail' }).props.children).toBe('Xin chờ trong giây lát…');
+    await act(async () => { finish(true); });
+    expect(renderer.root.findAllByProps({ testID: 'map-level-loading-overlay' })).toHaveLength(0);
+    expect(mockRouter.push).toHaveBeenCalledWith('/game/1');
   });
   it('defers a start completed in background until foreground without starting again',async()=>{
     let finish!: (value:boolean)=>void;

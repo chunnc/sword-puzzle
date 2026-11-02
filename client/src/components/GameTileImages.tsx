@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, type PropsWithChildren } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import { useImage, type SkImage } from '@shopify/react-native-skia';
 import { ART } from '../assets';
 
@@ -8,12 +8,18 @@ const SOURCES = [ART.tileSword, ART.tileSword4, ART.tileSword5, ART.tileFire, AR
   ART.tileLightning, ART.tileLightning4, ART.tileLightning5, ART.tileSpiritOrb, ART.tileSpiritOrb4, ART.tileSpiritOrb5,
   ART.tileRock, ART.tileSword5Idle, ART.tileFire5Idle, ART.tileLightning5Idle, ART.tileSpiritOrb5Idle];
 
-/** Decode each board asset once per gameplay session and share it with the HUD. */
+/** Load board sprites first; the larger decorative idle atlases can follow the first render. */
 export function GameTileImageProvider({ children }: PropsWithChildren) {
+  const [idleAtlasesReady, setIdleAtlasesReady] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setIdleAtlasesReady(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
   const loaded = [useImage(SOURCES[0]), useImage(SOURCES[1]), useImage(SOURCES[2]), useImage(SOURCES[3]),
     useImage(SOURCES[4]), useImage(SOURCES[5]), useImage(SOURCES[6]), useImage(SOURCES[7]), useImage(SOURCES[8]),
     useImage(SOURCES[9]), useImage(SOURCES[10]), useImage(SOURCES[11]), useImage(SOURCES[12]),
-    useImage(SOURCES[13]), useImage(SOURCES[14]), useImage(SOURCES[15]), useImage(SOURCES[16])];
+    useImage(idleAtlasesReady ? SOURCES[13] : null), useImage(idleAtlasesReady ? SOURCES[14] : null),
+    useImage(idleAtlasesReady ? SOURCES[15] : null), useImage(idleAtlasesReady ? SOURCES[16] : null)];
   const images = useMemo(() => Object.fromEntries(SOURCES.map((source, index) => [source, loaded[index]])), loaded);
   return <TileImagesContext.Provider value={images}>{children}</TileImagesContext.Provider>;
 }

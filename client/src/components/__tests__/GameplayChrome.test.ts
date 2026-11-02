@@ -236,15 +236,20 @@ describe('gameplay header and objective rows', () => {
     expect(renderer.root.findAll(node => node.type === 'Canvas' as never)).toHaveLength(0);
   });
 
-  it('shares decoded images between the board and HUD instead of loading another sprite sheet', () => {
-    let boardImage: unknown;
-    function BoardImageConsumer() { boardImage = useGameTileImage(ART.tileSword5Idle); return null; }
-    const goals: ObjectiveDefinition[] = [{ ...collect('five'), chargeTier: 5 }];
-    act(() => { renderer = create(React.createElement(GameTileImageProvider, {},
-      React.createElement(BoardImageConsumer), info(goals))); });
-    act(() => view('objective-five').props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 90, height: 36 } } }));
-    expect(tileSprites()[0].props.idleImage).toBe(boardImage);
-    expect(jest.mocked(useImage).mock.calls.filter(([source]) => source === ART.tileSword5Idle)).toHaveLength(1);
+  it('loads decorative idle atlases after gameplay mounts, then shares each decoded image between the board and HUD', async () => {
+    jest.useFakeTimers();
+    try {
+      let boardImage: unknown;
+      function BoardImageConsumer() { boardImage = useGameTileImage(ART.tileSword5Idle); return null; }
+      const goals: ObjectiveDefinition[] = [{ ...collect('five'), chargeTier: 5 }];
+      act(() => { renderer = create(React.createElement(GameTileImageProvider, {},
+        React.createElement(BoardImageConsumer), info(goals))); });
+      expect(jest.mocked(useImage).mock.calls.filter(([source]) => source === ART.tileSword5Idle)).toHaveLength(0);
+      await act(async () => { jest.advanceTimersByTime(500); });
+      act(() => view('objective-five').props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 90, height: 36 } } }));
+      expect(tileSprites()[0].props.idleImage).toBe(boardImage);
+      expect(jest.mocked(useImage).mock.calls.filter(([source]) => source === ART.tileSword5Idle)).toHaveLength(1);
+    } finally { jest.useRealTimers(); }
   });
 
   it('falls back to the tier artwork when the sprite sheet has not loaded', () => {

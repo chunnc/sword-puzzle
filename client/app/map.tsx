@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BlurMask, Canvas, Path, Skia } from '@shopify/react-native-skia';
-import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, BackHandler, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,12 +25,13 @@ function chapterLevelTarget(chapter: ChapterDefinition, highestUnlocked: number)
   return Math.max(chapter.firstLevelId, Math.min(chapter.lastLevelId, highestUnlocked));
 }
 
-const MapLevelItem = React.memo(function MapLevelItem({ levelId, difficulty, stars, completed, locked, index, itemCount, mapWidth, onOpen }: {
+const MapLevelItem = React.memo(function MapLevelItem({ levelId, difficulty, stars, completed, locked, opening, index, itemCount, mapWidth, onOpen }: {
   levelId: number;
   difficulty: MapSummary['difficulty'];
   stars: number;
   completed: boolean;
   locked: boolean;
+  opening: boolean;
   index: number;
   itemCount: number;
   mapWidth: number;
@@ -87,11 +88,11 @@ const MapLevelItem = React.memo(function MapLevelItem({ levelId, difficulty, sta
       </View> : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Màn ${levelId}${difficultyName ? `, ${difficultyName}` : ''}${completed ? `, đã hoàn thành, ${stars} sao` : current ? ', màn hiện tại' : ', đã khóa'}`}
-        accessibilityState={{ disabled: locked }}
-        disabled={locked}
+        accessibilityLabel={`Màn ${levelId}${difficultyName ? `, ${difficultyName}` : ''}${completed ? `, đã hoàn thành, ${stars} sao` : current ? ', màn hiện tại' : ', đã khóa'}${opening ? ', đang mở' : ''}`}
+        accessibilityState={{ disabled: locked || opening, busy: opening }}
+        disabled={locked || opening}
         onPress={sfxPress(() => void onOpen(levelId), !locked)}
-        style={[styles.stage, { transform: [{ translateX: shift }] }]}
+        style={[styles.stage, opening && styles.stageOpening, { transform: [{ translateX: shift }] }]}
       >
         <Image
           source={ART[art]}
@@ -136,6 +137,11 @@ export default function MapScreen() {
   const expectedContentHeight = Math.max(viewportSize.height,
     edgePadding.top + orderedMaps.length * LEVEL_ROW_HEIGHT + edgePadding.bottom);
   const opening = useRef(false);
+  const [openingLevelId, setOpeningLevelId] = useState<number | null>(null);
+  const [showOpenOverlay, setShowOpenOverlay] = useState(false);
+  const [showLongWait, setShowLongWait] = useState(false);
+  const loadingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longWaitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const focused = useRef(false);
   const pendingNavigation = useRef<number | null>(null);
   const foreground = useGameStore(state => state.foreground);
@@ -156,8 +162,13 @@ export default function MapScreen() {
   useFocusEffect(useCallback(() => {
     focused.current = true;
     focusCurrentProgress();
-    return () => { focused.current=false;pendingNavigation.current=null; };
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => opening.current);
+    return () => { focused.current=false;pendingNavigation.current=null;subscription.remove(); };
   }, [focusCurrentProgress]));
+  useEffect(() => () => {
+    if (loadingTimer.current) clearTimeout(loadingTimer.current);
+    if (longWaitTimer.current) clearTimeout(longWaitTimer.current);
+  }, []);
 
   const chooseChapter = useCallback((selected: ChapterDefinition) => {
     const targetLevel = chapterLevelTarget(selected, unlocked);
@@ -187,24 +198,48 @@ export default function MapScreen() {
   const openLevel = useCallback(async (levelId: number) => {
     if (opening.current) return;
     opening.current = true;
+    setOpeningLevelId(levelId);
+    setShowOpenOverlay(false);
+    setShowLongWait(false);
+    loadingTimer.current = setTimeout(() => setShowOpenOverlay(true), 200);
+    longWaitTimer.current = setTimeout(() => setShowLongWait(true), 3000);
     try {
       if (await startLevel(levelId)) {
         if (!focused.current) return;
         if (useGameStore.getState().foreground) router.push(gameRoute(levelId, useGameStore.getState().save.active?.runId) as never);
         else pendingNavigation.current=levelId;
       }
-    } finally { opening.current = false; }
+    } finally {
+      if (loadingTimer.current) clearTimeout(loadingTimer.current);
+      if (longWaitTimer.current) clearTimeout(longWaitTimer.current);
+      loadingTimer.current = null;
+      longWaitTimer.current = null;
+      opening.current = false;
+      setOpeningLevelId(null);
+      setShowOpenOverlay(false);
+      setShowLongWait(false);
+    }
   }, [startLevel, router]);
   const renderLevel = useCallback(({ item, index }: { item: MapSummary; index: number }) => (
     <MapLevelItem levelId={item.id} difficulty={item.difficulty} stars={getLevelStars(save, item.id)}
-      completed={getLevelCompleted(save, item.id)} locked={item.id > unlocked} index={index}
+      completed={getLevelCompleted(save, item.id)} locked={item.id > unlocked} opening={openingLevelId === item.id} index={index}
       itemCount={orderedMaps.length} mapWidth={viewportSize.width} onOpen={openLevel} />
-  ), [save, unlocked, openLevel, orderedMaps.length, viewportSize.width]);
+  ), [save, unlocked, openingLevelId, openLevel, orderedMaps.length, viewportSize.width]);
   const nav = (id: BottomNavId) => navigateTab(router, id);
   const chapterLevelCount = chapter ? chapter.lastLevelId - chapter.firstLevelId + 1 : maps.length;
 
   return (
-    <ScreenFrame background="bgMap">
+    <ScreenFrame background="bgMap" overlay={showOpenOverlay ? <View
+      testID="map-level-loading-overlay"
+      accessibilityViewIsModal
+      accessibilityRole="progressbar"
+      accessibilityLabel={showLongWait ? 'Đang khai mở Tiên Lộ… Xin chờ trong giây lát…' : 'Đang khai mở Tiên Lộ…'}
+      accessibilityLiveRegion="polite"
+      style={styles.openingOverlay}>
+      <ActivityIndicator accessibilityElementsHidden size="large" color={colors.goldBright} />
+      <Text testID="map-level-loading-title" style={styles.openingTitle}>Đang khai mở Tiên Lộ…</Text>
+      {showLongWait ? <Text testID="map-level-loading-detail" style={styles.openingDetail}>Xin chờ trong giây lát…</Text> : null}
+    </View> : undefined}>
       <TopHud onAccount={() => router.push('/account')} />
       <View testID="map-area" style={styles.mapArea}>
         <FlatList
@@ -295,6 +330,10 @@ const styles = StyleSheet.create({
   chapterName: { color: '#392b1d', textAlign: 'center', fontSize: 15, lineHeight: 18, fontWeight: '900' },
   chapterStars: { color: '#98702e', fontSize: 12, fontWeight: '800', marginTop: 8 },
   stage: { position: 'absolute', top: LEVEL_STAGE_TOP, left: '50%', marginLeft: -42, width: 84, height: 84, justifyContent: 'center', alignItems: 'center' },
+  stageOpening: { borderWidth: 2, borderColor: colors.goldBright, borderRadius: 42 },
+  openingOverlay: { ...StyleSheet.absoluteFill, zIndex: 100, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.veil, gap: 12 },
+  openingTitle: { color: colors.ivory, fontSize: 16, lineHeight: 22, fontWeight: '800', textAlign: 'center' },
+  openingDetail: { color: colors.goldBright, fontSize: 13, lineHeight: 18, fontWeight: '700', textAlign: 'center' },
   lockedStageArt: { tintColor: '#8f9699' },
   stageNumber: { color: colors.ivory, fontSize: 26, fontWeight: '900', textShadowColor: '#102f2d', textShadowRadius: 5 },
   lockedStageNumber: { color: '#c0c4c6' },

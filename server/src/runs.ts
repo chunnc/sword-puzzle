@@ -7,7 +7,7 @@ import { consumeEnergy, contentWire, learnedPassives, highestUnlocked, mapFromDo
 import { profileFields, profileFromDocument } from './domain/profile';
 import { assistForFailures, closeAbandonedRun, completeRun, emptyMapStats, parseRunReport, startedStats, type MapStats, type StoredRun } from './domain/runs';
 
-export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, assertInstallation: (req: AuthenticatedRequest, tx: Transaction) => Promise<unknown>) {
+export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, assertInstallation: (req: AuthenticatedRequest, tx: Transaction) => Promise<{ activeRunId?: string | null }>) {
   const router = Router();
   router.get('/v3/bootstrap', async (_req, res, next) => {
     try {
@@ -37,7 +37,7 @@ export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, ass
       const statsRef = playerRef.collection('mapStats').doc(String(levelId));
       const installationRef = db.collection('installations').doc(req.installationId!);
       const response = await db.runTransaction(async tx => {
-        await assertInstallation(req, tx);
+        const installation = await assertInstallation(req, tx);
         const duplicate = await tx.get(runRef);
         if (duplicate.exists) {
           const data = duplicate.data()!;
@@ -61,8 +61,7 @@ export function createRunsRouter(db: Firestore, requireAuth: RequestHandler, ass
         if (!resource.exists) throw new ApiError(404, 'MAP_NOT_FOUND');
         const map = mapResourceFromDocument(resource.data(), content);
         if (map.id !== levelId) throw new Error('INVALID_MAP_RESOURCE');
-        const installation = await tx.get(installationRef);
-        const supersededRunId = installation.data()?.activeRunId ?? previousRunId;
+        const supersededRunId = installation.activeRunId ?? previousRunId;
         const [player, statsDoc, previousDoc] = await Promise.all([tx.get(playerRef), tx.get(statsRef),
           supersededRunId ? tx.get(playerRef.collection('runs').doc(supersededRunId)) : Promise.resolve(null)]);
         let profile = profileFromDocument(player.data(), content, Date.now());

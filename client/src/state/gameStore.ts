@@ -62,6 +62,24 @@ interface GameState {
 }
 const CLIENT_VERSION = '1.9.0';
 let startRequestInFlight = false;
+type StartDiagnostics = {
+  levelId: number;
+  requestedAt: number;
+  queueMs: number;
+  pendingMs: number;
+  pendingSaveMs: number;
+  runApiMs: number;
+  boardMs: number;
+  activeSaveMs: number;
+};
+const performanceNow = () => globalThis.performance?.now?.() ?? Date.now();
+function reportStartDiagnostics(timing: StartDiagnostics) {
+  if (__DEV__) {
+    const { levelId, requestedAt, ...phases } = timing;
+    console.info('[game][open-level]', JSON.stringify({ levelId, totalMs: Math.round((performanceNow() - requestedAt) * 10) / 10,
+      ...Object.fromEntries(Object.entries(phases).map(([key, value]) => [key, Math.round(value * 10) / 10])) }));
+  }
+}
 let recoveryInFlight: Promise<void> | null = null,
   mutationQueue = Promise.resolve(),
   identityLoaded = false,
@@ -182,13 +200,18 @@ async function loadChapter(chapterId: string, options?: { force?: boolean }) {
   try { await request; }
   finally { if (chapterRequests.get(chapterId) === request) chapterRequests.delete(chapterId); }
 }
-async function recoverRunStart() {
+async function recoverRunStart(timing?: StartDiagnostics) {
   const state = useGameStore.getState(), pending = state.save.pendingStart, session = getCurrentSession();
   if (!pending || !session) return;
   const epoch = getSessionGeneration();
   let response;
-  try { response = await startRun(session, pending); }
+  const apiStartedAt = performanceNow();
+  try {
+    response = await startRun(session, pending);
+    if (timing) timing.runApiMs = performanceNow() - apiStartedAt;
+  }
   catch (error) {
+    if (timing) timing.runApiMs = performanceNow() - apiStartedAt;
     if (epoch !== getSessionGeneration() || useGameStore.getState().save.ownerId !== session.uid) throw new GameApiError('SESSION_CHANGED');
     if (error instanceof GameApiError && ['RUN_CONFLICT','RUN_FINISHED','LEVEL_LOCKED','INVALID_RUN','MAP_NOT_FOUND','INSUFFICIENT_ENERGY'].includes(error.code)) {
       const save = useGameStore.getState().save;
@@ -208,10 +231,14 @@ async function recoverRunStart() {
     || new Set(run.loadout.skills).size !== run.loadout.skills.length || !run.loadout.skills.every(id => content.skills.some(s => s.id === id && s.kind !== 'passive')) || run.loadout.sword !== null && !content.swords.some(s => s.id === run.loadout.sword)
     || !Number.isFinite(run.assistReduction) || run.assistReduction < 0 || run.assistReduction > .3) throw new GameApiError('INVALID_RESPONSE');
   if (run.passiveSkills !== undefined && (!Array.isArray(run.passiveSkills) || new Set(run.passiveSkills).size !== run.passiveSkills.length || !run.passiveSkills.every(id => content.skills.some(s => s.id === id && s.kind === 'passive')))) throw new GameApiError('INVALID_RESPONSE');
+  const boardStartedAt = performanceNow();
   const active = new BoardEngine(mapToLevel(map, run.seed, run.assistReduction, content), null, { loadout: run.loadout, totalExp: run.totalExp, passiveSkills: run.passiveSkills }).snapshot();
   active.runId = run.runId;
+  if (timing) timing.boardMs = performanceNow() - boardStartedAt;
+  const saveStartedAt = performanceNow();
   await persistNext({ ...useGameStore.getState().save, profile: { ...useGameStore.getState().save.profile, energy: normalizeEnergy(response.value.energy) },
     active, pendingStart: undefined, pendingEnergyLoss: undefined, energyConsumedRunId: undefined, retiredRunId: undefined, lastWin: null });
+  if (timing) timing.activeSaveMs = performanceNow() - saveStartedAt;
   observeEnergyClock(normalizeEnergy(response.value.energy));
   useGameStore.setState({ session: response.session });
 }
@@ -652,11 +679,17 @@ export const useGameStore = create<GameState>((set, get) => ({
   startLevel: levelId => {
     if (startRequestInFlight) return Promise.resolve(false);
     startRequestInFlight = true;
+    const timing: StartDiagnostics = { levelId, requestedAt: performanceNow(), queueMs: 0, pendingMs: 0, pendingSaveMs: 0, runApiMs: 0, boardMs: 0, activeSaveMs: 0 };
     return serialize(async () => {
+      timing.queueMs = performanceNow() - timing.requestedAt;
       if (!available(true)) return false;
       try {
         const uncertainStart = get().save.pendingStart;
-        if (!await submitPending()) return false;
+        const pendingStartedAt = performanceNow();
+        let canStart: boolean;
+        try { canStart = await submitPending(); }
+        finally { timing.pendingMs = performanceNow() - pendingStartedAt; }
+        if (!canStart) return false;
         if (uncertainStart) return uncertainStart.levelId === levelId;
         let current = get().save;
         if (!Number.isInteger(levelId) || levelId < 1 || levelId > CONTENT.levelCount) return false;
@@ -671,9 +704,12 @@ export const useGameStore = create<GameState>((set, get) => ({
           set({ energyPrompt: true, notice: '' });
           return false;
         }
-        await persistNext({ ...get().save, pendingStart: { runId: newId(), levelId,
-          previousRunId: current.active?.level.mapDefinition ? current.active.runId : null } });
-        await recoverRunStart();
+        const pendingSaveStartedAt = performanceNow();
+        try {
+          await persistNext({ ...get().save, pendingStart: { runId: newId(), levelId,
+            previousRunId: current.active?.level.mapDefinition ? current.active.runId : null } });
+        } finally { timing.pendingSaveMs = performanceNow() - pendingSaveStartedAt; }
+        await recoverRunStart(timing);
         const ch = get().save.active!.level.mapDefinition!.chapterId;
         if (get().chapterId !== ch) set({ chapterId: ch, chapterMaps: chapterCache.get(ch)?.maps ?? [], chapterLoading: false, chapterError: '' });
         return true;
@@ -681,7 +717,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (error instanceof GameApiError && error.code === 'INSUFFICIENT_ENERGY') { set({ energyPrompt: true, notice: '' }); return false; }
         await failure(error); return false;
       }
-    }).finally(() => { startRequestInFlight = false; });
+    }).finally(() => { reportStartDiagnostics(timing); startRequestInFlight = false; });
   },
   swap: (x1, y1, x2, y2, presenter) => serialize(async () => {
     const current = get().save;
