@@ -215,11 +215,14 @@ describe('inventory collection', () => {
       expect(scroll.props.scrollEnabled).not.toBe(false);
     }
   });
-  it('shows empty inventory guidance for a new character', () => {
+  it.each(['sword', 'skill'] as const)('shows the empty state for %s', category => {
     mockState.save = emptySave();
-    mount();
-    const text = renderer.root.findAllByType(require('react-native').Text).map(node => node.props.children).join(' ');
-    expect(text).toContain('Đạt 3 sao màn 3');
+    mount(category);
+    const text = renderer.root.findAllByType(Text).map(node => node.props.children).join(' ');
+    expect(text).toContain('Chưa sở hữu');
+    expect(text).not.toContain('Đạt 3 sao');
+    expect(text).not.toContain('Chưa học kiếm thức');
+    expect(text).not.toContain('Chưa có kiếm.');
   });
 
   it('puts equipped skills first in slot order and removes equipped status copy from cards', () => {
@@ -245,11 +248,12 @@ describe('inventory collection', () => {
     expect(renderer.root.findAllByType(Text).some(node => node.props.children === 'Đang trang bị')).toBe(false);
   });
 
-  it('uses high-contrast text for the empty list guidance', () => {
+  it('uses high-contrast text for the empty state', () => {
     mockState.save = emptySave();
     mount();
-    const hint = renderer.root.findAllByType(Text).find(node => String(node.props.children).includes('Đạt 3 sao màn 3'))!;
+    const hint = renderer.root.findAllByType(Text).find(node => node.props.children === 'Chưa sở hữu')!;
     expect(StyleSheet.flatten(hint.props.style)).toMatchObject({ color: colors.ivory, fontWeight: '700' });
+    expect(StyleSheet.flatten(hint.parent!.props.style)).toMatchObject({ backgroundColor: colors.inkDeep });
   });
 
   it('renders new passive form icons without equipment controls', () => {

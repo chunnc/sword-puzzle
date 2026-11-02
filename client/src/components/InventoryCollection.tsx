@@ -110,8 +110,8 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
     <ScreenFrame background="bgRealm">
       <TopHud onAccount={() => router.push('/account')} />
       <CollectionTabs category={category} disabled={working} onSelect={setCategory} />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
-        {!ownedItems.length ? <Text style={styles.emptyMessage}>{category === 'sword' ? 'Chưa có kiếm. Đạt 3 sao màn 3 để nhận Thiết Kiếm.' : 'Chưa học kiếm thức. Đạt 3 sao màn 5 để học Thứ.'}</Text> : null}
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.list, !ownedItems.length && styles.emptyList]} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
+        {!ownedItems.length ? <View style={styles.emptyBox}><Text style={styles.emptyMessage}>Chưa sở hữu</Text></View> : null}
         {orderedItems.map(item => {
           const isSkill = 'cost' in item;
           const passive = isSkill && item.kind === 'passive';
@@ -188,6 +188,7 @@ export function InventoryCollection({ initialCategory = 'sword' }: { initialCate
 const styles = StyleSheet.create({
   scroll: { flex: 1, minHeight: 0 },
   list: { gap: 8, paddingBottom: 12 },
+  emptyList: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },
   card: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10, minHeight: 88 },
   socket: { width: 56, height: 56, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   itemIcon: { width: 48, height: 48 },
@@ -196,7 +197,8 @@ const styles = StyleSheet.create({
   nameArea: { flex: 1, minWidth: 0, gap: 2 },
   name: { color: colors.ivory, fontSize: 17, lineHeight: 22, fontWeight: '800' },
   meta: { color: colors.goldBright, fontSize: 10, lineHeight: 15, fontWeight: '600' },
-  emptyMessage: { color: colors.ivory, fontSize: 14, lineHeight: 20, fontWeight: '700' },
+  emptyBox: { backgroundColor: colors.inkDeep, borderColor: colors.gold, borderWidth: 1, borderRadius: 8, paddingVertical: 12, paddingHorizontal: 24 },
+  emptyMessage: { color: colors.ivory, fontSize: 14, lineHeight: 20, fontWeight: '700', textAlign: 'center' },
   description: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   equipTap: { width: 88, minHeight: 44, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   equipArt: { position: 'absolute', width: 88, height: 34 },
