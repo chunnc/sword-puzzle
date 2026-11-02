@@ -4,7 +4,7 @@ import {
   BlurMask, Canvas, Circle, DashPathEffect, FontWeight, Group, Image, Paint, Paragraph, Path, RoundedRect, Skia, useImage,
   type SkImage, type SkParagraph,
 } from '@shopify/react-native-skia';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, runOnUI } from 'react-native-worklets';
 import {
   Easing, useAnimatedReaction, useDerivedValue, withSequence, withTiming, type SharedValue,
@@ -17,7 +17,7 @@ import { colors } from '../theme';
 import {
   BOARD_SWAP_MS, BOARD_CLEAR_MS, BOARD_FALL_MS, BOARD_SETTLE_MS,
   BOARD_REJECT_OUT_MS, BOARD_REJECT_BACK_MS, BOARD_FLASH_IN_MS, BOARD_PULSE_IN_MS,
-  boardClearDurationMs, displayIndices, buildBoardEffectCues, buildCellVisuals, cellBounds, pointToCell,
+  boardClearDurationMs, displayIndices, buildBoardEffectCues, buildCellVisuals, cellBounds,
   type BoardVisualEffect, type CellVisual,
 } from './boardVisuals';
 import { createBoardMotionSession, createBoardMotionFrame, updateBoardMotionFrame, finishBoardMotionSession, type BoardMotionSession, type CellMotionValues } from './boardMotion';
@@ -31,6 +31,7 @@ import { BOARD_FRAME_INSET } from './boardLayout';
 import { boardOutlinePath } from './boardOutline';
 import { TutorialGuide } from './TutorialGuide';
 import { TUTORIAL_COLOR, tutorialGeometry, type TutorialMove } from './tutorialPresentation';
+import { useBoardSwipe } from './useBoardSwipe';
 
 export type { CellPosition } from '../game/types';
 export {
@@ -262,14 +263,8 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
     };
   }, [motion, clearDurationMs, hasLightning, hasSword, hasSpirit, hasSourceAnimation, onMotionStarted, onMotionFinished]);
 
-  const gesture = useMemo(() => Gesture.Pan().enabled(!locked && !targetingHint).minDistance(10).onStart(event => {
-    const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side, geometry);
-    if (first && tutorialMove && onTutorialDragStart) runOnJS(onTutorialDragStart)(tutorialMove.key);
-  }).onEnd(event => {
-    const first = pointToCell(event.x - event.translationX, event.y - event.translationY, side, geometry);
-    const second = pointToCell(event.x, event.y, side, geometry);
-    if (first && second) runOnJS(onSwipe)(first.x, first.y, second.x, second.y);
-  }), [locked, targetingHint, side, onSwipe, geometry, tutorialMove?.key, onTutorialDragStart]);
+  const gesture = useBoardSwipe({ runId, side, geometry, enabled: !locked && !targetingHint,
+    tutorialKey: tutorialMove?.key, onTutorialDragStart, onSwipe });
 
   return <View style={styles.frame}>
     {side > geometry.width * 2 ? <Canvas pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>

@@ -50,12 +50,9 @@ jest.mock('expo-router', () => ({ useIsFocused: () => mockFocused }));
 jest.mock('react-native-gesture-handler', () => ({
   Gesture: {
     Pan: jest.fn(() => {
-      const gesture: { enabled: jest.Mock; minDistance: jest.Mock; onStart: jest.Mock; onEnd: jest.Mock } = {
-        enabled: jest.fn(() => gesture),
-        minDistance: jest.fn(() => gesture),
-        onStart: jest.fn(() => gesture),
-        onEnd: jest.fn(() => gesture),
-      };
+      const gesture = {} as Record<string, jest.Mock>;
+      for (const name of ['enabled', 'minDistance', 'maxPointers', 'shouldCancelWhenOutside',
+        'onBegin', 'onStart', 'onUpdate', 'onEnd', 'onFinalize']) gesture[name] = jest.fn(() => gesture);
       return gesture;
     }),
   },
@@ -67,7 +64,10 @@ jest.mock('react-native-worklets', () => ({
     if (mockQueueUI) mockUIQueue.push(() => fn(...args));
     else fn(...args);
   },
-  runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
+  runOnJS: (fn: (...args: unknown[]) => unknown) => (...args: unknown[]) => {
+    if (mockQueueJS) mockJSQueue.push(() => fn(...args));
+    else fn(...args);
+  },
 }));
 
 jest.mock('react-native-reanimated', () => ({
@@ -113,6 +113,8 @@ let mockAppChanged: (state: 'active' | 'background') => void;
 const originalAppState = AppState.currentState;
 let mockQueueUI = false;
 const mockUIQueue: (() => unknown)[] = [];
+let mockQueueJS = false;
+const mockJSQueue: (() => unknown)[] = [];
 const mockReactions: (() => void)[] = [];
 
 jest.mock('@shopify/react-native-skia', () => {
@@ -176,9 +178,16 @@ describe('Skia Board integration', () => {
   const tile = (index: number) => renderer.root.findAll(node => node.type === 'Group' as never &&
     node.props.origin?.x === index % 7 * 50 + 25 && node.props.origin?.y === (6 - Math.floor(index / 7)) * 50 + 25)[0];
   const reactFrames = () => act(() => { mockReactions.forEach(run => run()); mockReactions.forEach(run => run()); });
+  const latestGesture = () => (Gesture.Pan as jest.Mock).mock.results.at(-1)!.value;
+  const beginSwipe = (x: number, y: number) => {
+    const gesture = latestGesture();
+    act(() => gesture.onBegin.mock.calls[0][0]({ x, y }));
+    return gesture;
+  };
 
   beforeEach(() => {
     mockQueueUI = false; mockUIQueue.length = 0; mockReactions.length = 0; mockFrameClocks.length = 0; mockFocused = true;
+    mockQueueJS = false; mockJSQueue.length = 0;
     AppState.currentState = 'active';
     const appListeners = new Set<(state: 'active' | 'background') => void>();
     mockAppChanged = state => appListeners.forEach(listener => listener(state));
@@ -202,8 +211,8 @@ describe('Skia Board integration', () => {
     expect(backgrounds.some(node => node.props.x === 151 && node.props.y === 151)).toBe(false);
     expect(buttons()).toHaveLength(48);
     expect(buttons().some(node => node.props.accessibilityLabel.endsWith('hàng 4, cột 4'))).toBe(false);
-    const gesture = (Gesture.Pan as jest.Mock).mock.results.at(-1)!.value;
-    gesture.onEnd.mock.calls[0][0]({ x: 175, y: 175, translationX: 50, translationY: 0 });
+    const gesture = beginSwipe(125, 175);
+    gesture.onEnd.mock.calls[0][0]({ x: 175, y: 175 }, true);
     expect(onSwipe).not.toHaveBeenCalled();
   });
 
@@ -222,21 +231,22 @@ describe('Skia Board integration', () => {
     expect(outline[0].findAll(node => node.type === 'DashPathEffect' as never)[0].props.intervals).toEqual([8, 5]);
   });
 
-  it('notifies drag start before drop and keeps the outline when the hand is dismissed', () => {
+  it('notifies drag start and swaps before drop, retaining the outline after dismissal', () => {
     const onTutorialDragStart = jest.fn();
     mount({ tutorialMove, onTutorialDragStart });
-    const gesture = (Gesture.Pan as jest.Mock).mock.results.at(-1)!.value;
+    const gesture = beginSwipe(125, 275);
     expect(gesture.minDistance).toHaveBeenCalledWith(10);
     expect(onTutorialDragStart).not.toHaveBeenCalled();
     act(() => gesture.onStart.mock.calls[0][0]({ x: 125, y: 264, translationX: 0, translationY: -11 }));
     expect(onTutorialDragStart).toHaveBeenCalledWith(tutorialMove.key);
-    expect(onSwipe).not.toHaveBeenCalled();
+    expect(onSwipe).toHaveBeenCalledWith(2, 1, 2, 2);
+    expect(onTutorialDragStart.mock.invocationCallOrder[0]).toBeLessThan(onSwipe.mock.invocationCallOrder[0]);
     act(() => renderer.update(React.createElement(Board, { ...props, tutorialMove, tutorialPromptVisible: false })));
     expect(renderer.root.findAll(node => node.props.testID === 'tutorial-guide')).toHaveLength(0);
     expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never && node.props.color === TUTORIAL_COLOR && node.props.strokeWidth === 4)).toHaveLength(1);
     const afterDismissal = (Gesture.Pan as jest.Mock).mock.results.at(-1)!.value;
-    act(() => afterDismissal.onEnd.mock.calls[0][0]({ x: 125, y: 225, translationX: 0, translationY: -50 }));
-    expect(onSwipe).toHaveBeenCalledWith(2, 1, 2, 2);
+    act(() => afterDismissal.onEnd.mock.calls[0][0]({ x: 125, y: 225 }, true));
+    expect(onSwipe).toHaveBeenCalledTimes(1);
   });
 
   it('hides tutorial visuals while the board is locked', () => {
@@ -244,6 +254,121 @@ describe('Skia Board integration', () => {
     expect(renderer.root.findAll(node => node.props.testID === 'tutorial-guide')).toHaveLength(0);
     expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never && node.props.color === TUTORIAL_COLOR)).toHaveLength(0);
   });
+
+  it.each([false, true])('dispatches a short swipe on activation with reduced motion %s', reduceMotion => {
+    mount({ reduceMotion });
+    const gesture = beginSwipe(149, 175);
+    expect(gesture.maxPointers).toHaveBeenCalledWith(1);
+    expect(gesture.shouldCancelWhenOutside).toHaveBeenCalledWith(false);
+    // Android has reset translation at activation; the source is still column 2.
+    act(() => gesture.onStart.mock.calls[0][0]({ x: 161, y: 175, translationX: 0, translationY: 0 }));
+    expect(onSwipe).toHaveBeenCalledWith(2, 3, 3, 3);
+    act(() => {
+      gesture.onUpdate.mock.calls[0][0]({ x: 300, y: 175 });
+      gesture.onUpdate.mock.calls[0][0]({ x: 100, y: 175 });
+      gesture.onEnd.mock.calls[0][0]({ x: 100, y: 175 }, true);
+      gesture.onFinalize.mock.calls[0][0]();
+    });
+    expect(onSwipe).toHaveBeenCalledTimes(1);
+    expect(onCellPress).not.toHaveBeenCalled();
+  });
+
+  it('waits through jitter and ambiguous motion, then commits on update before release', () => {
+    mount();
+    const gesture = beginSwipe(175, 175);
+    act(() => {
+      gesture.onStart.mock.calls[0][0]({ x: 183, y: 183 });
+      gesture.onUpdate.mock.calls[0][0]({ x: 195, y: 195 });
+    });
+    expect(onSwipe).not.toHaveBeenCalled();
+    act(() => gesture.onUpdate.mock.calls[0][0]({ x: 200, y: 190 }));
+    expect(onSwipe).toHaveBeenCalledWith(3, 3, 4, 3);
+    expect(onSwipe).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts a fast long swipe ending outside the board once, and rearms for a new touch', () => {
+    mount();
+    const gesture = beginSwipe(275, 175);
+    act(() => {
+      gesture.onStart.mock.calls[0][0]({ x: 283, y: 183 });
+      gesture.onEnd.mock.calls[0][0]({ x: 360, y: 175 }, true);
+      gesture.onFinalize.mock.calls[0][0]();
+    });
+    expect(onSwipe).toHaveBeenCalledWith(5, 3, 6, 3);
+    beginSwipe(175, 175);
+    act(() => gesture.onStart.mock.calls[0][0]({ x: 175, y: 160 }));
+    expect(onSwipe).toHaveBeenLastCalledWith(3, 3, 3, 4);
+    expect(onSwipe).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['failed-end', 'finalize'] as const)('discards a contact on %s without an extra swap', cancellation => {
+    mount();
+    const gesture = beginSwipe(175, 175);
+    act(() => {
+      gesture.onStart.mock.calls[0][0]({ x: 183, y: 183 });
+      if (cancellation === 'failed-end') gesture.onEnd.mock.calls[0][0]({ x: 200, y: 175 }, false);
+      else gesture.onFinalize.mock.calls[0][0]();
+      gesture.onUpdate.mock.calls[0][0]({ x: 200, y: 175 });
+      gesture.onEnd.mock.calls[0][0]({ x: 200, y: 175 }, true);
+    });
+    expect(onSwipe).not.toHaveBeenCalled();
+  });
+
+  it('leaves ordinary taps and skill target taps available', () => {
+    mount();
+    const gesture = beginSwipe(25, 325);
+    act(() => {
+      gesture.onFinalize.mock.calls[0][0]();
+      buttons()[42].props.onPress();
+    });
+    expect(onCellPress).toHaveBeenCalledWith(0, 0);
+    expect(onSwipe).not.toHaveBeenCalled();
+    act(() => renderer.update(React.createElement(Board, { ...props, targetingHint: 'Chọn ô' })));
+    act(() => buttons()[43].props.onPress());
+    expect(onCellPress).toHaveBeenLastCalledWith(1, 0);
+    expect(latestGesture().enabled).toHaveBeenCalledWith(false);
+  });
+
+  it('keeps an in-progress swipe and uses the latest handler across unrelated rerenders', () => {
+    mount();
+    const gesture = beginSwipe(175, 175);
+    const nextSwipe = jest.fn();
+    act(() => renderer.update(React.createElement(Board, { ...props, selected: { x: 0, y: 0 }, onSwipe: nextSwipe })));
+    expect(latestGesture()).toBe(gesture);
+    act(() => gesture.onUpdate.mock.calls[0][0]({ x: 190, y: 175 }));
+    expect(nextSwipe).toHaveBeenCalledWith(3, 3, 4, 3);
+    expect(onSwipe).not.toHaveBeenCalled();
+  });
+
+  it.each(['lock', 'targeting', 'run', 'geometry', 'resize', 'unmount'] as const)(
+    'retires the contact and queued JS callbacks on %s', change => {
+      mount();
+      const gesture = beginSwipe(175, 175);
+      mockQueueJS = true;
+      act(() => gesture.onStart.mock.calls[0][0]({ x: 190, y: 175 }));
+      expect(onSwipe).not.toHaveBeenCalled();
+      act(() => {
+        if (change === 'lock') renderer.update(React.createElement(Board, { ...props, locked: true }));
+        if (change === 'targeting') renderer.update(React.createElement(Board, { ...props, targetingHint: 'Chọn ô' }));
+        if (change === 'run') renderer.update(React.createElement(Board, { ...props, snapshot: { ...snapshot, runId: 'next-run' } }));
+        if (change === 'geometry') renderer.update(React.createElement(Board, { ...props,
+          snapshot: { ...snapshot, level: { ...snapshot.level, board: { ...snapshot.level.board } } } }));
+        if (change === 'resize') {
+          renderer.root.findAllByType(View).find(node => typeof node.props.onLayout === 'function')!
+            .props.onLayout({ nativeEvent: { layout: { width: 280, height: 280 } } });
+        }
+        if (change === 'unmount') renderer.unmount();
+      });
+      act(() => {
+        mockJSQueue.splice(0).forEach(fn => fn());
+        gesture.onUpdate.mock.calls[0][0]({ x: 210, y: 175 });
+        gesture.onEnd.mock.calls[0][0]({ x: 210, y: 175 }, true);
+        mockJSQueue.splice(0).forEach(fn => fn());
+      });
+      expect(onSwipe).not.toHaveBeenCalled();
+      mockQueueJS = false;
+    },
+  );
 
   it('always balances origin-bearing static tile groups with identity transforms', () => {
     mount();
@@ -635,8 +760,8 @@ describe('Skia Board integration', () => {
 
   it('preserves swipe coordinates and disables swiping while locked or targeting', () => {
     mount();
-    const latestGesture = () => (Gesture.Pan as jest.Mock).mock.results.at(-1)!.value;
-    act(() => { latestGesture().onEnd.mock.calls[0][0]({ x: 75, y: 325, translationX: 50, translationY: 0 }); });
+    const gesture = beginSwipe(25, 325);
+    act(() => { gesture.onEnd.mock.calls[0][0]({ x: 75, y: 325 }, true); });
     expect(onSwipe).toHaveBeenCalledWith(0, 0, 1, 0);
     act(() => { renderer.update(React.createElement(Board, { ...props, locked: true })); });
     expect(latestGesture().enabled).toHaveBeenCalledWith(false);
@@ -922,16 +1047,17 @@ describe('Skia Board integration', () => {
     mount({ visualEffect: { id: 20, kind: 'fall', falls: [{ index: 7, fromY: 4 }] } });
     expect(tile(7).props.transform.value).toEqual([{ translateX: 0 }, { translateY: -150 }, { scale: 1 }]);
     const oldTransform = tile(7).props.transform;
+    const transitionStart = mockUIQueue.length;
     act(() => renderer.update(React.createElement(Board, { ...props, visualEffect: {
       id: 21, kind: 'fall', falls: [{ index: 48, fromY: 7 }],
     } })));
     const nextTransform = tile(48).props.transform;
     expect(nextTransform.value).toEqual([{ translateX: 0 }, { translateY: -50 }, { scale: 1 }]);
     // Even a late cleanup of the old phase cannot cancel or finish the new fall.
-    act(() => { mockUIQueue[1](); });
+    act(() => { mockUIQueue[transitionStart](); });
     expect(oldTransform.value).toEqual([{ translateX: 0 }, { translateY: 0 }, { scale: 1 }]);
     expect(nextTransform.value).toEqual([{ translateX: 0 }, { translateY: -50 }, { scale: 1 }]);
-    act(() => { mockUIQueue[2](); mockReactions.at(-1)!(); });
+    act(() => { mockUIQueue[transitionStart + 1](); mockReactions.at(-1)!(); });
     expect(nextTransform.value).toEqual([{ translateX: 0 }, { translateY: 0 }, { scale: 1 }]);
   });
 
