@@ -47,7 +47,7 @@ interface Label {
 }
 
 function makeLabel(text: string, fontSize: number, color: string): Label {
-  // Paragraph uses the native font manager's fallback for the seal glyph.
+  // Paragraph text is used for the small in-board target badges.
   const paragraph = Skia.ParagraphBuilder.Make({
     maxLines: 1,
     textStyle: {
@@ -60,11 +60,10 @@ function makeLabel(text: string, fontSize: number, color: string): Label {
   return { paragraph, width: Math.max(1, width), height: paragraph.getHeight() };
 }
 
-function useBoardLabels(cellWidth: number, targetCount: number) {
+function useBoardLabels(targetCount: number) {
   return useMemo(() => ({
-    seal: makeLabel('封', Math.min(27, cellWidth * .65), '#eee0ff'),
     targets: Array.from({ length: targetCount }, (_, i) => makeLabel(String(i + 1), 13, '#fff8dd')),
-  }), [cellWidth, targetCount]);
+  }), [targetCount]);
 }
 
 type BoardLabels = ReturnType<typeof useBoardLabels>;
@@ -138,6 +137,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const [side, setSide] = useState(0);
   const outline = useMemo(() => boardOutlinePath(geometry, side), [geometry, side]);
   const images = useBoardImages();
+  const sealOverlay = useImage(ART.overlaySeal as number);
   const imageForTile = (tile: Tile) => images[semanticTileKind(tile.kind, content) as TileKind][tile.chargeTier];
   const visualTile = (tile: Tile): Tile => ({ ...tile, kind: semanticTileKind(tile.kind, content) as TileKind });
   const fxFireBurst = useImage(ART.fxFireBurst), fxLightning = useImage(ART.fxLightningAtlas);
@@ -196,7 +196,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
     value => { updateBoardMotionFrame(frame, value.progress, value.pulse); },
     [motion, frame],
   );
-  const labels = useBoardLabels(Math.max(0, side / geometry.width - 2), targets.length);
+  const labels = useBoardLabels(targets.length);
   const forecastSeals = useMemo(() => {
     const locked = new Set(snapshot.tiles.flatMap((tile, index) => tile?.locked ? [index] : []));
     const forecast = new Set<number>();
@@ -271,11 +271,11 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
       <Group transform={[{ translateX: BOARD_FRAME_INSET }, { translateY: BOARD_FRAME_INSET }]}>
         <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
           {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color={colors.boardCell} />)}
-          {drawOrder.map(index => <TileVisual key={index} tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} visual={visuals[index]} motion={frame.cells[index]} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />)}
+          {drawOrder.map(index => <TileVisual key={index} tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} sealOverlay={sealOverlay} visual={visuals[index]} motion={frame.cells[index]} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />)}
           {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
             progress={motion.progress} elapsedMs={hasSourceAnimation ? effectElapsedMs : motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning}
             renderTile={index => <TileArtwork tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)}
-              image={imageForTile(snapshot.tiles[index]!)} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />} /> : null}
+              image={imageForTile(snapshot.tiles[index]!)} sealOverlay={sealOverlay} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />} /> : null}
           {indices.map(index => {
             const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
             const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
@@ -323,10 +323,11 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   </View>;
 }
 
-function TileVisual({ tile, bounds, image, visual, motion, labels, particlePhase, idleAnimations, reduceMotion }: {
+function TileVisual({ tile, bounds, image, sealOverlay, visual, motion, labels, particlePhase, idleAnimations, reduceMotion }: {
   tile: Tile;
   bounds: ReturnType<typeof cellBounds>;
   image: SkImage | null;
+  sealOverlay: SkImage | null;
   visual: CellVisual;
   motion: CellMotionValues | null;
   labels: BoardLabels;
@@ -338,12 +339,12 @@ function TileVisual({ tile, bounds, image, visual, motion, labels, particlePhase
   // Paragraph paints its own colors, so fade the complete tile as a layer.
   // Source animations also fade/hide the artwork and its orbiting particles together.
   return <Group origin={{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }} transform={motion?.transform ?? IDENTITY_TILE_TRANSFORM} layer={visual.clearing || visual.sourceAnimation ? <Paint opacity={motion!.opacity} /> : undefined}>
-    <TileArtwork tile={tile} bounds={bounds} image={image} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />
+    <TileArtwork tile={tile} bounds={bounds} image={image} sealOverlay={sealOverlay} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />
   </Group>;
 }
 
-function TileArtwork({ tile, bounds, image, labels, particlePhase, idleAnimations, reduceMotion }: {
-  tile: Tile; bounds: ReturnType<typeof cellBounds>; image: SkImage | null; labels: BoardLabels;
+function TileArtwork({ tile, bounds, image, sealOverlay, labels, particlePhase, idleAnimations, reduceMotion }: {
+  tile: Tile; bounds: ReturnType<typeof cellBounds>; image: SkImage | null; sealOverlay: SkImage | null; labels: BoardLabels;
   particlePhase: SharedValue<number>; idleAnimations: IdleTileAnimations; reduceMotion: boolean;
 }) {
   const idle = tile.chargeTier === 5 ? idleAnimations[tile.kind] : undefined;
@@ -352,8 +353,8 @@ function TileArtwork({ tile, bounds, image, labels, particlePhase, idleAnimation
       idleImage={idle?.image} elapsedMs={idle?.elapsedMs ?? particlePhase} particlePhase={particlePhase} reduced={reduceMotion} />
     {tile.locked ? <Group>
       <RoundedRect {...bounds} r={5} color="rgba(9,35,49,.45)" />
-      <RoundedRect x={bounds.x + 1} y={bounds.y + 1} width={bounds.width - 2} height={bounds.height - 2} r={4} style="stroke" strokeWidth={2} color="#ae97cd" />
-      <Paragraph paragraph={labels.seal.paragraph} x={bounds.x + (bounds.width - labels.seal.width) / 2} y={bounds.y + (bounds.height - labels.seal.height) / 2} width={labels.seal.width} />
+      <Image image={sealOverlay} x={bounds.x + bounds.width * .05} y={bounds.y + bounds.height * .05}
+        width={bounds.width * .9} height={bounds.height * .9} fit="contain" />
     </Group> : null}
     {tile.nodeCharge !== undefined ? <Group>
       <RoundedRect {...bounds} r={5} color="rgba(31,21,57,.86)" />

@@ -471,7 +471,7 @@ describe('Skia Board integration', () => {
     const labels = renderer.root.findAll(node => node.type === 'Paragraph' as never).map(node => node.props.paragraph.text);
     expect(labels).not.toContain('氣');
     expect(labels.some(text => text.includes('✧') || text.includes('✦'))).toBe(false);
-    expect(labels).toContain('封');
+    expect(labels).not.toContain('封');
     expect(cells.find(node => node.props.accessibilityLabel.includes('cường hóa 4'))).toBeDefined();
     expect(cells.find(node => node.props.accessibilityLabel.includes('cường hóa 5'))).toBeDefined();
   });
@@ -699,7 +699,8 @@ describe('Skia Board integration', () => {
     mockReactions.at(-1)!();
     expect(tile(0).props.layer.props.opacity.value).toBe(.5);
     expect(tile(0).findAllByType(ChargedTileParticle)).toHaveLength(1);
-    expect(tile(0).findAll(node => node.type === 'Paragraph' as never)[0].props.paragraph.text).toBe('封');
+    expect(tile(0).findAll(node => node.type === 'SkiaImage' as never
+      && node.props.image?.asset === ART.overlaySeal)).toHaveLength(1);
     expect(renderer.root.findAll(node => node.type === 'RoundedRect' as never
       && node.props.color === colors.goldBright && node.props.style === 'stroke')).toHaveLength(1);
     motionSession.progress.value = 1;
@@ -744,7 +745,7 @@ describe('Skia Board integration', () => {
   it('renders one canvas and keeps 49 correctly positioned accessible buttons', () => {
     mount();
     expect(renderer.root.findAll(node => node.type === 'Canvas' as never)).toHaveLength(1);
-    expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(48);
+    expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(49);
     expect(renderer.root.findAllByType(IdleAtlasTile)).toHaveLength(1);
     const cells = buttons();
     expect(cells).toHaveLength(49);
@@ -775,16 +776,18 @@ describe('Skia Board integration', () => {
     expect(renderer.root.findAllByType(Text).some(node => node.props.children === 'Chọn một ô')).toBe(false);
   });
 
-  it.each([175, 350])('keeps the seal label inside its tile at grid width %s', side => {
+  it.each([175, 350])('renders a centered, ratio-preserving chain overlay inside its tile at grid width %s', side => {
     mount();
     const grid = renderer.root.findAllByType(View).find(node => typeof node.props.onLayout === 'function')!;
     act(() => { grid.props.onLayout({ nativeEvent: { layout: { width: side, height: side } } }); });
-    const seal = renderer.root.findAll(node => node.type === 'Paragraph' as never && node.props.paragraph.text === '封')[0];
+    const seal = renderer.root.findAll(node => node.type === 'SkiaImage' as never && node.props.image?.asset === ART.overlaySeal)[0];
     const bounds = StyleSheet.flatten(buttons()[0].props.style);
-    expect(seal.props.x).toBeGreaterThanOrEqual(bounds.left);
-    expect(seal.props.y).toBeGreaterThanOrEqual(bounds.top);
-    expect(seal.props.x + seal.props.width).toBeLessThanOrEqual(bounds.left + bounds.width);
-    expect(seal.props.y + seal.props.paragraph.getHeight()).toBeLessThanOrEqual(bounds.top + bounds.height);
+    expect(seal.props.fit).toBe('contain');
+    expect(seal.props.x).toBeGreaterThan(bounds.left);
+    expect(seal.props.y).toBeGreaterThan(bounds.top);
+    expect(seal.props.x + seal.props.width).toBeLessThan(bounds.left + bounds.width);
+    expect(seal.props.y + seal.props.height).toBeLessThan(bounds.top + bounds.height);
+    expect(renderer.root.findAll(node => node.type === 'Paragraph' as never && node.props.paragraph.text === '封')).toHaveLength(0);
   });
 
   it.each(['out','in'] as const)('plays settlement %s over 75ms on the UI thread', direction => {
@@ -1095,19 +1098,19 @@ describe('Skia Board integration', () => {
     expect(tile(7).props.layer.props.opacity).not.toBe(oldOpacity);
   });
 
-  it('fades sprite and text together and keeps prior cleared cells absent', () => {
+  it('fades sprite and chain overlay together and keeps prior cleared cells absent', () => {
     const first: BoardVisualEffect = { id: 4, kind: 'clear', cleared: [42], changed: [], effects: [{ kind: 'spirit', cells: [42], damage: 0, qi: 10 }] };
     mount({ visualEffect: first });
     const layers = () => renderer.root.findAll(node => node.type === 'Group' as never && node.props.layer);
     expect(layers()).toHaveLength(1);
     expect(layers()[0].props.layer.props.opacity).toEqual({ value: 0 });
-    expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(48);
+    expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(49);
     const second: BoardVisualEffect = { id: 5, kind: 'clear', cleared: [42, 43], changed: [], effects: [{ kind: 'fire', cells: [43], source: 42, damage: 1, qi: 1 }] };
     act(() => { renderer.update(React.createElement(Board, { ...props, visualEffect: second })); });
     expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(48);
     expect(layers()).toHaveLength(1);
     act(() => { renderer.update(React.createElement(Board, { ...props, visualEffect: { id: 6, kind: 'fall', falls: [{ index: 42, fromY: 7 }] } })); });
-    expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(48);
+    expect(renderer.root.findAll(node => node.type === 'SkiaImage' as never)).toHaveLength(49);
     expect(layers()).toHaveLength(0);
     expect(withTiming).toHaveBeenLastCalledWith(1, { duration: 450 }, expect.any(Function));
   });
