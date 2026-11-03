@@ -29,6 +29,7 @@ jest.mock('react-native-reanimated', () => ({
   default: { View: require('react-native').View }, useReducedMotion: () => mockReduceMotion,
   useSharedValue: (value: number) => require('react').useRef({ value }).current,
   useAnimatedStyle: (style: () => unknown) => style(), withTiming: (value: number) => value,
+  withDelay: (_delay: number, animation: unknown) => animation,
   cancelAnimation: jest.fn(), withSequence: (...values: unknown[]) => values.at(-1), Easing: { out: (value: unknown) => value, back: () => ({}), quad: {} },
   makeMutable: (value: unknown) => ({ value }),
 }));
