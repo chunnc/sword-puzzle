@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   emptyBox: { backgroundColor: colors.inkDeep, borderColor: colors.gold, borderWidth: 1, borderRadius: 8, paddingVertical: 12, paddingHorizontal: 24 },
   emptyMessage: { color: colors.ivory, fontSize: 14, lineHeight: 20, fontWeight: '700', textAlign: 'center' },
   description: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
-  equipTap: { width: 88, minHeight: 44, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
+  equipTap: { width: 88, minHeight: 44, marginRight: 8, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   equipArt: { position: 'absolute', width: 88, height: 34 },
   equipText: { color: colors.ivory, fontSize: 11, fontWeight: '800', letterSpacing: 0.2 },
   disabledText: { color: colors.ivory },

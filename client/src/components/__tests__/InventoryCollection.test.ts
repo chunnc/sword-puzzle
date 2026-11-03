@@ -82,6 +82,15 @@ describe('inventory collection', () => {
     for (const skill of SKILLS) expect(sources()).toContain(ART[SKILL_ART[skill.id]]);
   });
 
+  it.each([
+    ['sword', 'Trang bị Trọng Nhạc'],
+    ['skill', 'Trang bị Ngự Kiếm'],
+  ] as const)('insets the %s list equipment button by 8 points', (category, label) => {
+    mount(category);
+    const style = StyleSheet.flatten(button(label).props.style({ pressed: false }));
+    expect(style).toMatchObject({ width: 88, minHeight: 44, marginRight: 8 });
+  });
+
   it('equips a sword without changing skill slots', async () => {
     mount();
     await act(async () => { button('Trang bị Trọng Nhạc').props.onPress(); });
