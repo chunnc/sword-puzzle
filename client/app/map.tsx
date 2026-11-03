@@ -1,25 +1,26 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BlurMask, Canvas, Path, Skia } from '@shopify/react-native-skia';
-import { ActivityIndicator, BackHandler, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, BackHandler, FlatList, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ART, type Artwork } from '../src/assets';
 import { BottomNav, TopHud } from '../src/components/Chrome';
-import { ArtPanel, ScreenFrame } from '../src/components/Art';
+import { ArtPanel, GameButton, ScreenFrame } from '../src/components/Art';
 import { Notice } from '../src/components/Notice';
 import { CONTENT, type ChapterDefinition, type MapSummary } from '../src/game/domain';
 import { gameRoute } from '../src/game/gameRoute';
 import { navigateTab, type BottomNavId } from '../src/components/Navigation';
 import { getHighestUnlocked, getLevelStars, getLevelCompleted, useGameStore } from '../src/state/gameStore';
 import { useSfxPress } from '../src/audio/useSfxPress';
-import { colors } from '../src/theme';
+import { colors, type } from '../src/theme';
 
 const mapKey = (map: MapSummary) => String(map.id);
 const LEVEL_STAGE_WIDTH = 84;
 const LEVEL_ROW_HEIGHT = 124;
 const LEVEL_STAGE_TOP = (LEVEL_ROW_HEIGHT - LEVEL_STAGE_WIDTH) / 2;
 const LEVEL_TARGET_CENTER = 0.3;
+const DIALOG_PANEL_ASPECT_RATIO = 633 / 1024;
 
 function chapterLevelTarget(chapter: ChapterDefinition, highestUnlocked: number) {
   return Math.max(chapter.firstLevelId, Math.min(chapter.lastLevelId, highestUnlocked));
@@ -109,6 +110,11 @@ const MapLevelItem = React.memo(function MapLevelItem({ levelId, difficulty, sta
 export default function MapScreen() {
   const sfxPress = useSfxPress();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const availablePanelWidth = Math.max(0, windowWidth - insets.left - insets.right - 40);
+  const availablePanelHeight = Math.max(0, windowHeight - insets.top - insets.bottom - 48);
+  const chapterPanelWidth = Math.min(400, availablePanelWidth, availablePanelHeight * DIALOG_PANEL_ASPECT_RATIO);
+  const chapterPanelHeight = chapterPanelWidth / DIALOG_PANEL_ASPECT_RATIO;
   const router = useRouter();
   const chapterId = useGameStore(state => state.chapterId);
   const maps = useGameStore(state => state.chapterMaps);
@@ -272,31 +278,40 @@ export default function MapScreen() {
       <BottomNav active="map" onSelect={nav} onReselect={focusCurrentProgress} />
       <Notice message={notice} onDismiss={() => setNotice('')} />
       <Modal visible={chapterPickerOpen} transparent animationType="fade" presentationStyle="overFullScreen" statusBarTranslucent navigationBarTranslucent onRequestClose={() => setChapterPickerOpen(false)}>
-        <View style={[styles.modalOverlay, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24, paddingLeft: insets.left + 24, paddingRight: insets.right + 24 }]}>
+        <View style={[styles.modalOverlay, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24, paddingLeft: insets.left + 20, paddingRight: insets.right + 20 }]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Đóng danh sách chương" onPress={() => setChapterPickerOpen(false)} style={StyleSheet.absoluteFill} />
           <View accessibilityViewIsModal style={styles.chapterDialog}>
-            <Image source={ART.inventoryDialog} contentFit="fill" accessible={false} style={StyleSheet.absoluteFill} />
-            <Text accessibilityRole="header" style={styles.dialogTitle}>CHỌN CHƯƠNG</Text>
-            <ScrollView contentContainerStyle={styles.chapterOptions} showsVerticalScrollIndicator={false}>
-              {chapters.map(item => {
-                const locked = item.firstLevelId > unlocked;
-                const selected = item.id === chapterId;
-                return <Pressable key={item.id} accessibilityRole="button"
-                  accessibilityLabel={`Chương ${item.order}, ${item.name}${locked ? ', đã khóa' : ''}`}
-                  accessibilityState={{ selected, disabled: locked }} disabled={locked}
-                  onPress={sfxPress(() => chooseChapter(item), !locked)}
-                  style={[styles.chapterOption, selected && styles.chapterOptionSelected, locked && styles.chapterOptionLocked]}>
-                  <View style={styles.chapterOptionCopy}>
-                    <Text style={styles.chapterOptionOrder}>CHƯƠNG {item.order}</Text>
-                    <Text numberOfLines={2} style={styles.chapterOptionName}>{item.name}</Text>
-                  </View>
-                  {locked ? <Image source={ART.iconSlotLocked} contentFit="contain" accessible={false} style={styles.chapterLockIcon} /> : selected ? <Text style={styles.chapterSelected}>ĐANG XEM</Text> : null}
-                </Pressable>;
-              })}
-            </ScrollView>
-            <Pressable accessibilityRole="button" accessibilityLabel="Đóng danh sách chương" onPress={() => setChapterPickerOpen(false)} style={styles.dialogClose}>
-              <Text style={styles.dialogCloseText}>ĐÓNG</Text>
-            </Pressable>
+            <ArtPanel art="dialogPanel" contentFit="contain" testID="chapter-picker-panel" style={[styles.chapterPanel, { width: chapterPanelWidth, height: chapterPanelHeight }]}>
+              <View style={styles.chapterContent}>
+                <View style={styles.chapterHeader}>
+                  <Text accessibilityRole="header" style={styles.dialogTitle}>CHỌN CHƯƠNG</Text>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Đóng danh sách chương" onPress={sfxPress(() => setChapterPickerOpen(false))} style={styles.chapterHeaderClose}>
+                    <Text style={styles.chapterHeaderCloseText}>×</Text>
+                  </Pressable>
+                </View>
+                <ScrollView style={styles.chapterOptionsScroll} contentContainerStyle={styles.chapterOptions} showsVerticalScrollIndicator={false}>
+                  {chapters.map(item => {
+                    const locked = item.firstLevelId > unlocked;
+                    const selected = item.id === chapterId;
+                    return <Pressable key={item.id} accessibilityRole="button"
+                      accessibilityLabel={`Chương ${item.order}, ${item.name}${locked ? ', đã khóa' : selected ? ', đang xem' : ''}`}
+                      accessibilityState={{ selected, disabled: locked }} disabled={locked}
+                      onPress={sfxPress(() => chooseChapter(item), !locked)}
+                      style={[styles.chapterOption, selected && styles.chapterOptionSelected, locked && styles.chapterOptionLocked]}>
+                      <View style={[styles.chapterNumber, selected && styles.chapterNumberSelected, locked && styles.chapterNumberLocked]}>
+                        <Text style={[styles.chapterNumberText, locked && styles.chapterNumberTextLocked]}>{String(item.order).padStart(2, '0')}</Text>
+                      </View>
+                      <View style={styles.chapterOptionCopy}>
+                        <Text numberOfLines={2} style={[styles.chapterOptionName, locked && styles.chapterOptionNameLocked]}>{item.name}</Text>
+                        {selected || locked ? <Text style={[styles.chapterOptionStatus, locked && styles.chapterOptionStatusLocked]}>{locked ? 'ĐÃ KHÓA' : 'ĐANG XEM'}</Text> : null}
+                      </View>
+                      {locked ? <Image source={ART.iconSlotLocked} contentFit="contain" accessible={false} style={styles.chapterLockIcon} /> : null}
+                    </Pressable>;
+                  })}
+                </ScrollView>
+                <GameButton title="ĐÓNG" art="buttonSecondary" onPress={() => setChapterPickerOpen(false)} style={styles.chapterCloseButton} />
+              </View>
+            </ArtPanel>
           </View>
         </View>
       </Modal>
@@ -337,18 +352,29 @@ const styles = StyleSheet.create({
   lockedStageArt: { tintColor: '#8f9699' },
   stageNumber: { color: colors.ivory, fontSize: 26, fontWeight: '900', textShadowColor: '#102f2d', textShadowRadius: 5 },
   lockedStageNumber: { color: '#c0c4c6' },
-  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(1,18,23,0.78)', padding: 24 },
-  chapterDialog: { width: '100%', maxWidth: 340, maxHeight: '82%', minHeight: 220, padding: 18, gap: 12 },
-  dialogTitle: { color: colors.ivory, fontSize: 20, lineHeight: 26, fontWeight: '900', textAlign: 'center' },
-  chapterOptions: { gap: 8, paddingVertical: 2 },
-  chapterOption: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 9, borderWidth: 1, borderColor: 'rgba(215,183,110,0.32)', backgroundColor: 'rgba(11,80,81,0.62)' },
-  chapterOptionSelected: { borderColor: colors.goldBright, backgroundColor: 'rgba(26,119,114,0.54)' },
-  chapterOptionLocked: { opacity: 0.55 },
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(1,18,23,0.78)', paddingHorizontal: 20, paddingVertical: 24 },
+  chapterDialog: { width: '100%', maxHeight: '100%', alignItems: 'center' },
+  chapterPanel: { paddingHorizontal: 24, paddingVertical: 22 },
+  chapterContent: { width: '100%', flexShrink: 1, gap: 14 },
+  chapterHeader: { minHeight: 48, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 44 },
+  dialogTitle: { ...type.heading, fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', color: colors.goldBright, fontSize: 22, textAlign: 'center' },
+  chapterHeaderClose: { position: 'absolute', right: -10, top: 2, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  chapterHeaderCloseText: { color: colors.goldBright, fontSize: 32, lineHeight: 38, fontWeight: '400' },
+  chapterOptionsScroll: { flexShrink: 1, minHeight: 0 },
+  chapterOptions: { gap: 4, paddingVertical: 2 },
+  chapterOption: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 8, borderWidth: 1, borderColor: 'transparent', borderRadius: 12 },
+  chapterOptionSelected: { borderColor: colors.goldBright, backgroundColor: 'rgba(26,119,114,0.5)' },
+  chapterOptionLocked: { backgroundColor: 'rgba(6,36,39,0.18)' },
+  chapterNumber: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(215,183,110,0.58)' },
+  chapterNumberSelected: { backgroundColor: 'rgba(242,213,142,0.14)', borderColor: colors.goldBright },
+  chapterNumberLocked: { borderColor: 'rgba(201,212,197,0.4)' },
+  chapterNumberText: { color: colors.goldBright, fontSize: 14, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  chapterNumberTextLocked: { color: colors.textMuted },
   chapterOptionCopy: { flex: 1, minWidth: 0, gap: 3 },
-  chapterOptionOrder: { color: colors.goldBright, fontSize: 10, fontWeight: '800', letterSpacing: 0.6 },
-  chapterOptionName: { color: colors.ivory, fontSize: 14, lineHeight: 18, fontWeight: '800' },
+  chapterOptionName: { color: colors.ivory, fontSize: 15, lineHeight: 19, fontWeight: '800' },
+  chapterOptionNameLocked: { color: colors.textMuted },
+  chapterOptionStatus: { color: colors.goldBright, fontSize: 10, lineHeight: 14, fontWeight: '900', letterSpacing: 0.7 },
+  chapterOptionStatusLocked: { color: colors.textMuted },
   chapterLockIcon: { width: 22, height: 22 },
-  chapterSelected: { color: colors.goldBright, fontSize: 9, fontWeight: '900' },
-  dialogClose: { alignSelf: 'center', minWidth: 96, minHeight: 40, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.gold, borderRadius: 10, backgroundColor: 'rgba(6,47,50,0.75)' },
-  dialogCloseText: { color: colors.ivory, fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
+  chapterCloseButton: { width: '100%', minHeight: 48 },
 });
