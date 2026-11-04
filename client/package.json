@@ -7,6 +7,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "postinstall": "node scripts/patch-expo-dev-launcher.cjs",
     "start": "node ../tools/generate_game_content.mjs && expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
