@@ -6,10 +6,15 @@ export interface TimedSfxCue {
   reducedDelayMs?: number;
 }
 
-/** Owns pending cues, not audio tails. Cancellation never replays on resume. */
-export function createSfxSequence(cues: readonly TimedSfxCue[], play: (id: SfxId) => void) {
+/** Owns queued cues and their started playback. Cancellation never replays on resume. */
+export function createSfxSequence(
+  cues: readonly TimedSfxCue[],
+  play: (id: SfxId) => void | (() => void),
+  onPlaybackStopped?: () => void,
+) {
   const emitted = new Set<number>();
   const timers = new Set<ReturnType<typeof setTimeout>>();
+  const stops = new Set<() => void>();
   let startedAt: number | null = null, reduced = false, cancelled = false;
   let resolve!: () => void;
   const finished = new Promise<void>(yes => { resolve = yes; });
@@ -17,7 +22,10 @@ export function createSfxSequence(cues: readonly TimedSfxCue[], play: (id: SfxId
   const emit = (index: number) => {
     if (cancelled || emitted.has(index)) return;
     emitted.add(index);
-    try { play(cues[index].id); } catch { /* Feedback cannot block resolution. */ }
+    try {
+      const stop = play(cues[index].id);
+      if (stop) stops.add(stop);
+    } catch { /* Feedback cannot block resolution. */ }
     if (emitted.size === cues.length) resolve();
   };
   const schedule = () => {
@@ -34,6 +42,11 @@ export function createSfxSequence(cues: readonly TimedSfxCue[], play: (id: SfxId
       }
     });
   };
+  const stopPlayback = () => {
+    stops.forEach(stop => { try { stop(); } catch { /* Audio cleanup must not affect gameplay. */ } });
+    stops.clear();
+    onPlaybackStopped?.();
+  };
   return {
     finished,
     start(reduceMotion = false) {
@@ -41,6 +54,7 @@ export function createSfxSequence(cues: readonly TimedSfxCue[], play: (id: SfxId
       startedAt = Date.now(); reduced = reduceMotion; schedule();
     },
     reduce() { reduced = true; schedule(); },
-    cancel() { cancelled = true; clear(); resolve(); },
+    stopPlayback,
+    cancel() { cancelled = true; clear(); stopPlayback(); resolve(); },
   };
 }

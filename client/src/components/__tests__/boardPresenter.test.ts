@@ -441,6 +441,22 @@ it('starts each sound at its own confirmed trace, including windup and both swor
     f.finish(); await phase.finished; f.playback.dispose();
 });
 
+it('stops a long lightning cue when its own animation finishes', async () => {
+    const f = fixture();
+    const stop = jest.fn();
+    f.onSfx.mockReturnValue(stop);
+    f.step.effects = [{ kind: 'lightning', origin: 'charged', source: 1, cells: [1], qi: 0, damage: 0 }];
+    f.step.falls = [];
+    const phase = f.playback.presenter.present({ kind: 'step', step: f.step });
+    f.begin(); await flush();
+    expect(f.onSfx).toHaveBeenCalledWith('lightning_chain');
+    expect(stop).not.toHaveBeenCalled();
+    f.finish(); await flush();
+    expect(stop).toHaveBeenCalledTimes(1);
+    await phase.finished;
+    f.playback.dispose();
+});
+
 it('cancels a queued second slash and never emits it after a late callback', async () => {
     const f = fixture();
     f.step.effects = [{ kind: 'cross', origin: 'charged', swordChargeTier: 5, source: 0, cells: [0], qi: 0, damage: 0 }];
@@ -450,6 +466,20 @@ it('cancels a queued second slash and never emits it after a late callback', asy
     await expect(phase.finished).rejects.toBeInstanceOf(BoardActionCancelled);
     f.playback.onMotionStarted(f.board.runId, id); await jest.runAllTimersAsync();
     expect(f.onSfx).toHaveBeenCalledTimes(1); f.playback.dispose();
+});
+
+it('stops an active sound when the board action is cancelled', async () => {
+    const f = fixture();
+    const stop = jest.fn();
+    f.onSfx.mockReturnValue(stop);
+    f.step.effects = [{ kind: 'lightning', origin: 'charged', source: 1, cells: [1], qi: 0, damage: 0 }];
+    const phase = f.playback.presenter.present({ kind: 'step', step: f.step });
+    f.begin(); await flush();
+    expect(f.onSfx).toHaveBeenCalledWith('lightning_chain');
+    f.controller.abort();
+    await expect(phase.finished).rejects.toBeInstanceOf(BoardActionCancelled);
+    expect(stop).toHaveBeenCalledTimes(1);
+    f.playback.dispose();
 });
 
 it('preserves remaining cues when reduced motion is enabled mid-wave', async () => {

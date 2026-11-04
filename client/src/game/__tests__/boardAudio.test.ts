@@ -27,9 +27,24 @@ it('attributes adjacent rock breaks to the ordinary match, not a later activatio
   expect(engine.snapshot()).not.toHaveProperty('effects');
 });
 
-it('attributes skill and queued fire rock breaks separately and never duplicates a rock', () => {
+it.each([4, 5] as const)('plays the ordinary match before the tier %s fire activation', tier => {
   const snapshot = fixture();
-  snapshot.tiles[24] = tile('fire', 4); snapshot.tiles[25] = tile('rock'); snapshot.tiles[10] = tile('rock');
+  snapshot.tiles[21] = tile('fire', tier);
+  snapshot.tiles[22] = tile('fire');
+  snapshot.tiles[30] = tile('fire');
+  snapshot.tiles[23] = tile('sword');
+  const engine = new BoardEngine(snapshot.level, snapshot);
+  expect(engine.beginSwap(2, 4, 2, 3)).not.toBeNull();
+  const step = engine.nextResolutionStep()!;
+  expect(step.effects.map(effect => effect.kind)).toEqual(['skill', 'fire']);
+  expect(boardSoundCues(step).map(cue => [cue.id, cue.traceIndex])).toEqual([
+    ['match_spirit', 0], ['fire_burst', 1],
+  ]);
+});
+
+it.each([4, 5] as const)('plays fire tier %s after its queued activation and attributes rock breaks separately', tier => {
+  const snapshot = fixture();
+  snapshot.tiles[24] = tile('fire', tier); snapshot.tiles[25] = tile('rock'); snapshot.tiles[10] = tile('rock');
   const engine = new BoardEngine(snapshot.level, snapshot);
   expect(engine.beginSkill('thu', [{ x: 3, y: 3 }])).not.toBeNull();
   const step = engine.nextResolutionStep()!;

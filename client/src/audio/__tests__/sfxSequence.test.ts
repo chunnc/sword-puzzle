@@ -40,3 +40,19 @@ it('keeps the 60ms gap in reduced motion while removing elemental windup', async
   sequence.start(true); expect(play).toHaveBeenCalledTimes(2);
   jest.advanceTimersByTime(60); await sequence.finished; expect(play).toHaveBeenCalledTimes(3);
 });
+
+it('stops only audio started by the sequence when it is cancelled or its animation ends', async () => {
+  const firstStop = jest.fn(), secondStop = jest.fn();
+  const play = jest.fn().mockReturnValueOnce(firstStop).mockReturnValueOnce(secondStop);
+  const sequence = createSfxSequence([
+    { id: 'lightning_chain', delayMs: 0 }, { id: 'lightning_chain', delayMs: 60 },
+  ], play);
+  sequence.start(); jest.advanceTimersByTime(60);
+  await sequence.finished;
+  sequence.stopPlayback();
+  expect(firstStop).toHaveBeenCalledTimes(1);
+  expect(secondStop).toHaveBeenCalledTimes(1);
+  sequence.cancel();
+  expect(firstStop).toHaveBeenCalledTimes(1);
+  expect(secondStop).toHaveBeenCalledTimes(1);
+});

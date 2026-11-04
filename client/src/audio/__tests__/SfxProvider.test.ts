@@ -3,11 +3,11 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { AppState, type AppStateStatus } from 'react-native';
 import { SfxProvider, useSfx, type SfxId } from '../SfxProvider';
 
-const mockPlayers: { play: jest.Mock; remove: jest.Mock; unsubscribe: jest.Mock }[] = [];
+const mockPlayers: { play: jest.Mock; pause: jest.Mock; remove: jest.Mock; unsubscribe: jest.Mock }[] = [];
 jest.mock('expo-audio', () => ({
   preload: jest.fn(() => Promise.resolve()),
   createAudioPlayer: jest.fn(() => {
-    const player = { seekTo: jest.fn(() => Promise.resolve()), play: jest.fn(), remove: jest.fn(), unsubscribe: jest.fn(),
+    const player = { seekTo: jest.fn(() => Promise.resolve()), play: jest.fn(), pause: jest.fn(), remove: jest.fn(), unsubscribe: jest.fn(),
       addListener: () => ({ remove: player.unsubscribe }) };
     mockPlayers.push(player); return player;
   }),

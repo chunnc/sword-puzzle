@@ -22,7 +22,7 @@ export function createBoardPresenter(options: {
     setEffect: (effect: BoardVisualEffect | null) => void;
     onCollectionProgress?: (progress: BoardSnapshot['objectiveProgress']) => void;
     onStart: () => void;
-    onSfx?: (id: SfxId) => void;
+    onSfx?: (id: SfxId) => void | (() => void);
 }) {
     const { signal } = options;
     let reduceMotion = options.reduceMotion;
@@ -31,10 +31,9 @@ export function createBoardPresenter(options: {
     const sequences = new Set<ReturnType<typeof createSfxSequence>>();
     const sequence = (cues: readonly TimedSfxCue[]) => {
         const sound = createSfxSequence(cues, id => {
-            if (!signal.aborted) options.onSfx?.(id);
-        });
+            if (!signal.aborted) return options.onSfx?.(id);
+        }, () => sequences.delete(sound));
         sequences.add(sound);
-        void sound.finished.then(() => sequences.delete(sound));
         return sound;
     };
     let collectionProgress: BoardSnapshot['objectiveProgress'] = {};
@@ -82,8 +81,12 @@ export function createBoardPresenter(options: {
                 await playback.started;
                 sound?.start(reduceMotion);
                 if (!began) { began = true; started.resolve(); }
-                await playback.finished;
-                if (sound) await sound.finished;
+                try {
+                    await playback.finished;
+                    if (sound) await sound.finished;
+                } finally {
+                    sound?.stopPlayback();
+                }
                 check();
             };
             if (phase.kind === 'start') {

@@ -3,11 +3,11 @@ import { createSfxPool } from '../sfxPool';
 
 function fixture() {
   let active = true;
-  const players: { seekTo: jest.Mock; play: jest.Mock; remove: jest.Mock; unsubscribe: jest.Mock; finish: () => void }[] = [];
+  const players: { seekTo: jest.Mock; play: jest.Mock; pause: jest.Mock; remove: jest.Mock; unsubscribe: jest.Mock; finish: () => void }[] = [];
   const createPlayer = jest.fn(() => {
     let listener: (status: AudioStatus) => void;
     const unsubscribe = jest.fn();
-    const player = { seekTo: jest.fn(() => Promise.resolve()), play: jest.fn(), remove: jest.fn(), unsubscribe,
+    const player = { seekTo: jest.fn(() => Promise.resolve()), play: jest.fn(), pause: jest.fn(), remove: jest.fn(), unsubscribe,
       addListener: jest.fn((_: string, callback: typeof listener) => { listener = callback; return { remove: unsubscribe }; }),
       finish: () => listener({ didJustFinish: true } as AudioStatus),
     };
@@ -57,4 +57,18 @@ it('recovers after failed seek, play, or player creation', async () => {
   f.createPlayer.mockImplementationOnce(() => { throw new Error('create'); });
   expect(() => f.pool.play('star_award')).not.toThrow();
   f.pool.play('star_award'); await flush(); expect(f.players).toHaveLength(2);
+});
+
+it('stops only the leased voice and ignores stale stop handles after reuse', async () => {
+  const f = fixture();
+  const stopFirst = f.pool.play('sword_slash')!;
+  await flush();
+  stopFirst();
+  expect(f.players[0].pause).toHaveBeenCalledTimes(1);
+
+  const stopSecond = f.pool.play('sword_slash'); await flush();
+  stopFirst();
+  expect(f.players[0].pause).toHaveBeenCalledTimes(1);
+  stopSecond?.();
+  expect(f.players[0].pause).toHaveBeenCalledTimes(2);
 });

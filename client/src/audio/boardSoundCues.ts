@@ -41,13 +41,15 @@ export function boardSoundCues(step: BoardResolutionStep): BoardSoundCue[] {
           add('sword_slash', BOARD_SWORD_CROSS_DELAY_MS, BOARD_SWORD_CROSS_DELAY_MS);
         }
       }
-    } else if (isOrdinaryMatch(trace, step)) add('match_spirit');
+    } else if (isOrdinaryMatch(trace)) add('match_spirit');
   });
   return cues;
 }
 
-function isOrdinaryMatch(trace: BoardAnimationEffect, step: BoardResolutionStep) {
+function isOrdinaryMatch(trace: BoardAnimationEffect) {
   if (trace.origin && trace.origin !== 'match') return false;
   if (trace.kind !== 'skill' || trace.source !== undefined || trace.objectiveProgressAfter === undefined) return false;
-  return trace.cells.filter(index => step.before.tiles[index]?.chargeTier === 0).length >= 3;
+  // The engine has already classified this trace as a legal match. Charged
+  // tiles may make fewer than three cells look like ordinary tiles here.
+  return trace.cells.length >= 3;
 }

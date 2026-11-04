@@ -23,6 +23,9 @@ it('uses the shared match cue for ordinary three-cell matches and anchored four-
     .toEqual(['match_spirit']);
   expect(soundIds(makeStep([matchTrace([0, 1, 2, 3])], fourMatch, [1, 2, 3])))
     .toEqual(['match_spirit']);
+  const chargedMatch = [{ kind: TileKind.Sword, chargeTier: 4 as const, locked: false }, ...ordinary.slice(1, 3)];
+  expect(soundIds(makeStep([matchTrace([0, 1, 2])], chargedMatch, [0, 1, 2])))
+    .toEqual(['match_spirit']);
   const sealHit: Tile[] = [
     { kind: TileKind.Sword, chargeTier: 0, locked: true },
     { kind: TileKind.Sword, chargeTier: 0, locked: false },

@@ -21,7 +21,7 @@ export function createSfxPool<Id extends string>(
   };
   return {
     play(id: Id) {
-      if (disposed || !isActive()) return;
+      if (disposed || !isActive()) return undefined;
       let voice: Voice | undefined;
       try {
         const group = voices.get(id) ?? [];
@@ -48,12 +48,20 @@ export function createSfxPool<Id extends string>(
         }).catch(() => {
           if (reserved.lease === lease) reserved.busy = false;
         });
+        return () => {
+          if (reserved.removed || reserved.lease !== lease) return;
+          reserved.lease++;
+          reserved.seeking = false;
+          reserved.busy = false;
+          try { reserved.player.pause(); } catch { /* A stale native voice must not affect gameplay. */ }
+        };
       } catch {
         if (voice) {
           remove(voice);
           const group = voices.get(id);
           if (group) voices.set(id, group.filter(candidate => candidate !== voice));
         }
+        return undefined;
       }
     },
     stop,
