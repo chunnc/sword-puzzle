@@ -790,19 +790,32 @@ describe('Skia Board integration', () => {
     expect(renderer.root.findAll(node => node.type === 'Paragraph' as never && node.props.paragraph.text === '封')).toHaveLength(0);
   });
 
-  it('renders the rune array on Trận Nhãn cells with three diamond charge indicators', () => {
+  it.each([0, 1, 2] as const)('renders a full-cell dark background and three charge indicators at node charge %s', nodeCharge => {
     const tiles = [...snapshot.tiles];
-    tiles[0] = { ...tiles[0]!, nodeCharge: 1 };
+    tiles[0] = { ...tiles[0]!, nodeCharge };
     mount({ snapshot: { ...snapshot, tiles } });
     const nodeTile = tile(0);
     const rune = nodeTile.findAll(node => node.type === 'SkiaImage' as never && node.props.image?.asset === ART.overlayNode)[0];
     expect(rune.props.fit).toBe('contain');
     expect(rune.props.width).toBeGreaterThan(0);
+    const nodeOrigin = nodeTile.props.origin as { x: number; y: number };
+    const nodeButton = buttons().find(button => {
+      const frame = StyleSheet.flatten(button.props.style);
+      return Number(frame.left) + Number(frame.width) / 2 === nodeOrigin.x
+        && Number(frame.top) + Number(frame.height) / 2 === nodeOrigin.y;
+    })!;
+    const cellFrame = StyleSheet.flatten(nodeButton.props.style);
+    const background = nodeTile.findAll(node => node.type === 'RoundedRect' as never && node.props.color === 'rgba(26,16,45,.82)')[0];
+    expect(background.props).toMatchObject({
+      x: cellFrame.left, y: cellFrame.top, width: cellFrame.width, height: cellFrame.height,
+      r: 5, color: 'rgba(26,16,45,.82)',
+    });
     const chargeDiamonds = nodeTile.findAll(node => node.type === 'Path' as never);
     expect(chargeDiamonds).toHaveLength(3);
     expect(chargeDiamonds.map(diamond => diamond.props.color)).toEqual([
-      '#ffe37c', 'rgba(238,224,255,.42)', 'rgba(238,224,255,.42)',
+      ...[0, 1, 2].map(index => index < nodeCharge ? '#ffe37c' : 'rgba(238,224,255,.42)'),
     ]);
+    expect(tile(1).findAll(node => node.type === 'RoundedRect' as never && node.props.color === 'rgba(26,16,45,.82)')).toHaveLength(0);
   });
 
   it.each(['out','in'] as const)('plays settlement %s over 75ms on the UI thread', direction => {

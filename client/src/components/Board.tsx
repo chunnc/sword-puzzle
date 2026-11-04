@@ -359,10 +359,9 @@ function TileArtwork({ tile, bounds, image, sealOverlay, nodeOverlay, labels, pa
         width={bounds.width * .9} height={bounds.height * .9} fit="contain" />
     </Group> : null}
     {tile.nodeCharge !== undefined ? <Group>
+      <RoundedRect {...bounds} r={5} color="rgba(26,16,45,.82)" />
       <Image image={nodeOverlay} x={bounds.x + bounds.width * .04} y={bounds.y + bounds.height * .04}
         width={bounds.width * .92} height={bounds.height * .92} fit="contain" />
-      <RoundedRect x={bounds.x + bounds.width * .25} y={bounds.y + bounds.height * .77}
-        width={bounds.width * .5} height={bounds.height * .17} r={Math.max(2, bounds.width * .06)} color="rgba(26,16,45,.82)" />
       {[0, 1, 2].map(index => <Path key={`node-charge-${index}`} path={nodeChargeDiamond(bounds, index)}
         color={index < tile.nodeCharge! ? '#ffe37c' : 'rgba(238,224,255,.42)'} />)}
     </Group> : null}
