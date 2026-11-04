@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
-  BlurMask, Canvas, Circle, DashPathEffect, FontWeight, Group, Image, Paint, Paragraph, Path, RoundedRect, Skia, useImage,
+  BlurMask, Canvas, DashPathEffect, FontWeight, Group, Image, Paint, Paragraph, Path, RoundedRect, Skia, useImage,
   type SkImage, type SkParagraph,
 } from '@shopify/react-native-skia';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -138,6 +138,7 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   const outline = useMemo(() => boardOutlinePath(geometry, side), [geometry, side]);
   const images = useBoardImages();
   const sealOverlay = useImage(ART.overlaySeal as number);
+  const nodeOverlay = useImage(ART.overlayNode as number);
   const imageForTile = (tile: Tile) => images[semanticTileKind(tile.kind, content) as TileKind][tile.chargeTier];
   const visualTile = (tile: Tile): Tile => ({ ...tile, kind: semanticTileKind(tile.kind, content) as TileKind });
   const fxFireBurst = useImage(ART.fxFireBurst), fxLightning = useImage(ART.fxLightningAtlas);
@@ -271,11 +272,11 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
       <Group transform={[{ translateX: BOARD_FRAME_INSET }, { translateY: BOARD_FRAME_INSET }]}>
         <Group clip={{ x: 0, y: 0, width: side, height: side * geometry.height / geometry.width }}>
           {indices.map(index => <RoundedRect key={`background-${index}`} {...cellBounds(index, side, geometry)} r={5} color={colors.boardCell} />)}
-          {drawOrder.map(index => <TileVisual key={index} tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} sealOverlay={sealOverlay} visual={visuals[index]} motion={frame.cells[index]} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />)}
+          {drawOrder.map(index => <TileVisual key={index} tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)} image={imageForTile(snapshot.tiles[index]!)} sealOverlay={sealOverlay} nodeOverlay={nodeOverlay} visual={visuals[index]} motion={frame.cells[index]} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />)}
           {effectCues.length ? <BoardEffects key={`${snapshot.runId}:${id}`} cues={effectCues} geometry={geometry} side={side}
             progress={motion.progress} elapsedMs={hasSourceAnimation ? effectElapsedMs : motion.elapsedMs} durationMs={clearDurationMs} fireBurstImage={fxFireBurst} lightningImage={fxLightning}
             renderTile={index => <TileArtwork tile={visualTile(snapshot.tiles[index]!)} bounds={cellBounds(index, side, geometry)}
-              image={imageForTile(snapshot.tiles[index]!)} sealOverlay={sealOverlay} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />} /> : null}
+              image={imageForTile(snapshot.tiles[index]!)} sealOverlay={sealOverlay} nodeOverlay={nodeOverlay} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />} /> : null}
           {indices.map(index => {
             const bounds = cellBounds(index, side, geometry), x = index % geometry.width, y = Math.floor(index / geometry.width);
             const targetNumber = targets.findIndex(p => p.x === x && p.y === y) + 1;
@@ -323,11 +324,12 @@ export function Board({ snapshot, selected, targets = [], preview = [], targetin
   </View>;
 }
 
-function TileVisual({ tile, bounds, image, sealOverlay, visual, motion, labels, particlePhase, idleAnimations, reduceMotion }: {
+function TileVisual({ tile, bounds, image, sealOverlay, nodeOverlay, visual, motion, labels, particlePhase, idleAnimations, reduceMotion }: {
   tile: Tile;
   bounds: ReturnType<typeof cellBounds>;
   image: SkImage | null;
   sealOverlay: SkImage | null;
+  nodeOverlay: SkImage | null;
   visual: CellVisual;
   motion: CellMotionValues | null;
   labels: BoardLabels;
@@ -339,12 +341,12 @@ function TileVisual({ tile, bounds, image, sealOverlay, visual, motion, labels, 
   // Paragraph paints its own colors, so fade the complete tile as a layer.
   // Source animations also fade/hide the artwork and its orbiting particles together.
   return <Group origin={{ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }} transform={motion?.transform ?? IDENTITY_TILE_TRANSFORM} layer={visual.clearing || visual.sourceAnimation ? <Paint opacity={motion!.opacity} /> : undefined}>
-    <TileArtwork tile={tile} bounds={bounds} image={image} sealOverlay={sealOverlay} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />
+    <TileArtwork tile={tile} bounds={bounds} image={image} sealOverlay={sealOverlay} nodeOverlay={nodeOverlay} labels={labels} particlePhase={particlePhase} idleAnimations={idleAnimations} reduceMotion={reduceMotion} />
   </Group>;
 }
 
-function TileArtwork({ tile, bounds, image, sealOverlay, labels, particlePhase, idleAnimations, reduceMotion }: {
-  tile: Tile; bounds: ReturnType<typeof cellBounds>; image: SkImage | null; sealOverlay: SkImage | null; labels: BoardLabels;
+function TileArtwork({ tile, bounds, image, sealOverlay, nodeOverlay, labels, particlePhase, idleAnimations, reduceMotion }: {
+  tile: Tile; bounds: ReturnType<typeof cellBounds>; image: SkImage | null; sealOverlay: SkImage | null; nodeOverlay: SkImage | null; labels: BoardLabels;
   particlePhase: SharedValue<number>; idleAnimations: IdleTileAnimations; reduceMotion: boolean;
 }) {
   const idle = tile.chargeTier === 5 ? idleAnimations[tile.kind] : undefined;
@@ -357,19 +359,19 @@ function TileArtwork({ tile, bounds, image, sealOverlay, labels, particlePhase, 
         width={bounds.width * .9} height={bounds.height * .9} fit="contain" />
     </Group> : null}
     {tile.nodeCharge !== undefined ? <Group>
-      <RoundedRect {...bounds} r={5} color="rgba(31,21,57,.86)" />
-      <Circle cx={bounds.x + bounds.width / 2} cy={bounds.y + bounds.height * .43} r={Math.min(bounds.width, bounds.height) * .27}
-        color="#e2ba68" style="stroke" strokeWidth={Math.max(1.5, bounds.width * .055)} />
-      <Path path={nodeDiamond(bounds)} color="#f4d58b" style="stroke" strokeWidth={Math.max(1, bounds.width * .035)} />
-      {[0, 1, 2].map(index => <Circle key={`node-charge-${index}`} cx={bounds.x + bounds.width * (.34 + index * .16)}
-        cy={bounds.y + bounds.height * .82} r={Math.max(1.5, bounds.width * .045)}
-        color={index < tile.nodeCharge! ? '#ffe37c' : 'rgba(238,224,255,.32)'} />)}
+      <Image image={nodeOverlay} x={bounds.x + bounds.width * .04} y={bounds.y + bounds.height * .04}
+        width={bounds.width * .92} height={bounds.height * .92} fit="contain" />
+      <RoundedRect x={bounds.x + bounds.width * .25} y={bounds.y + bounds.height * .77}
+        width={bounds.width * .5} height={bounds.height * .17} r={Math.max(2, bounds.width * .06)} color="rgba(26,16,45,.82)" />
+      {[0, 1, 2].map(index => <Path key={`node-charge-${index}`} path={nodeChargeDiamond(bounds, index)}
+        color={index < tile.nodeCharge! ? '#ffe37c' : 'rgba(238,224,255,.42)'} />)}
     </Group> : null}
   </Group>;
 }
 
-function nodeDiamond(bounds: ReturnType<typeof cellBounds>) {
-  const x = bounds.x + bounds.width / 2, y = bounds.y + bounds.height * .43, r = Math.min(bounds.width, bounds.height) * .16;
+function nodeChargeDiamond(bounds: ReturnType<typeof cellBounds>, index: number) {
+  const x = bounds.x + bounds.width * (.38 + index * .12), y = bounds.y + bounds.height * .855;
+  const r = Math.min(bounds.width, bounds.height) * .055;
   return Skia.Path.Make().moveTo(x, y - r).lineTo(x + r, y).lineTo(x, y + r).lineTo(x - r, y).close();
 }
 

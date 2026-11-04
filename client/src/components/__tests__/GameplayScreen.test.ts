@@ -177,6 +177,9 @@ describe('gameplay presentation and exit behavior', () => {
     const objective = view('intro-objective-main');
     expect(objective.props.accessibilityLabel).toContain(goal === GoalKind.Boss ? 'Yêu vương' : goal === GoalKind.Battle ? 'Yêu thú' : goal === GoalKind.BreakRocks ? 'Phá đá' : String(goal) === 'ActivateNodes' ? 'Kích hoạt Trận Nhãn' : goal === GoalKind.BreakSeals ? 'Phá phong ấn' : 'Thu');
     expect(objective.props.accessibilityLabel).toContain(String(level.objectives[0].target));
+    if (String(goal) === 'ActivateNodes') {
+      expect(objective.findAll(node => node.props.source !== undefined).some(node => node.props.source === ART.overlayNode)).toBe(true);
+    }
     expect(renderer.root.findAllByType(Native.ScrollView).some(node => node.props.testID === 'game-objective-intro-list')).toBe(true);
   });
 

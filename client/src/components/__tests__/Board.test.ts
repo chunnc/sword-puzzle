@@ -790,6 +790,21 @@ describe('Skia Board integration', () => {
     expect(renderer.root.findAll(node => node.type === 'Paragraph' as never && node.props.paragraph.text === '封')).toHaveLength(0);
   });
 
+  it('renders the rune array on Trận Nhãn cells with three diamond charge indicators', () => {
+    const tiles = [...snapshot.tiles];
+    tiles[0] = { ...tiles[0]!, nodeCharge: 1 };
+    mount({ snapshot: { ...snapshot, tiles } });
+    const nodeTile = tile(0);
+    const rune = nodeTile.findAll(node => node.type === 'SkiaImage' as never && node.props.image?.asset === ART.overlayNode)[0];
+    expect(rune.props.fit).toBe('contain');
+    expect(rune.props.width).toBeGreaterThan(0);
+    const chargeDiamonds = nodeTile.findAll(node => node.type === 'Path' as never);
+    expect(chargeDiamonds).toHaveLength(3);
+    expect(chargeDiamonds.map(diamond => diamond.props.color)).toEqual([
+      '#ffe37c', 'rgba(238,224,255,.42)', 'rgba(238,224,255,.42)',
+    ]);
+  });
+
   it.each(['out','in'] as const)('plays settlement %s over 75ms on the UI thread', direction => {
     mount({ visualEffect: { id: 81, kind: 'settle', direction } });
     expect(withTiming).toHaveBeenCalledWith(1, { duration: 75 }, expect.any(Function));

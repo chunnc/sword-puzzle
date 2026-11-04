@@ -161,6 +161,18 @@ describe('gameplay header and objective rows', () => {
     expect(renderer.root.findAllByType(Text).some(node => String(node.props.children).includes('✓'))).toBe(false);
   });
 
+  it('uses the rune icon for Trận Nhãn objectives while keeping chains for seal objectives', () => {
+    const goals: ObjectiveDefinition[] = [
+      { id: 'nodes', type: 'ActivateNodes', target: 2 },
+      { id: 'seals', type: 'BreakSeals', target: 4 },
+    ];
+    act(() => { renderer = create(info(goals)); });
+    const nodeIcon = view('objective-nodes').findAll(node => node.props.source !== undefined)[0];
+    const sealIcon = view('objective-seals').findAll(node => node.props.source !== undefined)[0];
+    expect(nodeIcon.props.source).toBe(ART.overlayNode);
+    expect(sealIcon.props.source).toBe(ART.overlaySeal);
+  });
+
   it('uses separate panel artwork and a green name at zero boss HP without a tick', () => {
     act(() => { renderer = create(info([enemy('Boss'), collect('collect')], { enemy: 300, collect: 23 })); });
     expect(view('game-enemy-panel').props.variant).toBe('boss');

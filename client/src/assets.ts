@@ -98,6 +98,7 @@ export const ART = {
   iconSkill: require('../app-assets/ui/icon_skill.webp') as ImageSourcePropType,
   nav: require('../app-assets/ui/nav.webp') as ImageSourcePropType,
   overlayOmni: require('../app-assets/ui/overlay_omni.webp') as ImageSourcePropType,
+  overlayNode: require('../app-assets/ui/icon_tran_nhan.webp') as ImageSourcePropType,
   overlaySeal: require('../app-assets/ui/overlay_seal.webp') as ImageSourcePropType,
   overlaySlash: require('../app-assets/ui/overlay_slash.webp') as ImageSourcePropType,
   panel: require('../app-assets/ui/panel.webp') as ImageSourcePropType,

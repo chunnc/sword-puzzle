@@ -66,7 +66,9 @@ export function GameplayInfo({ level, board, compact, reduceMotion, duration, co
           <View testID="game-objectives-row" style={styles.goalsRow}>
             {goals.map(objective => {
               const name = objective.type === 'Collect' ? `Thu ${content.tiles.find(t => t.id === objective.tileKind)?.name ?? 'linh vật'}${objective.chargeTier ? ` cấp ${objective.chargeTier}` : ''}` : objective.type === 'BreakRocks' ? 'Phá đá' : objective.type === 'ActivateNodes' ? 'Kích hoạt Trận Nhãn' : 'Phá phong ấn';
-              const icon = objective.type === 'Collect' ? tileArtwork(semanticTileKind(objective.tileKind, content)) : objective.type === 'BreakRocks' ? tileArtwork(TileKind.Rock) : ART.overlaySeal;
+              const icon = objective.type === 'Collect' ? tileArtwork(semanticTileKind(objective.tileKind, content))
+                : objective.type === 'BreakRocks' ? tileArtwork(TileKind.Rock)
+                : objective.type === 'ActivateNodes' ? ART.overlayNode : ART.overlaySeal;
               const progress = objective.type === 'Collect'
                 ? collectProgress?.[objective.id] ?? board.objectiveProgress[objective.id] ?? 0
                 : board.objectiveProgress[objective.id] ?? 0;

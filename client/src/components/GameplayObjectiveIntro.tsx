@@ -11,7 +11,7 @@ import { InventoryDialogPanel } from './InventoryDialogPanel';
 
 function objectiveDetails(objective: ObjectiveDefinition, content: ReturnType<typeof getContentVersion>) {
   // Keep the preview compatible with map content that introduces Trận Nhãn.
-  if ((objective.type as string) === 'ActivateNodes') return { name: 'Kích hoạt Trận Nhãn', icon: ART.overlaySeal };
+  if (objective.type === 'ActivateNodes') return { name: 'Kích hoạt Trận Nhãn', icon: ART.overlayNode };
   switch (objective.type) {
     case 'Collect': return {
       name: `Thu ${content.tiles.find(tile => tile.id === objective.tileKind)?.name ?? 'linh vật'}${objective.chargeTier ? ` cấp ${objective.chargeTier}` : ''}`,
