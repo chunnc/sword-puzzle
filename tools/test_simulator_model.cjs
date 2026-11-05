@@ -11,6 +11,79 @@ runtime.BoardEngine = class extends OriginalBoardEngine {
 };
 const simulator = require('./simulate_maps.cjs');
 const { renderBalanceReport } = require('./render_balance_report.cjs');
+const balance = require('./generate_map_balance.cjs');
+const config = require('../content/game-config.json');
+
+test('five active skills are selected deterministically and validated against the snapshot', () => {
+  const selected = balance.selectSkills(config, 123);
+  assert.equal(selected.length, 5);
+  assert.equal(new Set(selected).size, 5);
+  assert.deepEqual(balance.selectSkills(config, 123), selected);
+  assert.ok(selected.every(id => config.skills.some(skill => skill.id === id && skill.kind !== 'passive')));
+  assert.throws(() => balance.selectSkills({skills: config.skills.filter(s => s.kind === 'passive')}, 123), /five active/);
+  assert.deepEqual(balance.ensureSkills({seed: 999, skills: selected}, config), selected);
+  assert.throws(() => balance.ensureSkills({skills: [...selected.slice(0, 4), selected[0]]}, config), /Invalid/);
+});
+
+test('five skill sets use paired seeds, a single skill per run and repeatable engine results', () => {
+  const map = simulator.catalog.find(candidate => candidate.id === 3);
+  const request = {seed: 123, totalExp: 120, skills: balance.selectSkills(config, 123)};
+  const first = balance.samples(map, 2, 'validation', request);
+  assert.deepEqual(balance.samples(map, 2, 'validation', request), first);
+  assert.equal(first.length, 10);
+  for (const skill of request.skills) assert.equal(first.filter(r => r.skill === skill).length, 2);
+  assert.ok(first.every(r => Number.isInteger(r.skillUses)));
+  assert.equal(first.reduce((n, r) => n + r.skillUses, 0), simulator.summarize(map, first).skillUses);
+});
+
+test('every active skill can be played through the production engine deterministically', () => {
+  const map = simulator.catalog.find(candidate => candidate.id === 3);
+  for (const {id} of config.skills.filter(skill => skill.kind !== 'passive')) {
+    const result = simulator.play(map, 76543, 'normal', 'expected', 0, false, {skill: id});
+    assert.deepEqual(simulator.play(map, 76543, 'normal', 'expected', 0, false, {skill: id}), result, id);
+    assert.equal(result.skill, id);
+    assert.equal(result.stalled, false, id);
+  }
+});
+
+test('bot casts legal targets through the engine only when qi and turn permit', () => {
+  const map = simulator.catalog.find(candidate => candidate.id === 3);
+  const installed = runtime.installContent(config);
+  for (const {id} of config.skills.filter(skill => skill.kind !== 'passive')) {
+    const level = runtime.mapToLevel(map, 76543, 0, installed);
+    const start = new OriginalBoardEngine(level, null, {loadout: {sword: null, skills: [id]}, totalExp: 0});
+    const snapshot = start.snapshot();
+    const indices = snapshot.tiles.flatMap((t, i) => t && !t.locked && t.nodeCharge === undefined ? [i] : []);
+    snapshot.tiles[indices[0]].kind = runtime.tileId('sword', installed);
+    snapshot.tiles[indices[1]].kind = runtime.tileId('fire', installed);
+    snapshot.tiles[indices[0]].chargeTier = 4;
+    snapshot.tiles[indices[1]].chargeTier = 4;
+    snapshot.tiles[indices[2]].kind = runtime.tileId('rock', installed);
+    snapshot.swordQi = 0;
+    assert.equal(simulator.useSkill(new OriginalBoardEngine(level, snapshot)), null, id);
+    snapshot.swordQi = installed.qiCap;
+    const engine = new OriginalBoardEngine(level, snapshot);
+    assert.equal(simulator.useSkill(engine), id, id);
+    assert.equal(simulator.useSkill(engine), null, id);
+  }
+});
+
+test('verification reports paired skill results, retries and a separate no-skill control', () => {
+  const map = simulator.catalog.find(candidate => candidate.id === 3);
+  const request = require('./generate_map.cjs').parseRequest(['--difficulty', 'easy', '--objective', 'collect', '--seed', '123'], 21);
+  request.validationSeeds = 2;
+  request.retrySeeds = 2;
+  request.retryAttempts = 2;
+  const report = balance.verify(map, config, request);
+  assert.equal(report.validation.summary.samples, 10);
+  assert.equal(report.validation.noSkill.samples, 2);
+  assert.equal(report.retries.firstWin.samples, 10);
+  for (const skill of request.skills) {
+    assert.equal(report.validation.bySkill[skill].samples, 2);
+    assert.equal(report.retries.bySkill[skill].firstWin.samples, 2);
+  }
+  assert.deepEqual(report.botModel.skills, request.skills);
+});
 
 test('collection scoring respects exact tiers and ignores sealed charged tiles', () => {
   const source = simulator.catalog[0], kind = source.tileRegistry.sword;
@@ -26,6 +99,7 @@ test('collection scoring respects exact tiers and ignores sealed charged tiles',
 });
 
 test('all bot and power profiles use an empty active and passive loadout', () => {
+  observedLoadouts.length = 0;
   const map = simulator.catalog.find(candidate => candidate.id === 3);
   for (const bot of ['basic', 'normal', 'strategic']) {
     for (const power of ['minimum', 'expected', 'strong']) {

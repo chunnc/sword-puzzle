@@ -103,6 +103,17 @@ chains near obstacles and weakens with retry assistance. Generation and
 `maps:balance INDEX` also measure first-win and first-three-star retry sequences
 with the server's consecutive-failure reset semantics.
 
+Generation deterministically selects five distinct active skills from the entire
+config using the authoring seed. Each skill is tested independently with one skill
+equipped per run and paired gameplay seeds; training and acceptance use the pooled,
+equally weighted results. `balance.json` and the preview compare each skill with a
+no-skill validation control. Retry statistics include pooled and per-skill results.
+The chosen skills are saved with the request and reused by `maps:balance`; older
+seeds acquire a deterministic selection during revalidation. Minimum and strong EXP
+diagnostics also use the five skills. Each configured seed count is per skill, so
+this model requires roughly five times as many simulation runs plus the control.
+The standalone `maps:simulate` profiles retain their empty loadout.
+
 Once the initial catalog is configured, `npm run maps:publish -- INDEX` publishes
 that single generated map. It allocates immutable map revisions, appends one level
 to a fresh immutable content version when necessary, and updates catalogRevision

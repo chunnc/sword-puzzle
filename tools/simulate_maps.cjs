@@ -121,15 +121,65 @@ function selectRankedMove(ranked, mistakeRate, random) {
   const selected=best.length===1?best[0]:best[Math.floor(random()*best.length)];
   return {move:selected.move,suboptimal:false};
 }
+// Candidate scoring is a bot heuristic; legality and all effects belong to BoardEngine.
+function skillCandidates(engine, id) {
+  const s = engine.snapshot(), {width:w,height:h} = s.level.board, tiles=s.tiles;
+  const rock=tileId('rock',content), sword=tileId('sword',content), lightning=tileId('lightning',content);
+  const positions=tiles.flatMap((t,i)=>t?[i]:[]), movable=i=>tiles[i] && tiles[i].kind!==rock && !tiles[i].locked && tiles[i].nodeCharge===undefined;
+  const point=i=>({x:i%w,y:Math.floor(i/w)}), area=i=>positions.filter(j=>Math.abs(j%w-i%w)<=1 && Math.abs(Math.floor(j/w)-Math.floor(i/w))<=1);
+  const candidates=[];
+  const add=(indices,score)=>candidates.push({targets:indices.map(point),score});
+  for(const i of positions) {
+    const t=tiles[i], a=area(i);
+    if(id==='thu') add([i],clearValue(s,[i])+(t.kind===rock?2:0));
+    if(id==='nhat-kiem') add([i],clearValue(s,positions.filter(j=>Math.floor(j/w)===Math.floor(i/w))));
+    if(id==='hoa-lien') add([i],clearValue(s,a));
+    if(id==='van-kiem' && t.kind!==rock) add([i],clearValue(s,positions.filter(j=>tiles[j].kind===t.kind)));
+    if(id==='pha-chuong') { const obstacles=a.filter(j=>tiles[j].kind===rock||tiles[j].locked||tiles[j].nodeCharge!==undefined); if(obstacles.length) add([i],obstacles.length*2); }
+    if(id==='hoi-linh') { const m=a.filter(movable); if(m.length>1 && new Set(m.map(j=>`${tiles[j].kind}:${tiles[j].chargeTier}`)).size>1) add([i],.1); }
+    if(id==='ngu-kiem' && movable(i)) for(const j of [i+1,i+w]) {
+      if(!positions.includes(j) || !movable(j) || (j===i+1 && Math.floor(j/w)!==Math.floor(i/w)) || (t.kind!==sword && tiles[j].kind!==sword) || (t.kind===tiles[j].kind && t.chargeTier===tiles[j].chargeTier)) continue;
+      const move=[i%w,Math.floor(i/w),j%w,Math.floor(j/w)], m=matched(s,move);
+      add([i,j],clearValue(s,m.cells,m.tiles)+.1);
+    }
+  }
+  if(id==='lien-kiem') {
+    const charged=positions.filter(i=>movable(i)&&tiles[i].chargeTier>0).sort((a,b)=>clearValue(s,[b])-clearValue(s,[a]));
+    if(charged.length>=2) add(charged.slice(0,2),clearValue(s,charged.slice(0,2)));
+  }
+  if(id==='dan-loi') {
+    const eligible=positions.filter(i=>movable(i)&&tiles[i].kind!==lightning&&!tiles[i].chargeTier);
+    // Favor cells adjacent to lightning; avoid enumerating O(n³) triples on every turn.
+    const adjacency=i=>positions.filter(j=>tiles[j].kind===lightning && (Math.abs(j%w-i%w)+Math.abs(Math.floor(j/w)-Math.floor(i/w))===1)).length;
+    eligible.sort ( (a,b)=>adjacency(b)-adjacency(a) || a-b );
+    if(eligible.length>=3) add(eligible.slice(0,3),eligible.slice(0,3).reduce((sum,i)=>sum+adjacency(i),0)+.1);
+  }
+  return candidates.sort((a,b)=>b.score-a.score);
+}
+function useSkill(engine) {
+  for(const id of engine.availableSkills()) for(const candidate of skillCandidates(engine,id)) {
+    if(engine.trySkill(id,candidate.targets)) return id;
+  }
+  return null;
+}
 function play(map, seed, bot='normal', power='expected', assist=0, trace=false, context={}) {
   const random=rng(seed^0x5a17c9e3), totalExp=context.totalExp??(power==='minimum'?0:power==='strong'?(map.id-1)*100+1500:(map.id-1)*60);
   const level=mapToLevel(map,seed,assist,content);
-  const engine=new BoardEngine(level,null,{loadout:{sword:null,skills:[]},totalExp});
-  let waves=0,maxChain=0,actions=0,damage=0,suboptimalChoices=0;
+  const engine=new BoardEngine(level,null,{loadout:{sword:null,skills:context.skill?[context.skill]:[]},totalExp});
+  let waves=0,maxChain=0,actions=0,damage=0,suboptimalChoices=0,skillUses=0,swapChoices=0;
   const waveCounts={},timeline=[],metrics={seeded:0,setups:0,setupAttempts:0,setupFallbacks:0,setupUsed:0,chargesCreated:0,chargesActivated:0,settlements:0};
   for(let action=0;action<map.moves*3+10&&!engine.won&&!engine.lost;action++) {
+    if(useSkill(engine)) {
+      skillUses++; actions++;
+      const steps=engine.animation?.steps??[]; waves+=steps.length; maxChain=Math.max(maxChain,...steps.map(s=>s.chain),0);
+      waveCounts[steps.length]=(waveCounts[steps.length]??0)+1;
+      for(const key of Object.keys(metrics))metrics[key]+=engine.actionMetrics[key];
+      if(trace){damage+=steps.reduce((sum,s)=>sum+s.damage,0);timeline.push({movesUsed:engine.movesUsed,damage,kind:'skill'});}
+      continue;
+    }
     const choice=chooseSwap(engine,bot,random);
     if(!choice.move||!engine.trySwap(...choice.move))break;
+    swapChoices++;
     if(choice.suboptimal)suboptimalChoices++;
     waves+=engine.animation?.steps.length??0;
     maxChain=Math.max(maxChain,...(engine.animation?.steps.map(s=>s.chain)??[0]));
@@ -138,16 +188,16 @@ function play(map, seed, bot='normal', power='expected', assist=0, trace=false, 
     if(trace){damage+=engine.animation.steps.reduce((sum,s)=>sum+s.damage,0);timeline.push({movesUsed:engine.movesUsed,damage,kind:engine.animation.kind});}
   }
   const snapshot=engine.snapshot();
-  return {won:engine.won,stars:engine.won?mapStars(map,engine.movesUsed):0,movesUsed:engine.movesUsed,waves,maxChain,reshuffles:snapshot.reshuffles??0,actions,suboptimalChoices,waveCounts,metrics,...(trace?{timeline}:{}),
+  return {won:engine.won,stars:engine.won?mapStars(map,engine.movesUsed):0,movesUsed:engine.movesUsed,waves,maxChain,reshuffles:snapshot.reshuffles??0,actions,swapChoices,suboptimalChoices,skill:context.skill??null,skillUses,waveCounts,metrics,...(trace?{timeline}:{}),
     stalled:!engine.won&&!engine.lost,objectiveProgress:{...snapshot.objectiveProgress},
     progress:map.objectives.reduce((sum,o)=>sum+snapshot.objectiveProgress[o.id]/o.target,0)/map.objectives.length};
 }
 function summarize(map, results) {
   const won=results.filter(r=>r.won),lost=results.filter(r=>!r.won),histogram=[0,0,0,0];results.forEach(r=>histogram[r.stars]++);
-  const moves=won.map(r=>r.movesUsed).sort((a,b)=>a-b),waveCounts={},metrics={};let actions=0,suboptimalChoices=0;
-  for(const r of results){actions+=r.actions??0;suboptimalChoices+=r.suboptimalChoices??0;for(const [key,value]of Object.entries(r.waveCounts??{}))waveCounts[key]=(waveCounts[key]??0)+value;for(const [key,value]of Object.entries(r.metrics??{}))metrics[key]=(metrics[key]??0)+value;}
+  const moves=won.map(r=>r.movesUsed).sort((a,b)=>a-b),waveCounts={},metrics={};let actions=0,swapChoices=0,suboptimalChoices=0,skillUses=0;
+  for(const r of results){actions+=r.actions??0;swapChoices+=r.swapChoices??r.actions??0;suboptimalChoices+=r.suboptimalChoices??0;skillUses+=r.skillUses??0;for(const [key,value]of Object.entries(r.waveCounts??{}))waveCounts[key]=(waveCounts[key]??0)+value;for(const [key,value]of Object.entries(r.metrics??{}))metrics[key]=(metrics[key]??0)+value;}
   return {mapHash:createHash('sha256').update(JSON.stringify(map)).digest('hex'),id:map.id,difficulty:map.difficulty,samples:results.length,winRate:won.length/results.length,starRates:histogram.map(n=>n/results.length),
-    suboptimalChoices,suboptimalChoiceRate:actions?suboptimalChoices/actions:0,
+    suboptimalChoices,swapChoices,skillUses,averageSkillUses:results.length?skillUses/results.length:0,suboptimalChoiceRate:swapChoices?suboptimalChoices/swapChoices:0,
     medianMoves:moves.length?(moves[Math.floor((moves.length-1)/2)]+moves[Math.floor(moves.length/2)])/2:null,actions,waveCounts,metrics,settlementRate:actions?(metrics.settlements??0)/actions:0,
     movesHistogram:Object.fromEntries(Array.from({length:map.moves+1},(_,n)=>[n,won.filter(r=>r.movesUsed===n).length]).filter(([,n])=>n)),
     averageMoves:won.length?won.reduce((s,r)=>s+r.movesUsed,0)/won.length:null,averageProgress:results.reduce((s,r)=>s+r.progress,0)/results.length,
@@ -428,4 +478,4 @@ async function main(args) {
 if(require.main===module) {
   main(process.argv.slice(2)).catch(error=>{ console.error(error.message);process.exitCode=1; });
 }
-module.exports={BOT_MODEL,play,summarize,seedFor,targets,catalog,simulateRetries,evaluateChecks,parseOptions,main,installSnapshot,executeTask,simulateRetryChunk,mergeRetryChunks,finalizeRetries,spawnAssistMechanisms,chooseSwap,selectRankedMove,clearValue};
+module.exports={BOT_MODEL,play,summarize,seedFor,targets,catalog,simulateRetries,evaluateChecks,parseOptions,main,installSnapshot,executeTask,simulateRetryChunk,mergeRetryChunks,finalizeRetries,spawnAssistMechanisms,chooseSwap,selectRankedMove,clearValue,skillCandidates,useSkill};

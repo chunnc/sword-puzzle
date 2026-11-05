@@ -9,13 +9,30 @@ const CHANCE_POLICIES = [
   { comboChance: .15, setupChance: .35 }
 ];
 const MAX_BUDGET_REFINEMENTS = 8;
+const SKILL_MODEL_VERSION = 2;
+function selectSkills(config, seed) {
+  const skills = config.skills.filter(skill => skill.kind !== 'passive').map(skill => skill.id).sort();
+  if (skills.length < 5) throw new Error('At least five active skills are required');
+  let state = (seed ^ 0x6d2b79f5) >>> 0 || 1;
+  for (let i = skills.length - 1; i > 0; i--) {
+    state ^= state << 13; state ^= state >>> 17; state ^= state << 5;
+    const j = (state >>> 0) % (i + 1); [skills[i], skills[j]] = [skills[j], skills[i]];
+  }
+  return skills.slice(0, 5);
+}
+function ensureSkills(request, config) {
+  if (!request.skills) request.skills = selectSkills(config, request.seed);
+  if (!Array.isArray(request.skills) || request.skills.length !== 5 || new Set(request.skills).size !== 5 ||
+      !request.skills.every(id => config.skills.some(skill => skill.id === id && skill.kind !== 'passive'))) throw new Error('Invalid simulation skills');
+  return request.skills;
+}
 function samples(map, count, suite, request, bot = 'normal', power = 'expected') {
-  return Array.from({ length: count }, (_, i) => {
+  return request.skills.flatMap(skill => Array.from({ length: count }, (_, i) => {
     const result = play(map, gameplaySeed(i, suite, request.seed), bot, power, 0, false,
-      power === 'expected' ? { totalExp: request.totalExp } : {});
+      { skill, ...(power === 'expected' ? { totalExp: request.totalExp } : {}) });
     if (result.stalled || result.maxChain > 4) throw new Error('ENGINE_PLAYABILITY_FAILURE');
     return result;
-  });
+  }));
 }
 function moveCutoffs(moves) {
   const three = Math.min(moves - 2, Math.round(.6 * moves));
@@ -97,6 +114,7 @@ function pressureSelectable(objective, obstaclePressure, hasRockBlockers = false
 }
 function calibrate(templates, config, request, progress = console.log) {
   installSnapshot(config, []);
+  ensureSkills(request, config);
   const shortlist = [], rejected = [], adjustmentHistory = [];
   const coarseSeeds = Math.min(40, request.trainingSeeds);
   for (const [index, template] of templates.entries()) {
@@ -196,14 +214,17 @@ function attemptStats(firstAttempts, count, maxAttempts) {
 }
 function simulateToThreeStars(map, request) {
   const firstWins = [], firstThrees = [], assistCounts = {};
+  const bySkill = {};
   let suboptimalChoices=0;
+  for (const skill of request.skills) {
+  const skillWins = [], skillThrees = [];
   for (let sequence = 0; sequence < request.retrySeeds; sequence++) {
     let consecutiveFailures = 0, firstWin = null, firstThree = null;
     for (let attempt = 0; attempt < request.retryAttempts; attempt++) {
       const assist = assistForFailures(map, consecutiveFailures);
       assistCounts[assist] = (assistCounts[assist] ?? 0) + 1;
       const result = play(map, gameplaySeed(sequence * request.retryAttempts + attempt, 'retry', request.seed),
-        'normal', 'expected', assist, false, { totalExp: request.totalExp });
+        'normal', 'expected', assist, false, { totalExp: request.totalExp, skill });
       suboptimalChoices+=result.suboptimalChoices??0;
       if (result.stalled || result.maxChain > 4) throw new Error('RETRY_PLAYABILITY_FAILURE');
       if (result.won) {
@@ -213,15 +234,28 @@ function simulateToThreeStars(map, request) {
       } else consecutiveFailures++;
     }
     firstWins.push(firstWin); firstThrees.push(firstThree);
+    skillWins.push(firstWin); skillThrees.push(firstThree);
   }
-  return { bot: 'normal', totalExp: request.totalExp, botModel: require('./simulate_maps.cjs').BOT_MODEL,
+  bySkill[skill] = { firstWin: attemptStats(skillWins, request.retrySeeds, request.retryAttempts), firstThreeStars: attemptStats(skillThrees, request.retrySeeds, request.retryAttempts) };
+  }
+  const count = request.retrySeeds * request.skills.length;
+  return { bot: 'normal', totalExp: request.totalExp, botModel: skillBotModel(request), bySkill,
     suboptimalChoices, assistance: 'consecutive-losses; reset after any win', assistCounts,
-    firstWin: attemptStats(firstWins, request.retrySeeds, request.retryAttempts),
-    firstThreeStars: attemptStats(firstThrees, request.retrySeeds, request.retryAttempts) };
+    firstWin: attemptStats(firstWins, count, request.retryAttempts),
+    firstThreeStars: attemptStats(firstThrees, count, request.retryAttempts) };
+}
+function skillBotModel(request) {
+  return { ...require('./simulate_maps.cjs').BOT_MODEL, version: SKILL_MODEL_VERSION,
+    loadout: { sword: null, skills: 'one per run' }, skills: [...request.skills], selection: 'seeded-uniform-active-five', extraMoves: false };
 }
 function verify(map, config, request, training = null, search = null) {
   installSnapshot(config, []);
-  const validation = assess(map, samples(map, request.validationSeeds, 'validation', request), request);
+  ensureSkills(request, config);
+  const validationResults = samples(map, request.validationSeeds, 'validation', request);
+  const validation = assess(map, validationResults, request);
+  validation.bySkill = Object.fromEntries(request.skills.map(skill => [skill, summarize(map, validationResults.filter(result => result.skill === skill))]));
+  validation.noSkill = summarize(map, Array.from({ length: request.validationSeeds }, (_, i) =>
+    play(map, gameplaySeed(i, 'validation', request.seed), 'normal', 'expected', 0, false, { totalExp: request.totalExp })));
   const retries = simulateToThreeStars(map, request), failures = [...validation.failures];
   const cutoffs = moveCutoffs(map.moves);
   for (const [key, range] of [['firstWin', request.retryWinMedian], ['firstThreeStars', request.retryThreeMedian]]) {
@@ -233,7 +267,7 @@ function verify(map, config, request, training = null, search = null) {
     samples(map, Math.min(100, request.validationSeeds), 'diagnostic', request, 'normal', power)), bot: 'normal', power }));
   return { format: 1, status: failures.length ? 'failed' : 'passed', failures,
     hashes: { map: hash(map), config: hash(contentWire(config)), engine: engineHash() },
-    bands: request.bands, botModel: require('./simulate_maps.cjs').BOT_MODEL,
+    bands: request.bands, botModel: skillBotModel(request),
     authoringPolicy: request.policyVersion === 2 ? {
       version: 2, starQuantile: request.starQuantile, totalMoves: map.moves,
       threeStarMaxMoves: cutoffs?.three ?? null, twoStarMaxMoves: cutoffs?.two ?? null,
@@ -242,11 +276,11 @@ function verify(map, config, request, training = null, search = null) {
       budgetRefinement: search?.selectedHistory ?? []
     } : { version: 1, winRateEnforced: true },
     powerModel: { expectedTotalExp: request.totalExp, minimumTotalExp: 0, strongTotalExp: (map.id - 1) * 100 + 1500,
-      loadout: { sword: null, skills: [] }, extraMoves: false },
+      loadout: { sword: null, skills: 'one per run', selectedSkills: [...request.skills] }, extraMoves: false },
     seedSuites: { generationSeed: request.seed, training: request.trainingSeeds, validation: request.validationSeeds,
       retrySequences: request.retrySeeds, maxRetryAttempts: request.retryAttempts, selection: 'training-only; one frozen validation pass' },
     training, search, validation, retries, diagnostics };
 }
-module.exports = { samples, assess, calibrate, attemptStats, simulateToThreeStars, verify,
+module.exports = { samples, assess, calibrate, attemptStats, simulateToThreeStars, verify, selectSkills, ensureSkills,
   moveCutoffs, percentile, firstAttemptQuantile, progressQuantile, targetChoices, convergeBudget,
   policyVariants, pressureVariants, pressureSelectable };

@@ -30,6 +30,7 @@ Balance: --win-rate MIN,MAX --three-rate MIN,MAX --total-exp N
          --retry-win-median MIN,MAX --retry-three-median MIN,MAX (total attempts)
 Samples: --layouts 8 --training-seeds 150 --validation-seeds 1000
          --retry-seeds 100 --retry-attempts 100
+Each seed count is per skill: five active skills are selected from the config using the authoring seed.
 
 Targets/HP are proposed automatically unless --target is provided. Maps are limited to 30 moves.
 3-star move cutoffs target about 60% of the budget; 2-star cutoffs target about 80%.
