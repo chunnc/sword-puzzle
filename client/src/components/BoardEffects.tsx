@@ -12,10 +12,10 @@ import {
 } from './boardFx';
 
 const FIRE_ATLAS_COLUMNS = 5;
-const FIRE_ATLAS_ROWS = 3;
-const FIRE_FRAME_COUNT = 12;
+const FIRE_ATLAS_ROWS = 2;
+const FIRE_FRAME_COUNT = 8;
 const FIRE_ATLAS_WIDTH = 960;
-const FIRE_ATLAS_HEIGHT = 576;
+const FIRE_ATLAS_HEIGHT = 384;
 const FIRE_BURST_MS = BOARD_FIRE_MS * .72;
 
 function setWhiteAlpha(color: SkColor, alpha: number) {

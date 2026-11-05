@@ -1330,10 +1330,10 @@ describe('lightning-test-2 flipbook rendering', () => {
   });
 });
 
-describe('fire-test-2 flipbook rendering', () => {
+describe('fire-test flipbook rendering', () => {
   let renderer: ReactTestRenderer;
   const geometry = { width: 7, height: 7 };
-  const fireBurstImage = { width: () => 960, height: () => 576 } as SkImage;
+  const fireBurstImage = { width: () => 960, height: () => 384 } as SkImage;
   const cue = buildBoardEffectCues({
     id: 80, kind: 'clear', cleared: [24], changed: [],
     effects: [{ kind: 'fire', source: 24, cells: [24], damage: 1, qi: 0 }],
@@ -1352,9 +1352,8 @@ describe('fire-test-2 flipbook rendering', () => {
   afterEach(() => { act(() => renderer?.unmount()); });
 
   it.each([
-    [0, 0, 0], [108, 192, 0], [180, 384, 0], [252, 576, 0],
-    [324, 768, 0], [396, 0, 192], [468, 192, 192], [540, 384, 192],
-    [612, 576, 192], [684, 768, 192], [756, 0, 384], [828, 192, 384],
+    [0, 0, 0], [110, 192, 0], [220, 384, 0], [330, 576, 0],
+    [440, 768, 0], [550, 0, 192], [660, 192, 192], [770, 384, 192],
   ])('selects the correct 192px frame at %sms', (timeMs, x, y) => {
     const atlas = draw(timeMs);
     expect(atlas.sprites.value[0]).toMatchObject({ x, y, width: 192, height: 192 });
@@ -1367,9 +1366,9 @@ describe('fire-test-2 flipbook rendering', () => {
     for (const [timeMs, expectedAlpha] of [[-1, 0], [0, 1], [600, 1], [828, 1], [863, 1], [864, 0], [1200, 0]]) {
       const atlas = draw(timeMs);
       expect(atlas.colors.value[0][3]).toBe(expectedAlpha);
-      // Even after playback, never sample the three unused cells in the last row.
+      // Even after playback, never sample the two unused cells in the last row.
       expect(atlas.sprites.value[0].x).toBeLessThanOrEqual(768);
-      if (atlas.sprites.value[0].y === 384) expect(atlas.sprites.value[0].x).toBeLessThanOrEqual(192);
+      if (atlas.sprites.value[0].y === 192) expect(atlas.sprites.value[0].x).toBeLessThanOrEqual(384);
       act(() => renderer.unmount());
     }
   });
@@ -1405,9 +1404,21 @@ describe('fire-test-2 flipbook rendering', () => {
     expect(ended.colors.value.map((color: Float32Array) => color[3])).toEqual([0, 0]);
   });
 
+  it.each([
+    ['skill', 0, -87.5, 212.5], ['charged', 48, 212.5, -87.5],
+  ] as const)('centers a %s fire burst at an edge source', (origin, source, x, y) => {
+    const effect: BoardVisualEffect = { id: 104, kind: 'clear', cleared: [source], changed: [],
+      effects: [{ kind: 'fire', origin, ...(origin === 'skill' ? { skillId: 'hoa-lien' as const } : {}),
+        source, cells: [source], damage: 1, qi: 0 }] };
+    const edgeCue = buildBoardEffectCues(effect, geometry)[0];
+    const atlas = draw(110, 1200, [edgeCue]);
+    expect(atlas.transforms.value[0].values).toEqual([225 / 192, 0, x, y]);
+    expect(atlas.sprites.value[0]).toMatchObject({ x: 192, y: 0, width: 192, height: 192 });
+  });
+
   it('keeps the correct frame geometry while the image is loading', () => {
     const atlas = draw(396, 1200, [cue], null);
     expect(atlas.image).toBeNull();
-    expect(atlas.sprites.value[0]).toMatchObject({ x: 0, y: 192, width: 192, height: 192 });
+    expect(atlas.sprites.value[0]).toMatchObject({ x: 576, y: 0, width: 192, height: 192 });
   });
 });
