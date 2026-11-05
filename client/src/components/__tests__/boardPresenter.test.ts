@@ -457,6 +457,20 @@ it('stops a long lightning cue when its own animation finishes', async () => {
     f.playback.dispose();
 });
 
+it('stops the active lightning cue when motion is reduced during its animation', async () => {
+    const f = fixture();
+    const stop = jest.fn();
+    f.onSfx.mockReturnValue(stop);
+    f.step.effects = [{ kind: 'lightning', origin: 'charged', source: 1, cells: [1], qi: 0, damage: 0 }];
+    f.step.falls = [];
+    const phase = f.playback.presenter.present({ kind: 'step', step: f.step });
+    f.begin(); await flush();
+    f.playback.setReduceMotion(true);
+    await phase.finished;
+    expect(stop).toHaveBeenCalledTimes(1);
+    f.playback.dispose();
+});
+
 it('cancels a queued second slash and never emits it after a late callback', async () => {
     const f = fixture();
     f.step.effects = [{ kind: 'cross', origin: 'charged', swordChargeTier: 5, source: 0, cells: [0], qi: 0, damage: 0 }];

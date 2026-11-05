@@ -42,6 +42,24 @@ it.each([4, 5] as const)('plays the ordinary match before the tier %s fire activ
   ]);
 });
 
+it.each([
+  ['sword', 'sword_slash'], ['fire', 'fire_burst'],
+  ['lightning', 'lightning_chain'], ['spirit', 'spirit_absorb'],
+] as const)('keeps the match cue when a %s charge activates', (kind, cue) => {
+  for (const tier of [4, 5] as const) {
+    const snapshot = fixture();
+    snapshot.tiles[21] = tile(kind, tier);
+    snapshot.tiles[22] = tile(kind);
+    snapshot.tiles[30] = tile(kind);
+    snapshot.tiles[23] = tile(kind === 'sword' ? 'fire' : 'sword');
+    const engine = new BoardEngine(snapshot.level, snapshot);
+    expect(engine.beginSwap(2, 4, 2, 3)).not.toBeNull();
+    const cues = boardSoundCues(engine.nextResolutionStep()!);
+    expect(cues[0].id).toBe('match_spirit');
+    expect(cues.some(sound => sound.id === cue)).toBe(true);
+  }
+});
+
 it.each([4, 5] as const)('plays fire tier %s after its queued activation and attributes rock breaks separately', tier => {
   const snapshot = fixture();
   snapshot.tiles[24] = tile('fire', tier); snapshot.tiles[25] = tile('rock'); snapshot.tiles[10] = tile('rock');

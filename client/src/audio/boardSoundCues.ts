@@ -47,7 +47,10 @@ export function boardSoundCues(step: BoardResolutionStep): BoardSoundCue[] {
 }
 
 function isOrdinaryMatch(trace: BoardAnimationEffect) {
-  if (trace.origin && trace.origin !== 'match') return false;
+  // The engine marks actual match waves explicitly, including matches that
+  // also queue charged tiles. Do not infer their identity from removed tiles.
+  if (trace.origin === 'match') return true;
+  if (trace.origin) return false;
   if (trace.kind !== 'skill' || trace.source !== undefined || trace.objectiveProgressAfter === undefined) return false;
   // The engine has already classified this trace as a legal match. Charged
   // tiles may make fewer than three cells look like ordinary tiles here.

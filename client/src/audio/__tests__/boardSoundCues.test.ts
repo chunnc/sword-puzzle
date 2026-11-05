@@ -42,6 +42,18 @@ it('does not mistake targeted skill clears or short traces for ordinary matches'
   expect(soundIds(makeStep([matchTrace([0, 1])], charged, [0, 1]))).toEqual([]);
 });
 
+it('always plays a cue for an engine-classified match, independently of its charged activations', () => {
+  const tiles: Tile[] = [
+    { kind: TileKind.Fire, chargeTier: 4, locked: false },
+    { kind: TileKind.Lightning, chargeTier: 5, locked: false },
+  ];
+  const match: BoardAnimationEffect = { ...matchTrace([0, 1]), origin: 'match' };
+  const fire: BoardAnimationEffect = { kind: 'fire', origin: 'charged', source: 0, cells: [], damage: 0, qi: 0 };
+  const lightning: BoardAnimationEffect = { kind: 'lightning', origin: 'charged', source: 1, cells: [], damage: 0, qi: 0 };
+  expect(soundIds(makeStep([match, fire, lightning], tiles, [0, 1])))
+    .toEqual(['match_spirit', 'fire_burst', 'lightning_chain']);
+});
+
 it.each([4, 5] as const)('uses the same fire sound for charged fire tier %s', tier => {
   const tiles: Tile[] = [{ kind: TileKind.Fire, chargeTier: tier, locked: false }];
   const fire: BoardAnimationEffect = { kind: 'fire', source: 0, cells: [0], damage: 0, qi: 0 };

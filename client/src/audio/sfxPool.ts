@@ -26,6 +26,7 @@ export function createSfxPool<Id extends string>(
       try {
         const group = voices.get(id) ?? [];
         voice = group.find(candidate => !candidate.busy);
+        const fresh = !voice;
         if (!voice) {
           const player = createPlayer(sources[id]);
           voice = { player, busy: false, seeking: false, lease: 0, removed: false, unsubscribe: () => undefined };
@@ -40,7 +41,10 @@ export function createSfxPool<Id extends string>(
         voice.busy = true;
         voice.seeking = true;
         const reserved = voice, lease = ++voice.lease;
-        void voice.player.seekTo(0).then(() => {
+        // A newly created player already starts at zero. Seeking before its
+        // native item is ready can delay or lose the first short-lived cue.
+        const ready = fresh ? Promise.resolve() : voice.player.seekTo(0);
+        void ready.then(() => {
           if (reserved.removed || reserved.lease !== lease || disposed) return;
           reserved.seeking = false;
           if (!isActive()) { reserved.busy = false; return; }

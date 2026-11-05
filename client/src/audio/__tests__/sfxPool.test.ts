@@ -25,10 +25,19 @@ it('reserves before seeking, overlaps full tails, and reuses only completed voic
   expect(f.players.every(player => player.play.mock.calls.length === 1)).toBe(true);
   f.pool.play('star_award'); f.pool.play('star_award'); f.pool.play('star_award'); await flush();
   expect(f.players).toHaveLength(5);
-  expect(f.players.every(player => player.seekTo.mock.calls.length === 1)).toBe(true);
+  expect(f.players.every(player => player.seekTo.mock.calls.length === 0)).toBe(true);
   f.players[0].finish(); f.pool.play('sword_slash'); await flush();
   expect(f.players).toHaveLength(5); expect(f.players[0].play).toHaveBeenCalledTimes(2);
+  expect(f.players[0].seekTo).toHaveBeenCalledTimes(1);
   f.pool.dispose(); expect(f.players.every(player => player.remove.mock.calls.length === 1 && player.unsubscribe.mock.calls.length === 1)).toBe(true);
+});
+
+it('plays a new voice without waiting for a seek on an unloaded player', async () => {
+  const f = fixture();
+  f.pool.play('sword_slash');
+  expect(f.players[0].seekTo).not.toHaveBeenCalled();
+  await flush();
+  expect(f.players[0].play).toHaveBeenCalledTimes(1);
 });
 
 it('ignores a stale finish while a voice is seeking', async () => {

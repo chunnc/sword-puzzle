@@ -16,7 +16,7 @@ const SFX = {
 
 export type SfxId = keyof typeof SFX;
 for (const source of Object.values(SFX)) void preload(source).catch(() => undefined);
-const SfxContext = createContext<(id: SfxId) => void>(() => undefined);
+const SfxContext = createContext<(id: SfxId) => void | (() => void)>(() => undefined);
 
 export function SfxProvider({ children }: React.PropsWithChildren) {
   const pool = useRef<ReturnType<typeof createSfxPool<SfxId>> | null>(null);
@@ -29,7 +29,7 @@ export function SfxProvider({ children }: React.PropsWithChildren) {
     });
     return () => { subscription.remove(); current.dispose(); pool.current = null; };
   }, []);
-  const playSfx = useCallback((id: SfxId) => { pool.current?.play(id); }, []);
+  const playSfx = useCallback((id: SfxId) => pool.current?.play(id), []);
   return <SfxContext.Provider value={playSfx}>{children}</SfxContext.Provider>;
 }
 
