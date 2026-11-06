@@ -1,0 +1,326 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 32,
+    "id": 24,
+    "chapterId": "chapter-2",
+    "orderInChapter": 14,
+    "name": "Map 24",
+    "difficulty": "medium",
+    "layout": [
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        0,
+        0,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 4,
+        "column": 1
+      },
+      {
+        "row": 5,
+        "column": 0
+      },
+      {
+        "row": 5,
+        "column": 1
+      },
+      {
+        "row": 6,
+        "column": 1
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 7,
+        "column": 2
+      },
+      {
+        "row": 7,
+        "column": 3
+      }
+    ],
+    "objectives": [
+      {
+        "id": "activate-nodes",
+        "type": "ActivateNodes",
+        "target": 2
+      }
+    ],
+    "moves": 20,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0.3,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 1629958321,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "medium",
+      "objective": "activate-nodes",
+      "index": 24,
+      "bands": {
+        "win": [
+          0.8,
+          1
+        ],
+        "three": [
+          0.45,
+          0.55
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.5,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": null,
+      "sealBlockers": null,
+      "minimumTarget": null,
+      "seed": 1629958321,
+      "totalExp": 1380,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Map 24",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null,
+      "skills": [
+        "van-kiem",
+        "lien-kiem",
+        "ngu-kiem",
+        "hoi-linh",
+        "thu"
+      ]
+    },
+    "shape": {
+      "family": "chamfer",
+      "layout": [
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          -1,
+          0,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          0,
+          0,
+          0,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          0,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          0,
+          -1,
+          -1
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 6,
+        "height": 8,
+        "activeCells": 36,
+        "holes": 12,
+        "holeRatio": 0.25
+      },
+      "key": "[[0,0,1,1,1,0],[1,1,1,0,1,1],[1,1,1,1,1,1],[1,1,1,0,1,1],[1,1,1,1,1,1],[1,1,0,0,0,1],[0,1,0,1,1,1],[0,1,1,1,1,0]]",
+      "sealCount": 4,
+      "sealCells": [
+        {
+          "row": 4,
+          "column": 1
+        },
+        {
+          "row": 5,
+          "column": 0
+        },
+        {
+          "row": 5,
+          "column": 1
+        },
+        {
+          "row": 6,
+          "column": 1
+        }
+      ],
+      "nodeCount": 2,
+      "nodeCells": [
+        {
+          "row": 7,
+          "column": 2
+        },
+        {
+          "row": 7,
+          "column": 3
+        }
+      ]
+    },
+    "sourceCatalogHash": "5e6d1c0e8676a5e8013e960d23422ce7b831e87b87faff493561a66f12db464d",
+    "authoringConfigVersion": 32
+  },
+  "hashes": {
+    "map": "6f72c706e08783ce8cac4f1127bbe474588dacb227b2e8b1a06b083b51302933",
+    "config": "85cf886fd02f10fa8cc1823342a95240a7cfdfcd27022ad151c0c75dbb87ef05",
+    "engine": "087e8d8428c815cb0085cf6263ed0253b2f4ba2ebd5acf1391ff219675b6fbe3",
+    "report": "96efe28f404cef3f5bde14e8ca1681fa0b2be5b330267fabed8ec4e0130b275c"
+  }
+}

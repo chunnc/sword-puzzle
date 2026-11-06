@@ -1,0 +1,277 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 29,
+    "id": 21,
+    "chapterId": "chapter-2",
+    "orderInChapter": 11,
+    "name": "Map 21",
+    "difficulty": "medium",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 2,
+        "column": 2
+      },
+      {
+        "row": 3,
+        "column": 2
+      },
+      {
+        "row": 4,
+        "column": 0
+      },
+      {
+        "row": 4,
+        "column": 1
+      },
+      {
+        "row": 4,
+        "column": 2
+      },
+      {
+        "row": 5,
+        "column": 0
+      }
+    ],
+    "objectives": [
+      {
+        "id": "break-seals",
+        "type": "BreakSeals",
+        "target": 6
+      }
+    ],
+    "moves": 9,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 56,
+      "twoStarBelowPercent": 78
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0.3,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 3002952637,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "medium",
+      "objective": "break-seals",
+      "index": 21,
+      "bands": {
+        "win": [
+          0.8,
+          1
+        ],
+        "three": [
+          0.45,
+          0.55
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.5,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": null,
+      "sealBlockers": null,
+      "minimumTarget": null,
+      "seed": 3002952637,
+      "totalExp": 1200,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Map 21",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null,
+      "skills": [
+        "hoa-lien",
+        "pha-chuong",
+        "van-kiem",
+        "hoi-linh",
+        "dan-loi"
+      ]
+    },
+    "shape": {
+      "family": "waist",
+      "layout": [
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          0,
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          -1,
+          0,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 5,
+        "height": 6,
+        "activeCells": 22,
+        "holes": 8,
+        "holeRatio": 0.26666666666666666
+      },
+      "key": "[[1,1,0,0,1,1],[1,1,0,0,1,1],[1,1,1,1,1,1],[1,1,0,0,1,1],[1,1,0,0,1,1]]",
+      "sealCount": 6,
+      "sealCells": [
+        {
+          "row": 2,
+          "column": 2
+        },
+        {
+          "row": 3,
+          "column": 2
+        },
+        {
+          "row": 4,
+          "column": 0
+        },
+        {
+          "row": 4,
+          "column": 1
+        },
+        {
+          "row": 4,
+          "column": 2
+        },
+        {
+          "row": 5,
+          "column": 0
+        }
+      ]
+    },
+    "sourceCatalogHash": "19a385dbbbe4fb47bd8c92174be7b9792fdd824f0f79fd2ff8bf9604fef11d32",
+    "authoringConfigVersion": 29
+  },
+  "hashes": {
+    "map": "5a29f8fff560f2e43837f8041026652ace8f2f9cdc069e82f4e43889fd74395a",
+    "config": "65775d9da0e4d091b58c45dce14d17366eac723309821018d2e403f7e2ae33ac",
+    "engine": "087e8d8428c815cb0085cf6263ed0253b2f4ba2ebd5acf1391ff219675b6fbe3",
+    "report": "f6c423ba8184a0dc578e0bac9dc763e0b9194088e91d5cc62c6bb42729c419fe"
+  }
+}

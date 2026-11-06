@@ -1,0 +1,278 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 38,
+    "id": 30,
+    "chapterId": "chapter-2",
+    "orderInChapter": 20,
+    "name": "Map 30",
+    "difficulty": "hard",
+    "layout": [
+      [
+        0,
+        0,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        0,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "main",
+        "type": "Boss",
+        "target": 2428,
+        "enemy": {
+          "id": "boss-30",
+          "name": "Yêu Vương",
+          "artKey": "beast"
+        }
+      }
+    ],
+    "moves": 29,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 59,
+      "twoStarBelowPercent": 80
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 2702636401,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "hard",
+      "objective": "boss",
+      "index": 30,
+      "bands": {
+        "win": [
+          0.25,
+          0.4
+        ],
+        "three": [
+          0.05,
+          0.15
+        ],
+        "exclusiveWin": false,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.1,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": null,
+      "sealBlockers": null,
+      "minimumTarget": null,
+      "seed": 2702636401,
+      "totalExp": 1740,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Map 30",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": {
+        "id": "boss-30",
+        "name": "Yêu Vương",
+        "artKey": "beast"
+      },
+      "skills": [
+        "lien-kiem",
+        "van-kiem",
+        "nhat-kiem",
+        "thu",
+        "ngu-kiem"
+      ]
+    },
+    "shape": {
+      "family": "chamfer",
+      "layout": [
+        [
+          0,
+          0,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          0,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          0,
+          -1,
+          -1,
+          0,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 6,
+        "height": 8,
+        "activeCells": 34,
+        "holes": 14,
+        "holeRatio": 0.2916666666666667
+      },
+      "key": "[[0,0,1,1,0,0],[0,0,1,1,1,0],[1,1,1,1,1,1],[1,0,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1],[0,1,1,1,1,0],[0,0,1,1,0,0]]"
+    },
+    "sourceCatalogHash": "ba2085377db1cf249f909b809ffc7faff48b7f2861fda84afa89fa845efb19b5",
+    "authoringConfigVersion": 38
+  },
+  "hashes": {
+    "map": "a661b0b375a7ad0f9d26558fc518b0172d22bca89bc18c1fac85cba0ccc67ccb",
+    "config": "d477583fea5cbfd96e5e4a9290cbe82dd3bce90785555cee650f4b48091b2ee3",
+    "engine": "087e8d8428c815cb0085cf6263ed0253b2f4ba2ebd5acf1391ff219675b6fbe3",
+    "report": "cd3a83c6fac152b6ecc7d39ded877435e59da29f239032bf8af0f1f5ecc94bba"
+  }
+}

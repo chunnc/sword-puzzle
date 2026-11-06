@@ -1,0 +1,233 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 36,
+    "id": 28,
+    "chapterId": "chapter-2",
+    "orderInChapter": 18,
+    "name": "Map 28",
+    "difficulty": "medium",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        0,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-sword-4",
+        "type": "Collect",
+        "tileKind": 1,
+        "chargeTier": 4,
+        "target": 1
+      }
+    ],
+    "moves": 15,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0.1,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 3858055587,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "medium",
+      "objective": "collect",
+      "index": 28,
+      "bands": {
+        "win": [
+          0.8,
+          1
+        ],
+        "three": [
+          0.45,
+          0.55
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.5,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword:4"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": null,
+      "sealBlockers": null,
+      "minimumTarget": null,
+      "seed": 3858055587,
+      "totalExp": 1620,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Map 28",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null,
+      "skills": [
+        "ngu-kiem",
+        "nhat-kiem",
+        "hoa-lien",
+        "thu",
+        "lien-kiem"
+      ]
+    },
+    "shape": {
+      "family": "courtyard",
+      "layout": [
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          0,
+          -1,
+          0,
+          0
+        ],
+        [
+          -1,
+          -1,
+          0,
+          0,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          0,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 7,
+        "height": 5,
+        "activeCells": 26,
+        "holes": 9,
+        "holeRatio": 0.2571428571428571
+      },
+      "key": "[[0,0,0,1,1],[0,0,1,1,1],[1,1,1,1,1],[1,0,0,1,1],[1,1,0,0,1],[1,1,1,1,1],[1,1,1,1,1]]"
+    },
+    "sourceCatalogHash": "95d4e64c0468bd89c7b076dc873a776ba697202358c5a6eedbbe2a1b2c091fa2",
+    "authoringConfigVersion": 36
+  },
+  "hashes": {
+    "map": "94bcc2d143a87765e8008badcad41bb2394d6bb135c1769ac41fb7cc842d0296",
+    "config": "159fde5c84ff74a0ab111bc996eca2de6b5994f77becfc2283022bf6e6976de7",
+    "engine": "087e8d8428c815cb0085cf6263ed0253b2f4ba2ebd5acf1391ff219675b6fbe3",
+    "report": "9b1813785d7cf6cb579d2ae1fe4231ca418ae99cebf55ea74c30bd87753ae52d"
+  }
+}

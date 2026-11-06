@@ -1,0 +1,15 @@
+{
+  "status": "approved-with-validation-exception",
+  "approvedAt": "2026-11-05T15:43:48.567Z",
+  "note": "User approved the candidate for the local chapter-2 catalog despite the small medium 3-star-rate deviation.",
+  "validation": {
+    "reportedThreeStarRate": 0.5636,
+    "allowedBand": [
+      0.45,
+      0.55
+    ],
+    "failures": [
+      "First-attempt three-star rate outside requested band"
+    ]
+  }
+}

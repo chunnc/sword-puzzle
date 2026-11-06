@@ -2605,5 +2605,1290 @@
       "spirit": 4,
       "rock": 5
     }
+  },
+  {
+    "contentVersion": 29,
+    "id": 21,
+    "chapterId": "chapter-2",
+    "orderInChapter": 11,
+    "name": "Map 21",
+    "difficulty": "medium",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 2,
+        "column": 2
+      },
+      {
+        "row": 3,
+        "column": 2
+      },
+      {
+        "row": 4,
+        "column": 0
+      },
+      {
+        "row": 4,
+        "column": 1
+      },
+      {
+        "row": 4,
+        "column": 2
+      },
+      {
+        "row": 5,
+        "column": 0
+      }
+    ],
+    "objectives": [
+      {
+        "id": "break-seals",
+        "type": "BreakSeals",
+        "target": 6
+      }
+    ],
+    "moves": 9,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 56,
+      "twoStarBelowPercent": 78
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0.3,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 30,
+    "id": 22,
+    "chapterId": "chapter-2",
+    "orderInChapter": 12,
+    "name": "Map 22",
+    "difficulty": "medium",
+    "layout": [
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        -1
+      ],
+      [
+        -1,
+        0,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-sword",
+        "type": "Collect",
+        "tileKind": 1,
+        "target": 27
+      },
+      {
+        "id": "collect-fire",
+        "type": "Collect",
+        "tileKind": 2,
+        "target": 27
+      }
+    ],
+    "moves": 30,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0.1,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 31,
+    "id": 23,
+    "chapterId": "chapter-2",
+    "orderInChapter": 13,
+    "name": "Map 23",
+    "difficulty": "medium",
+    "layout": [
+      [
+        0,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        0,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 5,
+        "column": 0
+      },
+      {
+        "row": 6,
+        "column": 0
+      },
+      {
+        "row": 6,
+        "column": 1
+      },
+      {
+        "row": 6,
+        "column": 2
+      },
+      {
+        "row": 7,
+        "column": 2
+      }
+    ],
+    "objectives": [
+      {
+        "id": "break-seals",
+        "type": "BreakSeals",
+        "target": 5
+      }
+    ],
+    "moves": 12,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 59,
+      "twoStarBelowPercent": 84
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.1,
+      "setupChance": 0.25,
+      "obstaclePressure": 0.15,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 32,
+    "id": 24,
+    "chapterId": "chapter-2",
+    "orderInChapter": 14,
+    "name": "Map 24",
+    "difficulty": "medium",
+    "layout": [
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        0,
+        0,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [
+      {
+        "row": 4,
+        "column": 1
+      },
+      {
+        "row": 5,
+        "column": 0
+      },
+      {
+        "row": 5,
+        "column": 1
+      },
+      {
+        "row": 6,
+        "column": 1
+      }
+    ],
+    "initialNodes": [
+      {
+        "row": 7,
+        "column": 2
+      },
+      {
+        "row": 7,
+        "column": 3
+      }
+    ],
+    "objectives": [
+      {
+        "id": "activate-nodes",
+        "type": "ActivateNodes",
+        "target": 2
+      }
+    ],
+    "moves": 20,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0.3,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 33,
+    "id": 25,
+    "chapterId": "chapter-2",
+    "orderInChapter": 15,
+    "name": "Map 25",
+    "difficulty": "medium",
+    "layout": [
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        0,
+        -1,
+        0,
+        -1,
+        0,
+        -1
+      ],
+      [
+        -1,
+        0,
+        -1,
+        0,
+        -1,
+        0,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        -1,
+        0,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-lightning",
+        "type": "Collect",
+        "tileKind": 3,
+        "target": 29
+      },
+      {
+        "id": "collect-spirit",
+        "type": "Collect",
+        "tileKind": 4,
+        "target": 29
+      }
+    ],
+    "moves": 25,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0.1,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 34,
+    "id": 26,
+    "chapterId": "chapter-2",
+    "orderInChapter": 16,
+    "name": "Map 26",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        5,
+        5,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        5,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "break-rocks",
+        "type": "BreakRocks",
+        "target": 3
+      }
+    ],
+    "moves": 7,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 58,
+      "twoStarBelowPercent": 86
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0.3,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 35,
+    "id": 27,
+    "chapterId": "chapter-2",
+    "orderInChapter": 17,
+    "name": "Map 27",
+    "difficulty": "hard",
+    "layout": [
+      [
+        0,
+        -1,
+        -1,
+        0,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "main",
+        "type": "Battle",
+        "target": 1411,
+        "enemy": {
+          "id": "battle-27",
+          "name": "Yêu Thú",
+          "artKey": "beast"
+        }
+      }
+    ],
+    "moves": 29,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 59,
+      "twoStarBelowPercent": 80
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 36,
+    "id": 28,
+    "chapterId": "chapter-2",
+    "orderInChapter": 18,
+    "name": "Map 28",
+    "difficulty": "medium",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        0,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-sword-4",
+        "type": "Collect",
+        "tileKind": 1,
+        "chargeTier": 4,
+        "target": 1
+      }
+    ],
+    "moves": 15,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0.1,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 37,
+    "id": 29,
+    "chapterId": "chapter-2",
+    "orderInChapter": 19,
+    "name": "Map 29",
+    "difficulty": "easy",
+    "layout": [
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        0,
+        0,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        0,
+        0,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        0,
+        0,
+        0,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "main",
+        "type": "Battle",
+        "target": 714,
+        "enemy": {
+          "id": "battle-29",
+          "name": "Yêu Thú",
+          "artKey": "beast"
+        }
+      }
+    ],
+    "moves": 30,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  {
+    "contentVersion": 38,
+    "id": 30,
+    "chapterId": "chapter-2",
+    "orderInChapter": 20,
+    "name": "Map 30",
+    "difficulty": "hard",
+    "layout": [
+      [
+        0,
+        0,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        0,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        0,
+        -1,
+        -1,
+        0,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "main",
+        "type": "Boss",
+        "target": 2428,
+        "enemy": {
+          "id": "boss-30",
+          "name": "Yêu Vương",
+          "artKey": "beast"
+        }
+      }
+    ],
+    "moves": 29,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 59,
+      "twoStarBelowPercent": 80
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
   }
 ]

@@ -1,0 +1,13 @@
+{
+  "id": 29,
+  "mapVersion": 1,
+  "contentVersion": 37,
+  "levelCount": 29,
+  "catalogRevision": 35,
+  "changed": true,
+  "dryRun": false,
+  "authoredMapHash": "16fc40042e02a5777a2f5583df1d62688e552a445071bd7c60607aaa6e7db105",
+  "reportHash": "ad858fe32a6231cf29b5da40b4fd6074098c707c543ed77fa099a2372e24da41",
+  "resourceHash": "56e5008ae35a574fe1336495424643bef24705172fd30a325bc500f7832a1799",
+  "project": "sword-puzzle"
+}

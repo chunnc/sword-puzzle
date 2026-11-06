@@ -1,0 +1,245 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 30,
+    "id": 22,
+    "chapterId": "chapter-2",
+    "orderInChapter": 12,
+    "name": "Map 22",
+    "difficulty": "medium",
+    "layout": [
+      [
+        0,
+        0,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        -1
+      ],
+      [
+        -1,
+        0,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-sword",
+        "type": "Collect",
+        "tileKind": 1,
+        "target": 27
+      },
+      {
+        "id": "collect-fire",
+        "type": "Collect",
+        "tileKind": 2,
+        "target": 27
+      }
+    ],
+    "moves": 30,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0.1,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 421462477,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "medium",
+      "objective": "collect",
+      "index": 22,
+      "bands": {
+        "win": [
+          0.8,
+          1
+        ],
+        "three": [
+          0.45,
+          0.55
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.5,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword",
+        "fire"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": null,
+      "sealBlockers": null,
+      "minimumTarget": null,
+      "seed": 421462477,
+      "totalExp": 1260,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Map 22",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null,
+      "skills": [
+        "pha-chuong",
+        "hoi-linh",
+        "lien-kiem",
+        "nhat-kiem",
+        "hoa-lien"
+      ]
+    },
+    "shape": {
+      "family": "courtyard",
+      "layout": [
+        [
+          0,
+          0,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          0,
+          0,
+          -1
+        ],
+        [
+          -1,
+          0,
+          -1,
+          0,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 6,
+        "height": 6,
+        "activeCells": 27,
+        "holes": 9,
+        "holeRatio": 0.25
+      },
+      "key": "[[0,0,1,1,1,0],[0,1,1,1,1,1],[1,1,1,0,0,1],[1,0,1,0,1,1],[1,1,1,1,1,1],[1,1,1,1,1,0]]"
+    },
+    "sourceCatalogHash": "124399ea2f8783b9667a12da9587096be9fed540a5921bc9e59e4249027c2a3e",
+    "authoringConfigVersion": 30
+  },
+  "hashes": {
+    "map": "9ef40a95f3853ccec2c0703afd0876032fc69ef8221f192d3600b296788f5e5f",
+    "config": "11044589eed81128c921a5ad69d1a26479e717ceda7e86fc45406ca17cb35165",
+    "engine": "087e8d8428c815cb0085cf6263ed0253b2f4ba2ebd5acf1391ff219675b6fbe3",
+    "report": "e408d6fc10121e587f510535190e11f1b9f23394ef4205c0453cebf5d0220b9f"
+  }
+}

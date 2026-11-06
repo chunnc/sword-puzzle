@@ -1,0 +1,262 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 35,
+    "id": 27,
+    "chapterId": "chapter-2",
+    "orderInChapter": 17,
+    "name": "Map 27",
+    "difficulty": "hard",
+    "layout": [
+      [
+        0,
+        -1,
+        -1,
+        0,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "main",
+        "type": "Battle",
+        "target": 1411,
+        "enemy": {
+          "id": "battle-27",
+          "name": "Yêu Thú",
+          "artKey": "beast"
+        }
+      }
+    ],
+    "moves": 29,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 59,
+      "twoStarBelowPercent": 80
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 1299234564,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "hard",
+      "objective": "battle",
+      "index": 27,
+      "bands": {
+        "win": [
+          0.25,
+          0.4
+        ],
+        "three": [
+          0.05,
+          0.15
+        ],
+        "exclusiveWin": false,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.1,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": null,
+      "sealBlockers": null,
+      "minimumTarget": null,
+      "seed": 1299234564,
+      "totalExp": 1560,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Map 27",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": {
+        "id": "battle-27",
+        "name": "Yêu Thú",
+        "artKey": "beast"
+      },
+      "skills": [
+        "lien-kiem",
+        "pha-chuong",
+        "hoa-lien",
+        "hoi-linh",
+        "nhat-kiem"
+      ]
+    },
+    "shape": {
+      "family": "chamfer",
+      "layout": [
+        [
+          0,
+          -1,
+          -1,
+          0,
+          0,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          0,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          0,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          0,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 6,
+        "height": 7,
+        "activeCells": 29,
+        "holes": 13,
+        "holeRatio": 0.30952380952380953
+      },
+      "key": "[[0,0,0,1,1,0,0],[0,1,1,1,1,1,0],[0,1,1,1,1,1,1],[1,1,1,0,0,0,1],[1,1,1,1,1,1,1],[0,1,1,1,1,1,0]]"
+    },
+    "sourceCatalogHash": "c6b12f9bc2bfadb2ffb42ed1806cd0112038e3f86603c11dc70b5910da9deedf",
+    "authoringConfigVersion": 35
+  },
+  "hashes": {
+    "map": "4c59a12b7069a7f5c1aaa4ea55f9e7aad46f63a8e299aa1014f2e6e2a37c7ab0",
+    "config": "c3c391f5fce7bcccad91d2105a02095183adde4d44c7f2f16410483d3d2b505b",
+    "engine": "087e8d8428c815cb0085cf6263ed0253b2f4ba2ebd5acf1391ff219675b6fbe3",
+    "report": "73c76eb3170d016be45fbe70e17225d109af7c8c355aabb9bcd996b0f23d3920"
+  }
+}

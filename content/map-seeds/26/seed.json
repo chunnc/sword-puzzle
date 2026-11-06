@@ -1,0 +1,268 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 34,
+    "id": 26,
+    "chapterId": "chapter-2",
+    "orderInChapter": 16,
+    "name": "Map 26",
+    "difficulty": "easy",
+    "layout": [
+      [
+        0,
+        5,
+        5,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        5,
+        -1,
+        -1,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "break-rocks",
+        "type": "BreakRocks",
+        "target": 3
+      }
+    ],
+    "moves": 7,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 58,
+      "twoStarBelowPercent": 86
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0,
+      "comboChance": 0.15,
+      "setupChance": 0.35,
+      "obstaclePressure": 0.3,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 3782370605,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "easy",
+      "objective": "break-rocks",
+      "index": 26,
+      "bands": {
+        "win": [
+          0.95,
+          1
+        ],
+        "three": [
+          0.8,
+          1
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": true
+      },
+      "starQuantile": 0.8,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "sword"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": null,
+      "sealBlockers": null,
+      "minimumTarget": null,
+      "seed": 3782370605,
+      "totalExp": 1500,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Map 26",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null,
+      "skills": [
+        "hoi-linh",
+        "van-kiem",
+        "lien-kiem",
+        "pha-chuong",
+        "ngu-kiem"
+      ]
+    },
+    "shape": {
+      "family": "wings",
+      "layout": [
+        [
+          0,
+          5,
+          5,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          -1,
+          5,
+          -1,
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 6,
+        "height": 7,
+        "activeCells": 34,
+        "holes": 8,
+        "holeRatio": 0.19047619047619047
+      },
+      "key": "[[0,0,1,1,1,0,0],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[1,1,1,1,1,1,1],[0,0,1,1,1,0,0]]",
+      "rockCount": 3,
+      "rockCells": [
+        {
+          "row": 0,
+          "column": 1
+        },
+        {
+          "row": 0,
+          "column": 2
+        },
+        {
+          "row": 1,
+          "column": 2
+        }
+      ]
+    },
+    "sourceCatalogHash": "a8ef659102c146020ec602fbceb1fbcd54af852b4cf5f2123eccb438e718c117",
+    "authoringConfigVersion": 34
+  },
+  "hashes": {
+    "map": "7308737be39c2f7dc349ec1069e58fb6545a8bebc3deba8fa2e7eab53d847361",
+    "config": "b74c6e3b3fb2b37f37e08bee98801bdec79a63c61f83ebc54d9b1678df51920c",
+    "engine": "087e8d8428c815cb0085cf6263ed0253b2f4ba2ebd5acf1391ff219675b6fbe3",
+    "report": "0371c81b9a62ab3430c5ef9f7d19f5e8f1d10dbf2629c294f0f742feccfd3f6c"
+  }
+}

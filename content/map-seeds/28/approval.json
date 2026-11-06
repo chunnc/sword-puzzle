@@ -1,0 +1,16 @@
+{
+  "status": "approved-with-validation-exception",
+  "approvedAt": "2026-11-05T18:12:03.469Z",
+  "note": "User approved this small deviation after approving the similarly small map-21 deviation; medium first-attempt 3-star rate is below the lower bound.",
+  "validation": {
+    "reportedThreeStarRate": 0.4424,
+    "allowedBand": [
+      0.45,
+      0.55
+    ],
+    "deviationFromNearestBound": 0.007599999999999996,
+    "failures": [
+      "First-attempt three-star rate outside requested band"
+    ]
+  }
+}

@@ -1,0 +1,293 @@
+{
+  "format": 1,
+  "map": {
+    "contentVersion": 33,
+    "id": 25,
+    "chapterId": "chapter-2",
+    "orderInChapter": 15,
+    "name": "Map 25",
+    "difficulty": "medium",
+    "layout": [
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        0,
+        -1,
+        0,
+        -1,
+        0,
+        -1
+      ],
+      [
+        -1,
+        0,
+        -1,
+        0,
+        -1,
+        0,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        -1,
+        0,
+        -1,
+        -1
+      ],
+      [
+        -1,
+        -1,
+        0,
+        -1,
+        0,
+        -1,
+        0
+      ],
+      [
+        0,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0
+      ]
+    ],
+    "initialSeals": [],
+    "objectives": [
+      {
+        "id": "collect-lightning",
+        "type": "Collect",
+        "tileKind": 3,
+        "target": 29
+      },
+      {
+        "id": "collect-spirit",
+        "type": "Collect",
+        "tileKind": 4,
+        "target": 29
+      }
+    ],
+    "moves": 25,
+    "baseExp": 100,
+    "starThresholds": {
+      "mode": "percentage",
+      "threeStarBelowPercent": 61,
+      "twoStarBelowPercent": 81
+    },
+    "spawnPolicy": {
+      "weights": {
+        "1": 100,
+        "2": 100,
+        "3": 100,
+        "4": 100
+      },
+      "collectionPressure": 0.1,
+      "comboChance": 0.05,
+      "setupChance": 0.15,
+      "obstaclePressure": 0,
+      "candidates": 4
+    },
+    "retryAssistPolicy": {
+      "thresholds": [
+        3,
+        5,
+        8
+      ],
+      "reductions": [
+        0.1,
+        0.2,
+        0.3
+      ]
+    },
+    "mapVersion": 1,
+    "rulesMode": "modern",
+    "tileRegistry": {
+      "sword": 1,
+      "fire": 2,
+      "lightning": 3,
+      "spirit": 4,
+      "rock": 5
+    }
+  },
+  "generation": {
+    "seed": 248532752,
+    "request": {
+      "policyVersion": 2,
+      "difficulty": "medium",
+      "objective": "collect",
+      "index": 25,
+      "bands": {
+        "win": [
+          0.8,
+          1
+        ],
+        "three": [
+          0.45,
+          0.55
+        ],
+        "exclusiveWin": true,
+        "exclusiveThree": false
+      },
+      "starQuantile": 0.5,
+      "winRateEnforced": false,
+      "minMoves": 6,
+      "maxMoves": 30,
+      "tiles": [
+        "lightning",
+        "spirit"
+      ],
+      "targets": null,
+      "fixedTargets": false,
+      "weights": {},
+      "rockBlockers": null,
+      "nodeBlockers": null,
+      "sealBlockers": null,
+      "minimumTarget": null,
+      "seed": 248532752,
+      "totalExp": 1440,
+      "layouts": 8,
+      "trainingSeeds": 150,
+      "validationSeeds": 1000,
+      "retrySeeds": 100,
+      "retryAttempts": 100,
+      "retryWinMedian": null,
+      "retryThreeMedian": null,
+      "name": "Map 25",
+      "replace": false,
+      "chapter": null,
+      "chapterName": null,
+      "enemy": null,
+      "skills": [
+        "dan-loi",
+        "nhat-kiem",
+        "van-kiem",
+        "hoa-lien",
+        "hoi-linh"
+      ]
+    },
+    "shape": {
+      "family": "chamfer",
+      "layout": [
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          0,
+          0
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          0,
+          -1,
+          0,
+          -1,
+          0,
+          -1
+        ],
+        [
+          -1,
+          0,
+          -1,
+          0,
+          -1,
+          0,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          0,
+          -1,
+          0,
+          -1,
+          -1
+        ],
+        [
+          -1,
+          -1,
+          0,
+          -1,
+          0,
+          -1,
+          0
+        ],
+        [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          0
+        ]
+      ],
+      "checks": {
+        "passed": true,
+        "failures": [],
+        "width": 7,
+        "height": 8,
+        "activeCells": 40,
+        "holes": 16,
+        "holeRatio": 0.2857142857142857
+      },
+      "key": "[[0,0,1,1,1,1,0],[1,1,1,1,1,1,1],[1,0,1,0,1,0,1],[1,0,1,0,1,0,1],[1,1,1,1,1,1,1],[1,1,0,1,0,1,1],[0,1,0,1,0,1,1],[0,1,1,1,1,1,0]]"
+    },
+    "sourceCatalogHash": "729db941981129f01f3a96d24a623f1377f9ba852186383144886eca440eca11",
+    "authoringConfigVersion": 33
+  },
+  "hashes": {
+    "map": "9a656bbb6b22625abc0e8a5edad5bd2f6f35e9effa1633f990750bdbdaf84583",
+    "config": "9870ea9908003db0a3ce80ad26db691be693b6e614d32ad65c3ad4d9a2e206e7",
+    "engine": "087e8d8428c815cb0085cf6263ed0253b2f4ba2ebd5acf1391ff219675b6fbe3",
+    "report": "cc96b4aab112bcdc1facd876aba76e301ca0fe7bc768472fbc1e77b9d5fa483a"
+  }
+}
