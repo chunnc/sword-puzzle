@@ -4,6 +4,7 @@ import { AppState, ScrollView, StyleSheet, Text, View, type AppStateStatus } fro
 import { GameplayHeader, GameplayInfo } from '../GameplayChrome';
 import { GameplayProgressBar } from '../GameplayProgressBar';
 import { ART } from '../../assets';
+import { enemyAvatarURL } from '../../enemyAvatars';
 import { CONTENT, tileId, type ObjectiveDefinition, type TileKey } from '../../game/domain';
 import { getLevel } from '../../game/levels';
 import type { BoardSnapshot } from '../../game/types';
@@ -77,7 +78,7 @@ describe('gameplay header and objective rows', () => {
   const tileSprites = () => renderer.root.findAllByType((TileSprite as any).type);
   const view = (id: string) => renderer.root.findAllByType(View).find(node => node.props.testID === id)!;
   const collect = (id: string, kind: TileKey = 'sword'): Extract<ObjectiveDefinition, { type: 'Collect' }> => ({ id, type: 'Collect', tileKind: tileId(kind, CONTENT), target: 15 });
-  const enemy = (type: 'Battle' | 'Boss'): ObjectiveDefinition => ({ id: 'enemy', type, target: 300, enemy: { id: 'enemy', name: 'Yêu vương', artKey: 'beast' } });
+  const enemy = (type: 'Battle' | 'Boss', artKey = 'beast'): ObjectiveDefinition => ({ id: 'enemy', type, target: 300, enemy: { id: 'enemy', name: 'Yêu vương', artKey } });
   function info(objectives: ObjectiveDefinition[], progress: Record<string, number> = {}, compact = false, reduceMotion = true) {
     const level = { ...getLevel(15), objectives };
     const board = { contentVersion: CONTENT.version, objectiveProgress: progress } as BoardSnapshot;
@@ -126,6 +127,33 @@ describe('gameplay header and objective rows', () => {
     expect(view('game-enemy-panel').findAllByType(Text).some(node => node.props.children === 'Yêu vương')).toBe(true);
     const health = renderer.root.findByType(GameplayProgressBar);
     expect(health.props).toMatchObject({ value: 180, max: 300, accessibilityLabel: 'Máu Yêu vương' });
+  });
+
+  it.each([false, true])('shows the full portrait over the boss frame without changing its size (compact=%s)', compact => {
+    act(() => { renderer = create(info([enemy('Boss', 'enemyAvatar10')], {}, compact)); });
+    const panel = StyleSheet.flatten(view('game-enemy-panel').props.style);
+    expect(panel).toMatchObject({ height: compact ? 52 : 60, overflow: 'visible' });
+    expect(StyleSheet.flatten(view('game-enemy-avatar').props.style)).toMatchObject({
+      width: compact ? 40 : 48, height: compact ? 40 : 48, overflow: 'visible',
+    });
+    const portrait = view('game-enemy-avatar').findAllByType(View).find(node => node.props.source === enemyAvatarURL('enemyAvatar10'))!;
+    expect(portrait.props.contentFit).toBe('contain');
+    expect(portrait.props.cachePolicy).toBe('memory');
+    expect(StyleSheet.flatten(portrait.props.style)).toMatchObject({
+      position: 'absolute', width: compact ? 60 : 68, height: compact ? 60 : 68, left: -10, top: -4,
+    });
+    expect(StyleSheet.flatten(portrait.props.style)).not.toHaveProperty('borderRadius');
+  });
+
+  it('assigns eight distinct registered portraits to the current combat maps', () => {
+    const maps = require('../../../../content/game-maps.json') as Array<any>;
+    const combatMaps = maps.filter(map => [7, 10, 17, 19, 20, 27, 29, 30].includes(map.id));
+    const keys = combatMaps.map(map => map.objectives.find((objective: any) => objective.enemy)?.enemy.artKey);
+    expect(combatMaps.map(map => map.id)).toEqual([7, 10, 17, 19, 20, 27, 29, 30]);
+    expect(keys).toEqual(['enemyAvatar7', 'enemyAvatar10', 'enemyAvatar17', 'enemyAvatar19', 'enemyAvatar20', 'enemyAvatar27', 'enemyAvatar29', 'enemyAvatar30']);
+    expect(new Set(keys).size).toBe(8);
+    expect(keys.every(key => enemyAvatarURL(key))).toBe(true);
+    expect(combatMaps.every(map => map.mapVersion === 2)).toBe(true);
   });
 
   it('omits an empty collection row for a boss-only level', () => {

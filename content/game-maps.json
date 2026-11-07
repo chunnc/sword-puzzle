@@ -803,7 +803,7 @@
         "enemy": {
           "id": "battle-7",
           "name": "Yêu thú canh cốc",
-          "artKey": "beast"
+          "artKey": "enemyAvatar7"
         }
       }
     ],
@@ -839,7 +839,7 @@
         0.3
       ]
     },
-    "mapVersion": 1,
+    "mapVersion": 2,
     "rulesMode": "modern",
     "tileRegistry": {
       "sword": 1,
@@ -1173,7 +1173,7 @@
         "enemy": {
           "id": "boss-10",
           "name": "Hộ Sơn Yêu Vương",
-          "artKey": "beast"
+          "artKey": "enemyAvatar10"
         }
       }
     ],
@@ -1209,7 +1209,7 @@
         0.3
       ]
     },
-    "mapVersion": 1,
+    "mapVersion": 2,
     "rulesMode": "modern",
     "tileRegistry": {
       "sword": 1,
@@ -2137,7 +2137,7 @@
         "enemy": {
           "id": "battle-17",
           "name": "Luyện Kiếm Sư Huynh",
-          "artKey": "beast"
+          "artKey": "enemyAvatar17"
         }
       }
     ],
@@ -2173,7 +2173,7 @@
         0.3
       ]
     },
-    "mapVersion": 1,
+    "mapVersion": 2,
     "rulesMode": "modern",
     "tileRegistry": {
       "sword": 1,
@@ -2420,7 +2420,7 @@
         "enemy": {
           "id": "battle-19",
           "name": "Đệ Tử Thách Đấu",
-          "artKey": "beast"
+          "artKey": "enemyAvatar19"
         }
       }
     ],
@@ -2456,7 +2456,7 @@
         0.3
       ]
     },
-    "mapVersion": 1,
+    "mapVersion": 2,
     "rulesMode": "modern",
     "tileRegistry": {
       "sword": 1,
@@ -2560,7 +2560,7 @@
         "enemy": {
           "id": "boss-20",
           "name": "Trận Linh Hộ Tông",
-          "artKey": "beast"
+          "artKey": "enemyAvatar20"
         }
       }
     ],
@@ -2596,7 +2596,7 @@
         0.3
       ]
     },
-    "mapVersion": 1,
+    "mapVersion": 2,
     "rulesMode": "modern",
     "tileRegistry": {
       "sword": 1,
@@ -3475,7 +3475,7 @@
         "enemy": {
           "id": "battle-27",
           "name": "Yêu Thú",
-          "artKey": "beast"
+          "artKey": "enemyAvatar27"
         }
       }
     ],
@@ -3511,7 +3511,7 @@
         0.3
       ]
     },
-    "mapVersion": 1,
+    "mapVersion": 2,
     "rulesMode": "modern",
     "tileRegistry": {
       "sword": 1,
@@ -3717,7 +3717,7 @@
         "enemy": {
           "id": "battle-29",
           "name": "Yêu Thú",
-          "artKey": "beast"
+          "artKey": "enemyAvatar29"
         }
       }
     ],
@@ -3753,7 +3753,7 @@
         0.3
       ]
     },
-    "mapVersion": 1,
+    "mapVersion": 2,
     "rulesMode": "modern",
     "tileRegistry": {
       "sword": 1,
@@ -3845,7 +3845,7 @@
         "enemy": {
           "id": "boss-30",
           "name": "Yêu Vương",
-          "artKey": "beast"
+          "artKey": "enemyAvatar30"
         }
       }
     ],
@@ -3881,7 +3881,7 @@
         0.3
       ]
     },
-    "mapVersion": 1,
+    "mapVersion": 2,
     "rulesMode": "modern",
     "tileRegistry": {
       "sword": 1,

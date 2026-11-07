@@ -8,6 +8,7 @@ import { TileKind, type BoardSnapshot } from '../game/types';
 import { colors } from '../theme';
 import { GameplayDialogButton } from './GameplayDialogButton';
 import { InventoryDialogPanel } from './InventoryDialogPanel';
+import { GameplayEnemyPortrait } from './GameplayEnemyPortrait';
 
 function objectiveDetails(objective: ObjectiveDefinition, content: ReturnType<typeof getContentVersion>) {
   // Keep the preview compatible with map content that introduces Trận Nhãn.
@@ -23,6 +24,7 @@ function objectiveDetails(objective: ObjectiveDefinition, content: ReturnType<ty
     case 'Boss': return {
       name: objective.enemy.name,
       icon: ART[objective.enemy.artKey as keyof typeof ART] ?? ART.beast,
+      artKey: objective.enemy.artKey,
     };
     default: return { name: 'Mục tiêu', icon: ART.overlaySeal };
   }
@@ -42,11 +44,12 @@ export function GameplayObjectiveIntro({ board, onStart, onBack }: {
         <Text accessibilityRole="header" maxFontSizeMultiplier={1.2} style={styles.title}>MỤC TIÊU MÀN {level.id}</Text>
         <ScrollView testID="game-objective-intro-list" style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator keyboardShouldPersistTaps="handled">
           {level.objectives.map(objective => {
-            const { name, icon } = objectiveDetails(objective, content);
+            const { name, icon, artKey } = objectiveDetails(objective, content);
             const enemy = objective.type === 'Battle' || objective.type === 'Boss';
             const label = enemy ? `Hạ ${name}, ${objective.target} máu` : `${name}, ${objective.target}`;
             return <View key={objective.id} testID={`intro-objective-${objective.id}`} accessible accessibilityRole="text" accessibilityLabel={label} style={styles.objective}>
-              <Image source={icon} contentFit="contain" accessible={false} style={styles.icon} />
+              {enemy ? <GameplayEnemyPortrait artKey={artKey} style={styles.icon} />
+                : <Image source={icon} contentFit="contain" accessible={false} style={styles.icon} />}
               <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={styles.objectiveName}>{enemy ? `Hạ ${name}` : name}</Text>
               {enemy
                 ? <Text maxFontSizeMultiplier={1.2} style={styles.target}>

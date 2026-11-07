@@ -12,6 +12,7 @@ import { OutlinedText } from './OutlinedText';
 import { useSfxPress } from '../audio/useSfxPress';
 import { CollectionTileIcons, CHARGED_GOAL_ICON_WIDTH, type CollectionTileIcon } from './CollectionTileIcons';
 import { useCollectionIconScale } from './useCollectionIconScale';
+import { GameplayEnemyPortrait } from './GameplayEnemyPortrait';
 
 export function GameplayHeader({ moves, busy, compact, onBack }: {
   moves: number; busy: boolean; compact: boolean; onBack: () => void;
@@ -50,10 +51,9 @@ export function GameplayInfo({ level, board, compact, reduceMotion, duration, co
         {enemies.map(objective => {
           const progress = board.objectiveProgress[objective.id] ?? 0;
           const name = objective.enemy.name;
-          const icon = ART[objective.enemy.artKey as keyof typeof ART] ?? ART.beast;
           return <View key={objective.id} testID={`objective-${objective.id}`} style={styles.enemyRow}>
-            <View testID="game-enemy-avatar" style={[styles.avatar, compact && styles.compactAvatar]}>
-              <Image source={icon} contentFit="cover" style={[styles.avatarArt, compact && styles.compactAvatarArt]} accessible={false} />
+            <View testID="game-enemy-avatar" pointerEvents="none" style={[styles.avatar, compact && styles.compactAvatar]}>
+              <GameplayEnemyPortrait artKey={objective.enemy.artKey} style={[styles.avatarArt, compact && styles.compactAvatarArt]} />
             </View>
             <View style={[styles.goalText, styles.enemyText]}>
               <Text numberOfLines={1} style={[styles.eyebrow, progress >= objective.target && styles.goalComplete]}>{name}</Text>
@@ -175,21 +175,20 @@ const styles = StyleSheet.create({
   objective: { width: '100%', minWidth: 0, paddingHorizontal: 20, paddingVertical: 6, alignItems: 'stretch' },
   collectionPanel: { height: 48 },
   compactCollectionPanel: { height: 44, paddingVertical: 4, paddingHorizontal: 18 },
-  enemyPanel: { height: 60 },
+  enemyPanel: { height: 60, overflow: 'visible' },
   compactEnemyPanel: { height: 52, paddingHorizontal: 18 },
   goalsRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   goalRow: { flexDirection: 'row', gap: 3, alignItems: 'center', justifyContent: 'flex-start', width: '33.333333%', minWidth: 0 },
-  enemyRow: { flexDirection: 'row', gap: 8, alignItems: 'center', flex: 1 },
+  enemyRow: { flexDirection: 'row', gap: 12, alignItems: 'center', flex: 1 },
   goalIcon: { width: 28, height: 28, flexShrink: 0 },
   goalIconFrame: { width: 28, height: 28, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   chargedGoalIconFrame: { width: CHARGED_GOAL_ICON_WIDTH, height: 28, flexShrink: 0 },
   goalText: { flex: 1, minWidth: 0 },
-  enemyText: { gap: 4, paddingRight: 16 },
-  avatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: colors.gold, backgroundColor: colors.inkDeep, overflow: 'hidden', flexShrink: 0 },
-  compactAvatar: { width: 40, height: 40, borderRadius: 20 },
-  // Frame the existing beast's head, centered around 60% x / 29% y.
-  avatarArt: { position: 'absolute', width: 120, height: 144, left: -48, top: -18 },
-  compactAvatarArt: { width: 100, height: 120, left: -40, top: -15 },
+  enemyText: { gap: 4, paddingRight: 16, zIndex: 1 },
+  avatar: { width: 48, height: 48, overflow: 'visible', flexShrink: 0, zIndex: 2 },
+  compactAvatar: { width: 40, height: 40 },
+  avatarArt: { position: 'absolute', width: 68, height: 68, left: -10, top: -4, zIndex: 2 },
+  compactAvatarArt: { width: 60, height: 60, left: -10, top: -4 },
   eyebrow: { color: colors.textMuted, fontSize: 11, lineHeight: 14, fontWeight: '700' },
   goalNumber: { flexShrink: 1, color: colors.ivory, fontSize: 20, lineHeight: 26, fontWeight: '900', fontVariant: ['tabular-nums'] },
   goalTotal: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },

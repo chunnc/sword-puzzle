@@ -8,7 +8,7 @@ Prompt 2 (`beast.png`): Transparent cutout of one friendly but imposing white ce
 
 Prompt 3 (`cultivator.png`): Transparent cutout of a young sword cultivator in white jade robes, seated in meditation around a glowing turquoise sword with celestial ribbons; no platform, UI or text.
 
-All four view backgrounds reuse the one world painting. The same beast appears in battle and boss screens; the portrait avatar is cropped from the same cultivator image.
+All four view backgrounds reuse the one world painting. Current combat maps use eight distinct enemy portraits, registered by each map's `enemy.artKey`. Generation prompts stay in [`enemy-avatars/PROMPTS.md`]; private PNG masters and runtime WebP images live in Firebase Storage at `enemy-avatars/source/v1/` and `enemy-avatars/runtime/v1/`. The app downloads WebP by Firebase URL and keeps it in memory. The HUD displays each full cutout over the rectangular boss panel without a circular crop. `beast.webp` remains the fallback for older or fixture content.
 
 Các sprite trong `runtime/` không chứa chữ; app vẫn dựng nhãn và số động. Bốn
 ảnh `runtime-preview-*.png` là contact sheet để duyệt bề mặt, icon, ô ghép và lớp
@@ -207,9 +207,10 @@ bản v1 được giữ để đối chiếu. `runtime-preview-gameplay-v2.png` 
 
 Gameplay bỏ nền dock. Hủy/Thi triển dùng Pressable 64×44 và 156×44, giữ vùng
 thao tác 44 px khi trống. HP và Kiếm khí dùng View/Reanimated/Expo
-LinearGradient, không dùng sprite thanh. Avatar lấy vùng đầu artwork boss
-hiện có; tên nằm trên HP có số bên trong, đúng hai hàng. Ảnh native và số
-đo bàn cờ nằm tại `assets/ui-review/gameplay-v2/`.
+LinearGradient, không dùng sprite thanh. Ở bản v2, avatar lấy vùng đầu artwork
+boss hiện có; tên nằm trên HP có số bên trong, đúng hai hàng. Bản HUD hiện tại
+dùng các chân dung riêng được ghi ở mục v3 bên dưới. Ảnh native và số đo bàn
+cờ nằm tại `assets/ui-review/gameplay-v2/`.
 
 ## Gameplay v3: panel mây góc và nút bằng sprite
 
@@ -233,6 +234,27 @@ alpha; ảnh mục tiêu tối đa 1200 px, Lượt/Hủy 512 px, Thi triển 10
 Nguồn PNG được giữ nguyên. `runtime-preview-gameplay-v3.png` là contact
 sheet; ảnh native và xác minh nguồn được lưu tại `assets/ui-review/gameplay-v3/`.
 Phần HP có đệm bên phải để không đè hoa văn, section vẫn cao 76/66 px.
+
+### Avatar đối thủ overlay
+
+Tám chân dung nền trong suốt được gán riêng cho map 7, 10, 17, 19, 20, 27, 29
+và 30. Hai Yêu Thú ở map 27 và 29 dùng hai ảnh khác nhau. PNG nguồn giữ alpha;
+WebP runtime được resize đến cạnh dài tối đa 512 px bằng Lanczos trên alpha
+tiền nhân. Cả hai bản lưu trên Firebase Storage `sword-puzzle` tại Singapore;
+PNG nguồn riêng tư, WebP chỉ tải được qua Firebase download token. Ứng dụng chỉ
+cache WebP trong bộ nhớ và hiển thị `beast.webp` làm ảnh dự phòng.
+
+Để thay chân dung, cập nhật cả PNG trong `assets/ui-source/enemy-avatars/` và
+WebP tương ứng trong `client/app-assets/ui/enemy-avatars/`, tăng `storageVersion`
+trong `tools/upload_enemy_avatars.mjs`, rồi chạy
+`node tools/upload_enemy_avatars.mjs --delete-local`. Script từ chối ghi đè
+object, kiểm checksum và quyền tải trước khi xóa đúng 16 ảnh local; nó cũng
+cập nhật URL Firebase client trong `client/src/enemyAvatars.ts`.
+
+HUD dùng ảnh `contain` trên lớp phía trước mép trái thẻ boss; ảnh nhô nhẹ qua
+mép trên/dưới, không có mặt nạ tròn. Khung giữ chiều cao 60 px, hoặc 52 px ở
+chế độ gọn; phần chữ dịch sang phải để không chạm chân dung. Hộp mục tiêu
+trước trận dùng cùng một khóa ảnh.
 
 ## Popup kết thúc màn
 
